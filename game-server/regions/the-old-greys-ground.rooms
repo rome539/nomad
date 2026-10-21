@@ -1,0 +1,41 @@
+# THE OLD GREY'S GROUND — 4 rooms behind the moon door.
+#
+# Its own file, not a slab-2 rewrite: the glade is an attachment here, and the
+# builder stays strictly additive, so not one live room of the wood is re-walked
+# to put these down.
+
+!region wood
+
+## the-moon-glade | attachment: the glade the moon door opens on
+!existing
+> north the-white-ride
+> east the-picked-bones
+
+# ---- THE OLD GREY'S GROUND (2026-10-21) -------------------------------------
+# The moon door opened on one room and a box, which is a thin thing to wait out
+# a full moon for. Behind the glade now: four rooms in a ring with one dead end
+# off it, and the dead end is the lie of the old grey, the wolf boss, with two
+# of its pack and the silvered casket. The ring means you can come round to
+# the lie either way and leave either way; nothing in here is keyed, so the
+# door shutting never seals anyone in (the deep door's law).
+
+## the-white-ride | The White Ride
+A ride cut straight through the trees and kept open by nothing anyone can see, the grass down the middle of it grazed short and pale. The moon finds the whole length of it at once. Along both edges the turf is trodden into narrow paths the width of one animal, and they all run the same way.
+> south the-moon-glade
+> east the-gnawed-stand
+
+## the-gnawed-stand | The Gnawed Stand
+Young trees standing close, and every one of them is marked at the height of a big dog's shoulder: bark rubbed through to the wood, and above the rub, long scores where something stood up against the trunk and pulled down. The marks are old on some and white and wet on others. It is a place something comes back to.
+> west the-white-ride
+> south the-picked-bones
+> east the-grey-lie
+
+## the-picked-bones | The Picked Bones
+Bones lie in the grass here the way leaves lie anywhere else: long bones split for the marrow, a deer's skull with the face gone, ribs in a fan. None of it smells. Whatever brings things here eats them down to this and leaves them out, and the grass has grown up through the oldest of it.
+> west the-moon-glade
+> north the-gnawed-stand
+
+## the-grey-lie | The Grey Lie
+A hollow under the roots of a beech that came half down and kept growing, the earth beneath it pressed flat and smooth by a great deal of lying in it. Grey hair is caught in every root. The ground in front of it is bare and beaten, and the bones there are fresh. This is where it sleeps, and it does not sleep far from the door.
+> west the-gnawed-stand
+

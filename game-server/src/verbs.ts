@@ -1372,6 +1372,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const from = session.roomId;
   session.roomId = exit.to_room;
   den.rattle(z, session.roomId, session.pubkey); // a bone rattle on a door here hears you come
+  ai.shadowFollow(z, session, from, session.roomId, Date.now()); // a wolf testing you comes after
   session.movedAt = Date.now();
   // Charge only a completed step, after every blocked-exit/failed-flight check.
   // The same equipped weight as combat includes balanced/cumbersome, never pack.

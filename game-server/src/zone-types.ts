@@ -127,6 +127,11 @@ export interface Creature {
   nextWanderAt: number; // ms epoch
   target: string | null; // pubkey it is fighting
   curious?: string | null; // roomId it heard something from — going to look
+  testing?: string;     // the lone wanderer a fed wolf is testing (ai.wolfTests)
+  testFeints?: number;  // rushes pulled short so far
+  testAt?: number;      // when the next rush comes
+  testHp?: number;      // its hp when it last rushed: lower means you turned on it
+  sportAt?: number;     // a fed fox's next chance to kill for nothing (SURPLUS_KILLERS)
   patrolIdx?: number; // position along a patrol route, if it keeps one
   phase?: number; // boss rage tier (0/1/2), climbs at hp thresholds
   stole?: string; // cutpurse: the item id it grabbed and ran with (dropped on death)

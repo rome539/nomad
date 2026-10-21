@@ -54,6 +54,8 @@ import {
   VARIANT_HOMES,
   groundWord,
   PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, OWN_FORAGE_MEAL_LEFT,
+  SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
+  TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -956,6 +958,59 @@ function thresholdStep(
 // reach. The recheck cadence keeps this off the hot path — the search is one
 // capped BFS, at most once a minute, only for a hungry hunter, and the answer
 // is held until it goes stale.
+// THE WOLVES TEST YOU (WOLF_TESTERS). Called on a fed wolf's live turn. True
+// when the test took its turn (it holds its ground rather than wandering off).
+export async function wolfTests(z: ZoneDO, c: Creature, now: number): Promise<boolean> {
+  if (!WOLF_TESTERS.has(c.templateId) || c.asleep || c.heldBy || c.holding) return false;
+  const tmpl = z.world!.mobTemplates.get(c.templateId)!;
+  // YOU TURNED ON IT before it committed: it breaks off and goes. (Your blow
+  // gave it a grudge, so the next meeting is no test.)
+  if (c.testing && c.hp < (c.testHp ?? c.hp)) {
+    if (c.target === c.testing) c.target = null;
+    c.testing = undefined;
+    z.roomFeed(c.roomId, `${cap(tmpl.name)} breaks off, and is gone.`, undefined, false);
+    await creatureMoves(z, c, now, "flee", false);
+    return true;
+  }
+  if (c.target) return false;
+  if ((c.hunger ?? 0) >= HUNGRY_AT) { c.testing = undefined; return false; } // hungry: the old rules
+  if (c.testing && now - (c.testAt ?? now) > TEST_FORGET_MS) c.testing = undefined;
+  const here = [...z.sessions.values()].filter((s) => s.roomId === c.roomId && !z.outOfWorld(s) && s.hp > 0);
+  if (here.length !== 1) return false; // only a lone wanderer is tested
+  const s = here[0];
+  if (c.testing !== s.pubkey) {
+    if (!chance(TEST_START_ODDS)) return false;
+    c.testing = s.pubkey;
+    c.testFeints = 0;
+    c.testAt = now;
+  }
+  c.nextWanderAt = Math.max(c.nextWanderAt, now + TEST_GAP_MIN_MS); // it stays on you
+  if (now < (c.testAt ?? 0)) return true;
+  c.testAt = now + randInt(TEST_GAP_MIN_MS, TEST_GAP_MAX_MS);
+  c.testHp = c.hp;
+  c.testFeints = (c.testFeints ?? 0) + 1;
+  if (c.testFeints > TEST_FEINTS || s.hp < s.maxHp * WOUNDED_FRACTION) {
+    c.testing = undefined;
+    c.target = s.pubkey;
+    z.send(s, `${cap(tmpl.name)} comes at you again, and this time it does not stop.`, "seize big");
+    z.refreshRoomCtx(c.roomId);
+    return true;
+  }
+  z.send(s, pick(TEST_RUSH_LINES).replace("{a}", cap(tmpl.name)), "dmgin");
+  z.refreshRoomCtx(c.roomId);
+  return true;
+}
+
+// ...AND FOLLOWS WHEN YOU GO: a wolf testing you takes the way you took, a beat
+// behind. Called from the move, after you are through.
+export function shadowFollow(z: ZoneDO, session: Session, from: string, to: string, now: number): void {
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== from || c.testing !== session.pubkey || c.target) continue;
+    c.curious = to;
+    c.nextWanderAt = now + randInt(4_000, 15_000);
+  }
+}
+
 // THE BEAR'S WALK TO FOOD (OWN_FORAGE_ROOMS). Hungry and not standing on its own
 // feeding ground, it is pulled toward the nearest one; standing on it, it stays
 // there to eat; fed, the errand ends and the den pulls it home.
@@ -1836,7 +1891,10 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     const corpseHere = !!traces && traces.some((tr) => CORPSE_TRACES.has(tr.kind));
     const floor = z.ground.get(creature.roomId);
     const baitHere = !!floor && floor.some((id) => world.itemTemplates.get(id)?.lure);
-    if (!hungry && !corpseHere && !baitHere) return false;
+    // A FED FOX MAY KILL FOR NOTHING (SURPLUS_KILLERS) - decided below, once
+    // there is something in the room to kill.
+    const sport = !hungry && !corpseHere && !baitHere;
+    if (sport && (!SURPLUS_KILLERS.has(creature.templateId) || (creature.sportAt ?? 0) > now)) return false;
     if (!chance(PREDATION_ODDS)) return false;
     // A target in the room; prefer one not already busy with a player (the easy meal).
     let victim: Creature | null = null;
@@ -1851,6 +1909,10 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       if (!c.target) break;
     }
     if (!victim) return false;
+    if (sport) {
+      creature.sportAt = now + SURPLUS_REARM_MS;
+      if (!chance(SURPLUS_ODDS)) return false;
+    }
     const tmpl = world.mobTemplates.get(creature.templateId)!;
     const vt = world.mobTemplates.get(victim.templateId)!;
     // MOST HUNTS FAIL (HUNT_SUCCESS). The rush is the whole of it: a miss and the
@@ -1879,6 +1941,19 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     exhaustion.creatureAttempt(creature, now);
     victim.hp -= Math.max(1, exhaustion.creatureDamage(creature, randInt(tmpl.dmg_min, tmpl.dmg_max)) - vt.armor);
     if (spined(z, creature, tmpl, victim, vt)) return true;
+    // THE HENHOUSE KILL: it does not eat it, and it does not hold on to it.
+    if (sport) {
+      if (victim.hp <= 0) {
+        preyFalls(z, victim, vt);
+        z.roomFeed(creature.roomId, `${cap(tmpl.name)} kills ${vt.name}, and leaves it lying, and does not eat.`, undefined, false);
+        z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.", undefined, undefined, false, { mob: creature.templateId, act: "fight" });
+        z.refreshRoomCtx(creature.roomId);
+      } else {
+        z.roomFeed(creature.roomId, `${cap(tmpl.name)} worries ${vt.name} and lets it go, bleeding, for no reason it could give.`, undefined, false);
+        await creatureMoves(z, victim, now, "flee", false);
+      }
+      return true;
+    }
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt);
       creature.hunger = 0;

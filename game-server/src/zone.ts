@@ -5627,7 +5627,8 @@ export class ZoneDO implements DurableObject {
         // strikes, that's its action this tick — it doesn't also wander.
         // A grip already taken outranks looking for a fresh one — it worries
         // what it has until that kills or slips (ai.worryPrey).
-        const hunted = (await ai.worryPrey(this, creature, now)) || await ai.predation(this, creature, now);
+        const hunted = (await ai.worryPrey(this, creature, now)) || await ai.predation(this, creature, now)
+          || await ai.wolfTests(this, creature, now); // a fed wolf testing a lone wanderer holds its ground
         if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)
             && !ai.allCrouched(this, creature.roomId)) {
           // Never settles while there's someone to run from — it keeps moving,

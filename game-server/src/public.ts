@@ -3415,7 +3415,7 @@ var VOICE_FAMILY = {
   dog: "masterless-dog lead-dog drove-dog a-fold-dog marsh-hound a-lymer the-last-dog the-drove-master",
   twohound: "two-hound",
   threehound: "three-hound",
-  wolf: "grey-wolf dire-wolf hill-wolf lead-wolf",
+  wolf: "grey-wolf dire-wolf hill-wolf lead-wolf the-old-grey",
   fox: "hill-fox snow-fox the-blue-fox the-raiding-fox",
   hyena: "grave-hyena",
   direhyena: "dire-hyena",
@@ -13208,6 +13208,7 @@ var MOB_SPRITE = {
   // of them to be drawn; these are the rest.
   "great-vulture": 22,        // 1.15
   "lead-wolf": 14,            // 1.10
+  "the-old-grey": 24,         // 1.60  bigger than any wolf should be: a head over the dire wolf (its cell is drawn short, 0.89)
   "old-billy": 14,            // 1.10
   "red-stag": 45,             // 1.75  a stag stands as tall as a man; the hind beside him is 18
   "wood-stag": 45,            // the same animal, in the wood (mig 302), on his own sheet
@@ -13476,6 +13477,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "the-old-grey":   { n: 8, aspect: 1.036, f: {"idle":0,"alert":1,"rest":2,"hold-ground":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "hedgehog":   { n: 9, aspect: 1.097, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"curl-up":6,"alert":7,"death":8} },
   "wood-sloth":   { n: 9, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"reach-up":6,"alert":7,"death":8} },
   "tawny-owl":   { n: 9, aspect: 1.2, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"rest":7,"death":8} },

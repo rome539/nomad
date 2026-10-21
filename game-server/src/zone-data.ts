@@ -1668,6 +1668,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "roe-deer": "Something light and quick breaks {dir} through the undergrowth, all at once.",
   "wild-boar": "Something heavy shoulders through the brush {dir}, taking the straight way.",
   "grey-wolf": "A long, unhurried padding crosses {dir}, and does not stop to consider you.",
+  "the-old-grey": "Something heavy pads {dir}, unhurried, and the smaller feet around it go where it goes.",
   "the-follower": "A step {dir} that matches yours, and stops when you stop.",
   "charcoal-burner": "Boots and a dragging haft go {dir}, at a working pace.",
   "root-thing": "Earth and root shift {dir}, slowly, like a bank giving way.",
@@ -1693,6 +1694,7 @@ export const STILL_SOUNDS: Record<string, string> = {
   "roe-deer": "quick shallow breathing, held — something small deciding whether it has been seen",
   "wild-boar": "a low grunting and the steady work of something rooting, unbothered",
   "grey-wolf": "nothing at all, and then the small sound of a jaw closing",
+  "the-old-grey": "a long, slow breath let out through the nose, the way a big dog sighs lying down",
   "lead-dog": "slow breathing through a bad nose, and a collar-chain that has not been on anything for a long time",
   "wayman": "cloth shifting, and a man breathing through his mouth to keep it quiet",
   "the-toll-clerk": "the creak of a loaded strap taking a weight that has not been put down in two hundred years",
@@ -4731,6 +4733,7 @@ export const TRACK_PRINTS: Record<string, string> = {
   "the-blue-fox": "small, neat prints set one in front of the other, in a straight line",
   "hill-wolf": "big four-toed pads with the claws showing, several sets, one stepping in another",
   "lead-wolf": "big four-toed pads with the claws showing, wider than the rest",
+  "the-old-grey": "a wolf's pads, bigger than any wolf's, and one forefoot printing short where a toe is gone",
   "lynx": "big round pads with no claws showing, wide apart, unhurried",
   "wildcat": "small round pads with no claws showing, placed with care",
   "glutton": "broad five-toed prints with long claws, loping in pairs",
@@ -4947,11 +4950,12 @@ export const HEAVY_KNOCK_ODDS = 0.3;    // while fresh; a guarded stance halves 
 // itself out again.
 export const PACKS: Record<string, string> = {
   "grey-wolf": "wolf", "dire-wolf": "wolf", "hill-wolf": "wolf", "lead-wolf": "wolf",
+  "the-old-grey": "wolf", // the boss behind the moon door fights with its pack, and leads it
   "masterless-dog": "dog", "a-fold-dog": "dog", "drove-dog": "dog", "lead-dog": "dog",
   "the-last-dog": "dog", "marsh-hound": "dog", "a-lymer": "dog",
   "grave-hyena": "hyena", "dire-hyena": "hyena",
 };
-export const PACK_LEADS = new Set(["lead-wolf", "lead-dog"]);
+export const PACK_LEADS = new Set(["lead-wolf", "lead-dog", "the-old-grey"]);
 export const PACK_FLANK_MULT = 1.4;
 export const PACK_LEADERLESS_MS = 10 * 60_000;
 // SWARMS are strength in numbers: every other one on you makes this one's bite
@@ -5134,6 +5138,31 @@ export const NOISE_COVER: Record<string, number> = { "hedgehog": 0.5 };
 // thing never touches it) and a hunting animal's bite alike. Flat, past armor,
 // and it can kill. zone.ts melee and ai.ts huntPrey/worryPrey.
 export const PRICKLY: Record<string, number> = { "hedgehog": 2 };
+// THE HENHOUSE KILL (rome, 2026-10-21). A fed fox sometimes kills anyway and
+// leaves the body where it fell - no meal, no heal - so the crows and the
+// scavengers come to its ground for the free carrion, and a tracker finds
+// kills nobody ate. Rolled at SURPLUS_ODDS when a fed fox shares a room with
+// its prey, then not again for SURPLUS_REARM_MS. ai.predation.
+export const SURPLUS_KILLERS = new Set(["hill-fox", "snow-fox", "the-raiding-fox", "the-blue-fox"]);
+export const SURPLUS_ODDS = 0.25;
+export const SURPLUS_REARM_MS = 2 * 3_600_000;
+// THE WOLVES TEST YOU (rome, 2026-10-21). A FED wolf alone in a room with a
+// lone wanderer rushes and pulls up short, falls back, and follows when you go
+// (a room behind, a beat later). Turn on it before it commits and it breaks off
+// and goes; after TEST_FEINTS rushes, or the moment you are badly hurt, the next
+// one does not stop. Hungry wolves hunt by the old rules. ai.wolfTests.
+export const WOLF_TESTERS = new Set(["grey-wolf", "hill-wolf", "lead-wolf"]);
+export const TEST_START_ODDS = 0.15;              // per turn, a fed wolf decides to start on you
+export const TEST_GAP_MIN_MS = 20_000;            // between rushes
+export const TEST_GAP_MAX_MS = 60_000;
+export const TEST_FEINTS = 3;                     // the fourth does not stop
+export const TEST_FORGET_MS = 15 * 60_000;        // lost track of you this long: the test is over
+export const TEST_RUSH_LINES = [
+  "{a} comes at you low and fast - and pulls up short, a length off, and backs away watching you.",
+  "{a} rushes you, and veers off at the last stride, and circles.",
+  "{a} darts in at your legs and is gone again before you can turn, and stands off, watching.",
+  "{a} comes in a few steps, stiff-legged, head low, and stops. It is measuring you.",
+];
 // THE MOSS (rome, 2026-10-21): the sloth's coat is green where the damp has got
 // into it, and it moves slowly so as never to give itself away - a hunter in the
 // room passes it over this share of the time, still or moving. The hedgehog is easy to find and hurts to bite;
@@ -5244,6 +5273,10 @@ export const PROVISIONED = new Set([
   // mig 247, the mountain's rare blood: the-last-dog, the-one-who-stayed, the-butter-wife
   "the-last-dog", "the-one-who-stayed", "the-butter-wife",
 "charcoal-burner", "the-woodward", "the-keeper-of-the-holding",
+  // THE OLD GREY (mig 323) lies up in its lie and its pack hunts for it: a boss
+  // stands where it lives, so it has no way to eat of its own and must not bank
+  // hunger it can never spend.
+  "the-old-grey",
   "road-carrier", "the-sapper", "the-bellfounder",
   // THE SUMMER PEOPLE (mig 244). The mountain's first people, and the first
   // bodies on it that are not a mouth: the herd and the milker keep a flock that
@@ -6065,7 +6098,10 @@ export const AGGRESSIVE = new Set([
   // THE CROSSING (mig 191): three that hold a workplace rather than a post. The
   // mason and the widow are AT WORK and you are in it; the gull simply has a
   // pier, and has never in its life conceded anything to anybody.
-  "the-bridge-mason", "the-salt-widow", "great-gull", "black-backed-gull"]);
+  "the-bridge-mason", "the-salt-widow", "great-gull", "black-backed-gull",
+  // THE OLD GREY (mig 323): its lie is the end of the only way in, and anything
+  // the moon door lets that far has come for what is behind it.
+  "the-old-grey"]);
 
 // ...AND WHICH OF THEM IS ACTUALLY GUARDING SOMETHING (rome, 2026-08-25: a
 // great gull was telling him it moved to bar the way).
@@ -7304,9 +7340,9 @@ export const WOOD_RULES: [string, RegExp][] = [
   // alder and willow standing in water, the mire, and the ponds and ditches dug into it
   ["wet", /^the-(alder-carr|black-alders|black-mud|black-pool|brown-water|drinking-pool|drowned-holly|drowned-roots|eel-ditch|far-mire|far-south-turning|fishponds|flooded-ride|frog-chorus|heronry|leaning-alders|low-mist|mire-edge|moat-bank|moss-floor|old-pond|osier-beds|quaking-ground|reed-break|rush-bed|sedge-flat|silted-pond|sodden-ground|south-ride|spring-head|standing-water|stew-pond|still-air|sunk-fence|wet-hollow|willow-break|willow-margin|withy-hut)$/],
   // open grass inside the wood: clearings, lawns and the cut rides
-  ["glade", /^the-(deer-lawn|empty-ride|first-clearing|flood-meadow|long-glade|north-marches|north-ride|open-canopy|sunken-lawn|west-ride)$/],
+  ["glade", /^the-(deer-lawn|empty-ride|first-clearing|flood-meadow|long-glade|north-marches|north-ride|open-canopy|sunken-lawn|west-ride|white-ride)$/],
   // the plain wood - every stand, thicket, planted row and burnt patch, and the maze rooms that are meant to be unmemorable
-  ["wood", /^the-(ant-hills|ash-heap|ash-stand|badger-ground|birch-edge|blind-corner|boar-ground|boundary-oak|bracken-edge|bracken-sea|bramble-margin|broken-avenue|burnt-stand|charcoal-flat|charcoal-hut|charcoal-ring|close-dark|close-ground|crooked-stand|crow-roost|deer-fence|deer-path|dry-gully|eaves|edge-of-it|fallen-giant|fallen-wall|far-birches|far-hollow|far-north-turning|fox-earths|grey-thicket|high-holly|hollow-beeches|hollow-yew|holly-brake|holly-hedge|holly-maze|hornbeam-row|hunters-stand|keepers-approach|last-oaks|leaning-wood|lichen-wood|lightning-split|lime-kiln|listening-stand|mast-fall|nettle-glade|north-turning|old-burn|old-coppice|orchard-gone-wild|outer-scrub|park-pale|pine-dark|poachers-camp|pollard-row|same-tree|south-turning|stone-pile|sunken-ditch|swallowing|thin-birches|thin-soil|timber-stack|turned-ground|turning|turning-leaves|white-ground|wind-shorn-edge|windfall|yew-walk)$/],
+  ["wood", /^the-(ant-hills|ash-heap|ash-stand|badger-ground|birch-edge|blind-corner|boar-ground|boundary-oak|bracken-edge|bracken-sea|bramble-margin|broken-avenue|burnt-stand|charcoal-flat|charcoal-hut|charcoal-ring|close-dark|close-ground|crooked-stand|crow-roost|deer-fence|deer-path|dry-gully|eaves|edge-of-it|fallen-giant|gnawed-stand|grey-lie|fallen-wall|far-birches|far-hollow|far-north-turning|fox-earths|grey-thicket|high-holly|hollow-beeches|hollow-yew|holly-brake|holly-hedge|holly-maze|hornbeam-row|hunters-stand|keepers-approach|last-oaks|leaning-wood|lichen-wood|lightning-split|lime-kiln|listening-stand|mast-fall|nettle-glade|north-turning|old-burn|old-coppice|orchard-gone-wild|outer-scrub|park-pale|picked-bones|pine-dark|poachers-camp|pollard-row|same-tree|south-turning|stone-pile|sunken-ditch|swallowing|thin-birches|thin-soil|timber-stack|turned-ground|turning|turning-leaves|white-ground|wind-shorn-edge|windfall|yew-walk)$/],
   // everything else in the wood is the wood
   ["wood", /^/],
 ];
@@ -8684,6 +8720,7 @@ export const BLEED_ODDS = new Map<string, number>([
   ["tawny-owl", 0.2],
   ["great-vulture", 0.22],
   ["lead-wolf", 0.22],           // the dire wolf's rate: the same jaws, half again the size
+  ["the-old-grey", 0.25],        // the oldest jaws in the wood
   ["the-dancer", 0.22],
   ["the-tom", 0.25],
   ["lynx", 0.25],
@@ -8973,7 +9010,7 @@ export const MATERIAL_HIDE = new Set([
   "wardens-watch-mantle", "strapped-baldric",
   "tusk-studded-targe",
   "bristle-hide-jack", "shadow-treads", "rat-mantle", "hill-wolf-jerkin",
-  "adder-skin-boots", "glutton-hide-coat", "lion-pelt-cloak", "white-rat-mantle",
+  "adder-skin-boots", "glutton-hide-coat", "lion-pelt-cloak", "white-rat-mantle", "old-greys-mantle", "bearskin-mantle",
   "lead-wolf-ruff", "white-hide-targe", "the-white-roe",
 ]);
 export const MATERIAL_CLOTH = new Set([

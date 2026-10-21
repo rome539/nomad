@@ -509,6 +509,10 @@ const LINES = {
   rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
   alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
 },
+"the-old-grey": {
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
 "lead-wolf": {
   feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
   rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
@@ -989,6 +993,9 @@ const REDRAW = {
   "hill-fox": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "hill-wolf": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "lead-wolf": ["idle","rest","hold-ground","feed","move-a","move-b","attack","death"],
+  // THE OLD GREY (mig 323): the boss behind the moon door. Its pack feeds it, so
+  // no eating frame; it holds its lie, so hold-ground.
+  "the-old-grey": ["idle","alert","rest","hold-ground","move-a","move-b","attack","death"],
   "lynx": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "marsh-hound": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "mountain-hare": ["idle","alert","rest","graze","move-a","move-b","attack","death"],
@@ -1340,6 +1347,9 @@ THE WINGSPAN DECIDES THE SCALE OF EVERY CELL ON THIS SHEET. Find the pose with t
 DO NOT enlarge any pose to fill its cell. DO NOT let a wing, a tail, a foot or a bill touch or cross a cell edge in any cell, for any reason. If a wingspan will not fit, the bird is drawn TOO BIG - shrink the whole bird on every cell until it does. A wingtip that reaches the edge of its cell is not a tight crop, it is a severed wing: the rest of it lands in the next bird's cell and is lost.`;
 
 const CONSTANT = {
+  "the-old-grey": `
+IT IS OLD, AND IT IS THE SAME OLD WOLF IN EVERY CELL. A very big grey wolf, grey all over with age rather than colour: the muzzle and the brows gone white, the ears notched and torn at the edges, pale old scars showing through the coat on the shoulders and the face. Lean, heavy-boned, long in the leg. The same size, the same scars, the same torn ears in every cell. No red eyes, no glow, no moon. Camera: eye-level three-quarter view, facing slightly toward the viewer's right.
+`,
   "wood-sloth": `
 ITS CLAWS ARE SHORT, AND THE SAME SIZE IN EVERY CELL. Three short curved claws on each foot, about as long as its toes - never long hooks, never sickles, never longer than the paw itself. Count them and measure them against the paw in every cell: the same short claws, the same length, front and back, in all nine poses. It lives on the ground and walks on all fours; it never hangs from anything. Camera: eye-level three-quarter view, facing slightly toward the viewer's right.
 `,

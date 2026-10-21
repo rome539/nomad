@@ -185,6 +185,7 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "the-miller": [0, 0, 0, 0],
   "the-mire-walker": [0, 0, 0, 0],
   "the-old-glutton": [12, 5, 40, 6],
+  "the-old-grey": [40, 3, 40, 0], // an old wolf: longer in the wind than its pack, and it knows how to spend it
   "the-old-raven": [20, 3, 32, 0],
   "the-one-who-stayed": [0, 0, 0, 0],
   "the-pale-drake": [24, 4, 80, 0],
