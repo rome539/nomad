@@ -133,8 +133,9 @@ import { FORGE_STOCK,
   LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT,
   MARKERS, MARK_MS, MARK_HEED_MULT, MARK_CALL_ODDS, SWEEPERS,
-  FERRY_DRAG_ROOM, FERRY_DRAG_ODDS, FERRY_DRAG_MAX, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, RAVEN_NEST_ROOMS, RAVEN_SCOOPERS,
+  FERRY_DRAG_ROOM, FERRY_DRAG_ODDS, FERRY_DRAG_MAX, SLOW_TO_NOTICE, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, RAVEN_NEST_ROOMS, RAVEN_SCOOPERS,
   groundWord, carveMedium, REST_TRACE, throwLand, metalFall,
+  PRICKLY, PRICK_LINES,
 } from "./zone-data";
 
 import { PrivateMessages } from "./private-messages";
@@ -4255,8 +4256,9 @@ export class ZoneDO implements DurableObject {
       const alive = (c: Creature) => this.creatures.has(c.id);
       let primary = foes.find((c) => c.id === session.target && alive(c)) ?? foes.find(alive);
       const speed = Math.max(1, this.equippedItem(session, "weapon")?.tmpl.speed ?? 1);
+      let prickedBy: MobTemplate | null = null; // spines that finished you (PRICKLY)
 
-      for (let swing = 0; swing < speed && primary; swing++) {
+      for (let swing = 0; swing < speed && primary && session.hp > 0; swing++) {
         // Re-fetch each swing: a fumble can fling the blade mid-round, and a
         // blade can wear through mid-arc. The rest of the round is bare-handed.
         const weapon = this.equippedItem(session, "weapon");
@@ -4283,6 +4285,7 @@ export class ZoneDO implements DurableObject {
           await this.playerFumble(session, null);
         } else {
           for (const creature of targets) {
+            if (session.hp <= 0) break;
             if (!alive(creature)) continue;
             const tmpl = world.mobTemplates.get(creature.templateId)!;
             // A bear still to give its warning is not in your fight yet (styles.ts).
@@ -4341,6 +4344,16 @@ export class ZoneDO implements DurableObject {
             this.markHurt(creature, tmpl, session.pubkey);
             // A landed blow on a crow is a stone in the pond: the murder rises.
             this.rouseCrows(session, creature);
+            // THE SPINES (rome, 2026-10-21): hitting a hedgehog hurts the one who
+            // hits it - more with a bare fist. Flat, no armor, and it can kill.
+            const prick = PRICKLY[tmpl.id];
+            if (prick) {
+              const got = prick + (weapon ? 0 : 1);
+              session.hp -= got;
+              this.send(session, `${pick(PRICK_LINES)} — ${got}. [${hpLabel(session.hp, session.maxHp)}]`, "dmgin");
+              this.sendStatus(session);
+              if (session.hp <= 0) prickedBy = tmpl;
+            }
             // The vitals lottery, PLAYER side (playerVitals holds the rules, and
             // the opener and the throw ask it too). Drops to 0 so the kill runs
             // the normal death path with a weapon-aware killing line.
@@ -4431,6 +4444,7 @@ export class ZoneDO implements DurableObject {
         if (!alive(primary)) primary = foes.find(alive);
         session.target = primary ? primary.id : null;
       }
+      if (prickedBy) { await this.onPlayerDeath(session, prickedBy); continue; }
       if (session.target && !this.creatures.has(session.target)) {
         const left = foes.find(alive);
         session.target = left ? left.id : null;
@@ -4556,6 +4570,18 @@ export class ZoneDO implements DurableObject {
         );
         if (watcher) this.send(watcher, `${cap(tmpl.name)} shakes off the daze.`);
         continue;
+      }
+      // SLOW TO NOTICE (mig 321): a sloth goes on chewing for its first beats of
+      // a fight, and only then turns and answers. Clears when the fight does.
+      const slow = SLOW_TO_NOTICE[tmpl.id];
+      if (slow && !creature.target) creature.noticeAt = undefined;
+      if (slow && creature.target) {
+        if (creature.noticeAt === undefined) creature.noticeAt = now + slow * COMBAT_ROUND_MS;
+        if (now < creature.noticeAt) {
+          const s = this.sessions.get(creature.target);
+          if (s && s.roomId === creature.roomId) this.send(s, `${cap(tmpl.name)} goes on chewing. It has not noticed yet.`);
+          continue;
+        }
       }
       // A dire-hyena guarding a meal turns on anyone standing in the room with
       // it — whether they walked in, the meal came to them, or it went bold. No
@@ -6135,6 +6161,11 @@ export class ZoneDO implements DurableObject {
         else lines.push("Someone rested here, a while back.");
       } else if (t.kind === "track") {
         lines.push(clues.trackLine(t, age));
+      } else if (t.kind === "den") {
+        // A bear's bed in a cave it has given up (mig 319), read by its age.
+        if (age < 6 * 3_600_000) lines.push("A bear has lain up here, and not long since: the bracken bed is pressed flat and still smells of it, and the claw marks are pale and new.");
+        else if (age < 36 * 3_600_000) lines.push("Old bear sign: a trodden bed of bracken gone flat and dry, dung darkening by it, and claw marks scored deep.");
+        else lines.push("A bear used this place a while ago. The bed has sprung back; the claw marks have not.");
       } else if (t.kind === "passage") {
         lines.push(passageLine(this, roomId, region, age));
       }

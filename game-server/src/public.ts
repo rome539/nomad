@@ -3419,7 +3419,7 @@ var VOICE_FAMILY = {
   fox: "hill-fox snow-fox the-blue-fox the-raiding-fox",
   hyena: "grave-hyena",
   direhyena: "dire-hyena",
-  rat: "rat fleet-rat brood-rat albino-rat",
+  rat: "rat fleet-rat brood-rat albino-rat hedgehog",
   gull: "great-gull black-backed-gull",
   oystercatcher: "oystercatcher",
   chough: "mountain-chough",
@@ -3428,7 +3428,7 @@ var VOICE_FAMILY = {
   crow: "gibbet-crow scarp-raven the-old-raven",
   eagle: "hill-eagle eyrie-holder",
   vulture: "brooding-vulture carrion-vulture great-vulture bone-breaker the-bone-dropper",
-  owl: "eagle-owl",
+  owl: "eagle-owl tawny-owl",
   bittern: "bittern",
   adder: "fen-viper gill-adder stone-adder the-gravid-adder",
   eel: "silver-eel ford-eel conger old-conger",
@@ -3445,8 +3445,8 @@ var VOICE_FAMILY = {
   goat: "feral-goat old-billy",
   cat: "lynx wildcat the-tom",
   beast: "cave-lion",
-  bear: "the-baited-bear the-chain-breaker",
-  hare: "mountain-hare snow-hare",
+  bear: "the-baited-bear the-chain-breaker brown-bear",
+  hare: "mountain-hare snow-hare wood-sloth",
   human: "cutthroat cutpurse footpad wayman strand-thief the-wrecker the-chainman the-sapper the-bellfounder the-butter-wife the-milker the-herd the-one-who-stayed road-carrier",
   mason: "the-bridge-mason",
   drover: "the-drover",
@@ -9771,7 +9771,7 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "14";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "15";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -9891,6 +9891,9 @@ var TERRAIN_PLATE = {
   // THE DENS (2026-09-30). Their warren end stands on "heath" above - the
   // wood's picture, the same country.
   "the-dens": ["the-dens"], fields: ["fields"], common: ["common"],
+  // THE BEAR CAVES (mig 319): the mouth in daylight and weather, the passage
+  // and the chamber in the dark behind it.
+  "cave-mouth": ["cave-mouth"], "cave-passage": ["cave-passage"], cave: ["cave"],
 };
 // THE GATEHOUSE KEEPS THE YEAR (rome, 2026-09-27). Four dressings of the same
 // room, painted over the same picture, each hung for a stretch of the real
@@ -10801,6 +10804,11 @@ var TERRAIN_SCENES = {
   "the-dens":    "day night night-torch fog rain snow",
   fields:        "day night night-torch fog rain snow",
   common:        "day night night-torch fog rain snow",
+  // THE BEAR CAVES (2026-10-21). The mouth stands open to the sky and takes the
+  // full six; past it the rock has no hour and no weather, like the sea cave.
+  "cave-mouth":   "day night night-torch fog rain snow",
+  "cave-passage": "night night-torch",
+  cave:           "night night-torch",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
@@ -13237,6 +13245,13 @@ var MOB_SPRITE = {
   "white-roe": 13,            // 1.00
   "the-baited-bear": 15,      // 1.20  on all fours, chained
   "the-chain-breaker": 17,    // 1.35  the bigger of the two, and the chain is off
+  // THE WOOD'S NIGHT AND ITS BEARS (mig 320-321). Nine-frame sheets that fill
+  // only 0.73-0.86 of their cell (the bear's upright frame makes every cell tall),
+  // so each is metres x 12.5 scaled up by (0.97 / fill) ^ (1 / MOB_P).
+  "brown-bear": 31,           // 1.30  on all fours; a shade over the baited bear
+  "tawny-owl": 9,             // 0.40  perched
+  "wood-sloth": 10,           // 0.60  sitting
+  "hedgehog": 4,              // 0.20  just over a rat
   "the-old-raven": 7,         // 0.55
   "the-one-who-stayed": 34,   // 1.75
   "the-pale-drake": 44,       // 3.50  twice a standing man, same as the drake it is a variant of
@@ -13439,6 +13454,10 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "hedgehog":   { n: 9, aspect: 1.097, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"curl-up":6,"alert":7,"death":8} },
+  "wood-sloth":   { n: 9, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"reach-up":6,"alert":7,"death":8} },
+  "tawny-owl":   { n: 9, aspect: 1.2, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"rest":7,"death":8} },
+  "brown-bear":   { n: 8, aspect: 0.986, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"feed":4,"rest":5,"inspect-upright":6,"death":7} },
   "wood-stag":   { n: 8, aspect: 1.045, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "nomad":   { n: 14, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13} },
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -13616,6 +13635,7 @@ var MOB_ANIM = {
 // Basking is not sleeping and stays: an adder flat on a warm stone with its eyes
 // open is exactly what this list is for.
 var CALM_POSES = ["bask","listen","watch","hold-ground",
+  "reach-up", // the sloth (mig 321), sitting up and pulling a branch down to eat: the sloth at rest
   "stand-ground","hold-warm-ground","keep-the-line","inspect-upright",
   // THE VARIANTS' OWN POSES, which were drawn and shipped and never named here
   // (2026-09-09). Every rare form on the hill is six frames — idle, its own
@@ -14659,6 +14679,7 @@ var EAT_POSES = ["feed", "graze"];
 // and every one of them has a pose like this - cut-the-stick, read-the-water,
 // lift-the-trap - so this list grows once per sheet until they are all in.
 var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
+                   "curl-up", // the hedgehog (mig 321): its decision about you is to stop having a front
                    "hold-ground", "inspect-upright", "advance", "rise-from-the-turf",
                    "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.

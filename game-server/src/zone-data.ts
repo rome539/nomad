@@ -1020,6 +1020,9 @@ export const FORAGE_FIND_MS = 15 * 60_000;
 
 export const STARVING_AT = 85; // past mere hunger: the end of the rope, where a predator with no easier meal eyes a lone delver as meat
 export const WANDER_MIN_MS = 45_000;
+// THE SLOW (mig 321): a creature here waits this many times as long between
+// steps as anything else. The sloth, which is the entire point of a sloth.
+export const SLOW_WALKERS: Record<string, number> = { "wood-sloth": 5 };
 export const WANDER_MAX_MS = 150_000;
 export const FLEE_BELOW = 0.18; // flesh runs only when nearly done (was 0.25 — everything bolted early)
 export const FLEE_CHANCE = 0.2; // per round once below the threshold (was 0.5)
@@ -1281,12 +1284,14 @@ export const ECO_LINES = new Set([
   // THE MOUNTAIN, TIER TWO (mig 229). The middle breathes with the foot — same
   // band, one web, the hunters simply get bigger the higher it goes.
   "ermine", "eagle-owl", "snow-hare", "lynx",
+  "tawny-owl", // the wood's owl (mig 321)
   // THE MOUNTAIN, TIER ONE (mig 227). The foot is a closed web — nothing walks up
   // from the road, so every line here breathes against the ones beside it.
   "ptarmigan", "mountain-hare", "red-hind", "red-stag",
   "hill-fox", "wildcat", "hill-eagle",
   "roe-deer", "white-roe", "wild-boar", "old-boar", "wood-stag",              // the wood's game
   "the-baited-bear", "the-chain-breaker",                        // and the thing that eats the wood's game AND the wood
+  "brown-bear",                                                  // and the wood's own bear, which was always here (mig 319)
   "grey-wolf", "dire-wolf",                                      // and what eats it
   "grave-hyena", "dire-hyena",                                   // the fortress's own web
   "masterless-dog", "lead-dog",                                  // the road's strays
@@ -1537,6 +1542,8 @@ export const TRACE_LIFE_MS: Record<string, number> = {
   // Prints in the snow (clues.ts): an hour, which the snow's own halving makes
   // half that - long enough to follow, short enough that fresh means fresh.
   track: 60 * 60_000,
+  // A bear's bed in a cave it has left (mig 319): three days, read by its age.
+  den: 72 * 3_600_000,
 };
 export const TRACE_CAP = 12; // per room; oldest non-carving forgotten first
 export const CARVE_CAP = 5; // wall space is finite
@@ -1652,6 +1659,9 @@ export const MOVE_SOUNDS: Record<string, string> = {
   // you get a room's warning if you are listening. The chain-breaker took that
   // warning away with it, and four links do not make a sound.
   "the-baited-bear": "A chain drags {dir} over stone, slow, with something very heavy walking at the end of it.",
+  "brown-bear": "Something very heavy goes {dir} through the undergrowth, unhurried, breaking what it does not bother to step over.",
+  "wood-sloth": "Something drags itself {dir} through the dead leaves, a claw at a time, and takes a long time about it.",
+  "hedgehog": "Something small goes {dir} through the dead leaves, snuffling, and making a great deal of noise about it.",
   "the-chain-breaker": "Something enormous moves {dir} without hurrying, and the brush closes behind it.",
   "something-ahead": "A step {dir} that matches yours — and it is in front of you.",
   footpad: "A step scuffs the verge {dir}, and takes care to be the last one you hear.",
@@ -1733,6 +1743,9 @@ export const STILL_SOUNDS: Record<string, string> = {
   "white-roe": "breathing, unhurried and quite steady — something that has not decided to be afraid of you",
   "old-boar": "a deep, wet snorting, and a tusk knocking on wood, over and over",
   "the-baited-bear": "a slow shift of weight, and a chain paying out a link at a time",
+  "brown-bear": "a long breath let out through the nose, and the creak of a branch taking weight",
+  "wood-sloth": "the slow rustle of a branch being pulled down, and chewing",
+  "hedgehog": "a snuffling in the leaf litter, and a small crunch",
   "the-chain-breaker": "a low sound down in the chest of something, felt more than heard",
   "something-ahead": "your own breathing, and ahead of it, a fraction EARLY, something doing the same",
   "the-follower": "your own breathing, and under it, a fraction late, something doing the same",
@@ -2672,6 +2685,7 @@ export const NAPPERS = new Set([
   "rat", "fleet-rat", "albino-rat", "cutpurse",  // the fortress's own dozers
   "roe-deer", "white-roe", "wild-boar", "old-boar", "wood-stag", // the wood's game, after dark
   "the-baited-bear", "the-chain-breaker", // it lies up where it stops; finding one asleep is the only good news about it
+  "brown-bear",
   "otter", "dog-otter", "feral-goat", "old-billy", "gill-adder",      // the east road: an adder in the one patch of sun is the whole animal
   "grey-seal", "bull-seal", "wrack-crab", "devil-crab", "oystercatcher", // the crossing: a hauled-out seal is ASLEEP, and that is the only time it is funny
   // ...AND THE REST OF THE TWO NEW BANDS THAT KEEP HOURS AT ALL (rome,
@@ -2695,6 +2709,7 @@ export const NAPPERS = new Set([
   // the day at the night rate and are out working at the night rate's opposite.
   "hill-wolf", "lead-wolf", "lynx", "wildcat", "the-tom",
   "hill-fox", "the-raiding-fox", "glutton", "the-old-glutton", "eagle-owl",
+  "tawny-owl", "wood-sloth", // the wood's owl roosts, and the sloth sleeps most of what is left of the day (mig 321)
   // AND THE THING ON THE SUMMIT (rome, 2026-08-22). An eagle sleeps, and 237's
   // whole ruling is that this is an animal: a territory, a nest, prey carried
   // home, and a strong preference for being left alone. It never bedded down
@@ -2773,6 +2788,7 @@ export const NOCTURNAL = new Set([
   "hill-fox", "wildcat",
   // THE MOUNTAIN, TIER TWO (mig 229). An owl and a cat, which is the whole night shift.
   "eagle-owl", "lynx",
+  "tawny-owl", "hedgehog", // the wood's night (mig 321)
   // THE MOUNTAIN, TIER THREE (mig 231). The pack works the edges of the day, and
   // the glutton keeps no hours at all — it is on this list because the dark is
   // when it goes round the kills.
@@ -3039,6 +3055,7 @@ export const POSES: Record<string, { self: string; room: string; read: string; e
 };
 export const REST_LINES: Record<string, string> = {
   "the-baited-bear": "lying on its side in the road like a fallen wall, the chain pooled beside it, breathing slowly",
+  "brown-bear": "curled in a bed of trodden bracken with its back to you, the whole hill of it rising and falling",
   "the-chain-breaker": "asleep sitting up against a tree with its back to the trunk, which is very nearly a man's way of doing it",
   "dog-otter": "stretched out on the flat stone above the beck, scarred head on his paws, entirely unbothered",
   otter: "curled in the holt with its back to the water, dry for once",
@@ -3074,6 +3091,9 @@ export const REST_LINES: Record<string, string> = {
   "a-fold-dog": "curled nose-to-tail against the fold wall out of the wind, one ear still working",
   "hill-eagle": "hunched on the crag with its head sunk and its feathers out, twice the size it flies at",
   "eagle-owl": "upright on the ledge with its eyes shut and its ear tufts down, and it is bigger asleep than it looked awake",
+  "tawny-owl": "pressed against the trunk with its eyes shut, a stub of bark that happens to have feathers",
+  "wood-sloth": "asleep against the foot of a tree, curled into a bundle of grey fur with its claws locked round itself",
+  "hedgehog": "curled tight in the leaves, a ball of spines rising and falling",
   ptarmigan: "sat down into a scrape in the scree with its head tucked, and it is the exact colour of the ground it is sat in",
   // The summit. It is an animal, and 237's whole ruling was that it be read as
   // one — so it lies up like a bird and not like a dog on a rug. The pale drake
@@ -3205,6 +3225,7 @@ export const DRINKERS = new Set([
   "grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",        // what already drank
   "roe-deer", "white-roe", "wild-boar", "old-boar", "wood-stag",             // the wood's game
   "the-baited-bear", "the-chain-breaker",                       // the beck is the one place on the east road you can count on meeting it
+  "brown-bear",
   "masterless-dog", "lead-dog",                                 // the road's strays
   // EVERYTHING ELSE WITH A THROAT (rome, 2026-10-11). The list had grown by
   // region and left whole kinds dry: the goats, the small hunters, the working
@@ -4111,6 +4132,18 @@ const EAGLE_LINES = [
   "The eagle sits on the high stone and looks out over the whole of its country, and nothing in it moves without it knowing. It is the only thing up here that owns what it sees.",
   "The eagle turns its head a little and goes back to watching its ground — all of it, the whole tier, held the way a man holds a debt.",
 ];
+const TAWNY_LINES = [
+  "The tawny owl turns its whole face to follow you, the dish of it tilting, and then it is not there: it has gone off the branch and through the trees without one sound.",
+  "Somewhere overhead the owl calls, and from the far side of the wood another answers it, and the wood between them is suddenly very wide.",
+];
+const SLOTH_LINES = [
+  "The sloth reaches for the next leaf. By the time its claw arrives you have taken eleven breaths, and it eats the leaf as if it has all of them.",
+  "The sloth reaches up with one short claw, hooks a branch, and pulls it down to its face, and the whole tree bows to it. It lets go when it has finished, and the branch takes some time to stop.",
+];
+const HEDGEHOG_LINES = [
+  "The hedgehog shoves its nose under a leaf and roots out something that crunches, and grunts over it like an old man at his dinner.",
+  "The hedgehog hears you and stops, and the spines rise all along its back, and then it is a ball and the leaf litter has a stone in it that was not there.",
+];
 const OWL_LINES = [
   "The eagle owl turns its head round to watch you pass, further than a head should turn, and turns it back only when you are gone. It has been keeping this watch since before there was anyone to watch.",
   "The eagle owl blinks, once, slowly, and goes on looking at you with the whole of its face, the way the night looks at a candle.",
@@ -4191,6 +4224,10 @@ const BOAR_LINES = [
   "The wild boar lowers itself into the wallow and rolls, once, hugely, and the mud closes over it, and it stays a long time with only its breathing showing. It has been doing this since before the wallow knew its name.",
   "The old boar settles into the wallow and works the mud into its hide with the whole of its weight, and the wallow takes it the way it has always taken it. This is the oldest appointment on the wood's edge, and it is kept.",
 ];
+const WILD_BEAR_LINES = [
+  "The bear stands up against an oak and drags its claws down the bark, slowly, as high as it can reach, and the scores it leaves are above your head. Every bear that comes this way will read how tall this one was.",
+  "The bear turns a fallen log over with one paw as if it weighed nothing, and puts its face into what was living underneath, and eats. It knows you are there. You are not the most interesting thing in the wood.",
+];
 const BEAR_LINES = [
   "The bear rises on its hind legs and works its back against the tree, slowly, side to side, and the tree takes it the way it has always taken it. The bark is worn smooth. This has been going on longer than the tree has been standing here.",
   "The chain-breaker stands and rubs itself along the old trunk, one slow pass, and the tree leans a little with the habit of it. They have kept this appointment through everything, the bear and the tree.",
@@ -4249,6 +4286,7 @@ export const WITNESSED_LINES: Record<string, string[]> = {
   "mountain-chough": CHOUGH_LINES,
   "hill-eagle": EAGLE_LINES,
   "eagle-owl": OWL_LINES,
+  "tawny-owl": TAWNY_LINES, "wood-sloth": SLOTH_LINES, "hedgehog": HEDGEHOG_LINES,
   "carrion-vulture": VULTURE_LINES, "great-vulture": VULTURE_LINES, "brooding-vulture": VULTURE_LINES,
   "eyrie-holder": EYRIE_LINES,
   // the mountain's land
@@ -4272,6 +4310,7 @@ export const WITNESSED_LINES: Record<string, string[]> = {
   // the wood's stragglers
   "wild-boar": BOAR_LINES, "old-boar": BOAR_LINES,
   "the-baited-bear": BEAR_LINES, "the-chain-breaker": BEAR_LINES,
+  "brown-bear": WILD_BEAR_LINES,
   "drove-dog": DOG_LINES, "a-lymer": DOG_LINES, "lead-dog": DOG_LINES, "marsh-hound": DOG_LINES, "masterless-dog": DOG_LINES,
   // the last holdouts
   "ptarmigan": PTARMIGAN_LINES,
@@ -4375,6 +4414,9 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // top of another predator at this size: 40hp/5-8 against 18hp/3-5, at night,
   // silently, is not a fight the stoat is in.
   ["eagle-owl", new Set(["mountain-hare", "snow-hare", "ptarmigan", "ermine"])],
+  // THE WOOD'S OWL (mig 321) eats the two small things it was brought in for: the
+  // sloth that will not run and the hedgehog that will not open.
+  ["tawny-owl", new Set(["wood-sloth", "hedgehog"])],
   ["ermine", new Set(["mountain-hare", "snow-hare", "ptarmigan"])],
   // TIER THREE (mig 231). THE STAG STOPS BEING UNTOUCHABLE, and the two notes
   // above have been promising exactly this since the foot shipped. One hill wolf
@@ -4452,6 +4494,9 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // way the old boar and the dire hyena do. Note both halves of the animal —
   // this list is only what it CATCHES, and it is a GRAZER as well, so a bear
   // that finds nothing to run down still eats and never starves out of a band.
+  // THE WOOD'S OWN BEAR (mig 319) takes what the wood has at its size: a roe
+  // when it can catch one, a boar when it is hungry enough to argue with tusks.
+  ["brown-bear", new Set(["roe-deer", "white-roe", "wild-boar"])],
   ["the-baited-bear", new Set(["roe-deer", "white-roe", "wild-boar", "wood-stag", "old-boar", "feral-goat", "old-billy",
     "drove-dog", "the-drove-master", "masterless-dog", "lead-dog", "grey-wolf", "grave-hyena",
     "rat", "fleet-rat", "otter", "dog-otter"])],
@@ -4640,14 +4685,14 @@ export const HUNT_SUCCESS: Record<string, number> = {
   // pouncers and small killers
   "hill-fox": 0.3, "snow-fox": 0.3, "ermine": 0.35,
   // from the air
-  "hill-eagle": 0.25, "eagle-owl": 0.45, "great-gull": 0.3, "black-backed-gull": 0.3,
+  "hill-eagle": 0.25, "eagle-owl": 0.45, "tawny-owl": 0.4, "great-gull": 0.3, "black-backed-gull": 0.3,
   // from the water and the reeds
   "otter": 0.4, "dog-otter": 0.4, "grey-seal": 0.4, "bull-seal": 0.4,
   "conger": 0.4, "old-conger": 0.4, "bittern": 0.4,
   // ambushers that wait for it to come to them
   "stone-adder": 0.5, "pale-crawler": 0.45, "pale-stalker": 0.45, "albino-rat": 0.35,
   // the big and the slow: they win the fight but rarely the chase
-  "the-baited-bear": 0.15, "the-chain-breaker": 0.15, "glutton": 0.2, "old-boar": 0.15,
+  "the-baited-bear": 0.15, "the-chain-breaker": 0.15, "brown-bear": 0.15, "glutton": 0.2, "old-boar": 0.15,
 };
 // THE HOUR CHANGES WHO CATCHES WHAT (rome, 2026-10-12). Night, or a room with
 // no light in it, is the night hunters' ground: the NOCTURNAL list lands half
@@ -4655,7 +4700,7 @@ export const HUNT_SUCCESS: Record<string, number> = {
 // it is half as good by day. And the ones that hunt by sight from high up -
 // eagles, gulls - lose most of it once they cannot see: half in the dark.
 export const DARK_HUNT_MULT = 1.5;
-export const DAY_BLIND_HUNTERS = new Set(["eagle-owl"]);
+export const DAY_BLIND_HUNTERS = new Set(["eagle-owl", "tawny-owl"]);
 export const DAY_BLIND_MULT = 0.5;
 export const SIGHT_HUNTERS = new Set(["hill-eagle", "great-gull", "black-backed-gull"]);
 export const SIGHT_DARK_MULT = 0.5;
@@ -4690,6 +4735,9 @@ export const TRACK_PRINTS: Record<string, string> = {
   "red-hind": "split hooves, long and narrow, sunk deep",
   "red-stag": "split hooves, long and narrow, sunk deep and wide apart",
   "wood-stag": "split hooves, long and narrow, sunk deep and wide apart, and the bark frayed where he passed",
+  "brown-bear": "broad prints, five toes in a straight line and the claw marks set out in front of them, the hind foot longer than your own",
+  "wood-sloth": "short hooked claw marks dragged through the snow between two trees, as if something had crawled the whole way",
+  "hedgehog": "tiny five-toed prints, close together, wandering everywhere and going nowhere",
   "ptarmigan": "small three-toed bird feet, wandering",
   "mountain-chough": "three-toed bird feet that hop, then stop where it took off",
   "scarp-raven": "big three-toed bird feet that walk, then stop where it took off",
@@ -4762,7 +4810,7 @@ export const STARVE_HUNTERS = new Set([
   "hill-wolf", "lead-wolf", "glutton",
   // THE MOUNTAIN, TIER TWO (mig 229). The lynx does not gather itself first — see
   // LURKERS. The owl you will not hear at all.
-  "lynx", "eagle-owl",
+  "lynx", "eagle-owl", "tawny-owl",
   // THE MOUNTAIN, TIER ONE (mig 227). Neither of these wants you. Past the end of the
   // clock the eagle is chest-high and the cat is already flattened against the
   // rock you are walking past.
@@ -4775,7 +4823,7 @@ export const STARVE_HUNTERS = new Set([
   // other half: a starving one comes, and it holds a grudge, and it walks the
   // whole band. The bear that ignored you last week is the argument for leaving
   // before it stops being fed.
-  "the-baited-bear", "the-chain-breaker"]);   // the crossing's three, and the gull is the one that comes to YOU
+  "the-baited-bear", "the-chain-breaker", "brown-bear"]);   // the crossing's three, and the gull is the one that comes to YOU
 // The deep eats its own: strayed rats (and worse) die in the dark and rot where
 // they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
 // the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into
@@ -4885,7 +4933,7 @@ export const BLOWN_TAKEN_MULT = 1.5;
 // HEAVIES are huge and fresh at the start: a landed blow can knock you down
 // (your next swing is lost). Every blow it lands tires it, and a tired one hits
 // softer and knocks nobody down. Rest puts it back to fresh.
-export const HEAVIES = new Set(["the-baited-bear", "cave-lion", "glutton", "the-old-glutton", "the-gaunt", "the-chain-breaker"]);
+export const HEAVIES = new Set(["the-baited-bear", "brown-bear", "cave-lion", "glutton", "the-old-glutton", "the-gaunt", "the-chain-breaker"]);
 export const HEAVY_KNOCK_ODDS = 0.3;    // while fresh; a guarded stance halves it, worn mass shrugs it like a stun
 // PACKS work together. The animals you are not swinging at come in from the
 // side and bite harder - while the lead one is alive to hold them to it. The lead
@@ -4930,7 +4978,7 @@ export const STRIKER_DODGE_BARE = 0.15;
 export const FLIER_KIND: Record<string, "mobber" | "ground" | "hunter"> = {
   "great-gull": "mobber", "black-backed-gull": "mobber",
   "gibbet-crow": "ground", "scarp-raven": "ground", "the-old-raven": "ground",
-  "hill-eagle": "hunter", "eagle-owl": "hunter", "eyrie-holder": "hunter", "bone-breaker": "hunter", "the-bone-dropper": "hunter",
+  "hill-eagle": "hunter", "eagle-owl": "hunter", "tawny-owl": "hunter", "eyrie-holder": "hunter", "bone-breaker": "hunter", "the-bone-dropper": "hunter",
 };
 export const FLIERS = new Set(Object.keys(FLIER_KIND));
 export const MOBBER_WHEEL_ODDS = 0.6;   // a gull you just hit wheels off for a round
@@ -4955,7 +5003,7 @@ export const VULTURE_CHECK_MS = 10_000;
 // THE OWL HUNTS IN SILENCE (rome, 2026-10-06). At night it comes and goes
 // without a sound, and when it hunts there is no wind-up: the first thing you
 // know of it is the strike.
-export const SILENT_HUNTERS = new Set(["eagle-owl"]);
+export const SILENT_HUNTERS = new Set(["eagle-owl", "tawny-owl"]);
 // ANIMALS AS THEY ARE (rome, 2026-10-06), in styles.ts:
 // WOLVES GO FOR THE WEAKEST. A wolf tests the herd: of everyone standing in the
 // room it goes for the most hurt or the least armoured, and changes its mind
@@ -4968,7 +5016,7 @@ export const TURNING_BOARS = new Set(["wild-boar", "old-boar"]);
 export const BOAR_TURN_AT = 0.25;
 // THE BEAR BLUFFS. Its first rush stops short. Leave and it is over; stand
 // there without swinging and it usually lets you be; swing and it is a fight.
-export const BLUFFERS = new Set(["the-baited-bear"]);
+export const BLUFFERS = new Set(["the-baited-bear", "brown-bear"]);
 export const BLUFF_HOLD_MS = 6_000;       // how long it stands blowing at you before it decides
 export const BLUFF_LEAVE_ODDS = 0.6;
 export const BLUFF_REARM_MS = 10 * 60_000; // ignore the warning and the next one is no bluff
@@ -5048,6 +5096,45 @@ export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", 
 // spawn id, and the room it stood in before, for a creature whose id is not
 // its den's. Six barrow-wights out of the deep and back to the barrows, and
 // eight scarp ravens down off the mountain into the wood.
+// THE BEARS' CAVES (mig 319, rome 2026-10-21). Three brown bears and five
+// caves in the wood, so two always stand empty and nobody can say which. A bear
+// holds one for a spell (CAVE_HOLD), then takes another that no bear holds and
+// walks there: its home moves and the ordinary territory pull does the walking.
+// The one it leaves keeps its sign (a "den" trace) for the next to read.
+export const BEAR_CAVES = ["the-ridge-cave", "the-oak-cave", "the-wall-cave", "the-boundary-cave", "the-pile-cave"];
+export const CAVE_DWELLERS = new Map<string, string[]>([["brown-bear", BEAR_CAVES]]);
+export const CAVE_HOLD_MIN_MS = 8 * 3_600_000;
+export const CAVE_HOLD_MAX_MS = 20 * 3_600_000;
+// THE WOOD'S HABITS (mig 321, rome 2026-10-21): how the new animals meet the
+// rest of the world, each read by ai.arrivalHabits (and the two in combat and
+// the wake roll, named where they bite).
+// THE BEAR TAKES THE KILL. A bear coming in on wolves standing over a fresh
+// kill does not ask: the wolves give it up and go, and the bear eats.
+export const KILL_TAKERS = new Map<string, Set<string>>([["brown-bear", new Set(["grey-wolf", "dire-wolf"])]]);
+export const KILL_FRESH_MS = 20 * 60_000;
+// THE CROWS MOB THE OWL. By day a corvid that walks in on a roosting owl goes
+// up shouting and calls the murder in from CROW_ROUSE_RADIUS (CROW_CALL_ODDS
+// each); the owl leaves. Once in a while per owl, not every visit.
+export const MOBBED_OWLS = new Set(["tawny-owl"]);
+export const OWL_MOB_REARM_MS = 45 * 60_000;
+// THE SLOTH IS SLOW TO NOTICE. It keeps eating for this many beats of a fight
+// before it turns and answers (zone.ts, the creatures' turn).
+export const SLOW_TO_NOTICE: Record<string, number> = { "wood-sloth": 2 };
+// THE HEDGEHOG IS LOUD. While one is rooting awake in the room, and nothing
+// that hunts is in there with it, what you make is half as easy to hear
+// (ai.wakeListeners). A hunter coming in shuts it up, and the room can tell.
+export const NOISE_COVER: Record<string, number> = { "hedgehog": 0.5 };
+// THE SPINES (rome, 2026-10-21). Landing a blow on one of these hurts the one
+// who landed it: a player's melee hit (one more with a bare fist; a thrown
+// thing never touches it) and a hunting animal's bite alike. Flat, past armor,
+// and it can kill. zone.ts melee and ai.ts huntPrey/worryPrey.
+export const PRICKLY: Record<string, number> = { "hedgehog": 2 };
+export const PRICK_LINES = [
+  "The spines go into your hand",
+  "You come away with spines in your knuckles",
+  "It is like striking a gorse bush, and the spines go in",
+  "The spines drive into your fist and stay there",
+];
 export const DEN_MOVES = new Map<string, string>([
   ["wight-5", "drowned-barracks"], ["wight-4", "deep-ossuary"], ["wight-10", "bone-reliquary"],
   ["deep2-twice-drain-run", "the-drain-run"], ["deep2-twice-long-pews", "the-long-pews"],
@@ -5232,6 +5319,9 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "wild-boar": { out: "wheels and crashes off {dir} through the brush.", in_: "comes through the brush without slowing." },
   "old-boar": { out: "backs {dir} a few steps with its tusks up, daring you.", in_: "comes in straight and does not stop." },
   "the-baited-bear": { out: "turns and goes {dir} at a heavy rolling walk, the chain snaking after it.", in_: "comes in at a walk, and the chain comes in behind it." },
+  "brown-bear": { out: "turns and goes {dir} at a rolling walk, and does not look back.", in_: "comes in at a walk, swinging its head, and stops when it sees you." },
+  "wood-sloth": { out: "hauls itself {dir}, one claw and then the next, and is still in sight for a long time.", in_: "arrives, eventually." },
+  "hedgehog": { out: "unrolls and scuttles off {dir} through the leaves.", in_: "comes snuffling in through the leaves." },
   "the-chain-breaker": { out: "withdraws {dir} without hurrying, which is somehow worse.", in_: "arrives, and the room is smaller for it." },
   "the-follower": { out: "goes {dir} — the step you had been hearing, leaving.", in_: "arrives a fraction after the sound of it does." },
   "something-ahead": { out: "goes {dir}, and is somehow ahead of you again.", in_: "is here before the sound of it is." },
@@ -5845,7 +5935,7 @@ export const BEAKS = new Set([
   // than to kill anything with.
   "bone-breaker",
   // THE MOUNTAIN, TIER TWO (mig 229). The night shift, where the eagle is the day one.
-  "eagle-owl",
+  "eagle-owl", "tawny-owl",
   // THE MOUNTAIN, TIER ONE (mig 227). The bird that carries things off, and the
   // bird that gives you away by leaving.
   "hill-eagle", "ptarmigan",
@@ -5900,7 +5990,7 @@ export const BITERS = new Set([
   // The bear (mig 215) takes the jaws register and the claw lines in it are
   // finally literally true of something: it is the only body in the game that
   // both bites and rakes.
-  "the-baited-bear", "the-chain-breaker",
+  "the-baited-bear", "the-chain-breaker", "brown-bear",
   // The boar is the wood's other mouth, and a tusk is not a fist.
   "wild-boar", "old-boar",
   // ...and two birds that were sorted twice, two different ways: the bittern
@@ -6486,6 +6576,7 @@ export const FEARS_FIRE = new Set([
   "hill-wolf", "lead-wolf", "glutton", "bone-breaker",
   // THE MOUNTAIN, TIER TWO (mig 229).
   "ermine", "eagle-owl", "snow-hare", "lynx",
+  "tawny-owl", // the wood's owl (mig 321)
   // THE MOUNTAIN, TIER ONE (mig 227). Wild animals, every one.
   "ptarmigan", "mountain-hare", "red-hind", "red-stag", "hill-fox", "wildcat", "hill-eagle",
   "albino-rat",
@@ -6513,6 +6604,13 @@ export const FIRE_ITEMS = new Set<string>([]);
 // without a lit light source and you see NOTHING — no room, no exits, no way to
 // map it. A torch reveals it. (057; search/flood/map-blackout are follow-ons.)
 export const DARK_ROOMS = new Set([
+  // THE BEAR CAVES (mig 319): every room behind a mouth. The mouths keep the
+  // day, the way the sea cave's does.
+  "the-ridge-cave-drop", "the-ridge-cave-fork", "the-ridge-cave-pocket", "the-ridge-cave-squeeze", "the-ridge-cave",
+  "the-oak-cave-crawl", "the-oak-cave-hall", "the-oak-cave-neck", "the-oak-cave",
+  "the-wall-cave-passage", "the-wall-cave-turn", "the-wall-cave",
+  "the-boundary-cave-slope", "the-boundary-cave",
+  "the-pile-cave",
   // A hole in the earth under a root plate (mig 180): you go in with a light
   // or you go in blind, and either way you are going in where they sleep.
   "the-wolf-earth",
@@ -6739,7 +6837,8 @@ export const GRAZERS = new Set<string>([
   // the ground the rest of the year, and BOTH mouths are listed (see PREYS_ON).
   // It is the one creature that lives off the whole food web instead of a strand
   // of it, which is also why it can hold a range this big without starving.
-  "the-baited-bear", "the-chain-breaker",
+  "the-baited-bear", "the-chain-breaker", "brown-bear",
+  "wood-sloth", "hedgehog", // the sloth browses the canopy, the hedgehog roots in the leaf litter (mig 321)
 ]);
 export const FORAGE_HEAL = 3; // a scavenged nibble — less than a corpse (SCAVENGER_HEAL 6) or a dropped meal
 export const FORAGE_RAIN_MULT = 1.5; // the mud after a good rain brings up half again as much
@@ -7142,6 +7241,14 @@ export const ROAD_RULES: [string, RegExp][] = [
 // bosses' rooms, the bounds house, the wolf earth) are ART_ROOMS and paint their
 // own plate over whatever this says.
 export const WOOD_RULES: [string, RegExp][] = [
+  // THE BEAR CAVES (mig 319): rock, under the wood. Three grounds: the MOUTH,
+  // which keeps the day and the weather; the PASSAGES behind it (the drops,
+  // crawls, necks and squeezes between rooms); and the CHAMBERS, where the beds
+  // and the bones are. The last two are dark: night and night-torch only. Until
+  // drawn, the client stands them in on older plates.
+  ["cave-mouth", /^the-(ridge|oak|wall|boundary|pile)-cave-mouth$/],
+  ["cave-passage", /^the-(ridge-cave-(drop|fork|squeeze)|oak-cave-(crawl|neck)|wall-cave-(passage|turn)|boundary-cave-slope)$/],
+  ["cave", /^the-(ridge|oak|wall|boundary|pile)-cave(-[a-z]+)?$/],
   // beneath the sunken wood: the dark under the root-ceiling. No sky and no weather, so it takes night and night-torch only
   ["under-roots", /^the-(black-loam|buried-lane|clay-shelf|drip-line|flint-floor|last-light|low-sump|lower-ditch|old-course|still-pool|tree-fall|under-roots)$/],
   // the wood that fell in, walled by raw earth banks
@@ -7447,6 +7554,13 @@ export const ART_ROOMS = new Set<string>([
 ]);
 
 export const INDOOR_ROOMS = new Set<string>([
+  // THE BEAR CAVES (mig 319): every room behind a mouth. The mouths keep the
+  // day, the way the sea cave's does.
+  "the-ridge-cave-drop", "the-ridge-cave-fork", "the-ridge-cave-pocket", "the-ridge-cave-squeeze", "the-ridge-cave",
+  "the-oak-cave-crawl", "the-oak-cave-hall", "the-oak-cave-neck", "the-oak-cave",
+  "the-wall-cave-passage", "the-wall-cave-turn", "the-wall-cave",
+  "the-boundary-cave-slope", "the-boundary-cave",
+  "the-pile-cave",
   "the-charcoal-hut", "the-withy-hut",                                  // the wood's two boltholes
   "the-smithy", "the-reeves-house", "the-reeves-loft", "the-north-house", // the Field End
   "the-bare-chapel", "the-mill", "the-wheel-pit",
@@ -8487,7 +8601,8 @@ export const BLEED_ODDS = new Map<string, number>([
   ["dire-wolf", 0.22],           // the same jaws, half again the size
   ["wild-boar", 0.20],           // tusks go in and come up
   ["old-boar", 0.25],            // tusks grown past any use for rooting
-  ["the-baited-bear", 0.3],      // claws nobody ever trimmed, and a mouth that was muzzled rather than mended
+  ["the-baited-bear", 0.3],
+  ["brown-bear", 0.3],      // claws nobody ever trimmed, and a mouth that was muzzled rather than mended
   ["the-chain-breaker", 0.32],
   ["the-follower", 0.20],        // level with the deep's pale kin, which is what it is
   ["something-ahead", 0.25],
@@ -8522,6 +8637,7 @@ export const BLEED_ODDS = new Map<string, number>([
   ["glutton", 0.20],
   ["hill-eagle", 0.22],          // talons that close and do not open
   ["eagle-owl", 0.22],
+  ["tawny-owl", 0.2],
   ["great-vulture", 0.22],
   ["lead-wolf", 0.22],           // the dire wolf's rate: the same jaws, half again the size
   ["the-dancer", 0.22],

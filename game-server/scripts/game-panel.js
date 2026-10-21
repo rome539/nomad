@@ -49,7 +49,7 @@
     "The Mountain": "snow cairn gully scree boulder slab glass fold alder corrie-rim corrie-floor mountainside crag beck vent",
     "The Crossing": "causeway ford ferry staithe bridge marsh shell reed eyot shore-road works sea-cave",
     "The Road": "the-kept-road the-frost-heaved-paving the-cart-ruts",
-    "The Wood": "wood glade wet sunken heath holding under-roots",
+    "The Wood": "wood glade wet sunken heath holding under-roots cave-mouth cave-passage cave",
     "The Dens": "the-dens fields common"
   };
   var groundAt = {};

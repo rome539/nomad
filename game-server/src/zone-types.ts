@@ -119,6 +119,10 @@ export interface Creature {
   roomId: string;
   hp: number;
   hunger: number; // 0..100; above HUNGRY_AT it starts hunting for food
+  caveUntil?: number; // a cave dweller (CAVE_DWELLERS): when it gives up this cave for another
+  noticeAt?: number;  // a slow noticer (SLOW_TO_NOTICE): the beat it finally answers the fight
+  mobbedAt?: number;  // a mobbed owl (MOBBED_OWLS): when the crows last found it
+  hushedAt?: number;  // a noise cover (NOISE_COVER): when a hunter last shut it up
   grudges: Grudge[]; // who hurt it, and when — memory that fades with time
   nextWanderAt: number; // ms epoch
   target: string | null; // pubkey it is fighting
@@ -230,7 +234,7 @@ export interface Trace {
   // "blood" is a death's pooled stain; "drip" is the walking kind — a thing
   // (player or creature) that crossed this room with an open wound. The drip
   // is the huntable trail: scavengers drift toward it, and so can you.
-  kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve" | "track";
+  kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve" | "track" | "den";
   prey?: string;    // a predator's kill: what it was (the crows read its size, and that it was eaten where it fell)
   // A track's heading: which way the thing that made it went (clues.ts).
   dir?: string;

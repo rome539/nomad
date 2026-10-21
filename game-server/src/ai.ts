@@ -39,7 +39,7 @@ import {
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
-  SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
+  SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
@@ -47,12 +47,13 @@ import {
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
   QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
-  MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
+  MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, SLOW_WALKERS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   HUNGER_PER_MIN, COLD_HUNGER_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
   HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
   VARIANT_HOMES,
   groundWord,
+  PRICKLY,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -95,6 +96,95 @@ export function bloodlineHome(z: ZoneDO, tmpl: MobTemplate, den: string): string
 // A king rolled before the kings had rooms of their own is still sitting on the
 // old throne in the saved state. On load, send each one home. They are bosses
 // and would never walk there on their own. Returns how many moved.
+// WHAT THE WOOD'S NEW ANIMALS DO WHEN THEY WALK IN SOMEWHERE (mig 321). One
+// hook on every step, each habit gated on its own set, so it costs nothing for
+// a creature none of them name.
+export async function arrivalHabits(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now: number, silent: boolean): Promise<void> {
+  const here = creature.roomId;
+  const world = z.world!;
+  const others = [...z.creatures.values()].filter((c) => c.id !== creature.id && c.roomId === here);
+  // The bear takes the wolves' kill.
+  const gives = KILL_TAKERS.get(tmpl.id);
+  if (gives && !creature.target) {
+    const kill = (z.traces.get(here) ?? []).find((t) => t.kind === "blood" && t.prey && now - t.at < KILL_FRESH_MS);
+    const wolves = others.filter((c) => gives.has(c.templateId) && !c.target);
+    if (kill && wolves.length) {
+      if (!silent) {
+        z.roomFeed(here, `${cap(tmpl.name)} comes in on the wolves at their kill and does not slow down. They give it up to it and go, and it puts its head down to what they leave.`, undefined, false);
+        z.roomSound(here, "Snarling {dir}, and then a deep cough that ends it.", undefined, undefined, false, { mob: tmpl.id, act: "fight" });
+      }
+      for (const w of wolves) await creatureMoves(z, w, now, "flee", silent);
+      creature.hunger = 0;
+      creature.hp = Math.min(tmpl.max_hp, creature.hp + 8);
+      if (!silent) { z.fxFed(here, tmpl.id); z.refreshRoomCtx(here); }
+    }
+  }
+  // The crows mob the owl, by day.
+  if (CROWS.has(tmpl.id) && !creature.target && !isNight(now)) {
+    const owl = others.find((c) => MOBBED_OWLS.has(c.templateId) && !c.target && (!c.mobbedAt || now - c.mobbedAt > OWL_MOB_REARM_MS));
+    if (owl) {
+      owl.mobbedAt = now;
+      owl.asleep = false;
+      owl.sleepUntil = undefined;
+      const ot = world.mobTemplates.get(owl.templateId)!;
+      for (const c of z.creatures.values()) {
+        if (c.id === creature.id || !CROWS.has(c.templateId) || c.target || c.asleep) continue;
+        const d = z.roomDist(c.roomId, here);
+        if (d === 0 || d > CROW_ROUSE_RADIUS || !chance(CROW_CALL_ODDS)) continue;
+        // The curious walk follows one door, so aim it at the next room on the
+        // way: a crow next door arrives, one further off closes the distance.
+        const step = (world.exits.get(c.roomId) ?? []).find((e) => z.roomDist(e.to_room, here) < d);
+        if (step) c.curious = step.to_room;
+      }
+      if (!silent) {
+        z.roomFeed(here, `${cap(tmpl.name)} finds ${ot.name} on its roost and goes up shouting, and the crows come from every side to shout with it. The owl sits it out as long as it can, and then it goes.`, undefined, false);
+        z.roomSound(here, "Crows {dir}, a great many of them, all shouting at the same tree.", undefined, undefined, false, { mob: tmpl.id, act: "call" });
+      }
+      await creatureMoves(z, owl, now, "flee", silent);
+    }
+  }
+  // A hunter coming in shuts the hedgehog up, and the quiet is a tell.
+  if (PREYS_ON.has(tmpl.id) && !NOISE_COVER[tmpl.id]) {
+    for (const h of others) {
+      if (!NOISE_COVER[h.templateId] || h.asleep || (h.hushedAt && now - h.hushedAt < 5 * 60_000)) continue;
+      h.hushedAt = now;
+      if (!silent) z.roomFeed(here, "The snuffling in the leaves stops dead.", undefined, false);
+    }
+  }
+}
+
+// Is a noise cover rooting in this room, with nothing that hunts in there to
+// shut it up? Then what a wanderer makes here is that much harder to hear.
+export function noiseCover(z: ZoneDO, roomId: string): number {
+  let mult = 1, hunter = false;
+  for (const c of z.creatures.values()) {
+    if (c.roomId !== roomId) continue;
+    if (NOISE_COVER[c.templateId] && !c.asleep) mult = Math.min(mult, NOISE_COVER[c.templateId]);
+    else if (PREYS_ON.has(c.templateId)) hunter = true;
+  }
+  return hunter ? 1 : mult;
+}
+
+// When a cave dweller's spell is up it takes a cave no other of its kind holds
+// (never the one it is in) and makes that home; the walking is the territory
+// pull's. It leaves its sign in the cave it gave up. A first look only starts
+// the clock, so a bear loaded mid-spell does not move house on its first step.
+export function caveTurn(z: ZoneDO, creature: Creature, now: number): void {
+  const caves = (CAVE_DWELLERS.get(creature.templateId) ?? []).filter((r) => z.world!.rooms.has(r));
+  if (!caves.length) return;
+  const spell = () => now + randInt(CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS);
+  if (creature.caveUntil === undefined) { creature.caveUntil = spell(); return; }
+  if (now < creature.caveUntil) return;
+  const held = new Set<string>();
+  for (const c of z.creatures.values()) if (c.id !== creature.id && c.templateId === creature.templateId && c.home) held.add(c.home);
+  const free = caves.filter((r) => r !== creature.home && !held.has(r));
+  creature.caveUntil = spell();
+  if (!free.length) return;
+  const was = creature.home;
+  creature.home = free[randInt(0, free.length - 1)];
+  if (was && caves.includes(was)) z.addTrace(was, { kind: "den", at: now });
+}
+
 // A moved den takes its standing creature with it (zone-data DEN_MOVES), on
 // load, never one in a fight. Returns how many went.
 export function moveDens(z: ZoneDO): number {
@@ -586,6 +676,8 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
     // QUIET gear (felt soles, the grave-shroud) halves what the bones hear —
     // your footfall, your slip past, your reach for the door. Worn, not carried.
     if (z.wearsTrait(session, "quiet")) odds *= QUIET_WAKE_MULT;
+    // A hedgehog rooting in the room covers you (NOISE_COVER, mig 321).
+    odds *= noiseCover(z, roomId);
     // The bell outshouts felt soles: while it rings the keep hears everything,
     // and for a while after, the halls stay unsettled (events.bellWakeMult).
     odds = Math.min(1, odds * events.bellWakeMult(z, roomId));
@@ -958,6 +1050,9 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       const notHeld = exits.filter((e) => !SENTINEL_ROOMS.has(e.to_room));
       if (notHeld.length) exits = notHeld;
     }
+    // A CAVE DWELLER CHANGES CAVES (mig 319): before the territory pull, so the
+    // step it takes after choosing is already a step toward the new one.
+    if (mode === "wander" && !creature.target && CAVE_DWELLERS.has(tmpl.id)) caveTurn(z, creature, now);
     // MIGRATION. Before the territory pull is applied, the rare roll that moves
     // where "home" even is — so a creature that takes it spends this very step
     // walking the new way instead of the old. It is deliberately the smallest
@@ -1263,7 +1358,8 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // A drifter counts the room it just walked into, and asks whether this is
     // the place. This is the only thing that ever ends a walkabout.
     if (mode === "wander") driftArrives(z, creature, now);
-    creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS);
+    await arrivalHabits(z, creature, tmpl, now, silent);
+    creature.nextWanderAt = now + randInt(WANDER_MIN_MS, WANDER_MAX_MS) * (SLOW_WALKERS[tmpl.id] ?? 1);
     // THE QUIET (2026-08-06): nothing in the wood moves. Not frozen — a step it
     // would have taken in a minute it now takes in six, so the wood goes still
     // without a single creature being taken off the board.
@@ -1756,6 +1852,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     // bone-knight being torn at took the raw roll whole.
     exhaustion.creatureAttempt(creature, now);
     victim.hp -= Math.max(1, exhaustion.creatureDamage(creature, randInt(tmpl.dmg_min, tmpl.dmg_max)) - vt.armor);
+    if (spined(z, creature, tmpl, victim, vt)) return true;
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt);
       creature.hunger = 0;
@@ -1819,6 +1916,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     }
     exhaustion.creatureAttempt(creature, now);
     victim.hp -= Math.max(1, exhaustion.creatureDamage(creature, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) * PREY_WORRY_MULT)) - vt.armor);
+    if (spined(z, creature, tmpl, victim, vt)) return true;
     if (victim.hp > 0) return true;
     releaseHold(z, creature);
     preyFalls(z, victim, vt);
@@ -1828,6 +1926,22 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} finishes it, and stands over what is left.`, undefined, false);
     z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.", undefined, undefined, false, { mob: creature.templateId, act: "fight" });
     z.fxFed(creature.roomId, creature.templateId);   // it is standing over a kill; show it
+    z.refreshRoomCtx(creature.roomId);
+    return true;
+  }
+
+  // THE SPINES BITE BACK (rome, 2026-10-21): whatever bites a hedgehog gets a
+  // mouthful of them, the same flat PRICKLY hurt a player's blow takes. True
+  // when the spines killed the biter - it lies where it fell, the hedgehog
+  // goes free (unless the same bite killed it too), and the caller stops.
+function spined(z: ZoneDO, creature: Creature, tmpl: MobTemplate, victim: Creature, vt: MobTemplate): boolean {
+    const prick = PRICKLY[vt.id];
+    if (!prick) return false;
+    creature.hp -= prick;
+    if (creature.hp > 0) return false;
+    z.roomFeed(creature.roomId, `${cap(tmpl.name)} lets go of ${vt.name} with its mouth full of spines, and goes down, and does not get up.`, undefined, false);
+    preyFalls(z, creature, tmpl);
+    if (victim.hp <= 0) preyFalls(z, victim, vt); // the bite that took it took them both
     z.refreshRoomCtx(creature.roomId);
     return true;
   }

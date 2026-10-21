@@ -165,6 +165,29 @@ const RULED_OUT = {
 const WALK_A = "Contact pose A: One leg reaches forward with the heel making contact, while the opposite leg trails behind. The body is transferring weight forward.";
 const WALK_B = "Passing pose B: The rear leg has swung forward, with its knee bent and foot lifted, passing beside the planted supporting leg. The legs are close together, not spread apart.";
 const LINES = {
+// THE WOOD SLOTH (rome, 2026-10-21): it lives on the ground, never hangs, and
+// its claws are SHORT and the same size in every cell - they kept coming back a
+// different length each frame. The walk is the four-legged one (QUAD_WALK).
+// The bear's standing frame and the hedgehog's own five, as their 2026-10-21
+// sheets were drawn - they lived only in the handed-over prompt until now.
+"brown-bear": {
+  "inspect-upright": "Reared up on its hind legs to full height, forepaws hanging, head up and turned toward the viewer",
+},
+"hedgehog": {
+  attack: "Lunging forward with a snap of the snout, spines raised",
+  graze: "Nose down rooting through unseen leaf litter",
+  rest: "Asleep curled loosely, nose tucked under, spines flat",
+  "curl-up": "Rolled completely into a tight ball of raised spines, no face, no legs showing",
+  alert: "Frozen with nose up and spines half raised along the back",
+},
+"wood-sloth": {
+  idle: "Sitting on its haunches, short claws folded in front, head turned mildly toward the viewer",
+  attack: "Rearing back and swinging one front paw in a slow wide swipe, its short claws out",
+  graze: "Sitting and holding a bunch of leaves to its mouth with both front paws, chewing",
+  rest: "Asleep curled on the ground into a bundle of fur, paws wrapped round itself",
+  "reach-up": "Sitting up tall and reaching straight up overhead with one front paw, as if hooking an unseen branch above",
+  alert: "Sitting still with its head turned fully round toward the viewer, small mild face",
+},
 // THE REDO OF 2026-10-18 (nine cells, no recover). These three had no LINES of
 // their own; the carrier's two work poses are the wording his sheet was drawn
 // with, and the strand thief's graze is the wrack-turning his description gives.
@@ -952,6 +975,10 @@ const BIRD_SHEETS = {
 // wrong one out of sixteen lists, which is how eight drawn sheets lost a real
 // cell. Restored, with hit gone instead.
 const REDRAW = {
+  // ONE EATING FRAME FOR THE BEAR (rome, 2026-10-21). It hunts and forages, so it
+  // was asked for feed AND graze - and with no carcass and no ground drawn the
+  // two came back as the same head-down bear. Foraging shows the feed frame.
+  "brown-bear":         ["idle", "move-a", "move-b", "attack", "feed", "rest", "inspect-upright", "death"],
   "a-lymer": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "cave-lion": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "ermine": ["idle","inspect-upright","rest","feed","move-a","move-b","attack","death"],
@@ -1108,6 +1135,14 @@ try { cache = JSON.parse(fs.readFileSync(CACHE, "utf8")); } catch {}
 // moment it does, or this quietly becomes the thing that overrides live prose.
 const PENDING_DESC = {
   // migration 289 — he comes down off the rope and works standing
+  // migration 321, not yet on prod
+  "tawny-owl": "A round brown owl the colour of the bark it sits against, so that you see it only when it turns its face to you. The face is a dish, and the eyes in it are black all the way through. It makes no sound when it moves, none at all, and it has been watching you for longer than you have been looking.",
+  // migration 321, not yet on prod
+  "wood-sloth": "It sits at the foot of a tree with its short hooked claws folded in front of it, furred grey-brown and green where the damp has got into the coat, chewing a leaf it pulled down from somewhere above. It turns its head toward you over the course of some time, and the face it turns is small and mild and smiling at nothing, and it goes back to the leaf.",
+  // migration 321, not yet on prod
+  "hedgehog": "A brown ball of spines on short legs, snuffling through the leaf litter with a long wet nose and making more noise about it than anything its size has any right to. When it hears you it stops, and tucks its face away, and becomes a thing with no front to it at all.",
+  // migration 320 — the wood's own bear, not yet on prod
+  "brown-bear": "It is a long way bigger than the doorway of anything you would build, and it moves through the trees without seeming to have to push. The coat is thick and brown and grizzled on the shoulders, and the hump over them is all muscle. It has stopped, and it has turned its head, and it is deciding about you with a patience that has never once been in a hurry.",
   "the-scaffold-hand": "Standing under the broken arch with both arms up over his head, dressing the underside of a span that is not there any more. The scaffold came down two centuries ago. He did not come down with it, and he has not put his arms down since.",
 };
 
@@ -1313,6 +1348,9 @@ THE WINGSPAN DECIDES THE SCALE OF EVERY CELL ON THIS SHEET. Find the pose with t
 DO NOT enlarge any pose to fill its cell. DO NOT let a wing, a tail, a foot or a bill touch or cross a cell edge in any cell, for any reason. If a wingspan will not fit, the bird is drawn TOO BIG - shrink the whole bird on every cell until it does. A wingtip that reaches the edge of its cell is not a tight crop, it is a severed wing: the rest of it lands in the next bird's cell and is lost.`;
 
 const CONSTANT = {
+  "wood-sloth": `
+ITS CLAWS ARE SHORT, AND THE SAME SIZE IN EVERY CELL. Three short curved claws on each foot, about as long as its toes - never long hooks, never sickles, never longer than the paw itself. Count them and measure them against the paw in every cell: the same short claws, the same length, front and back, in all nine poses. It lives on the ground and walks on all fours; it never hangs from anything. Camera: eye-level three-quarter view, facing slightly toward the viewer's right.
+`,
   // HIS ARMS ARE BONE (rome, 2026-10-18). Sunk out of sight in the water that
   // is never drawn, they came back as stumps ending at the forearm.
   "the-miller": `
@@ -1564,11 +1602,17 @@ Every pose is the BODY making the shape of what it is doing, alone in empty mage
 // the passing frame has them together. The old "opposite leg phase" line came
 // back as two near-identical spread strides.
 const TWO_LEGS = worked() || ["cutthroat", "cutpurse", "footpad", "wayman", "road-carrier", "the-keeper-of-the-holding", "the-drowned", "drowned-hulk"].includes(id);
+// A four-legged walk, said the same way (rome, 2026-10-21): "natural gait" and
+// "opposite leg phase" came back for the bear, the sloth and the hedgehog as the
+// same step drawn twice. The two-legged WALK_A/WALK_B wording, said for paws.
+const FOUR_LEGS_WALK = ["brown-bear", "wood-sloth", "hedgehog"].includes(id);
+const QUAD_WALK_A = "Contact pose A: One front leg reaches forward with the paw making contact, while the opposite hind leg trails behind. The body is transferring weight forward.";
+const QUAD_WALK_B = "Passing pose B: The rear leg has swung forward, with its knee bent and paw lifted, passing beside the planted supporting leg. The legs are close together, not spread apart.";
 // what each pose is, said the way the sheet needs it said
 const SAY = {
   idle: "Natural resting alert stance",
-  "move-a": TWO_LEGS ? WALK_A : "Locomotion contact pose A, natural species-specific gait",
-  "move-b": TWO_LEGS ? WALK_B : "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": TWO_LEGS ? WALK_A : FOUR_LEGS_WALK ? QUAD_WALK_A : "Locomotion contact pose A, natural species-specific gait",
+  "move-b": TWO_LEGS ? WALK_B : FOUR_LEGS_WALK ? QUAD_WALK_B : "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "Natural physical attack for the species, full body in frame",
   // AN ARMED THING ATTACKS WITH WHAT IT IS HOLDING. The line above is written
   // for an animal, and for a soldier it says nothing at all - so the sheets came

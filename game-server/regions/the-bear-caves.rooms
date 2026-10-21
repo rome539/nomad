@@ -1,0 +1,143 @@
+# THE BEAR CAVES (rome, 2026-10-21). Five caves in the wood's rock, for the
+# wood's own bears: three brown bears and five caves, so two always stand empty
+# and nobody can say which (zone-data BEAR_CAVES / CAVE_DWELLERS, ai.caveTurn).
+#
+# Each is its own size, smallest two rooms and up by one (rome): 2, 3, 4, 5, 6,
+# twenty rooms in all, spread to the wood's corners so a bear moving house has a
+# long walk and is seen doing it. The bear's bed is the deepest chamber of each,
+# and that chamber is the one a bear calls home.
+#
+# THE MOUTH KEEPS THE DAY. Like the sea cave, the first room of each takes the
+# light from outside; behind it the roof comes down, and every room past the
+# mouth is under it (INDOOR_ROOMS) and black (DARK_ROOMS). Go in without a light
+# and you are going in where it sleeps without seeing it.
+#
+# THE MAP. Every room is one cell and every exit joins orthogonal neighbours,
+# laid into squares nothing else holds. No up or down: the bake draws those as
+# diagonals.
+!region wood
+
+# ---- THE RIDGE CAVE, six rooms, off the Green Ridge (north-west) ----------
+
+## the-green-ridge | attachment
+!existing
+> south the-ridge-cave-mouth
+
+## the-ridge-cave-mouth | The Cave Under the Ridge
+The ridge breaks open at its foot into a mouth of grey rock higher than a man, with ferns hanging over the lip and the ground inside trodden bare. The light goes in a dozen paces and gives up. The air coming out of it is cold and smells of earth, and under the earth, of animal.
+> north the-green-ridge
+> south the-ridge-cave-drop
+
+## the-ridge-cave-drop | The Drop
+The floor steps down a man's height in a slope of broken stone, polished on the left where something heavy has always gone down it the same way. The roof closes in overhead. Behind you the mouth is a grey shape that no longer lights anything.
+> north the-ridge-cave-mouth
+> south the-ridge-cave-fork
+
+## the-ridge-cave-fork | The Fork
+The passage splits around a pillar of rock worn smooth at shoulder height on both sides, and greasy with it. One way goes on down. The other is a short low hole off to the west, and the smell is stronger from neither and from both.
+> north the-ridge-cave-drop
+> west the-ridge-cave-pocket
+> south the-ridge-cave-squeeze
+
+## the-ridge-cave-pocket | The Bone Pocket
+A dead end the size of a cart, floored with bones. Deer, mostly, by the shape of the skulls, and boar, and none of them recent: they have been dragged in here and gone over and left, and the newest are no newer than a season. It is a larder, and it is a long way down a bad passage from the light.
+> east the-ridge-cave-fork
+
+## the-ridge-cave-squeeze | The Squeeze
+The roof comes down to meet the floor and the passage goes on between them, flat and wide, and you go through it bent double with the rock touching your back. Hair is caught on it here and there, coarse and brown and long. Something much bigger than you comes through here and does not find it a squeeze at all.
+> north the-ridge-cave-fork
+> south the-ridge-cave
+
+## the-ridge-cave | The Ridge Cave
+The roof lifts away into the dark and the passage opens into a chamber that swallows any light you bring. The floor is dry and soft with years of bracken carried in and trodden down, and the walls are scored in long parallel grooves as high as you can reach and higher. This is the back of the ridge, and the deepest place in it, and it is where the bear sleeps.
+> north the-ridge-cave-squeeze
+
+# ---- THE OAK CAVE, five rooms, off the Stone Oak (west) ------------------
+
+## the-stone-oak | attachment
+!existing
+> north the-oak-cave-mouth
+
+## the-oak-cave-mouth | The Mouth Under the Oak
+The oak has grown down over a split in the rock and held it, and the split goes back under the tree into the dark. Roots as thick as your leg come through the roof of it. The earth at the threshold is churned and printed, and the bark of the oak beside it is clawed through to the wood.
+> south the-stone-oak
+> north the-oak-cave-crawl
+
+## the-oak-cave-crawl | The Root Crawl
+A low crawl under the roots, half earth and half stone, where the oak's underneath comes down through the ceiling in ropes you have to push past. It is close and warm and it smells of fur. There is no room in here to turn around in a hurry.
+> south the-oak-cave-mouth
+> north the-oak-cave-hall
+
+## the-oak-cave-hall | The Low Hall
+The crawl opens into a low wide hall of stone with a floor of dry dirt, roofed so close you could lay your hand flat on it. The dirt is dug over in great scoops in one corner where something has been making a bed and thinking better of it. The way on goes off west, narrower.
+> south the-oak-cave-crawl
+> west the-oak-cave-neck
+
+## the-oak-cave-neck | The Neck
+A short throat of rock between the hall and whatever is beyond, so narrow that the sides are polished brown with the passing of a broad body. A single bone lies in the middle of it, cracked for the marrow and put down.
+> east the-oak-cave-hall
+> north the-oak-cave
+
+## the-oak-cave | The Oak Cave
+A round chamber at the end of everything, under the rock and under the oak both, with the roots coming down out of the dark overhead and into the floor like the bars of something. The bed is here against the far wall, a heap of bracken and leaves pressed into the shape of a body. It is the warmest room in the wood and it is not warm for you.
+> south the-oak-cave-neck
+
+# ---- THE WALL CAVE, four rooms, off the Fallen Wall (north-east) ---------
+
+## the-fallen-wall | attachment
+!existing
+> north the-wall-cave-mouth
+
+## the-wall-cave-mouth | The Breach
+Behind where the wall came down the hillside is hollow: the fall opened a hole into the rock that the wall had been built across, and nobody was left to wall it up again. Cut stones lie tumbled in the mouth, and the dark goes on past them. Something has made a path through the tumble that is not your width.
+> south the-fallen-wall
+> north the-wall-cave-passage
+
+## the-wall-cave-passage | The Dry Passage
+A dry passage of pale rock, straight for a few paces as if it had been cut once and then left to the animals. The floor is dust, and the dust is printed over and over with broad five-toed feet coming and going. The way turns east ahead.
+> south the-wall-cave-mouth
+> east the-wall-cave-turn
+
+## the-wall-cave-turn | The Turn
+The passage bends and drops, and the cold comes up from below with the smell on it. A tree root has found its way down through a crack here and been torn out and left in pieces. The way goes on down, to the north.
+> west the-wall-cave-passage
+> north the-wall-cave
+
+## the-wall-cave | The Wall Cave
+A low chamber with a sandy floor and a roof that drips in one corner into a hollow worn in the rock. The bed is a long scrape in the sand lined with dead grass and the hair that came off whatever lay in it. The walls are scored deep. It is quiet in here in a way that has nothing to do with being empty.
+> south the-wall-cave-turn
+
+# ---- THE BOUNDARY CAVE, three rooms, off the Old Boundary Stone (south-west)
+
+## the-old-boundary-stone | attachment
+!existing
+> south the-boundary-cave-mouth
+
+## the-boundary-cave-mouth | The Hole Behind the Stone
+The ground falls away behind the old stone into a hollow, and at the back of the hollow is a hole in the rock that the stone and the oak between them have been hiding. Moss on the lip is torn off in strips. A smell of old meat and wet fur hangs in it and does not move.
+> north the-old-boundary-stone
+> south the-boundary-cave-slope
+
+## the-boundary-cave-slope | The Slope
+The floor slants down and away under a roof of tilted rock, slick with leaf mould carried in on something's feet. There are claw marks in the slope where it climbs out, gouged in to keep its footing. It goes down east into a wider dark.
+> north the-boundary-cave-mouth
+> east the-boundary-cave
+
+## the-boundary-cave | The Boundary Cave
+A chamber like the inside of a fist, the rock closing all round and the roof low. The floor is a bed: a trodden mat of bracken and torn moss that fills it wall to wall, matted with hair. Whatever line the stone above once marked, this was the far side of it, and still is.
+> west the-boundary-cave-slope
+
+# ---- THE PILE CAVE, two rooms, off the Stone Pile (south-east) -----------
+
+## the-stone-pile | attachment
+!existing
+> east the-pile-cave-mouth
+
+## the-pile-cave-mouth | The Gap in the Stones
+Two of the great stones in the pile lean together and leave a gap under them, black, the height of a crouching man. The ground in front of it is bare and beaten, and there is a smell coming out of it that the rest of the wood does not have.
+> west the-stone-pile
+> east the-pile-cave
+
+## the-pile-cave | The Pile Cave
+Under the stones it is one small cave, the stones' weight over your head and their cold all round, and room enough for one bed and not much else. The bed is there, a nest of leaves and bracken pressed flat, and the stones by it are rubbed smooth and dark where a body has leaned on them a long time.
+> west the-pile-cave-mouth
