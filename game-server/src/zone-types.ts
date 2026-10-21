@@ -132,6 +132,9 @@ export interface Creature {
   testAt?: number;      // when the next rush comes
   testHp?: number;      // its hp when it last rushed: lower means you turned on it
   sportAt?: number;     // a fed fox's next chance to kill for nothing (SURPLUS_KILLERS)
+  rangeBand?: string;   // a RANGER's chosen ground: the band the pack is working (ai.rangePack)
+  rangeSince?: number;  // when the pack took that ground
+  rangeAt?: number;     // when the pack next weighs the world again
   patrolIdx?: number; // position along a patrol route, if it keeps one
   phase?: number; // boss rage tier (0/1/2), climbs at hp thresholds
   stole?: string; // cutpurse: the item id it grabbed and ran with (dropped on death)

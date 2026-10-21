@@ -1668,6 +1668,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "roe-deer": "Something light and quick breaks {dir} through the undergrowth, all at once.",
   "wild-boar": "Something heavy shoulders through the brush {dir}, taking the straight way.",
   "grey-wolf": "A long, unhurried padding crosses {dir}, and does not stop to consider you.",
+  "coyote": "Quick light feet go {dir}, several of them, and a yip, and then nothing.",
   "the-old-grey": "Something heavy pads {dir}, unhurried, and the smaller feet around it go where it goes.",
   "the-follower": "A step {dir} that matches yours, and stops when you stop.",
   "charcoal-burner": "Boots and a dragging haft go {dir}, at a working pace.",
@@ -1694,6 +1695,7 @@ export const STILL_SOUNDS: Record<string, string> = {
   "roe-deer": "quick shallow breathing, held — something small deciding whether it has been seen",
   "wild-boar": "a low grunting and the steady work of something rooting, unbothered",
   "grey-wolf": "nothing at all, and then the small sound of a jaw closing",
+  "coyote": "a thin yip from one side and an answer from the other, and both of them closer than they were",
   "the-old-grey": "a long, slow breath let out through the nose, the way a big dog sighs lying down",
   "lead-dog": "slow breathing through a bad nose, and a collar-chain that has not been on anything for a long time",
   "wayman": "cloth shifting, and a man breathing through his mouth to keep it quiet",
@@ -2355,7 +2357,7 @@ export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rar
 export const SCAVENGERS = new Set([
   // mig 247, the mountain's rare blood: the-blue-fox, the-bone-dropper, the-old-glutton
   "the-blue-fox", "the-bone-dropper", "the-old-glutton",
-"grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf",
+"grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf", "coyote",
   // THE MOUNTAIN, TIER THREE (mig 231). The glutton takes carrion off whatever
   // made it, which is most of how it eats. The bone-breaker is the one line in
   // the game that scavenges and hunts NOTHING — it has no PREYS_ON row at all,
@@ -2796,7 +2798,7 @@ export const NOCTURNAL = new Set([
   // when it goes round the kills.
   "hill-wolf", "lead-wolf", "glutton",
   // THE WOOD (rome, 2026-08-30). Its pack keeps the same hours as the hill's.
-  "grey-wolf", "dire-wolf"]);
+  "grey-wolf", "dire-wolf", "coyote"]);
 // HOW EACH OF THEM LIES UP. The generic line is "curled nose-to-tail, fast
 // asleep", which is a mammal on a floor and is the right picture for a rat, a
 // deer or an otter — and nonsense for a crab, an eel or a bird. A shore where
@@ -3380,7 +3382,7 @@ export const RAVEN_NEST_CAP = 4;      // a pool holds about four before the rave
 export const PACK_CALLERS = new Set([
   // mig 247, the mountain's rare blood: the-last-dog
   "the-last-dog",
-"grey-wolf", "dire-wolf", "masterless-dog", "lead-dog",
+"grey-wolf", "dire-wolf", "coyote", "masterless-dog", "lead-dog",
   // The drove dogs (mig 188). A herding dog's whole training is to work spread
   // out and answer another dog, and nobody has told them the stock is gone.
   "drove-dog", "the-drove-master",
@@ -4567,6 +4569,11 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // only feeds a wolf that has actually drifted onto the road, or a goat that
   // has drifted into the wood. Both are MIGRANTS, so both do happen.
   ["grey-wolf", new Set(["roe-deer", "white-roe", "feral-goat", "old-billy", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
+  // the roaming pack (RANGERS): small game anywhere, a deer when it can, and the
+  // smaller hunters it shares the ground with - the foxes, the ermine and the
+  // snakes, as a coyote kills a fox on its range. The rare foxes are not on it.
+  ["coyote", new Set(["roe-deer", "white-roe", "mountain-hare", "snow-hare", "ptarmigan", "rat", "fleet-rat", "oystercatcher", "wrack-crab", "otter",
+    "hill-fox", "snow-fox", "ermine", "gill-adder", "fen-viper", "stone-adder"])],
   ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar", "wood-stag", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   // THE STRAYS EAT SOMETHING NOW (2026-08-12). The west road's seven masterless
@@ -4635,6 +4642,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
 // ends. Walk in on four wolves and a boar and you do not.
 export const PACK_PREY = new Map<string, Map<string, number>>([
   ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3], ["grave-hyena", 2], ["feral-goat", 2], ["great-gull", 2], ["wood-stag", 3]])], // one wolf yields a carcass to a hyena; two do not — and the goat and the gull are both a fair match for one wolf, which is what the pack is FOR
+  ["coyote", new Map([["feral-goat", 2], ["wildcat", 2], ["red-hind", 3]])], // a goat or a wildcat takes two of them, a hind the whole pack
   ["dire-wolf", new Map([["old-boar", 2]])],
   ["grave-hyena", new Map([["roe-deer", 2], ["great-gull", 2]])],  // a lone hyena harries a roe; a pair brings it down — and the gull is the one shore animal it cannot bully alone
   ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
@@ -4684,6 +4692,7 @@ export const HUNT_SUCCESS_DEFAULT = 0.3;
 export const HUNT_SUCCESS: Record<string, number> = {
   // pack runners: a long chase, and the quarry usually outlasts it
   "grey-wolf": 0.2, "dire-wolf": 0.2, "hill-wolf": 0.2, "lead-wolf": 0.2,
+  "coyote": 0.25, // quick, and it picks the one that cannot run
   "masterless-dog": 0.15, "lead-dog": 0.15, "drove-dog": 0.15, "marsh-hound": 0.2,
   "three-hound": 0.2, "a-lymer": 0.2, "the-drove-master": 0.15,
   "grave-hyena": 0.3, "dire-hyena": 0.3,
@@ -4733,6 +4742,7 @@ export const TRACK_PRINTS: Record<string, string> = {
   "the-blue-fox": "small, neat prints set one in front of the other, in a straight line",
   "hill-wolf": "big four-toed pads with the claws showing, several sets, one stepping in another",
   "lead-wolf": "big four-toed pads with the claws showing, wider than the rest",
+  "coyote": "narrow four-toed prints, smaller than a wolf's, set in a straight line one in front of the other, and several sets of them",
   "the-old-grey": "a wolf's pads, bigger than any wolf's, and one forefoot printing short where a toe is gone",
   "lynx": "big round pads with no claws showing, wide apart, unhurried",
   "wildcat": "small round pads with no claws showing, placed with care",
@@ -4810,7 +4820,7 @@ export const BREAK_LINES = [
 export const STARVE_HUNTERS = new Set([
   // mig 247, the mountain's rare blood: the-blue-fox, the-tom, the-old-glutton
   "the-blue-fox", "the-tom", "the-old-glutton",
-"dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf",
+"dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf", "coyote",
   // THE MOUNTAIN, TIER THREE (mig 231). The pack past the end of its clock, and
   // the glutton, which was never especially interested in whether you were
   // hungry-adjacent or not. The bone-breaker is NOT here and never will be: it
@@ -4950,6 +4960,7 @@ export const HEAVY_KNOCK_ODDS = 0.3;    // while fresh; a guarded stance halves 
 // itself out again.
 export const PACKS: Record<string, string> = {
   "grey-wolf": "wolf", "dire-wolf": "wolf", "hill-wolf": "wolf", "lead-wolf": "wolf",
+  "coyote": "coyote",
   "the-old-grey": "wolf", // the boss behind the moon door fights with its pack, and leads it
   "masterless-dog": "dog", "a-fold-dog": "dog", "drove-dog": "dog", "lead-dog": "dog",
   "the-last-dog": "dog", "marsh-hound": "dog", "a-lymer": "dog",
@@ -5017,7 +5028,7 @@ export const SILENT_HUNTERS = new Set(["eagle-owl", "tawny-owl"]);
 // WOLVES GO FOR THE WEAKEST. A wolf tests the herd: of everyone standing in the
 // room it goes for the most hurt or the least armoured, and changes its mind
 // when somebody is clearly weaker than the one it has.
-export const WEAKEST_HUNTERS = new Set(["grey-wolf", "dire-wolf", "hill-wolf", "lead-wolf"]);
+export const WEAKEST_HUNTERS = new Set(["grey-wolf", "dire-wolf", "hill-wolf", "lead-wolf", "coyote"]);
 export const WEAKEST_SWITCH_GAP = 0.15;   // how much weaker somebody must be before it changes target
 // A WOUNDED BOAR TURNS. Hunters fear a hurt boar more than a fresh one: it does
 // not run, and once badly hurt it comes at you with one more charge.
@@ -5151,7 +5162,7 @@ export const SURPLUS_REARM_MS = 2 * 3_600_000;
 // (a room behind, a beat later). Turn on it before it commits and it breaks off
 // and goes; after TEST_FEINTS rushes, or the moment you are badly hurt, the next
 // one does not stop. Hungry wolves hunt by the old rules. ai.wolfTests.
-export const WOLF_TESTERS = new Set(["grey-wolf", "hill-wolf", "lead-wolf"]);
+export const WOLF_TESTERS = new Set(["grey-wolf", "hill-wolf", "lead-wolf", "coyote"]);
 export const TEST_START_ODDS = 0.15;              // per turn, a fed wolf decides to start on you
 export const TEST_GAP_MIN_MS = 20_000;            // between rushes
 export const TEST_GAP_MAX_MS = 60_000;
@@ -5163,6 +5174,45 @@ export const TEST_RUSH_LINES = [
   "{a} darts in at your legs and is gone again before you can turn, and stands off, watching.",
   "{a} comes in a few steps, stiff-legged, head low, and stops. It is measuring you.",
 ];
+// THE COYOTES (mig 325): the one pack with no territory. Every other hunter
+// keeps to ground 3 rooms from home, so the world's prey is eaten unevenly -
+// bare where the hunters are, full where they are not. The coyotes go where it
+// is full: every RANGE_CHECK_MS the pack weighs each band it may range by how
+// full its prey stands against its cap and how few other hunters share it, and
+// the best becomes home (ai.rangePack) - the ordinary territory walk carries
+// them there across the map. They stay until the ground is thinned
+// (RANGE_THINNED) or RANGE_STAY_MS is up, and never pick ground already eaten
+// down (RANGE_CRASHED). On the way they eat what is dead, and in a room they
+// take the most wounded animal first (CULLERS) - and never one whose own kind
+// stands below RANGE_CRASHED of its cap in that band, so they thin what is
+// plentiful (the mountain's foxes) and leave what is scarce (its hares). A
+// rare form has no cap of its own, and is never taken.
+export const RANGERS = new Set(["coyote"]);
+export const RANGE_BANDS = new Set(["road", "wood", "den", "crossing", "out", "mountain"]);
+export const RANGE_CHECK_MS = 10 * 60_000;
+export const RANGE_STAY_MS = 3 * 60 * 60_000;
+export const RANGE_THINNED = 0.6;
+export const RANGE_CRASHED = 0.5;
+export const CULLERS = new Set(["coyote"]);
+// A BROKEN PACK RUNS. Once RANGE_BREAK_LOST of the pack are dead (against its
+// spawn rows), what is left runs from every fight, tests nobody and joins no
+// brawl, until refills bring it back past the line (ai.packBroken).
+export const RANGE_BREAK_LOST = 4;
+// ...AND IT FIGHTS LIKE ONE (HARRIERS). A wolf commits; a coyote does not, while
+// you are standing straight. It circles out of reach some rounds and nips in
+// the rest, for a fraction of a bite. Once you are hurt past HARRY_COMMIT_AT, or
+// staggered, the waiting is over: it bites in full, and every other one of the
+// pack in the room is on you in the same breath.
+export const HARRIERS = new Set(["coyote"]);
+export const HARRY_COMMIT_AT = 0.6;
+export const HARRY_HOLD_ODDS = 0.4;
+export const HARRY_NIP_MULT = 0.5;
+export const HARRY_HOLD_LINES = [
+  "{a} circles you just out of reach, and will not come in.",
+  "{a} feints at your legs and skips back before you can turn on it.",
+  "{a} stands off a length away, head low, watching how you move.",
+];
+export const HARRY_PILE_LINE = "You are hurt, and they all know it at once. The rest of them come in together.";
 // THE MOSS (rome, 2026-10-21): the sloth's coat is green where the damp has got
 // into it, and it moves slowly so as never to give itself away - a hunter in the
 // room passes it over this share of the time, still or moving. The hedgehog is easy to find and hurts to bite;
@@ -5366,6 +5416,7 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "roe-deer": { out: "breaks {dir} in one bound and is simply not there.", in_: "comes through in a rush, all legs and panic." },
   "white-roe": { out: "walks {dir}, unhurried, and does not look back.", in_: "steps in, stands, and looks directly at you." },
   "grey-wolf": { out: "gives ground {dir}, circling, never turning its back.", in_: "comes in at a trot, low and wide." },
+  "coyote": { out: "breaks off {dir} at a lope, looking back over its shoulder.", in_: "comes in sidelong, low, and stops just out of reach." },
   "dire-wolf": { out: "falls back {dir} at a walk, untroubled by the idea.", in_: "comes in, and the room is smaller for it." },
   "wild-boar": { out: "wheels and crashes off {dir} through the brush.", in_: "comes through the brush without slowing." },
   "old-boar": { out: "backs {dir} a few steps with its tusks up, daring you.", in_: "comes in straight and does not stop." },
@@ -6037,7 +6088,7 @@ export const BITERS = new Set([
   // teeth at your throat in a pack. The dogs kept the same silence. This Set is
   // pure voice — it picks CREATURE_HIT and CREATURE_VITALS and nothing else —
   // so nothing about the fight changes except what the fight says.
-  "grey-wolf", "dire-wolf", "masterless-dog", "lead-dog",
+  "grey-wolf", "dire-wolf", "coyote", "masterless-dog", "lead-dog",
   // The bear (mig 215) takes the jaws register and the claw lines in it are
   // finally literally true of something: it is the only body in the game that
   // both bites and rakes.
@@ -6638,7 +6689,7 @@ export const FEARS_FIRE = new Set([
   "oystercatcher", "great-gull", "black-backed-gull", "bittern", "grey-seal", "bull-seal", "wrack-crab", "devil-crab", "fen-viper", "marsh-hound", "a-lymer", // the crossing's
   "gibbet-crow",                 // the open ground's
   "roe-deer", "white-roe", "wood-stag", // the wood's food, and it survives by leaving (the stag by standing)
-  "grey-wolf", "dire-wolf",      // the oldest reason there are campfires
+  "grey-wolf", "dire-wolf", "coyote", // the oldest reason there are campfires
   "wild-boar", "old-boar",
   "root-thing",                  // dry wood on the move: fire is what ends it
   // NOT THE BEAR, AND THAT IS THE POINT (mig 215). Every other large animal in
@@ -8678,6 +8729,7 @@ export const BLEED_ODDS = new Map<string, number>([
   ["masterless-dog", 0.12],      // a dog's teeth: dirty, not deep
   ["lead-dog", 0.15],            // older, bigger, and it has done this before
   ["grey-wolf", 0.18],           // wolves work the same wound over
+  ["coyote", 0.12],             // small teeth, quick and shallow
   ["dire-wolf", 0.22],           // the same jaws, half again the size
   ["wild-boar", 0.20],           // tusks go in and come up
   ["old-boar", 0.25],            // tusks grown past any use for rooting

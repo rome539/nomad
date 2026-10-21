@@ -970,6 +970,7 @@ export class ZoneDO implements DurableObject {
       this.applyRegrow(t, true);
       ai.applyArrivals(this, t, true);
       ai.scheduleArrivals(this, t);
+      ai.rangePack(this, t); // the coyotes keep choosing ground while the world sleeps, and the wander above walks them to it
     }
     this.rustFloors(now, true); // the gap's whole weather on the floors, in one pass
     this.pruneTraces(now);
@@ -4831,6 +4832,7 @@ export class ZoneDO implements DurableObject {
         const wantsFlee = !creature.traits?.includes("maneater") && !creature.traits?.includes("hind-mother") && (
           ai.dreadsFire(this, creature, victim)
           || RUNNERS.has(tmpl.id)
+          || ai.packBroken(this, creature)
           || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !HOARDERS.has(tmpl.id) && !TURNING_BOARS.has(tmpl.id) && creature.hp < fleeAt && chance(FLEE_CHANCE)));
         // A BLOWN ANIMAL CANNOT RUN, whatever it wants. It has spent the rout
         // it had in it (ai.creatureMoves), so the roll it just won is worth
@@ -5939,6 +5941,7 @@ export class ZoneDO implements DurableObject {
     // hunts the world. Once a tick and world-level, not per creature — it is
     // one animal doing one thing to every band at once (ai.drakePassage).
     ai.drakePassage(this, now);
+    ai.rangePack(this, now); // the coyotes go where the world is fullest
     // While the deep door is SEALED, the deep coughs one of its own up into the
     // shallows on a slow clock — the world minting the corpse-key. Once someone's
     // heart opens the door (or the King's death re-seals it), the clock just idles.

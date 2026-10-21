@@ -88,6 +88,7 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "cave-lion": [6, 4, 24, 3],
   "charcoal-burner": [0, 0, 0, 0],
   "conger": [24, 3, 40, 0],
+  "coyote": [32, 3, 32, 0],
   "cutpurse": [24, 3, 32, 0],
   "cutthroat": [24, 3, 32, 0],
   "devil-crab": [16, 2, 20, 0],

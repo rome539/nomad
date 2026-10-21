@@ -22,6 +22,7 @@ import {
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_MS, HOARD_TRAIL_MS, HOARD_SPOOK_MS,
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_BLOOD_ODDS, MURMUR_COOLDOWN_MS,
   BLOOD_MOON_HOLLOW_DMG_MULT, BLOOD_MOON_EYES_READ, BLOOD_MOON_WAKERS, BLOOD_MOON_WAKE_TELLS,
+  RANGERS, RANGE_BANDS, RANGE_CHECK_MS, RANGE_STAY_MS, RANGE_THINNED, RANGE_CRASHED, CULLERS, RANGE_BREAK_LOST,
   HOARD_COVET_RARITY, HOARD_COVET_ODDS, HOARD_COVET_MS, HOARD_COVET_LINES, RARITY_RANK,
   PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
@@ -441,6 +442,7 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
       const tmpl = z.world!.mobTemplates.get(creature.templateId);
       if (!tmpl) continue;
       if (tmpl.is_boss) continue;                                   // the king waits; he doesn't scrum
+      if (packBroken(z, creature)) continue;                        // what is left of a broken pack keeps out of it
       if (DROWNERS.has(tmpl.id) || SENTINELS.has(tmpl.id) || ROOTED.has(tmpl.id)) continue; // holds its water / its post / its ground
       // Carrion-followers track the dead, not the din — UNLESS they hunt in a
       // pack. This line read a bare `SCAVENGERS.has` and it was written when
@@ -521,6 +523,103 @@ export function creatureRead(z: ZoneDO, creature: Creature, viewer: string): str
   const redEyes = isBloodMoon() && HOLLOW.has(creature.templateId) ? BLOOD_MOON_EYES_READ : "";
   return `${tmpl.description}${mark ? ` ${mark}` : ""}${marked}${redEyes} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
     + (hoard || (bears ? ` It is ${bears.slice(2)}.` : ""));
+}
+
+// THE PACK WITH NO TERRITORY (RANGERS). World-level, once a tick beside
+// drakePassage. The pack's choice lives on its lead (lowest id alive) and is
+// copied to the rest - including a refill that has just walked in from a mouth
+// - as their `home`, so the ordinary territory walk is what carries them across
+// the map and the ordinary hunt is what thins the ground when they get there.
+export function rangePack(z: ZoneDO, now: number): void {
+  const world = z.world;
+  if (!world) return;
+  const pack = [...z.creatures.values()].filter((c) => RANGERS.has(c.templateId) && c.hp > 0)
+    .sort((a, b) => (a.id < b.id ? -1 : 1));
+  if (!pack.length) return;
+  const lead = pack[0];
+  if ((lead.rangeAt ?? 0) <= now) chooseGround(z, lead, now);
+  for (const c of pack) {
+    if (c === lead || c.rangeSince === lead.rangeSince) continue;
+    c.rangeBand = lead.rangeBand;
+    c.rangeSince = lead.rangeSince;
+    c.home = lead.home;
+  }
+}
+
+// Is this ranger's pack broken - RANGE_BREAK_LOST or more of it dead?
+export function packBroken(z: ZoneDO, creature: Creature): boolean {
+  if (!RANGERS.has(creature.templateId)) return false;
+  let rows = 0, alive = 0;
+  for (const s of z.world!.mobSpawns) if (s.template_id === creature.templateId) rows++;
+  for (const c of z.creatures.values()) if (c.templateId === creature.templateId && c.hp > 0) alive++;
+  return rows - alive >= RANGE_BREAK_LOST;
+}
+
+// A CULLER leaves what is scarce: this kind's living count in the band against
+// its spawn rows there. No rows (a rare form) is as scarce as it gets.
+function scarceHere(z: ZoneDO, templateId: string, roomId: string): boolean {
+  const band = z.regionOf(roomId);
+  let cap = 0, alive = 0;
+  for (const s of z.world!.mobSpawns) if (s.template_id === templateId && z.regionOf(s.room_id) === band) cap++;
+  if (!cap) return true;
+  for (const c of z.creatures.values()) if (c.templateId === templateId && z.regionOf(c.roomId) === band) alive++;
+  return alive / cap < RANGE_CRASHED;
+}
+
+function chooseGround(z: ZoneDO, lead: Creature, now: number): void {
+  const world = z.world!;
+  lead.rangeAt = now + RANGE_CHECK_MS;
+  const eats = new Set<string>([...(PREYS_ON.get(lead.templateId) ?? []), ...(PACK_PREY.get(lead.templateId)?.keys() ?? [])]);
+  // Where can it walk at all: no keyed door, nothing below the deep door.
+  const reach = new Set<string>([lead.roomId]);
+  const queue = [lead.roomId];
+  while (queue.length) {
+    const at = queue.pop()!;
+    for (const e of world.exits.get(at) ?? []) {
+      if (e.key_item || reach.has(e.to_room) || DEEP_ROOMS.has(e.to_room)) continue;
+      reach.add(e.to_room);
+      queue.push(e.to_room);
+    }
+  }
+  const capOf = new Map<string, number>(), aliveOf = new Map<string, number>(), huntersOf = new Map<string, number>();
+  const preyIn = new Map<string, number>();
+  for (const s of world.mobSpawns) {
+    if (!eats.has(s.template_id)) continue;
+    const band = z.regionOf(s.room_id);
+    if (RANGE_BANDS.has(band)) capOf.set(band, (capOf.get(band) ?? 0) + 1);
+  }
+  for (const c of z.creatures.values()) {
+    const band = z.regionOf(c.roomId);
+    if (!RANGE_BANDS.has(band) || RANGERS.has(c.templateId)) continue;
+    if (eats.has(c.templateId)) {
+      aliveOf.set(band, (aliveOf.get(band) ?? 0) + 1);
+      if (reach.has(c.roomId)) preyIn.set(c.roomId, (preyIn.get(c.roomId) ?? 0) + 1);
+    } else if ([...(PREYS_ON.get(c.templateId) ?? [])].some((p) => eats.has(p))) {
+      huntersOf.set(band, (huntersOf.get(band) ?? 0) + 1);
+    }
+  }
+  const fullness = (band: string) => (aliveOf.get(band) ?? 0) / Math.max(1, capOf.get(band) ?? 0);
+  // Staying: the ground still has meat on it and the stay is not up.
+  const here = lead.rangeBand;
+  if (here && now - (lead.rangeSince ?? 0) < RANGE_STAY_MS && fullness(here) >= RANGE_THINNED) return;
+  let best: string | undefined, bestScore = -1;
+  for (const band of capOf.keys()) {
+    if (band === here) continue;
+    const full = fullness(band);
+    if (full < RANGE_CRASHED) continue;
+    const score = full / (1 + (huntersOf.get(band) ?? 0) / Math.max(1, aliveOf.get(band) ?? 0));
+    if (score > bestScore) { bestScore = score; best = band; }
+  }
+  if (!best) return; // nowhere better: keep the ground it has
+  let room: string | undefined, most = 0;
+  for (const [id, n] of preyIn) {
+    if (z.regionOf(id) !== best || world.safeRooms.has(id) || world.entryRooms.has(id)) continue;
+    if (n > most || (n === most && chance(0.5))) { most = n; room = id; }
+  }
+  if (!room) return;
+  lead.rangeBand = best;
+  lead.rangeSince = now;
+  lead.home = room;
 }
 
 // THE BLOOD MOON PUTS TEETH IN THE DEAD. On the red nights the hollow things
@@ -961,6 +1060,7 @@ function thresholdStep(
 // THE WOLVES TEST YOU (WOLF_TESTERS). Called on a fed wolf's live turn. True
 // when the test took its turn (it holds its ground rather than wandering off).
 export async function wolfTests(z: ZoneDO, c: Creature, now: number): Promise<boolean> {
+  if (packBroken(z, c)) return false; // a broken pack tests nobody
   if (!WOLF_TESTERS.has(c.templateId) || c.asleep || c.heldBy || c.holding) return false;
   const tmpl = z.world!.mobTemplates.get(c.templateId)!;
   // YOU TURNED ON IT before it committed: it breaks off and goes. (Your blow
@@ -1905,6 +2005,14 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       // rush, no miss, it never knew.
       const moss = MOSS_HIDDEN[c.templateId];
       if (moss && chance(moss)) continue;
+      // A CULLER takes the weakest in the room, not the first: the hurt, the
+      // slow and the old are what it is for (CULLERS).
+      if (CULLERS.has(creature.templateId)) {
+        if (scarceHere(z, c.templateId, creature.roomId)) continue;
+        const ratio = (x: Creature) => x.hp / (world.mobTemplates.get(x.templateId)?.max_hp ?? x.hp);
+        if (!victim || ratio(c) < ratio(victim)) victim = c;
+        continue;
+      }
       victim = c;
       if (!c.target) break;
     }

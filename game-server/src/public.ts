@@ -3417,6 +3417,7 @@ var VOICE_FAMILY = {
   threehound: "three-hound",
   wolf: "grey-wolf dire-wolf hill-wolf lead-wolf the-old-grey",
   fox: "hill-fox snow-fox the-blue-fox the-raiding-fox",
+  coyote: "coyote",
   hyena: "grave-hyena",
   direhyena: "dire-hyena",
   rat: "rat fleet-rat brood-rat albino-rat hedgehog",
@@ -3821,6 +3822,18 @@ var VOICES = {
     else { VOX.voc(t, { f: [[0, 800], [0.25, 520]], d: 0.25, fm: [[1000, 3], [2200, 4]], g: 1, a: 0.005 }, o);
       VOX.voc(t + 0.35, { w: "triangle", f: [[0, 520], [1.4, 260]], d: 1.4, vib: [5, 12], fm: [[700, 3]], g: 0.8 }, o); }
   },
+  coyote: function (t, m, o) {
+    // THE COYOTE (mig 325): a run of short rising yips that breaks into a thin
+    // wavering howl, quavering and cracking at the top - the pack talking.
+    if (m === 0) {
+      [0, .11, .21, .34].forEach(function (at, i) {
+        VOX.voc(t + at, { f: [[0, 620 + i * 60], [.05, 900 + i * 70]], d: .07, fm: [[1300, 3], [2600, 4]], n: .25, g: .7, a: .006 }, o);
+      });
+      VOX.voc(t + .5, { w: "triangle", f: [[0, 700], [.3, 1050], [.7, 980], [1.0, 1080], [1.4, 760]], d: 1.45, vib: [9, 40], fm: [[1400, 2], [2700, 2]], n: .08, g: .7, a: .06 }, o);
+    }
+    else if (m === 1) { for (var i = 0; i < 4; i++) VOX.voc(t + i * 0.09, { f: [[0, 600], [0.05, 480]], d: 0.07, r: [80, 0.6], fm: [[1200, 3], [2400, 4]], n: 0.45, g: 1.1, a: 0.004 }, o); }
+    else VOX.voc(t, { f: [[0, 1300], [0.15, 1500], [0.8, 500]], d: 0.85, vib: [7, 30], fm: [[1600, 3], [2900, 4]], n: 0.2, g: 1, a: 0.008 }, o);
+  },
   fox: function (t, m, o) {
     if (m === 0) VOX.voc(t, { f: [[0, 700], [0.15, 1100], [0.6, 780]], d: 0.6, r: [70, 0.6], fm: [[1500, 3], [2800, 4]], n: 0.3, g: 1, a: 0.02 }, o);
     else if (m === 1) { for (var i = 0; i < 6; i++) VOX.voc(t + i * 0.075, { f: [[0, 520], [0.05, 460]], d: 0.055, r: [90, 0.7], fm: [[1100, 3], [2200, 4]], n: 0.4, g: 1.2, a: 0.004 }, o); }
@@ -4182,7 +4195,7 @@ VOX.wall = function (pan, destination) {
 // sound, never its call: a howl where the line says padding would be a lie.
 var MOVE_STYLE = {
   direhyena: "pad", boneknight: "mailmarch", mason: "mason", drover: "drover", eelcutter: "eelcutter", fowler: "fowler", hollowworker: "boots", hulk: "water", drownedgod: "water", stalker: "slither", gaunt: "boots",
-  dog: "pad", twohound: "heavy", threehound: "heavy", badger: "pad", otter: "water", wolf: "pad", fox: "pad", hyena: "pad", cat: "pad",
+  dog: "pad", twohound: "heavy", threehound: "heavy", badger: "pad", otter: "water", wolf: "pad", coyote: "pad", fox: "pad", hyena: "pad", cat: "pad",
   deer: "hoof", stag: "hoof", goat: "hoof", beast: "heavy", bear: "heavy", boar: "heavy",
   rat: "scurry", stoat: "scurry", hare: "scurry", sloth: "drag",
   gull: "wings", oystercatcher: "wings", chough: "wings", ptarmigan: "wings", heron: "wings", crow: "wings", eagle: "wings", vulture: "wings", owl: "wings", bittern: "boom",
@@ -4311,6 +4324,7 @@ var IDLE = {
   otter: function (t, o) { VOX.voc(t, { w: "sine", f: [[0, 1600], [0.07, 2100], [0.15, 1700]], d: 0.18, g: 0.25, a: 0.025 }, o); },
   dog: function (t, o) { SND._burst(t, { freq: 900, sweep: 300, dur: 0.2, gain: 1.0 * SCAPE_VOL, atk: 0.02, out: o }); },
   wolf: function (t, o) { SND._burst(t, { freq: 700, sweep: 250, dur: 0.25, gain: 1.0 * SCAPE_VOL, atk: 0.03, out: o }); VOX.voc(t + 0.3, { f: [[0, 95], [0.5, 100]], d: 0.5, r: [38, 0.9], fm: [[400, 3]], n: 0.5, g: 0.9, a: 0.1 }, o); },
+  coyote: function (t, o) { for (var i = 0; i < 2; i++) VOX.voc(t + i * 0.14, { f: [[0, 700], [0.05, 1000]], d: 0.07, fm: [[1400, 3]], n: 0.2, g: 0.35, a: 0.006 }, o); },
   fox: function (t, o) { for (var i = 0; i < 3; i++) SND._burst(t + i * 0.12, { type: "bandpass", freq: 2500, q: 2, dur: 0.07, gain: 0.9 * SCAPE_VOL, atk: 0.01, out: o }); },
   hyena: function (t, o) { for (var i = 0; i < 3; i++) VOX.voc(t + i * 0.13, { f: [[0, 520], [0.07, 450]], d: 0.08, fm: [[1000, 3]], n: 0.3, g: 0.45, a: 0.005 }, o); },
   rat: function (t, o) { VOX.clicks(t, { f: 2800, k: 6, gap: 0.04, q: 3, g: 0.08 }, o); VOX.blip(t + 0.35, 3200, 3600, 0.04, 0.3, o, "triangle"); },
@@ -13433,6 +13447,7 @@ var MOB_SPRITE = {
   // taller than any man, the Gaunt taller past reason; the sapper on his knees in
   // every pose, so sized low.
   "grey-wolf": 13,
+  "coyote": 11,             // a wolf's build at four-fifths the size: knee-high on a man, smaller than the grey wolf beside it
   "dire-wolf": 18,
   "wild-boar": 12,
   "old-boar": 14,
@@ -13477,6 +13492,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "coyote":   { n: 8, aspect: 1.172, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-old-grey":   { n: 8, aspect: 1.036, f: {"idle":0,"alert":1,"rest":2,"hold-ground":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "hedgehog":   { n: 9, aspect: 1.097, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"curl-up":6,"alert":7,"death":8} },
   "wood-sloth":   { n: 9, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"reach-up":6,"alert":7,"death":8} },

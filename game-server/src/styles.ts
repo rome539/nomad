@@ -10,9 +10,9 @@ import type { ZoneDO } from "./zone";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate } from "./world";
 import { hasTrait } from "./world";
-import { chance } from "./rng";
+import { chance, pick } from "./rng";
 import { cap } from "./zone-util";
-import { airborne, remembers } from "./ai";
+import { airborne, remembers, addGrudge } from "./ai";
 import type { CarriedItem, ItemTemplate } from "./world";
 import {
   SWARMS, SWARM_STEP, SWARM_MAX_OTHERS, STRIKERS, STRIKER_DODGE, STRIKER_DODGE_BARE,
@@ -24,6 +24,7 @@ import {
   CHARGERS, CHARGE_MULT, CHARGE_REST_MS, BLOWN_MS, BLOWN_TAKEN_MULT,
   HEAVIES, HEAVY_KNOCK_ODDS,
   PACKS, PACK_LEADS, PACK_FLANK_MULT, PACK_LEADERLESS_MS,
+  HARRIERS, HARRY_COMMIT_AT, HARRY_HOLD_ODDS, HARRY_NIP_MULT, HARRY_HOLD_LINES, HARRY_PILE_LINE,
 } from "./zone-data";
 
 export interface Blow { mult: number; line?: string; flourish?: string; knock: boolean; pin: boolean; feint: boolean }
@@ -47,6 +48,12 @@ export function creatureBlow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
 
   if (HEAVIES.has(id)) {
     out.knock = !exhaustion.heavyTired(creature) && chance(HEAVY_KNOCK_ODDS * (victim.stance === "guarded" ? 0.5 : 1));
+  }
+
+  // A harrier on somebody still standing straight nips in and out (HARRIERS).
+  if (HARRIERS.has(id) && !harryOpen(victim)) {
+    out.mult *= HARRY_NIP_MULT;
+    out.flourish = ", a quick nip, and it is back out of reach.";
   }
 
   if (PACKS[id] && victim.target !== creature.id && flanking(z, creature, victim, now)) {
@@ -102,6 +109,29 @@ export function beforeAttack(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} rushes ${victim.name} and stops short.`, victim.pubkey, false);
     z.refreshRoomCtx(creature.roomId);
     return true;
+  }
+  // A HARRIER waits for you to be hurt (HARRIERS). Until then some rounds it
+  // only circles; once you are, the rest of the pack in the room piles in.
+  if (HARRIERS.has(id)) {
+    if (!harryOpen(victim)) {
+      if (chance(HARRY_HOLD_ODDS)) {
+        z.send(victim, pick(HARRY_HOLD_LINES).replace("{a}", cap(tmpl.name)));
+        return true;
+      }
+    } else {
+      let joined = false;
+      for (const c of z.creaturesInRoom(creature.roomId)) {
+        if (c === creature || !HARRIERS.has(c.templateId) || c.target || c.asleep || c.hp <= 0) continue;
+        c.target = victim.pubkey;
+        addGrudge(z, c, victim.pubkey);
+        joined = true;
+      }
+      if (joined) {
+        z.send(victim, HARRY_PILE_LINE, "dmgin");
+        z.roomFeed(creature.roomId, `The pack closes on ${victim.name} all at once.`, victim.pubkey, false);
+        z.refreshRoomCtx(creature.roomId);
+      }
+    }
   }
   // A lurker in the dark it came out of goes back into it, and comes again.
   if (LURKERS.has(id)) {
@@ -438,4 +468,9 @@ export function thrownAt(z: ZoneDO, creature: Creature, tmpl: MobTemplate, sessi
   z.send(session, `That one knocks ${tmpl.name} out of the air. It comes down hard and flounders on the ground.`, "stun");
   z.roomFeed(creature.roomId, `${cap(tmpl.name)} is knocked out of the air and comes down hard.`, session.pubkey, false);
   z.refreshRoomCtx(creature.roomId);
+}
+
+// Is this wanderer hurt enough for a harrier to stop waiting?
+function harryOpen(victim: Session): boolean {
+  return !!victim.staggered || victim.hp < victim.maxHp * HARRY_COMMIT_AT;
 }

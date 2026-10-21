@@ -509,6 +509,11 @@ const LINES = {
   rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
   alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
 },
+"coyote": {
+  feed: "Head down over a carcass on the ground, one forefoot planted on it, the neck twisted to pull upward and the jaws working. THE CARCASS IS NOT DRAWN - only the animal's posture over it, head low, shoulders braced, the pull in the neck",
+  rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
+  alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
+},
 "the-old-grey": {
   rest: "Asleep curled round on its side with the tail over the nose, the whole body gone slack and settled low, eyes shut",
   alert: "Stopped square and facing, the head up and level, ears forward, the weight settled back over the hind legs - it has seen you and decided about it",
@@ -992,6 +997,7 @@ const REDRAW = {
   "glutton": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "hill-fox": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
   "hill-wolf": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
+  "coyote": ["idle","alert","rest","feed","move-a","move-b","attack","death"], // the grey wolf's sheet, as cut
   "lead-wolf": ["idle","rest","hold-ground","feed","move-a","move-b","attack","death"],
   // THE OLD GREY (mig 323): the boss behind the moon door. Its pack feeds it, so
   // no eating frame; it holds its lie, so hold-ground.
