@@ -576,6 +576,7 @@ export const HELP_TEXT = [
   "                    kind. 'buy <thing>' names your want, then 'offer <thing>'",
   "                    lays goods on the counter until he's square. He gives no",
   "                    change, buys nothing outright, and touches nothing sealed.",
+  "                    A count buys that many: 'buy 3 torch'.",
   "  dice              (bones) — the gatehouse bench only. Push your luck: two",
   "                    bones to open, then one at a time, and over 21 you're out",
   "                    where you stand. 'roll' takes another, 'stand' holds it.",

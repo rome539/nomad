@@ -5035,7 +5035,13 @@ export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", 
   // shock of this one is that ninety-six hit points were in the room with you
   // the entire time. zone.ts stamps `hidden` on creatures that joined this set
   // after they spawned, so the live world does not need a reseed to hide it.
-  "cave-lion"]);
+  "cave-lion",
+  // THE CROSSING'S TWO WATCHERS (mig 314, rome 2026-10-20). The fowler lies flat
+  // in his hide in wet turf, which is already a man you do not see until he
+  // rises; the reed walker is one cut over and the reed is too thick to see
+  // through. Both now wait unseen like the rest. The walker still shadows you
+  // (SHADOWS) from a room away; this only hides it in the room it holds.
+  "the-fowler", "the-reed-walker"]);
 // ROOTED things never move. Not a sentinel — a sentinel guards a door, sleeps
 // until the deep is opened, and carries a pile of deep-specific machinery a
 // wood creature has no business inheriting. This is the plainer fact: it is

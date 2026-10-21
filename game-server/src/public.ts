@@ -512,10 +512,10 @@ export const PAGE = `<!doctype html>
   }
   #bench .bitem button:hover { color: var(--gold); border-color: var(--gold); }
   /* How many of a stack to move: a minus, the count, a plus, in front of the move buttons. */
-  #bench .bitem .qty { display: inline-flex; align-items: center; gap: 2px; }
-  #bench .bitem .qty .qtyn { min-width: 2.2em; text-align: center; color: var(--gold); font-size: 12px; font-variant-numeric: tabular-nums; }
-  #bench .bitem .qty button { padding: 2px 7px; }
-  #bench .bitem .qty button:disabled { opacity: .35; cursor: default; color: var(--dim); border-color: var(--border); }
+  #bench .bitem .qty, #trade .qty { display: inline-flex; align-items: center; gap: 2px; }
+  #bench .bitem .qty .qtyn, #trade .qty .qtyn { min-width: 2.2em; text-align: center; color: var(--gold); font-size: 12px; font-variant-numeric: tabular-nums; }
+  #bench .bitem .qty button, #trade .qty button { padding: 2px 7px; }
+  #bench .bitem .qty button:disabled, #trade .qty button:disabled { opacity: .35; cursor: default; color: var(--dim); border-color: var(--border); }
   /* Destructive actions retain their warning and armed states. */
   #bench .bitem button.burn { color: var(--dim); }
   #bench .bitem button.burn:hover { color: var(--blood); border-color: var(--blood); }
@@ -7049,12 +7049,13 @@ var tgoods = document.getElementById("tgoods");
 var tnote = document.getElementById("tnote");
 var twant = document.getElementById("twant");
 var tradeWant = null; // the named want, or null (offers disabled until named)
+var tradeOfferAt = 0; // when the offer still waiting on the keeper's answer went (0 = none)
 var tradeTab = "pack"; // which keeping the goods column shows: pack | lockbox | vault
 var tradeState = null; // last trade payload, so tab switches re-render locally
 document.getElementById("tclose").addEventListener("click", function () { tradeSend("close"); });
 
-function tradeSend(action, row, src) {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "trade", action: action, row: row || "", src: src || "" }));
+function tradeSend(action, row, src, n) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "trade", action: action, row: row || "", src: src || "", n: n || 1 }));
   // If the wire is gone the frame goes nowhere \u2014 so a CLOSE still closes,
   // locally. Nothing traps a wanderer behind a panel that cannot answer.
   else if (action === "close") closeTrade();
@@ -7159,14 +7160,44 @@ function tradeItemNode(it, place) {
   var b = document.createElement("button");
   b.type = "button";
   if (place === "stock") {
+    // HOW MANY (rome, 2026-10-20): the kit window's minus-count-plus, on the
+    // keeper's stock. The count rides the buy frame; the cost shows the total.
+    var buyN = 1, BUY_MAX = 20;
+    var qty = document.createElement("span"); qty.className = "qty";
+    var minus = document.createElement("button"), plus = document.createElement("button"), shown = document.createElement("span");
+    minus.type = plus.type = "button"; minus.textContent = "\u2212"; plus.textContent = "+";
+    minus.setAttribute("aria-label", "One fewer"); plus.setAttribute("aria-label", "One more");
+    shown.className = "qtyn"; shown.setAttribute("aria-live", "polite");
+    var paintN = function () {
+      shown.textContent = String(buyN); minus.disabled = buyN <= 1; plus.disabled = buyN >= BUY_MAX;
+      var total = Math.round(it.cost * buyN * 10) / 10;
+      co.textContent = (co.className === "mud-cost" ? "Cost: " : "") + total;
+    };
+    minus.addEventListener("click", function (e) { e.stopPropagation(); if (buyN > 1) { buyN--; paintN(); } });
+    plus.addEventListener("click", function (e) { e.stopPropagation(); if (buyN < BUY_MAX) { buyN++; paintN(); } });
+    qty.append(minus, shown, plus); paintN();
+    qty.addEventListener("mudcost", paintN);
+    wrap.appendChild(qty);
+    b.className = "tbuy";
     b.textContent = "buy";
-    b.addEventListener("click", function () { tradeSend("buy", it.id); });
+    b.addEventListener("click", function () { tradeSend("buy", it.id, "", buyN); });
   } else {
     b.textContent = "offer";
+    b.className = "toffer";
     b.disabled = !tradeWant;
     // The tab the item came from rides with the offer: '' = pack.
     var src = tradeTab === "pack" ? "" : tradeTab;
-    b.addEventListener("click", function () { tradeSend("offer", it.id, src); });
+    // ONE OFFER IN FLIGHT (rome, 2026-10-20). On a slow line the offer that
+    // squared the counter had not answered yet, so more clicks went after it
+    // and the trophies felt thrown away. Each offer now waits for the keeper's
+    // answer: every offer button dims until the counter comes back (renderTrade
+    // lights them again), or five seconds pass with no answer.
+    b.addEventListener("click", function () {
+      if (tradeOfferAt && Date.now() - tradeOfferAt < 5000) return;
+      tradeOfferAt = Date.now();
+      document.querySelectorAll("#trade button.toffer").forEach(function (x) { x.disabled = true; });
+      tradeSend("offer", it.id, src);
+    });
   }
   wrap.appendChild(b);
   return wrap;
@@ -7266,6 +7297,7 @@ function renderGoods() {
 function renderTrade(state) {
   var restorePosition = keepListPosition("trade");
   tradeState = state;
+  tradeOfferAt = 0; // the keeper answered: the next offer may go
   // The cart: a list of wants (buy the same thing twice and it lists twice),
   // paid against their summed cost. Truthy only while something's on the counter
   // \\u2014 that's what unlocks the offer buttons.
@@ -7738,7 +7770,7 @@ function mudDetailSource(type,it,place,source){
  if(type==='forge'&&place==='recipe'){var rarity=nm.querySelector('.rar');if(rarity)rarity.remove()}
  if(it.stat){var stats=document.createElement('div');stats.className='mud-stats';it.stat.split(', ').forEach(function(t){var token=document.createElement('span');token.className=statTokenClass(t);token.textContent=t;stats.appendChild(token)});nm.after(stats)}
  var acts=source.querySelector('.acts');
- if(type==='trade'){acts=document.createElement('div');acts.className='acts';var buy=source.querySelector('button'),cost=source.querySelector('.tcost');if(cost){cost.className='mud-cost';cost.textContent='Cost: '+it.cost;acts.appendChild(cost)}acts.appendChild(buy);source.appendChild(acts)}
+ if(type==='trade'){acts=document.createElement('div');acts.className='acts';var buy=source.querySelector('button.tbuy')||source.querySelector('button'),cost=source.querySelector('.tcost'),q=source.querySelector('.qty');if(cost){cost.className='mud-cost';cost.textContent='Cost: '+it.cost;acts.appendChild(cost)}if(q){acts.appendChild(q);q.dispatchEvent(new Event('mudcost'))}acts.appendChild(buy);source.appendChild(acts)}
  if(type==='forge'&&place==='recipe'){var cost=source.querySelector('.cost');if(cost){cost.className='mud-cost';cost.textContent='Materials: '+cost.textContent;acts.prepend(cost)}}
 }
 function mudRow(type,it,place,source){

@@ -732,16 +732,26 @@ export function cartCost(trade: { wants: { cost: number }[] }): number {
 
 // Name a want: opens the cart, or adds to it. The same thing can go on twice —
 // 'buy linen dressing' twice buys two. Shared by the typed command and the modal.
-export function startBuy(z: ZoneDO, session: Session, stock: { itemId: string; cost: number }): string {
+// A COUNT PUTS THAT MANY ON AT ONCE (rome, 2026-10-20: the stock gets the same
+// minus-count-plus as the kit window). 'buy 3 torch', or the modal's stepper;
+// the stock is not counted, so any number up to BUY_COUNT_MAX goes on.
+export const BUY_COUNT_MAX = 20;
+export function startBuy(z: ZoneDO, session: Session, stock: { itemId: string; cost: number }, n = 1): string {
   const t = z.world!.itemTemplates.get(stock.itemId)!;
+  const count = Math.max(1, Math.min(BUY_COUNT_MAX, Math.floor(n) || 1));
   const cart = session.buying ?? { wants: [], paid: 0, escrow: [] };
-  cart.wants.push({ itemId: stock.itemId, cost: stock.cost });
+  const fresh = cart.wants.length === 0;
+  for (let i = 0; i < count; i++) cart.wants.push({ itemId: stock.itemId, cost: stock.cost });
   session.buying = cart;
   const total = cartCost(cart);
-  if (cart.wants.length === 1) {
+  const named = count > 1 ? `${t.name} (\u00d7${count})` : t.name;
+  if (fresh && count === 1) {
     return `The keeper taps the counter: ${t.name} runs ${stock.cost} in trade. Offer what you carry — he'll say when he's square.`;
   }
-  return `The keeper sets ${t.name} beside the rest — ${cart.wants.length} things now, ${total} in trade all told. Offer until he's square.`;
+  if (fresh) {
+    return `The keeper taps the counter: ${named} runs ${total} in trade. Offer what you carry — he'll say when he's square.`;
+  }
+  return `The keeper sets ${named} beside the rest — ${cart.wants.length} things now, ${total} in trade all told. Offer until he's square.`;
 }
 
 export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
@@ -755,9 +765,11 @@ export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
   const shut = worksBar(z, session);
   if (shut) return z.send(session, shut, "evt");
   if (!arg) return z.send(session, "Buy what? 'barter' shows the keeper's stock.");
+  const counted = /^(\d+)\s+(.+)$/.exec(arg.trim());
+  const want = counted ? counted[2] : arg, n = counted ? parseInt(counted[1], 10) : 1;
   const stock = world.fenceStock.find((s) => {
     const t = world.itemTemplates.get(s.itemId);
-    return t ? nameMatches(t.name, arg) : false;
+    return t ? nameMatches(t.name, want) : false;
   });
   if (!stock) return z.send(session, "The keeper shrugs. He doesn't carry that.");
   if (!inStock(z, stock.itemId)) {
@@ -767,7 +779,7 @@ export function cmdBuy(z: ZoneDO, session: Session, arg: string): void {
   throughTheDoor(z, session); // the hatch is inside — the door comes first
   z.enterStep(session, "trading"); // safe at the counter until you step away
   if (walkedIn) z.send(session, "You push in out of the cold and step up to the keeper's hatch.");
-  z.send(session, startBuy(z, session, stock) + " ('offer nothing' walks away.)");
+  z.send(session, startBuy(z, session, stock, n) + " ('offer nothing' walks away.)");
   z.sendCtx(session);
 }
 
@@ -1182,7 +1194,7 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
       return sendTrade(z, session, "The keeper shakes his head — he isn't carrying that just now. It comes and goes; check back.");
     }
     const stock = world.fenceStock.find((s) => s.itemId === frame.row);
-    note = stock ? startBuy(z, session, stock) : undefined;
+    note = stock ? startBuy(z, session, stock, Number(frame.n) || 1) : undefined;
   } else if (action === "offer") {
     if (!session.buying) {
       note = "Pick your want from the stock first.";
