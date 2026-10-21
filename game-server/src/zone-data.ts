@@ -7149,6 +7149,10 @@ export const CROSSING_RULES: [string, RegExp][] = [
   // WHAT IS LEFT IS THE SHORE ITSELF: the hard, the quay, the nets in the water,
   // the nousts, the capstans, the anchor stone. Ten rooms, every one of them
   // ground you could stand on with the tide in front of you.
+  // THE SALTINGS' DUNES (mig 310) matched nothing here for two days and painted
+  // the flat wash. No dune plate exists; the wood's heath - pale sand, dry grass
+  // tufts, gorse - is the nearest ground, and the dens already borrow it.
+  ["heath",      /^the-white-dunes$|^the-dune-slack$|^the-marram-sea$|^the-blowout$|^the-dune-ridge$|^the-sea-buckthorn$|^the-grey-dunes$/],
   ["staithe",    /staithe|^the-hard$|capstan|quay|net-poles|drying-frames|boat-noust|^the-oar|anchor-stone/],
   ["shell",      /wrack|shingle|shell|limpet|mussel-scaup|tide-mark|storm-line|thrift-bank|cockle|mud-shore|gutway|^the-strand|boat-graves/],
   ["shore-road", /road|\blane\b|cart-ruts|drove|parting|passengers-rest|toll-board|gull-flats|wildfowler|shepherds-stone|far-shore-stone|shore-descent|strand|stair/],

@@ -3446,7 +3446,8 @@ var VOICE_FAMILY = {
   cat: "lynx wildcat the-tom",
   beast: "cave-lion",
   bear: "the-baited-bear the-chain-breaker brown-bear",
-  hare: "mountain-hare snow-hare wood-sloth",
+  hare: "mountain-hare snow-hare",
+  sloth: "wood-sloth",
   human: "cutthroat cutpurse footpad wayman strand-thief the-wrecker the-chainman the-sapper the-bellfounder the-butter-wife the-milker the-herd the-one-who-stayed road-carrier",
   mason: "the-bridge-mason",
   drover: "the-drover",
@@ -3988,6 +3989,19 @@ var VOICES = {
       VOX.hiss(t + .3, { type: "lowpass", f: 540, sw: 140, d: 1.1, g: .5, a: .18 }, o);
     }
   },
+  // THE SLOTH (rome, 2026-10-21: its own voice, not the hare's). A thin high
+  // whistle, slow to start and slow to end, with breath under it - the call is
+  // long and rises and sags; the fight is a huff and a short squeal; the hurt
+  // is the whistle falling away. Nothing about it is quick.
+  sloth: function (t, m, o) {
+    if (m === 0) {
+      VOX.hiss(t, { type: "bandpass", f: 2400, d: 1.3, g: .12, a: .35 }, o);
+      VOX.voc(t + .1, { w: "sine", f: [[0, 1850], [.6, 2300], [1.5, 1700]], d: 1.6, vib: [3, 18], g: .32, a: .3 }, o);
+    } else if (m === 1) {
+      VOX.hiss(t, { type: "lowpass", f: 900, sw: 300, d: .55, g: .35, a: .12 }, o);
+      VOX.voc(t + .35, { w: "sine", f: [[0, 1600], [.2, 2150], [.5, 1500]], d: .55, vib: [4, 20], g: .38, a: .06 }, o);
+    } else VOX.voc(t, { w: "sine", f: [[0, 2200], [1.7, 900]], d: 1.8, vib: [4, 25], g: .42, a: .1 }, o);
+  },
   hare: function (t, m, o) {
     if (m === 0) {
       [0, .21].forEach(function (at) { VOX.voc(t + at, { w: "triangle", f: [[0, 720], [.05, 900], [.12, 660]], d: .15, fm: [[1300, 1.2]], n: .6, g: .3, a: .012 }, o); });
@@ -4170,7 +4184,7 @@ var MOVE_STYLE = {
   direhyena: "pad", boneknight: "mailmarch", mason: "mason", drover: "drover", eelcutter: "eelcutter", fowler: "fowler", hollowworker: "boots", hulk: "water", drownedgod: "water", stalker: "slither", gaunt: "boots",
   dog: "pad", twohound: "heavy", threehound: "heavy", badger: "pad", otter: "water", wolf: "pad", fox: "pad", hyena: "pad", cat: "pad",
   deer: "hoof", stag: "hoof", goat: "hoof", beast: "heavy", bear: "heavy", boar: "heavy",
-  rat: "scurry", stoat: "scurry", hare: "scurry",
+  rat: "scurry", stoat: "scurry", hare: "scurry", sloth: "drag",
   gull: "wings", oystercatcher: "wings", chough: "wings", ptarmigan: "wings", heron: "wings", crow: "wings", eagle: "wings", vulture: "wings", owl: "wings", bittern: "boom",
   adder: "slither", eel: "water", seal: "water", drowned: "water", crab: "crab", greatcrab: "shell", greatdevilcrab: "shell",
   armour: "heavyboots", bone: "rattle", cantor: "rattle", king: "rattle", root: "creak", pale: "slither",
@@ -4225,6 +4239,8 @@ var MOVES = {
   pad: function (t, o, n, gap) { for (var i = 0; i < n; i++) SND._burst(t + i * gap, { freq: 380, q: 1, dur: 0.09, gain: 1.4 * SCAPE_VOL, atk: 0.01, out: o }); },
   hoof: function (t, o, n, gap) { for (var i = 0; i < n; i++) VOX.clicks(t + i * gap, { f: 900, k: 1, q: 2, d: 0.04, g: 0.9 }, o); },
   heavy: function (t, o, n, gap) { for (var i = 0; i < n; i++) { SND._burst(t + i * gap * 1.4, { freq: 250, q: 1, dur: 0.14, gain: 0.5 * SCAPE_VOL, atk: 0.01, out: o }); VOX.blip(t + i * gap * 1.4, 70, 40, 0.15, 0.6, o); } },
+  // the sloth hauling itself through dead leaves: few pulls, far apart, soft
+  drag: function (t, o, n, gap) { for (var i = 0; i < n; i++) VOX.hiss(t + i * gap * 2.5, { type: "bandpass", f: 1700, q: .8, d: .4, g: .45, a: .12 }, o); },
   scurry: function (t, o, n, gap) { VOX.clicks(t, { f: 2200, k: n * 3, gap: gap / 3, q: 2, d: 0.025, g: 0.5 }, o); },
   wings: function (t, o, n, gap) { for (var i = 0; i < 3; i++) SND._burst(t + i * 0.16, { freq: 600, sweep: 200, dur: 0.14, gain: 1.3 * SCAPE_VOL, atk: 0.03, out: o }); },
   bigwings: function (t, o, n, gap) { for (var i = 0; i < 3; i++) SND._burst(t + i * 0.55, { freq: 350, sweep: 100, dur: 0.45, gain: 0.7 * SCAPE_VOL, atk: 0.15, out: o }); },
@@ -4321,6 +4337,10 @@ var IDLE = {
   cat: function (t, o) { VOX.voc(t, { f: [[0, 90], [0.8, 95]], d: 0.8, r: [24, 0.95], fm: [[300, 2]], n: 0.4, g: 1.0, a: 0.15 }, o); },
   beast: function (t, o) {
     VOX.hiss(t, { type: "bandpass", f: 340, sw: 220, d: .9, g: .35, a: .2 }, o);
+  },
+  sloth: function (t, o) {
+    VOX.hiss(t, { type: "lowpass", f: 1100, d: .9, g: .1, a: .35 }, o);
+    VOX.voc(t + .5, { w: "sine", f: [[0, 1900], [.7, 1750]], d: .7, g: .1, a: .25 }, o);
   },
   hare: function (t, o) {
     VOX.hiss(t, { type: "bandpass", f: 1500, d: .12, g: .18, a: .015 }, o);
@@ -9766,7 +9786,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "104";      // /mob/      strips and their eye layers
+var MOB_V  = "105";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
@@ -13246,9 +13266,11 @@ var MOB_SPRITE = {
   "the-baited-bear": 15,      // 1.20  on all fours, chained
   "the-chain-breaker": 17,    // 1.35  the bigger of the two, and the chain is off
   // THE WOOD'S NIGHT AND ITS BEARS (mig 320-321). Nine-frame sheets that fill
-  // only 0.73-0.86 of their cell (the bear's upright frame makes every cell tall),
+  // only 0.78-0.86 of their cell (the bear's upright frame makes every cell tall),
   // so each is metres x 12.5 scaled up by (0.97 / fill) ^ (1 / MOB_P).
-  "brown-bear": 31,           // 1.30  on all fours; a shade over the baited bear
+  // the bear's box is its STANDING frame, grown 1.3x (POSE_GROW, build-mob-strips),
+  // so on all fours it fills only 0.60 of it and the number is that much bigger
+  "brown-bear": 47,           // 1.30  on all fours; a shade over the baited bear
   "tawny-owl": 9,             // 0.40  perched
   "wood-sloth": 10,           // 0.60  sitting
   "hedgehog": 4,              // 0.20  just over a rat
@@ -13457,7 +13479,7 @@ var MOB_ANIM = {
   "hedgehog":   { n: 9, aspect: 1.097, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"curl-up":6,"alert":7,"death":8} },
   "wood-sloth":   { n: 9, aspect: 0.978, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"reach-up":6,"alert":7,"death":8} },
   "tawny-owl":   { n: 9, aspect: 1.2, f: {"idle":0,"up":1,"glide":2,"down":3,"landing":4,"attack":5,"feed":6,"rest":7,"death":8} },
-  "brown-bear":   { n: 8, aspect: 0.986, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"feed":4,"rest":5,"inspect-upright":6,"death":7} },
+  "brown-bear":   { n: 8, aspect: 0.797, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"feed":4,"rest":5,"inspect-upright":6,"death":7} },
   "wood-stag":   { n: 8, aspect: 1.045, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "nomad":   { n: 14, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13} },
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },

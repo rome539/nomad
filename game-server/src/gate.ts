@@ -16,7 +16,7 @@ import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
-import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, moonPhase, eclipsePhase } from "./zone-util";
+import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, moonPhase, eclipsePhase, skyBand, halfFrac } from "./zone-util";
 import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
@@ -2513,13 +2513,20 @@ function overhead(now = Date.now()): string {
   const when = moonWhen(now);
   return when ? `${sky}; ${when}` : sky;
 }
+// THE HOUR (rome, 2026-10-21: the slate gave the sky but never the time of day).
+// The day's five light bands as the sky draws them, and the night in thirds.
+function hourWord(now = Date.now()): string {
+  if (!isNight(now)) return ["dawn", "morning", "midday", "afternoon", "dusk"][skyBand(now)];
+  const f = halfFrac(now);
+  return f < 1 / 3 ? "evening" : f < 2 / 3 ? "the dead of night" : "the small hours";
+}
 export function slateText(z: ZoneDO): string {
   const words = skyWords(z);
   const grounds = [...new Set([...events.weatherGrounds(z).bands, "deep"])]
     .sort((a, b) => Object.keys(REGION_LABELS).indexOf(a) - Object.keys(REGION_LABELS).indexOf(b));
   const rows = grounds.map((b) => `  ${REGION_LABELS[b] ?? b} — ${(words.get(b) ?? ["clear"]).join(", ")}`);
   return ["A slate hangs by the hatch with the sky chalked on it in the keeper's square hand, wiped and written over so often the old words still show through:",
-    `  Overhead — ${overhead()}`, ...rows].join("\n");
+    `  The hour — ${hourWord()}`, `  Overhead — ${overhead()}`, ...rows].join("\n");
 }
 
 // ---- THE BOARD ----

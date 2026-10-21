@@ -1135,14 +1135,6 @@ try { cache = JSON.parse(fs.readFileSync(CACHE, "utf8")); } catch {}
 // moment it does, or this quietly becomes the thing that overrides live prose.
 const PENDING_DESC = {
   // migration 289 — he comes down off the rope and works standing
-  // migration 321, not yet on prod
-  "tawny-owl": "A round brown owl the colour of the bark it sits against, so that you see it only when it turns its face to you. The face is a dish, and the eyes in it are black all the way through. It makes no sound when it moves, none at all, and it has been watching you for longer than you have been looking.",
-  // migration 321, not yet on prod
-  "wood-sloth": "It sits at the foot of a tree with its short hooked claws folded in front of it, furred grey-brown and green where the damp has got into the coat, chewing a leaf it pulled down from somewhere above. It turns its head toward you over the course of some time, and the face it turns is small and mild and smiling at nothing, and it goes back to the leaf.",
-  // migration 321, not yet on prod
-  "hedgehog": "A brown ball of spines on short legs, snuffling through the leaf litter with a long wet nose and making more noise about it than anything its size has any right to. When it hears you it stops, and tucks its face away, and becomes a thing with no front to it at all.",
-  // migration 320 — the wood's own bear, not yet on prod
-  "brown-bear": "It is a long way bigger than the doorway of anything you would build, and it moves through the trees without seeming to have to push. The coat is thick and brown and grizzled on the shoulders, and the hump over them is all muscle. It has stopped, and it has turned its head, and it is deciding about you with a patience that has never once been in a hurry.",
   "the-scaffold-hand": "Standing under the broken arch with both arms up over his head, dressing the underside of a span that is not there any more. The scaffold came down two centuries ago. He did not come down with it, and he has not put his arms down since.",
 };
 

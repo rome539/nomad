@@ -84,6 +84,13 @@ const SAME_ART = { "warden": ["warden-surface"] };
 // over idle, move-a and move-b against the strip live before the redraw; the
 // wood stag is measured against the red stag, the same animal. Only ever below
 // 1: a margin can shrink an animal, and nothing here can grow one past its frame.
+// ONE FRAME DRAWN TOO SMALL FOR WHAT IT IS (rome, 2026-10-21). The generator
+// holds every cell to one body size, so a bear reared up on its hind legs came
+// out only 1.25x the height of the bear on all fours, where a standing bear is
+// nearer 1.7x. This grows that pose alone, from its feet, before the shared
+// crop - so the frame gets taller and every other pose keeps its own size
+// relative to the box (the MOB_SPRITE number takes up the difference).
+const POSE_GROW = { "brown-bear": { "inspect-upright": 1.3 } };
 const BODY_SCALE = {
   "the-pilot": 0.933, "the-drove-master": 0.973, "wood-stag": 0.970,
   "the-old-glutton": 0.951, "snow-fox": 0.968, "lead-dog": 0.962,
@@ -221,6 +228,11 @@ for (const [id, dir] of [...found].sort()) {
 
   const files = order.map((p) => path.join(dir, p + ".png"));
   const raw = await Promise.all(files.map((f) => sharp(f).toBuffer()));
+  const grow = POSE_GROW[id] || {};
+  for (let i = 0; i < order.length; i++) if (grow[order[i]]) {
+    const m = await sharp(raw[i]).metadata();
+    raw[i] = await sharp(raw[i]).resize(Math.round(m.width * grow[order[i]]), Math.round(m.height * grow[order[i]])).png().toBuffer();
+  }
   const meta = await Promise.all(raw.map((b) => sharp(b).metadata()));
 
   // pad every pose up to one canvas, bottom-aligned, before anything else
