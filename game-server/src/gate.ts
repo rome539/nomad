@@ -16,7 +16,7 @@ import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
-import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, moonPhase, eclipsePhase, skyBand, halfFrac } from "./zone-util";
+import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, isFullMoon, moonPhase, eclipsePhase, skyBand, halfFrac } from "./zone-util";
 import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
@@ -2500,7 +2500,7 @@ export // What is overhead, the keeper's calendar (rome, 2026-10-18: the full mo
 // the blood one belong on the slate too - and as an estimate, not a count).
 // The sun's state by day, the moon's by night, then roughly how far off the
 // next full moon is. A full moon or a blood one is named when it is up.
-function fullMoonIn(now = Date.now()): number { const p = moonPhase(now); return p === 0 ? 0 : MOON_FULL_EVERY - p; }
+function fullMoonIn(now = Date.now()): number { const p = moonPhase(now); return isFullMoon(now) ? 0 : MOON_FULL_EVERY - p; }
 function moonWhen(now = Date.now()): string {
   const n = fullMoonIn(now);
   return n === 0 ? (isNight(now) ? "" : "full moon tonight")

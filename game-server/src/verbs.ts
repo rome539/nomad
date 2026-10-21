@@ -1115,9 +1115,9 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
     const i = Math.floor(Date.now() / RIDDLE_ROTATE_MS) % RIDDLES.length;
     return z.send(session, RIDDLE_ASK.replace("{q}", RIDDLES[i].q), "study");
   } else if (exit.key_item === MOON_DOOR_KEY) {
-    // THE MOON DOOR keeps no state: the moon IS the state. Full and white,
-    // and not the red one — the red moon belongs to the dead.
-    if (!isNight() || !isFullMoon() || isBloodMoon()) {
+    // THE MOON DOOR keeps no state: the moon IS the state. Any full moon, the
+    // red one included (rome, 2026-10-21 - it was shut under the blood moon).
+    if (!isNight() || !isFullMoon()) {
       return z.send(session, "The black door will not move. The moon cut into it is dark, and the iron is cold against your hand.", "dmgin");
     }
     // open — fall through and walk
@@ -3062,7 +3062,7 @@ export function cmdScan(z: ZoneDO, session: Session, _arg: string): void {
   for (const e of exits) {
     const seen: string[] = [];
     for (const c of z.creaturesInRoom(e.to_room)) {
-      if (c.hidden || LURKERS.has(c.templateId)) continue; // unseen is unseen, height or no height
+      if (c.hidden || LURKERS.has(c.templateId) || z.mossUnseen(c, session)) continue; // unseen is unseen, height or no height
       const t = world.mobTemplates.get(c.templateId);
       if (t) seen.push(t.name);
     }
@@ -3115,7 +3115,7 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
     // are not in openDoors, but a door standing open is not cold iron either —
     // and a tide door standing silted is cold iron, whatever the water is doing.
     const sealed = e.key_item && !z.openDoors.has(`${session.roomId}:${e.dir}`)
-      && !(e.key_item === MOON_DOOR_KEY && isNight() && isFullMoon() && !isBloodMoon())
+      && !(e.key_item === MOON_DOOR_KEY && isNight() && isFullMoon())
       && !(e.key_item === TIDE_DOOR_KEY && events.seaLevel(z) === 0 && z.tideSilt <= 0)
       && !(e.key_item === BELL_DOOR_KEY && events.bellOpen(z));
     lines.push(`${cap(dirPhrase(e.dir))}: ${sealed ? "cold iron, and nothing through it" : heardIn(z, e.to_room, cues, e.dir)}.`);

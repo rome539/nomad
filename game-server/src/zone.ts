@@ -57,7 +57,7 @@ import {
 } from "./world";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -106,7 +106,7 @@ import { FORGE_STOCK,
   HOLLOW, BLOODLESS, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
-  RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
+  RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_OPEN_BLOOD, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
   BELL_DOOR_KEY, BELL_DOOR_SHUT, BELL_DOOR_TREMBLE, BELL_DOOR_OPEN,
   TIDE_SILT_COURSES, TIDE_PRY_MS, TIDE_DIGGING_TOOLS, tideSiltLine, TIDE_PRY_WET, TIDE_PRY_SETTLE, TIDE_PRY_TOOL_HINT, TIDE_PRY_MAKING, TIDE_PRY_OPEN,
   HABIT_ODDS, HABIT_COOLDOWN_MS, HABITS, HABIT_SKY, HABIT_NIGHT, HABIT_FIRE, HABIT_DEEP, HABIT_GRAVES, QUIRK_ODDS, QUIRK_COOLDOWN_MS, TREASURE_QUIRKS,
@@ -135,7 +135,7 @@ import { FORGE_STOCK,
   MARKERS, MARK_MS, MARK_HEED_MULT, MARK_CALL_ODDS, SWEEPERS,
   FERRY_DRAG_ROOM, FERRY_DRAG_ODDS, FERRY_DRAG_MAX, SLOW_TO_NOTICE, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, RAVEN_NEST_ROOMS, RAVEN_SCOOPERS,
   groundWord, carveMedium, REST_TRACE, throwLand, metalFall,
-  PRICKLY, PRICK_LINES,
+  PRICKLY, PRICK_LINES, MOSS_SPOT, MOSS_SPOT_SLOT_MS, OWN_FORAGE_GROUNDS, OWN_FORAGE_ROOMS,
 } from "./zone-data";
 
 import { PrivateMessages } from "./private-messages";
@@ -627,6 +627,13 @@ export class ZoneDO implements DurableObject {
       // (FORAGE_REGIONS) feeds the things that graze it. Without this the wood
       // was two hundred rooms of trees that a deer could starve in.
       if (FORAGE_REGIONS.has(room.region)) FORAGE_ROOMS.add(room.id);
+      // ...and the few animals that only eat certain ground (OWN_FORAGE_GROUNDS).
+      for (const [id, grounds] of Object.entries(OWN_FORAGE_GROUNDS)) {
+        if (!grounds.has(terrainOf(room.id, room.description, room.region))) continue;
+        const set = OWN_FORAGE_ROOMS.get(id) ?? new Set<string>();
+        set.add(room.id);
+        OWN_FORAGE_ROOMS.set(id, set);
+      }
     }
     // THE MATERIAL AUDIT. Gear decays by what it is made of now, and an id that
     // is misspelt in one of the MATERIAL_* sets fails silently in the worst
@@ -2363,6 +2370,22 @@ export class ZoneDO implements DurableObject {
     if (this.carriesLight(session)) return true;
     if (this.roomLit(session.roomId)) return true;
     return this.roomHasBearer(session.roomId, session);
+  }
+
+  // LIT AT NIGHT BY SOMETHING NOT IN YOUR HAND (rome, 2026-10-21). The room
+  // text has long shown every one of these whole after dark - a charcoal clamp,
+  // a torch on the floor, another wanderer's flame, a lived-in den's hearth, and
+  // the NIGHT_LIT ground (foxfire, marsh light, corpse candles, the houses and
+  // camps, every gatehouse doorway) - while the picture stayed the plain dark.
+  // Exactly the open-ground night isDark would call dark, and something here
+  // answering it; a moonlit night is already its own picture.
+  public nightLitPicture(session: Session): boolean {
+    const roomId = session.roomId;
+    if (!OUTDOOR_ROOMS.has(roomId) || !isNight() || (isFullMoon() && !events.wetSky(this, roomId))) return false;
+    if (DARK_ROOMS.has(roomId) || events.gloamed(this, roomId)) return this.roomLit(roomId) || this.roomHasBearer(roomId, session);
+    if (NIGHT_LIT.has(roomId) || this.roomLit(roomId) || this.roomHasBearer(roomId, session)) return true;
+    for (const d of this.dens.values()) if (d.roomId === roomId) return true;
+    return false;
   }
 
   // Is anyone else standing here with a light in hand? Split out because the
@@ -7570,7 +7593,7 @@ export class ZoneDO implements DurableObject {
         // and the roofed rooms three paces away are enclosed. The line names
         // the open sky, so the one signal that separates the two kinds of room
         // is in the sentence that only ever fires in one of them.
-        : this.carriesLight(session) || this.roomLit(room.id)
+        : this.carriesLight(session)
           ? "Night's fully down and the sky over you is open and black — past your light, so is everything else."
           : "Night's fully down and the sky over you is open and black — past the light you're standing in, so is everything else.");
     }
@@ -7583,8 +7606,8 @@ export class ZoneDO implements DurableObject {
     // remembers its shape yet.
     for (const e of exits) {
       if (e.key_item === MOON_DOOR_KEY) {
-        const openNow = isNight() && isFullMoon() && !isBloodMoon();
-        lines.push((openNow ? MOON_DOOR_OPEN : MOON_DOOR_SHUT).replace("{dir}", e.dir));
+        const openNow = isNight() && isFullMoon();
+        lines.push((openNow ? (isBloodMoon() ? MOON_DOOR_OPEN_BLOOD : MOON_DOOR_OPEN) : MOON_DOOR_SHUT).replace("{dir}", e.dir));
       } else if (e.key_item === TIDE_DOOR_KEY) {
         // Three states, all visible: the sea over the sill, the silt holding
         // it (with the count — legibility first), or the door standing open.
@@ -7753,6 +7776,7 @@ export class ZoneDO implements DurableObject {
       // A lurker lying in wait is unseen — it isn't in the room at all, until it
       // strikes. UNLESS you carry a flame: torchlight finds it pressed into its
       // crevice before it can spring, and the ambush is spoiled (wakeListeners).
+      if (this.mossUnseen(creature, session)) continue; // a still sloth in its moss
       const hiddenLurker = LURKERS.has(creature.templateId) && creature.hidden && !creature.target;
       if (hiddenLurker && !this.litFor(session)) continue;
       if (hiddenLurker) {
@@ -8058,10 +8082,24 @@ export class ZoneDO implements DurableObject {
   // (rome, 2026-07-12). Torchlight is the honest counter: carry a flame and the
   // room shows it pressed into its crevice, so it becomes addressable.
   public lurkerUnseen(creature: Creature, session: Session): boolean {
+    if (this.mossUnseen(creature, session)) return true;
     return LURKERS.has(creature.templateId)
       && !!creature.hidden
       && !creature.target
       && !this.litFor(session);
+  }
+
+  // THE MOSSED SLOTH (MOSS_SPOT): it is usually not seen at all - no line, no
+  // chip, no picture, no name to address it by - and its slowness is how it
+  // stays that way, so walking does not give it away (rome, 2026-10-21). A torch
+  // in your hand finds it; so does a fight. The roll is per player and per ten
+  // minutes, so two looks agree with each other.
+  public mossUnseen(creature: Creature, session: Session): boolean {
+    const spot = MOSS_SPOT[creature.templateId];
+    if (spot === undefined || creature.target || this.carriesLight(session)) return false;
+    const now = Date.now();
+    const slot = Math.floor(now / MOSS_SPOT_SLOT_MS);
+    return hashSeed(creature.id + "|" + session.pubkey + "|" + slot) % 1000 >= spot * 1000;
   }
 
 
@@ -8757,7 +8795,10 @@ export class ZoneDO implements DurableObject {
           // to be able to tell "not lit" from "this frame says nothing about it".
           // ...and a den's hearth, burning while you rest by it, lights the room
           // the way your own torch would (the den has no hearth picture of its own).
-          torch: !seesArt(session.pubkey) ? undefined : (this.carriesLight(session) || den.hearthWarm(this, session)) ? 1 : 0,
+          // ...AND A ROOM THAT IS LIT ANYWAY (rome, 2026-10-21): wherever the text
+          // shows you the whole room after dark, the picture shows it lit too,
+          // not the plain dark. See nightLitPicture.
+          torch: !seesArt(session.pubkey) ? undefined : (this.carriesLight(session) || den.hearthWarm(this, session) || this.nightLitPicture(session)) ? 1 : 0,
           // WHICH SKY, WHEN AN HOUR OWNS MORE THAN ONE. Not a choice made here:
           // just the day count, handed over so the client can index its own
           // table with it. The server stays out of the art the way it does with
@@ -8837,7 +8878,7 @@ export class ZoneDO implements DurableObject {
     : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId))) ? "rain"
     // A BLOOD MOON IS ITS OWN NIGHT. It was collapsing into plain dark,
     // so the one night in the calendar the whole world changes colour —
-    // red eyes in the hollow ones, the full-moon door shut — looked
+    // red eyes in the hollow ones, the moon door lit red — looked
     // exactly like every other night in the picture.
     // ...AND UNDER THE RAIN'S GREY it is the after-rain cloud at any hour
     // (rome, 2026-10-15): darkened for the night, warmed for the low hours.

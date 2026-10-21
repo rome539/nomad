@@ -14,7 +14,17 @@ export function isNight(now = Date.now()): boolean {
 // caller, and it's already gated on isNight() there) — a "full moon" at noon
 // is not a thing this asks about.
 export function isFullMoon(now = Date.now()): boolean {
-  return moonPhase(now) === 0;
+  const p = moonPhase(now);
+  return p === 0 || (p === 1 && bloodMonth(now));
+}
+// THE BLOOD MOON HOLDS TWO NIGHTS (rome, 2026-10-21: so a player is twice as
+// likely to be on for one). The red moon's month is every BLOOD_MOON_EVERY-th,
+// and in it the full moon stays up a second night - the night after - so both
+// nights read as full AND blood to every system: the lit ground, the shut moon
+// door, the hollow's teeth and eyes, the sky lines. The rest of that month runs
+// one night shorter on the wane, which nobody counting nights will miss.
+function bloodMonth(now: number): boolean {
+  return Math.floor(now / (DAY_CYCLE_MS * MOON_FULL_EVERY)) % BLOOD_MOON_EVERY === 0;
 }
 // WHICH NIGHT OF THE MOON'S MONTH THIS IS: 0 is full, and it counts up from
 // there — waning, dark, waxing — back round to full again. isFullMoon has
@@ -195,14 +205,14 @@ export function eclipsePhase(now = Date.now()): SkyPhase {
 // answer (ai's teeth and eyes, zone's damage and room line, events' prose).
 export function isBloodMoon(now = Date.now()): boolean {
   return isNight(now)
-    && moonPhase(now) === 0
-    && (Math.floor(now / (DAY_CYCLE_MS * MOON_FULL_EVERY)) % BLOOD_MOON_EVERY === 0);
+    && moonPhase(now) <= 1
+    && bloodMonth(now);
 }
 // The announcement and the art must name the same calendar event.
 export function moonriseLine(now = Date.now()): string {
   return isBloodMoon(now)
     ? "A blood moon rises over the grounds, full and red — the hollow things stir beneath it."
-    : MOON_NIGHTS[moonPhase(now)] ?? MOON_NIGHTS[3];
+    : MOON_NIGHTS[isFullMoon(now) ? 0 : moonPhase(now)] ?? MOON_NIGHTS[3];
 }
 // Predators hunt harder after dark, outdoors only — day/night has no opinion
 // on indoor rooms, so neither does this. 1 = no change, the common case.

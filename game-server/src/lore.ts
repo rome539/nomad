@@ -621,7 +621,7 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   }
   const creature = z.findCreatureIn(session.roomId, arg);
   // You can't study what you can't see — a hidden lurker isn't there yet.
-  if (!creature || (creature.hidden && LURKERS.has(creature.templateId) && !creature.target)) {
+  if (!creature || (creature.hidden && LURKERS.has(creature.templateId) && !creature.target) || z.mossUnseen(creature, session)) {
     return z.send(session, "Nothing by that name is here to study.");
   }
   const tmpl = z.world!.mobTemplates.get(creature.templateId)!;

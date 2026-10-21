@@ -203,6 +203,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // ...but THE PICTURE HOLDS IT FAINTLY (rome, 2026-10-17): a lurker lying in
     // wait is drawn in its lurk frame, barely there, the shape you might have
     // imagined in the dark. Still no chip, no name, no line in the room text.
+    // A still sloth in its moss is not drawn at all, faint or otherwise, and
+    // gets no chip: there is no lurk frame for a thing that is not lying in wait.
+    if (z.mossUnseen(creature, session)) continue;
     const lurking = LURKERS.has(creature.templateId) && creature.hidden && !creature.joinedOpenly;
     if (lurking && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) {
       if (seen.length < 4) { seen.push(creature.templateId); doing.push("lurk"); eyes.push(""); }
@@ -263,7 +266,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     );
     // Same filter as the attack-chip loop above: the throw chip must never
     // name a lurker still lying in wait (it was the one place that could).
-    const firstMob = z.creaturesInRoom(session.roomId).find((c) =>
+    const firstMob = z.creaturesInRoom(session.roomId).find((c) => !z.mossUnseen(c, session) &&
       !(LURKERS.has(c.templateId) && c.hidden
         && (c.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))));
     if (throwable && firstMob) {
@@ -322,7 +325,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // NOTHING. session.studied is the cache the sync builder can read;
     // unhydrated (undefined) falls through and offers it, as it always did.
     const firstMob = [...z.creatures.values()].find(
-      (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target)
+      (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target) && !z.mossUnseen(c, session)
         && !session.studied?.has(c.templateId),
     );
     if (firstMob) suggest.push(`study ${chipName(world.mobTemplates.get(firstMob.templateId)!.name)}`);

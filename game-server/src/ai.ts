@@ -53,7 +53,7 @@ import {
   HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
   VARIANT_HOMES,
   groundWord,
-  PRICKLY,
+  PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, OWN_FORAGE_MEAL_LEFT,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -956,6 +956,24 @@ function thresholdStep(
 // reach. The recheck cadence keeps this off the hot path — the search is one
 // capped BFS, at most once a minute, only for a hungry hunter, and the answer
 // is held until it goes stale.
+// THE BEAR'S WALK TO FOOD (OWN_FORAGE_ROOMS). Hungry and not standing on its own
+// feeding ground, it is pulled toward the nearest one; standing on it, it stays
+// there to eat; fed, the errand ends and the den pulls it home.
+function forageErrand(z: ZoneDO, creature: Creature, now: number): string | undefined {
+  const own = OWN_FORAGE_ROOMS.get(creature.templateId);
+  if (!own || (creature.hunger ?? 0) < HUNGRY_AT) {
+    creature.forageFor = undefined;
+    return undefined;
+  }
+  if (own.has(creature.roomId)) return (creature.forageFor = creature.roomId);
+  if ((creature.forageAt ?? 0) > now && creature.forageFor) return creature.forageFor;
+  creature.forageAt = now + HUNT_RECHECK_MS;
+  const out = z.nearby(creature.roomId, OWN_FORAGE_RANGE);
+  let best: string | undefined, bestD = Infinity;
+  for (const id of own) { const d = out.get(id); if (d !== undefined && d < bestD) { bestD = d; best = id; } }
+  return (creature.forageFor = best);
+}
+
 function huntGround(z: ZoneDO, creature: Creature, now: number): string | undefined {
   const prey = PREYS_ON.get(creature.templateId);
   if (!prey?.size || (creature.hunger ?? 0) < HUNGRY_AT) {
@@ -1111,7 +1129,9 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // the edge of its range and gave up, every time, for any hole further off
       // than TERRITORY_RADIUS. Same shape as the hungry re-anchor below it,
       // which is the precedent this follows.
-      const anchor = creature.wateringTo ?? huntGround(z, creature, now) ?? creature.home;
+      // A BEAR GOES OUT TO FEED (forageErrand) before it goes after prey: its
+      // food is ground it knows, not an animal that might not be there.
+      const anchor = creature.wateringTo ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? creature.home;
       // ONE capped walk out from the den answers both halves — am I inside my
       // range, and which of these exits are. This is the hottest distance query
       // in the game (every wandering creature, every beat); routing it through
@@ -1297,7 +1317,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // instead of drifting blind and starving. Its place-fear (avoids) already
       // steered the exits, so it won't loop back into a room it just fled.
       const larder = !mark && grazer
-        ? exits.find((e) => FORAGE_ROOMS.has(e.to_room) || world.entryRooms.has(e.to_room))
+        ? exits.find((e) => forageGround(z, tmpl.id, e.to_room))
         : undefined;
       const smells = mark ?? larder ?? exits.find((e) =>
         (z.ground.get(e.to_room) ?? []).some((id) => world.itemTemplates.get(id)?.lure),
@@ -1639,7 +1659,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // strays, the outworks' rats). The bone ground is the answer the fiction was
     // already giving; this makes the code agree with it.
     const carrionEater = SCAVENGERS.has(creature.templateId) && CARRION_ROOMS.has(creature.roomId);
-    const grazeHere = grazer && (FORAGE_ROOMS.has(creature.roomId) || world.entryRooms.has(creature.roomId));
+    const grazeHere = grazer && forageGround(z, creature.templateId, creature.roomId);
     // WEATHER KEYS THE FORAGE: a hard cold freezes the ground (nothing to
     // graze), and the mud after a good rain brings up more than the ground
     // usually gives. Carrion is carrion whatever the sky does.
@@ -1657,7 +1677,8 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       // ground, or a picked-over bone yard — and zeroing on it bought the animal
       // the same hundred minutes a deer would have. It comes back to the ground
       // within the hour now, which is what a thing living on scraps does.
-      creature.hunger = Math.max(0, creature.hunger - MEAL_GRAZE);
+      // A bear on its own feeding ground eats a real meal (OWN_FORAGE_MEAL_LEFT).
+      creature.hunger = grazeHere && OWN_FORAGE_ROOMS.has(creature.templateId) ? Math.min(creature.hunger, OWN_FORAGE_MEAL_LEFT) : Math.max(0, creature.hunger - MEAL_GRAZE);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.mastOn(z) ? Math.round(FORAGE_HEAL * MAST_FORAGE_MULT)
         : grazeHere && events.wrackIn(z, creature.roomId) ? Math.round(FORAGE_HEAL * WRACK_FORAGE_MULT)
         : grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT)
@@ -1821,6 +1842,11 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     let victim: Creature | null = null;
     for (const c of z.creaturesInRoom(creature.roomId)) {
       if (c.id === creature.id || !(prey?.has(c.templateId) || (strays && strayFor(z, creature, c)))) continue;
+      // THE MOSS (rome, 2026-10-21): a sloth is a green-grey lump moving too
+      // slowly to catch the eye, and a hunter often looks straight past it - no
+      // rush, no miss, it never knew.
+      const moss = MOSS_HIDDEN[c.templateId];
+      if (moss && chance(moss)) continue;
       victim = c;
       if (!c.target) break;
     }
@@ -1878,6 +1904,14 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
   }
 
 /** Let go, whatever the reason — death, escape, or the pair being separated. */
+/** Can this animal graze HERE? Its own grounds if it has them (OWN_FORAGE_ROOMS),
+ *  else the band's forage ground and the gate thresholds, as it always was. */
+export function forageGround(z: ZoneDO, templateId: string, roomId: string): boolean {
+  const own = OWN_FORAGE_ROOMS.get(templateId);
+  if (own) return own.has(roomId);
+  return FORAGE_ROOMS.has(roomId) || z.world!.entryRooms.has(roomId);
+}
+
 export function releaseHold(z: ZoneDO, creature: Creature): void {
   if (creature.holding) {
     const v = z.creatures.get(creature.holding);
@@ -2149,7 +2183,7 @@ function settlesHere(z: ZoneDO, templateId: string, roomId: string): boolean {
   // FORAGE_ROOMS, so band membership and room membership are the same fact
   // there), and it was wrong for the outworks, where only part of the ground
   // grows anything — a blanket band would have settled a goat on the Battery.
-  if (GRAZERS.has(templateId) && !THIEVES.has(templateId)) return FORAGE_ROOMS.has(roomId);
+  if (GRAZERS.has(templateId) && !THIEVES.has(templateId)) return OWN_FORAGE_ROOMS.get(templateId)?.has(roomId) ?? FORAGE_ROOMS.has(roomId);
   // A hunter needs something it hunts standing within its OWN range of here —
   // not "somewhere in the band", which is the lie the old gate told. This is
   // the same radius its territory will have the moment it settles, so the test

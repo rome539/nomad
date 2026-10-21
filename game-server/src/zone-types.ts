@@ -196,6 +196,8 @@ export interface Creature {
   groundedUntil?: number; // ...and, knocked out of the air, when it can fly again
   boltAt?: number;      // a chased runner's next bolt: each room already given up pushes this out by BOLT_TIRE_MS, so the rout visibly slows before it ends
   huntFor?: string;     // the room it is walking to because its own ground has nothing left to eat (ai.huntGround)
+  forageFor?: string; // a bear's walk to its own feeding ground (ai.forageErrand)
+  forageAt?: number;  // when that answer is worth asking again
   huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)
   drift?: number;       // rooms walked on a WALKABOUT — set = unmoored, no territory (ai.beginDrift)
   driftFrom?: string;   // the ground it set out from: what it walks away from, and what it returns to if it finds nothing

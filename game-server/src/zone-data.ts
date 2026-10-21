@@ -3437,9 +3437,11 @@ export const MOON_HOWL_ODDS = 0.5; // per calling creature at moonrise — a cho
 //   blood. The tooth: the dead remember harder — the hollow murmur, the one
 //   thing the moon's nights are FOR, comes out of the stone all night.
 export const ECLIPSE_EVERY = 43;                // one eclipse-day per 43 day-cycles (~a week of play)
-export const ECLIPSE_TELEGRAPH_MS = 4 * 60_000; // the light thins
-export const ECLIPSE_TOTAL_MS = 6 * 60_000;     // totality — the day fails
-export const ECLIPSE_AFTER_MS = 4 * 60_000;     // the light returns
+// AN HOUR, NOT FOURTEEN MINUTES (rome, 2026-10-21): at fourteen minutes a week
+// almost nobody was on for one. Centred on the game's midday, inside its day.
+export const ECLIPSE_TELEGRAPH_MS = 10 * 60_000; // the light thins
+export const ECLIPSE_TOTAL_MS = 40 * 60_000;     // totality — the day fails
+export const ECLIPSE_AFTER_MS = 10 * 60_000;     // the light returns
 // ONE FULL MOON IN FIVE (rome, 2026-09-01). At a 44-hour month that is a red
 // moon every 9.2 days — a little under one a week, and rare enough that it still
 // reads as an omen rather than as weather. It counts MONTHS rather than hours,
@@ -3657,6 +3659,9 @@ export const RIDDLE_MOCK = [
 ];
 export const MOON_DOOR_SHUT = " A black door stands in the {dir} wall with a moon cut into it — dark now, and shut.";
 export const MOON_DOOR_OPEN = " The moon door stands open, and the moon cut into it is full of light. It will not stand open for long.";
+// THE RED MOON OPENS IT TOO (rome, 2026-10-21). It is a full moon; the door says
+// which one let you through.
+export const MOON_DOOR_OPEN_BLOOD = " The moon door stands open, and the moon cut into it is full of red light. It will not stand open for long.";
 export const TIDE_DOOR_SHUT = " A door of black iron is set low in the {dir}, and water stands over its sill. The tide holds it shut.";
 export const TIDE_DOOR_OPEN = " The tide door stands open — the water has gone out, and the way {dir} is dry.";
 // THE TIDE DOOR IS A PUZZLE, NOT A GATE (2026-08-28). The water alone would
@@ -5129,6 +5134,19 @@ export const NOISE_COVER: Record<string, number> = { "hedgehog": 0.5 };
 // thing never touches it) and a hunting animal's bite alike. Flat, past armor,
 // and it can kill. zone.ts melee and ai.ts huntPrey/worryPrey.
 export const PRICKLY: Record<string, number> = { "hedgehog": 2 };
+// THE MOSS (rome, 2026-10-21): the sloth's coat is green where the damp has got
+// into it, and it moves slowly so as never to give itself away - a hunter in the
+// room passes it over this share of the time, still or moving. The hedgehog is easy to find and hurts to bite;
+// the sloth is hard to find and helpless once found. ai.ts predation.
+export const MOSS_HIDDEN: Record<string, number> = { "wood-sloth": 0.5 };
+// ...AND A WANDERER MISSES IT TOO (rome, 2026-10-21: unseen like the lurkers,
+// most of the time, and the slowness is how). A player spots a sloth this share
+// of the time - rolled once per player per MOSS_SPOT_SLOT_MS so it does not wink
+// in and out between two looks. A torch in hand always shows it, and so does a
+// fight. It is never silent: its chewing is still heard (verbs.ts sounds).
+// It does NOT ambush: this is not LURKERS. zone.ts mossUnseen.
+export const MOSS_SPOT: Record<string, number> = { "wood-sloth": 0.25 };
+export const MOSS_SPOT_SLOT_MS = 10 * 60_000;
 export const PRICK_LINES = [
   "The spines go into your hand",
   "You come away with spines in your knuckles",
@@ -6697,6 +6715,28 @@ export const WARRENS_ROOMS = new Set([
 // everyone, an orchard still dropping windfalls. It is the most food-per-room
 // on the surface and it holds almost nothing that eats — which is the shape of
 // a place people left.
+// AN ANIMAL THAT EATS ONLY CERTAIN GROUND (rome, 2026-10-21: what is a bear
+// grazing on?). FORAGE_REGIONS makes every room of the wood a mouthful, the
+// bear's own dark cave included. A creature named here grazes, walks hungry
+// toward, and settles on only the grounds listed - the wet wood (shoots, roots,
+// grubs in the mud), the heath (berries, ants), the glades (grass and the berry
+// bushes at the edges) and the ruined holding (the old orchard's windfalls).
+// Resolved to room ids at world load by terrain (OWN_FORAGE_ROOMS); a creature
+// not named keeps the band rule.
+export const OWN_FORAGE_GROUNDS: Record<string, Set<string>> = {
+  "brown-bear": new Set(["wet", "heath", "glade", "holding"]),
+};
+export const OWN_FORAGE_ROOMS = new Map<string, Set<string>>();
+// ...AND IT WALKS OUT TO THEM (rome, 2026-10-21). None of the bear caves has
+// feeding ground inside a bear's range, so a hungry one leaves home for the
+// nearest, however far (out to OWN_FORAGE_RANGE), eats its fill there - a full
+// meal, hunger to nothing, not the mouthful a band grazer gets - and walks home.
+export const OWN_FORAGE_RANGE = 40;
+// ...BUT NOT TO NOTHING (rome, 2026-10-21: they should get hungry). A meal leaves
+// the bear at this much hunger, so it is hungry again within the hour or so and
+// the long walks - the Ridge cave's above all - now and then run it past
+// STARVING_AT on the way, when it will take whoever it meets.
+export const OWN_FORAGE_MEAL_LEFT = 30;
 export const FORAGE_REGIONS = new Set<string>(["road", "wood", "den", "crossing"]); // a shore feeds things — weed, shellfish, whatever the water puts down
 // THE SURFACE HAD NOWHERE TO EAT (rome, 2026-08-13: the crabs are all starving).
 // FORAGE_REGIONS above already names road, wood, den and crossing as ground that
