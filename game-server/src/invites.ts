@@ -113,6 +113,13 @@ export async function returning(z: ZoneDO, session: Session, code: string): Prom
     z.send(session, "The letter is in your own hand. It is for someone else to carry here.");
     return;
   }
+  // The letter itself comes too, so it can be read like a newcomer's.
+  if (z.packRoom(session, "invite-letter")) {
+    const rowId = crypto.randomUUID();
+    await insertLoot(z.env.DB, rowId, session.pubkey, "invite-letter", null, 100, now, "");
+    await setItemInviteCode(z.env.DB, rowId, code);
+    session.items.push({ rowId, itemId: "invite-letter", serial: null, equipped: false, condition: 100, inviteCode: code, acquiredAt: now });
+  }
   const given: string[] = [];
   for (const id of RATIONS) if (await z.grantItem(session, id)) given.push(id);
   const sender = await z.env.DB.prepare("SELECT name FROM players WHERE pubkey = ?").bind(invite.inviter).first<{ name: string }>();
@@ -121,7 +128,7 @@ export async function returning(z: ZoneDO, session: Session, code: string): Prom
   const counts = new Map<string, number>();
   for (const id of given) counts.set(id, (counts.get(id) ?? 0) + 1);
   const food = [...counts].map(([id, n]) => (n > 1 ? n + " x " : "") + name(id)).join(", ");
-  z.send(session, "A letter from " + from + " finds you, though it was meant for someone new to the road."
+  z.send(session, "A letter from " + from + " finds you, though it was meant for someone new to the road. ('look letter' reads it.)"
     + (food ? " A little food was folded in with it: " + food + "." : " There was food folded in with it, but your pack has no room."), "gain");
   const other = z.sessions.get(invite.inviter);
   if (other && !other.linkdeadUntil) z.send(other, session.name + ", already on the road, has read your letter.");

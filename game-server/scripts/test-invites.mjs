@@ -94,10 +94,11 @@ try {
   // A wanderer already on the road: a line and rations, once ever; your own letter gives nothing.
   { const vet=await make('Rustpilgrim');vet.name='Rustpilgrim';const before=vet.items.length;
     await invites.returning(z,vet,first.code);
-    assert.match(frames.at(-2).text,/meant for someone new to the road\. A little food was folded in with it: 2 x .*hardtack.*cold water\.$/);
+    assert.match(frames.at(-2).text,/meant for someone new to the road\. \('look letter' reads it\.\) A little food was folded in with it: 2 x .*hardtack.*cold water\.$/);
     assert.match(frames.at(-1).text,/Rustpilgrim, already on the road, has read your letter\./);
-    assert.equal(vet.items.length,before+3);
-    const n=frames.length;await invites.returning(z,vet,first.code);assert.equal(frames.length,n);assert.equal(vet.items.length,before+3);
+    assert.equal(vet.items.length,before+4);assert.ok(vet.items.some(i=>i.itemId==='invite-letter'&&i.inviteCode===first.code));
+    assert.equal(await invites.read(z,vet,'letter'),true);assert.match(frames.at(-1).text,/— Geartest$/);
+    const n=frames.length;await invites.returning(z,vet,first.code);assert.equal(frames.length,n);assert.equal(vet.items.length,before+4);
     const n2=frames.length;await invites.returning(z,sender,first.code);
     assert.equal(frames.length,n2+1);assert.match(frames.at(-1).text,/in your own hand/); }
   console.log('PASS: a wanderer already on the road gets a line and rations once; the sender is told; your own letter gives nothing.');
