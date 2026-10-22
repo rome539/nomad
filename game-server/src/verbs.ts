@@ -994,6 +994,13 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // An animal path is a way only to someone who has watched it used (paths.ts).
   const exit = (world.exits.get(session.roomId) ?? []).find((e) => e.dir === dir) ?? paths.knownPath(z, session, dir);
   if (!exit) return z.send(session, "There is no way " + dir + " from here.");
+  // THE DOOR FIRST (rome, 2026-10-22: he walked north and south out of his own
+  // den without ever opening it). Calm, you go out through the door ('out'),
+  // the way you came in. With something in there with you, a direction is
+  // still a way out - you go through the doorway at a run - because a shut
+  // door must never be a trap with you on the wrong side of it.
+  if (den.insideOf(z, session.pubkey) && !z.inCombat(session))
+    return z.send(session, "The door is shut behind you. ('out' to step back onto the ground.)");
   // The quicksand has your leg: no step anywhere until it lets go.
   if (events.quicksandHolds(z, session)) return;
 

@@ -291,9 +291,14 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // the held gaps, so the chip row shows what is actually still open (ai.heldExits
   // never takes the last one, so this can never leave you with no exit chips).
   const shutWays = ai.heldExits(z, session);
-  for (const e of exitsHere) if (!shutWays.has(e.dir)) suggest.push(`go ${e.dir}`);
-  // An animal path this wanderer has seen used is a way like any other, to them.
-  for (const e of paths.knownPathsHere(z, session)) suggest.push(`go ${e.dir}`);
+  // Behind your own door the ways on are outside it: 'out' first, unless
+  // something has you, when the doorway is a way out like any other.
+  const indoors = !!den.insideOf(z, session.pubkey) && !fighting;
+  if (!indoors) {
+    for (const e of exitsHere) if (!shutWays.has(e.dir)) suggest.push(`go ${e.dir}`);
+    // An animal path this wanderer has seen used is a way like any other, to them.
+    for (const e of paths.knownPathsHere(z, session)) suggest.push(`go ${e.dir}`);
+  }
   // Combat-legal at the cost of an opening: stoop for a fallen weapon, eat,
   // or swap your steel (armor on/off is refused mid-fight, so no armor chip).
   // A tide-drowned floor offers no get chips (cmdGet refuses them) — the

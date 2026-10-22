@@ -9349,9 +9349,20 @@ var fsbtn = document.getElementById("fsbtn");
 var fsRoot = document.documentElement;
 function fsAvail() { return !!(fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen); }
 function fsIs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+// ESC BELONGS TO THE GAME IN FULLSCREEN (rome, 2026-10-22: closing the map
+// with Esc threw you out of fullscreen). A browser spends a plain Esc on
+// leaving fullscreen before the page ever hears it. Chrome and Edge let the
+// page lock that key while fullscreen: a tap then reaches the map and the
+// modals as it always did, and HOLDING Esc is what leaves. Other browsers have
+// no such lock, and there 'fullscreen' typed or the settings toggle still work.
 function renderFs() {
   fsbtn.textContent = fsIs() ? "on" : "off";
   fsbtn.className = fsIs() ? "on" : "";
+  var kb = navigator.keyboard;
+  try {
+    if (fsIs() && kb && kb.lock) { var lk = kb.lock(["Escape"]); if (lk && lk.catch) lk.catch(function () {}); }
+    else if (kb && kb.unlock) kb.unlock();
+  } catch (e) {}
 }
 function setFullscreen(on) {
   if (!fsAvail()) { print("This browser cannot go fullscreen. On a phone, add NOMAD to your home screen instead.", "sys"); return; }
@@ -12644,7 +12655,14 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // ...EXCEPT THROUGH A SHELTERED PLATE'S OWN OPENING (rome, 2026-10-14: the
   // dens' windows showed nothing). A roof stops the sky everywhere but the slot
   // or window the plate was cut with - that opening is why it is in SHELTERED.
-  if (lastCovered && !SHELTERED[place]) { sky = ""; turn = ""; }
+  // ...AND ONLY A ROOM'S OWN PLATE IS AN INTERIOR (rome, 2026-10-22: the
+  // Carter's Rest showed black where the sky should be). Nine roofed rooms
+  // have no picture of their own yet and borrow the open ground outside them
+  // - the road, the alder, the fold, the cairn, the shell - and that ground
+  // was cut for a sky. Taking the sky away left the hole black. A borrowed
+  // ground keeps its sky until the room gets its own plate; an interior is
+  // opaque, so a sky behind it would never show anyway.
+  if (lastCovered && place && !SHELTERED[place]) { sky = ""; turn = ""; }
   var precipitation = !singleLayer && scene && !lastCovered && !SHELTERED[place] ? mobHour : "";
   // RAIN AFTER DARK (rome, 2026-10-20). The server sends "rain" as the sky at
   // any hour - rain is the news - and there is no rain-at-night photograph, so

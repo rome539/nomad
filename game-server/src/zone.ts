@@ -2409,6 +2409,12 @@ export class ZoneDO implements DurableObject {
   // Exactly the open-ground night isDark would call dark, and something here
   // answering it; a moonlit night is already its own picture.
   public nightLitPicture(session: Session): boolean {
+    // BEHIND YOUR OWN DOOR NONE OF THIS REACHES YOU (rome, 2026-10-22: his new
+    // den showed its torch-lit picture at night with no torch and no fire). The
+    // den ground lights up outside because somebody lives there, and the inside
+    // stood on that same room id, so it lit too. Inside, only the light you
+    // carry and the hearth you rest by count, and both are asked for already.
+    if (this.inDen.has(session.pubkey)) return false;
     const roomId = session.roomId;
     if (!OUTDOOR_ROOMS.has(roomId) || !isNight() || (isFullMoon() && !events.wetSky(this, roomId))) return false;
     if (DARK_ROOMS.has(roomId) || events.gloamed(this, roomId)) return this.roomLit(roomId) || this.roomHasBearer(roomId, session);

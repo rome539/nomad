@@ -524,7 +524,6 @@ export const HELP_TEXT = [
   "                    can have (a hearth, oiled hides over the shelf, a bone",
   "                    rattle on the door, a second rack, a larder) and what each",
   "                    costs; 'build <thing>' puts it up out of your pack.",
-  "  invite [message] send for someone; invite post carries the letter to Nostr.",
   "  bunk <name>       hand somebody a key. They have to be standing in front of",
   "                    you. (unbunk takes it back — from anywhere, and you don't",
   "                    have to be alive to type it.) Draw steel on anybody under",
@@ -666,6 +665,13 @@ export const HELP_TEXT = [
   "                    trophies, and your legend of kills.",
   "  publish kind 1    (brag) — post your wanderer to your OWN feed, in your own",
   "                    hand — a note your followers will see. Only this touches it.",
+  "  invite [message]  write a letter for someone new: you get a link, and your",
+  "                    message goes with it. Whoever comes in through it wakes",
+  "                    with supplies, a plain kit and your letter ('look letter').",
+  "                    You can send two of those a day; past that the letter",
+  "                    still goes, alone. Someone already on the road who opens",
+  "                    it gets the letter and a little food.",
+  "  invite post       post the letter to your own Nostr feed, in your own hand.",
   "  scan              (a vantage) — from a height or an edge, read the ground one\n" +
   "                    step out: what is standing in it, and which way. Fog takes it,\n" +
   "                    and so does the dark unless the moon is full.\n" +
@@ -688,6 +694,9 @@ export const HELP_TEXT = [
   "  name <newname>    choose what the dungeon calls you",
   "  quit              (leave, exit) — step back out through the door. Your",
   "                    wanderer and everything sealed wait for your return.",
+  "  fullscreen        fill the whole screen with NOMAD (also in settings, under",
+  "                    the NOMAD wordmark). 'fullscreen' again to leave, or hold",
+  "                    Esc (a tap of Esc still closes the map and the panels).",
   "  help              (?) — this text",
   "",
   "Wounds do not close on their own. The dead stay dead until something",

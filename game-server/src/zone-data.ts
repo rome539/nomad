@@ -2394,7 +2394,10 @@ export const SCAVENGERS = new Set([
 export const VERMIN = new Set([
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer
   "the-old-raven", "the-raiding-fox", "the-dancer",
-"rat", "fleet-rat", "brood-rat", "roe-deer", "white-roe",
+"rat", "fleet-rat", "brood-rat",
+  // NOT THE ROE (rome, 2026-10-22: a deer was seen eating another deer). They
+  // came in on this line with the rats and so ate the dead when hungry, their
+  // own kind included. A deer grazes: both roe are GRAZERS, which feeds them.
   // THE MOUNTAIN, TIER FOUR (mig 233). A chough is a crow: it eats what it finds
   // dead as readily as what it finds alive, and above the cloud line "what it
   // finds dead" is the entire menu. Not SCAVENGERS — it gets none of that
