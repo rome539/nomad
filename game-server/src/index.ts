@@ -82,6 +82,32 @@ export default {
         }
         return new Response(BUILD_ID, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
       }
+      // AN INVITE LINK IS ITS OWN SMALL PAGE (rome, 2026-10-22). A Nostr client
+      // previews a link by reading the page's card tags, and the game page is
+      // too big for some of them to bother, so the posted note came with no
+      // picture. This page is only the card and a step through to the game, so
+      // the link itself shows the picture and the note carries nothing else.
+      const inviteLink = m === "GET" && /^\/i\/([A-Za-z0-9]{10})$/.exec(pathname);
+      if (inviteLink) {
+        const to = "/?invite=" + inviteLink[1];
+        return new Response(`<!doctype html><html><head><meta charset="utf-8">
+<title>NOMAD</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NOMAD">
+<meta property="og:title" content="A letter for the road">
+<meta property="og:description" content="A living text dungeon on Nostr. Someone has sent you supplies for the way in.">
+<meta property="og:url" content="https://nomadmud.com${pathname}">
+<meta property="og:image" content="https://nomadmud.com/og.jpg?v=4">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="A letter for the road">
+<meta name="twitter:image" content="https://nomadmud.com/og.jpg?v=4">
+<meta http-equiv="refresh" content="0;url=${to}">
+</head><body style="background:#16120c"><script>location.replace(${JSON.stringify(to)})</script><a href="${to}">NOMAD</a></body></html>`, {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" },
+        });
+      }
       if (m === "GET" && (pathname === "/guide" || pathname === "/wiki")) {
         return new Response(GUIDE_PAGE, {
           headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" },

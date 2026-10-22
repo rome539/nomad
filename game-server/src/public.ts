@@ -4830,12 +4830,10 @@ var SPEECH_KIND = 24914;
 async function postInvite(f) {
   var epoch = identityEpoch;
   try {
-    // The card rides IN the note as an image link (with its imeta), because a
-    // client's link preview cannot be trusted to read a page this size.
-    var card = "https://nomadmud.com/og.jpg";
-    var evt = { kind: 1, created_at: Math.floor(Date.now()/1000),
-      tags: [["t", "nomad"], ["imeta", "url " + card, "m image/jpeg", "dim 1200x630", "alt NOMAD, a living text dungeon on Nostr"]],
-      content: f.message + "\\n\\nhttps://nomadmud.com/?invite=" + f.code + "\\n\\n" + card };
+    // Only the words and the link: the link's own page carries the card, so a
+    // client shows the picture as the link's preview, not as a posted image.
+    var evt = { kind: 1, created_at: Math.floor(Date.now()/1000), tags: [["t", "nomad"]],
+      content: f.message + "\\n\\nhttps://nomadmud.com/i/" + f.code };
     var ev;
     if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
     else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
@@ -11219,6 +11217,9 @@ var MOB_LINE = {
   // man whatever the creature is, so enlarging the roster pushed every short
   // thing DOWN toward that line and the error stopped hiding in the gap.
  "corrie-rim": 60, "corrie-floor": 60, "the-back-wall": 62, "the-kept-room": 65,
+                 // The summit's drake stood too low on the new plate (rome,
+                 // 2026-10-22); five points up from the default.
+                 "the-summit": 50,
                  boulder: 64, glass: 70, snow: 64, "the-rib-cage": 66,
                  // THE HOLDING (rome, 2026-09-29: the creatures looked huge against
                  // it). The ruined walls stand close round the courtyard, so a

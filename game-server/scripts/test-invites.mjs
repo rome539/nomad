@@ -127,7 +127,7 @@ try {
     const posts=[];const signed=[];const signer=async e=>{signed.push(e);return {...e,sig:'test'};};
     const ctx={identityEpoch:1,method,sk:'test',finalizeEvent:signer,window:{nostr:{signEvent:signer}},ensureBunkerClient:async()=>({signEvent:signer}),gpubPool:{publish:(relays,e)=>{posts.push(e);return [Promise.resolve()];}},SPEECH_RELAYS:['mock'],print:()=>{}};
     vm.createContext(ctx);vm.runInContext(script,ctx);await ctx.postInvite(first);
-    assert.equal(posts.length,1);assert.equal(signed[0].kind,1);assert.equal(signed[0].tags[0].join(),'t,nomad');assert.equal(signed[0].tags[1][0],'imeta');assert.equal(signed[0].tags[1][1],'url https://nomadmud.com/og.jpg');assert.equal(signed[0].content,'Come Home\n\nhttps://nomadmud.com/?invite='+first.code+'\n\nhttps://nomadmud.com/og.jpg');
+    assert.equal(posts.length,1);assert.equal(signed[0].kind,1);assert.equal(signed[0].tags[0].join(),'t,nomad');assert.equal(signed[0].tags.length,1);assert.equal(signed[0].content,'Come Home\n\nhttps://nomadmud.com/i/'+first.code);
   }
   console.log('PASS: guest, extension and bunker client signing publish the requested kind-1 note to mocked relays.');
 } finally {db.close();saved.close();rmSync(dir,{recursive:true,force:true});}

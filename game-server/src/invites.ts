@@ -57,7 +57,7 @@ export async function command(z: ZoneDO, session: Session, arg: string): Promise
     await z.env.DB.prepare("UPDATE invites SET message = ? WHERE inviter = ?").bind(message, session.pubkey).run();
     invite.message = message;
   }
-  const link = "https://nomadmud.com/?invite=" + invite.code;
+  const link = "https://nomadmud.com/i/" + invite.code;
   z.send(session, "A letter for the road.\n" + link + "\nPost it to Nostr: invite post");
   try { session.ws.send(JSON.stringify({ v: 0, t: "invite", code: invite.code, message: invite.message || DEFAULT, post })); } catch {}
 }
