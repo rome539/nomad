@@ -2693,22 +2693,42 @@ export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {
   for (const s of world.mobSpawns) bump(capOf, s.template_id, band(s.room_id));
   for (const c of z.creatures.values()) bump(aliveOf, c.templateId, band(c.roomId));
   const lines = [`Alive in the deep (${z.creatures.size}):` + (hist.length ? "" : "  (no hourly readings yet: the trend fills in over the next day)")];
-  for (const [id, n] of byMob) {
+  // A RARE FORM SITS UNDER ITS OWN KIND (rome, 2026-10-22): the dire wolf
+  // under the grey wolf, the white roe under the roe deer. Kinds go by their
+  // base's name; under each, the base first and its forms indented below it.
+  // A base with none alive still heads its group (at 0) when a form of it is.
+  const baseOf = (id: string) => z.variantBase.get(id) ?? id;
+  const entry = (id: string, n: number, under: boolean) => {
     const caps = capOf.get(id), alive = aliveOf.get(id);
     const bands = [...new Set([...(caps?.keys() ?? []), ...(alive?.keys() ?? [])])].map((b) => {
       const a = alive?.get(b) ?? 0, c = RANGERS.has(id) ? 0 : caps?.get(b) ?? 0; // a pack that ranges has no band to fall short in
       if (!a && !c) return null;
       return c ? `${b} ${a}/${c}${a / c < 0.25 ? " !" : ""}` : `${b} ${a}`;
     });
-    lines.push(`  ${bare(id)} — ${n}${delta(id, n, h6, "6h")}${delta(id, n, h24, "· 24h")}   [${bands.filter(Boolean).join(", ")}]`);
+    lines.push(`${under ? "      ↳ " : "  "}${bare(id)} — ${n}${delta(id, n, h6, "6h")}${delta(id, n, h24, "· 24h")}   [${bands.filter(Boolean).join(", ")}]`);
+  };
+  const groups = new Map<string, string[]>();
+  for (const [id] of byMob) {
+    const b = baseOf(id);
+    if (b !== id) groups.set(b, [...(groups.get(b) ?? []), id]);
+    else if (!groups.has(id)) groups.set(id, []);
   }
-  // ...and the kinds with rows and nobody standing: gone, not merely low.
-  const gone = [...capOf.keys()].filter((id) => !counts.has(id)).sort(byName);
+  const headed = new Set<string>();
+  for (const b of [...groups.keys()].sort(byName)) {
+    entry(b, counts.get(b) ?? 0, false);
+    headed.add(b);
+    for (const v of groups.get(b)!.sort(byName)) entry(v, counts.get(v) ?? 0, true);
+  }
+  // ...and the kinds with rows and nobody standing: gone, not merely low. A
+  // base already heading a living form's group above is not repeated here.
+  const gone = [...capOf.keys()].filter((id) => !counts.has(id) && !headed.has(id))
+    .sort((a, b) => byName(baseOf(a), baseOf(b)) || (baseOf(a) === a ? -1 : baseOf(b) === b ? 1 : byName(a, b)));
   if (gone.length) {
     lines.push("", `None alive (${gone.length}):`);
     for (const id of gone) {
       const was = h6?.n[id] || h24?.n[id];
-      lines.push(`  ${bare(id)}${was ? ` — was ${was}` : ""}   [${[...capOf.get(id)!.entries()].map(([b, c]) => `${b} 0/${c} !`).join(", ")}]`);
+      const form = baseOf(id) !== id ? ` (a form of ${bare(baseOf(id))})` : "";
+      lines.push(`  ${bare(id)}${form}${was ? ` — was ${was}` : ""}   [${[...capOf.get(id)!.entries()].map(([b, c]) => `${b} 0/${c} !`).join(", ")}]`);
     }
   }
   // THE PACKS THAT RANGE (RANGERS): where each is, the ground it chose and why.
