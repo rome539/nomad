@@ -2668,7 +2668,10 @@ export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {
   const now = Date.now();
   const counts = new Map<string, number>();
   for (const c of z.creatures.values()) counts.set(c.templateId, (counts.get(c.templateId) ?? 0) + 1);
-  const byMob = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  // Bare names (no "a"/"an"/"the"), in alphabetical order (rome, 2026-10-22).
+  const bare = (id: string) => (world.mobTemplates.get(id)?.name ?? id).replace(/^(an?|the) /i, "");
+  const byName = (a: string, b: string) => bare(a).localeCompare(bare(b));
+  const byMob = [...counts.entries()].sort((a, b) => byName(a[0], b[0]));
   // THE WAY IT IS GOING: the reading nearest 6h and 24h back.
   const hist = await z.censusHistory();
   const back = (ms: number) => [...hist].reverse().find((h) => h.at <= now - ms + 10 * 60_000);
@@ -2697,15 +2700,15 @@ export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {
       if (!a && !c) return null;
       return c ? `${b} ${a}/${c}${a / c < 0.25 ? " !" : ""}` : `${b} ${a}`;
     });
-    lines.push(`  ${world.mobTemplates.get(id)?.name ?? id} — ${n}${delta(id, n, h6, "6h")}${delta(id, n, h24, "· 24h")}   [${bands.filter(Boolean).join(", ")}]`);
+    lines.push(`  ${bare(id)} — ${n}${delta(id, n, h6, "6h")}${delta(id, n, h24, "· 24h")}   [${bands.filter(Boolean).join(", ")}]`);
   }
   // ...and the kinds with rows and nobody standing: gone, not merely low.
-  const gone = [...capOf.keys()].filter((id) => !counts.has(id));
+  const gone = [...capOf.keys()].filter((id) => !counts.has(id)).sort(byName);
   if (gone.length) {
     lines.push("", `None alive (${gone.length}):`);
     for (const id of gone) {
       const was = h6?.n[id] || h24?.n[id];
-      lines.push(`  ${world.mobTemplates.get(id)?.name ?? id}${was ? ` — was ${was}` : ""}   [${[...capOf.get(id)!.entries()].map(([b, c]) => `${b} 0/${c} !`).join(", ")}]`);
+      lines.push(`  ${bare(id)}${was ? ` — was ${was}` : ""}   [${[...capOf.get(id)!.entries()].map(([b, c]) => `${b} 0/${c} !`).join(", ")}]`);
     }
   }
   // THE PACKS THAT RANGE (RANGERS): where each is, the ground it chose and why.
