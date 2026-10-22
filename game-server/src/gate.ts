@@ -1010,6 +1010,7 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   // pack-full spill lands unsealed.
   const slid: string[] = [];
   const lastOnes: string[] = [];
+  let vaultRows: CarriedItem[] | undefined; // read once, only if the pack fills
   for (const w of trade.wants) {
     // Sometimes yours was the last one on the shelf — the market is finite,
     // and the next wanderer finds bare wood where this sat.
@@ -1051,11 +1052,33 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     const jid = bought.id === JOURNAL_ITEM ? "jrn-" + uuid() : undefined;
     const got = await z.grantItem(session, bought.id, { condition: rollShopCondition(bought.slot), journalId: jid });
     if (!got) {
+      // A FULL PACK BANKS, IT DOES NOT SPILL (rome, 2026-10-22: Froststray paid
+      // for iron with one slot free and never saw it). The counter is behind
+      // the door and the floor is outside it, so "at your feet" was a pile on
+      // the stones of the gate room that nobody standing at the hatch could
+      // see. The bounty board has always put a full pack's pay in the vault;
+      // the keeper's own goods go there too now, gear sealed as it goes in.
+      if (!jid) {
+        vaultRows ??= await loadContainer(z.env.DB, session.pubkey, "vault");
+        if (z.hasRoom(vaultRows, bought.id, VAULT_CAP, "vault")) {
+          const rowId = uuid();
+          const condition = rollShopCondition(bought.slot);
+          await insertLoot(z.env.DB, rowId, session.pubkey, bought.id, null, condition);
+          await setContainer(z.env.DB, rowId, "vault");
+          const kept: CarriedItem = { rowId, itemId: bought.id, serial: null, equipped: false, condition };
+          if (!z.stackable(bought.id, null, undefined)) await sealOne(z, session, kept);
+          vaultRows.push(kept);
+          slid.push(`${z.gearName(bought.id)}${z.itemStat(bought)} [${bought.rarity}] (pack full — into your vault)`);
+          continue;
+        }
+      }
       // A journal spills INSTANCED even at the counter — the id minted above
       // rides the book to the floor, or it comes back up a blank no hand can open.
       if (jid) z.dropInstance(session.roomId, bought.id, jid);
       else z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), bought.id]);
-      slid.push(`${z.gearName(bought.id)}${z.itemStat(bought)} [${bought.rarity}] (pack full — at your feet, unsealed)`);
+      z.stampFresh(session.roomId, bought.id);
+      z.armStrayDecay(session.roomId);
+      slid.push(`${z.gearName(bought.id)}${z.itemStat(bought)} [${bought.rarity}] (pack and vault full — left on the stones outside the door, unsealed)`);
       continue;
     }
     // Gear comes sealed (you bought it, the world can't peel it off your corpse)
