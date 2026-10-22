@@ -9869,10 +9869,10 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "105";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "44";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "45";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "16";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "17";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11218,7 +11218,7 @@ var MOB_LINE = {
   // It became visible now because the sprites grew. Feet sit at line + half a
   // man whatever the creature is, so enlarging the roster pushed every short
   // thing DOWN toward that line and the error stopped hiding in the gap.
- "corrie-rim": 72, "corrie-floor": 72, "the-back-wall": 62, "the-kept-room": 65,
+ "corrie-rim": 60, "corrie-floor": 60, "the-back-wall": 62, "the-kept-room": 65,
                  boulder: 64, glass: 70, snow: 64, "the-rib-cage": 66,
                  // THE HOLDING (rome, 2026-09-29: the creatures looked huge against
                  // it). The ruined walls stand close round the courtyard, so a
