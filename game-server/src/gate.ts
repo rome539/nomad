@@ -1013,12 +1013,17 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   for (const w of trade.wants) {
     // Sometimes yours was the last one on the shelf — the market is finite,
     // and the next wanderer finds bare wood where this sat.
-    if (inStock(z, w.itemId) && !fenceStaple(z, w.itemId) && chance(FENCE_LAST_ONE_ODDS)) {
+    // (Not the materials: they keep their own count, and say so when it runs out.)
+    if (inStock(z, w.itemId) && !fenceStaple(z, w.itemId) && !FENCE_MATS[w.itemId] && chance(FENCE_LAST_ONE_ODDS)) {
       z.fenceOut.set(w.itemId, Date.now() + randInt(FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS));
       const t = world.itemTemplates.get(w.itemId);
       if (t) lastOnes.push(t.name);
     }
     takeMat(z, w.itemId); // a material leaves the shelf for good, until more comes in
+    if (matLeft(z, w.itemId) === 0) {
+      const mt = world.itemTemplates.get(w.itemId);
+      if (mt && !lastOnes.includes(mt.name)) lastOnes.push(mt.name);
+    }
     const bought = world.itemTemplates.get(w.itemId)!;
     // A WORD OF THE BOXES is not goods — the keeper sells what he's heard.
     // He names the room where a roaming strongbox sits RIGHT NOW (a locked one
@@ -1065,16 +1070,21 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   }
   const change = trade.paid > cost ? " He gives no change." : "";
   const seals = cracked ? " He cracks the gate's seals without ceremony." : "";
-  const goods = slid.length === 1
+  // ONE LINE PER KIND, WITH A COUNT (rome, 2026-10-22: a big order read out
+  // every bundle of wood one at a time, the length of the window).
+  const counts = new Map<string, number>();
+  for (const l of slid) counts.set(l, (counts.get(l) ?? 0) + 1);
+  const rows = [...counts].map(([l, n]) => n > 1 ? `${n} \u00d7 ${l}` : l);
+  const goods = rows.length === 1 && slid.length === 1
     ? `The keeper slides ${slid[0]} across the counter.`
-    : `The keeper slides it all across the counter:\n  ${slid.join("\n  ")}`;
+    : `The keeper slides it all across the counter:\n  ${rows.join("\n  ")}`;
   session.buying = undefined;
   // No per-purchase broadcast: an active shopper was flooding the whole gatehouse
   // with "X trades at the keeper's hatch." on every settle (rome, 2026-07-18).
   // Trading is a quiet act now, like sorting the bench — presence is the room's
   // own "X is here," and the one-time step-up line when they first walk in.
   const bare = lastOnes.length
-    ? ` You took the last ${lastOnes.join(" and the last ")} he had; the shelf behind him stands bare.`
+    ? ` You took the last ${lastOnes.map((n) => n.replace(/^(a|an|some|the)\s+/i, "")).join(" and the last ")} he had; that shelf behind him stands bare.`
     : "";
   return `${line}${seals}\n${goods}${change} The keeper's wares carry the gate's mark already — sealed, and yours.${bare}`;
 }

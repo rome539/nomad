@@ -348,8 +348,13 @@ export function parse(input: string): ParseResult | null {
   // LANTERN. ("torch" predates it and stays the bare-light default.)
   if (verb === "light" && head === "lantern" && !rest) rest = "lantern";
   if (!verb) {
+    // NEVER RE-ASK THE SAME WORD (rome, 2026-10-22: "soups nice" froze the
+    // gatehouse). "soups" is nearest to the direction "south", and a direction
+    // with words after it is not a verb, so "south nice" came back here and
+    // found "south" nearest to itself - forever, until the stack ran out and
+    // took the whole message with it.
     const near = nearestVerb(head);
-    if (near) {
+    if (near && near !== head) {
       const reparse = parse(near + (rest ? " " + rest : ""));
       if (reparse && !("miss" in reparse)) {
         return { miss: true, suggestion: near + (rest ? " " + rest : "") };
