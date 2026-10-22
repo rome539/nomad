@@ -15392,4 +15392,11 @@ function guideNotice(cmdText) {
 
 // Computed once, from the finished page. index.ts stamps it into the copy it
 // serves; chips.ts puts the same value on the wire.
-export const BUILD_ID = buildId(PAGE);
+// ...AND FROM THE SERVER (2026-10-21). A hash of the page alone never changed
+// on a ship that only touched the world's code, so no notice printed and the
+// world was never told to restart onto it - it ran the old rules until
+// Cloudflare happened to recycle it. `npm run deploy` hands in the git hash of
+// src/ as SERVER_REV, so any change to the game is a new build. Without it (a
+// bare `wrangler deploy`, the local preview) the id is the page's alone, as before.
+declare const SERVER_REV: string | undefined;
+export const BUILD_ID = buildId(PAGE + (typeof SERVER_REV === "string" ? SERVER_REV : ""));

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --define \"SERVER_REV:'$(git rev-parse HEAD:./src)'\"",
     "predeploy": "npm run check:privacy && npm run check:assets",
     "check:privacy": "node scripts/check-privacy.mjs",
     "typecheck": "tsc --noEmit",
