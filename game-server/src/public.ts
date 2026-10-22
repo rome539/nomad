@@ -2355,6 +2355,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div class="setrow"><span>what is NOMAD</span><button id="aboutbtn">read</button></div>
     <div class="setrow"><span>sound</span><button id="sndbtn">off</button></div>
     <div class="setrow"><span>command chips</span><button id="chipbtn">on</button></div>
+    <div class="setrow" id="fsrow"><span>fullscreen</span><button id="fsbtn" type="button">off</button></div>
     <div class="setrow"><span>inventory &amp; shop layout</span><button id="modallayoutbtn" type="button" aria-label="Inventory &amp; shop layout: Compact">Compact</button></div>
     <div class="setrow"><span>theme</span><button id="thbtn">door</button></div>
     <div class="setrow" id="dooratmorow"><span>theme design</span><button id="dooratmobtn" type="button" role="switch" aria-label="Enhanced theme design" aria-checked="false">off</button></div>
@@ -5943,6 +5944,8 @@ function localCmd(text) {
   }
   if (lower === "tutorial off" || lower === "tutorial stop") { guideOff(); return true; }
   if (lower === "tutorial") { guideStart(); return true; } // the first walk, on demand — for anyone, any time
+  if (lower === "fullscreen") { setFullscreen(!fsIs()); return true; }
+  if (lower === "fullscreen on" || lower === "fullscreen off") { setFullscreen(lower === "fullscreen on"); return true; }
   return false;
 }
 
@@ -9336,6 +9339,34 @@ chipbtn.addEventListener("click", function () {
   renderChipBtn();
   renderChips(lastSuggest, lastCombat);
 });
+
+// FULLSCREEN, BY CHOICE (rome, 2026-10-22): a toggle here and the word
+// 'fullscreen' typed. A browser only goes fullscreen on a click or a key, and
+// Esc always brings it back, so the button follows the page rather than a
+// saved setting. iPhone Safari has no fullscreen for a page at all: the row
+// hides there, and the home-screen app is already without the browser bar.
+var fsbtn = document.getElementById("fsbtn");
+var fsRoot = document.documentElement;
+function fsAvail() { return !!(fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen); }
+function fsIs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function renderFs() {
+  fsbtn.textContent = fsIs() ? "on" : "off";
+  fsbtn.className = fsIs() ? "on" : "";
+}
+function setFullscreen(on) {
+  if (!fsAvail()) { print("This browser cannot go fullscreen. On a phone, add NOMAD to your home screen instead.", "sys"); return; }
+  if (on === fsIs()) return;
+  try {
+    var p = on ? (fsRoot.requestFullscreen ? fsRoot.requestFullscreen() : fsRoot.webkitRequestFullscreen())
+               : (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen());
+    if (p && p.catch) p.catch(function () {});
+  } catch (e) {}
+}
+if (!fsAvail()) document.getElementById("fsrow").style.display = "none";
+renderFs();
+document.addEventListener("fullscreenchange", renderFs);
+document.addEventListener("webkitfullscreenchange", renderFs);
+fsbtn.addEventListener("click", function () { setFullscreen(!fsIs()); });
 
 // ---- themes: the Door in different lights ----
 // Six local presets, one row in settings; the relays add the rest below.

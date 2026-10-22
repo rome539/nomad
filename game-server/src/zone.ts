@@ -6682,6 +6682,16 @@ export class ZoneDO implements DurableObject {
   // if it ended the fight, never at all. Walking in and striking first showed
   // nothing whatsoever.
   public fxStruck(roomId: string, templateId: string): void { this.fxOne(roomId, templateId, "struck"); }
+  // ONE ANIMAL GOING FOR ANOTHER (rome, 2026-10-22: a dire wolf ran down a
+  // stag and neither picture moved). A hunt resolves outside the combat round,
+  // so its bites were told in prose and never drawn: the hunter shows its
+  // attack, and the hunted recoils if the bite landed.
+  public fxClash(roomId: string, swung: string, struck?: string): void {
+    for (const s of this.sessions.values()) {
+      if (s.roomId !== roomId || !seesArt(s.pubkey) || this.outOfWorld(s)) continue;
+      try { s.ws.send(JSON.stringify({ v: 0, t: "beat", swung: [swung], struck: struck ? [struck] : [] })); } catch {}
+    }
+  }
   // A DRAWN BEHAVIOUR, SENT WHEN IT HAPPENS (rome, 2026-09-25). The salute, the
   // rise, the grip, the king leaving his seat: each has a pose in the strip, and
   // the client used to cut to them on an idle clock, so a hollow soldier saluted

@@ -2037,6 +2037,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       creature.huntRestUntil = now + randInt(HUNT_REST_MIN, HUNT_REST_MAX) * 60_000;
       victim.asleep = false;
       victim.sleepUntil = undefined;
+      z.fxClash(creature.roomId, creature.templateId);
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} goes for ${vt.name}, and misses, and ${vt.name} is gone.`, undefined, false);
       z.roomSound(creature.roomId, "Something breaks cover {dir}, and something else goes after it, and stops.", undefined, undefined, false, { mob: creature.templateId, act: "scurry" });
       await creatureMoves(z, victim, now, "flee", false);
@@ -2049,6 +2050,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     // bone-knight being torn at took the raw roll whole.
     exhaustion.creatureAttempt(creature, now);
     victim.hp -= Math.max(1, exhaustion.creatureDamage(creature, randInt(tmpl.dmg_min, tmpl.dmg_max)) - vt.armor);
+    z.fxClash(creature.roomId, creature.templateId, victim.templateId);
     if (spined(z, creature, tmpl, victim, vt)) return true;
     // THE HENHOUSE KILL: it does not eat it, and it does not hold on to it.
     if (sport) {
@@ -2134,6 +2136,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     }
     exhaustion.creatureAttempt(creature, now);
     victim.hp -= Math.max(1, exhaustion.creatureDamage(creature, Math.round(randInt(tmpl.dmg_min, tmpl.dmg_max) * PREY_WORRY_MULT)) - vt.armor);
+    z.fxClash(creature.roomId, creature.templateId, victim.templateId);
     if (spined(z, creature, tmpl, victim, vt)) return true;
     if (victim.hp > 0) return true;
     releaseHold(z, creature);
