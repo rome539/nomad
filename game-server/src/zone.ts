@@ -365,6 +365,10 @@ export class ZoneDO implements DurableObject {
   private sim = simstore.newCache(); // what the sim rows last held, so persist() only writes the dirt (simstore.ts)
   private lastTickFlushAt = 0; // ms of the last TICK-driven sim flush; the tick batches its writes to TICK_SIM_FLUSH_MS (command saves stay immediate)
   private lastTickAt = 0; // ms of the previous tick — per-tick appetite/heal increments scale by the REAL gap (the beat runs slow when idle), not the nominal TICK_MS
+  // When this object started. A world that has only just started is already on
+  // the newest code, so a build that disagrees with it is the OLD Worker still
+  // draining, never a newer one (see fetch's build check).
+  private readonly bornAt = Date.now();
   private lastNightPhase: boolean | undefined; // the day/night world-clock's phase as of the last tick — undefined until first observed, so a cold wake never fires a false transition line
   private lastCommandAt = 0; // ms of the last player frame or connect — the world beats at TICK_MS while it's fresh (HOT_WINDOW_MS), stretches to IDLE_TICK_MS when quiet (see worldIsHot)
   private cacheRoom = new Map<string, string>(); // cacheId -> its CURRENT room; roaming chests relocate on refill
@@ -1241,7 +1245,12 @@ export class ZoneDO implements DurableObject {
     // just on time. Once per two minutes at most, so a request from an old
     // Worker still draining can never bounce the world back and forth.
     const want = req.headers.get("x-build");
-    if (want && want !== BUILD_ID) {
+    // ...BUT NOT FROM A WORLD THAT HAS ONLY JUST STARTED (2026-10-21: the thread
+    // frayed twice on one deploy). The deploy itself restarts the world onto the
+    // new code; for a few seconds after, the old Worker is still answering some
+    // requests, stamped with the OLD build, and the world read that mismatch as
+    // a newer deploy and restarted a second time for nothing.
+    if (want && want !== BUILD_ID && Date.now() - this.bornAt > BUILD_RESTART_EVERY_MS) {
       const last = (await this.state.storage.get<number>("buildRestartAt")) ?? 0;
       if (Date.now() - last > BUILD_RESTART_EVERY_MS) {
         await this.state.storage.put("buildRestartAt", Date.now());
