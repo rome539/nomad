@@ -60,6 +60,7 @@ export const COMBAT_ROUND_MS = 4000;
 // Bare hands. Steel is carried, never granted — a fresh key is a weak key,
 // and that weakness is the sybil resistance (a throwaway identity is a
 // throwaway threat). The best weapon in the pack adds its dmg.
+// Invite arrivals are the one exception (rome, 2026-10-22): a plain starter kit, with a 10% upgrade roll per slot, at most 2 a day per inviter — see invites.ts.
 export const PLAYER_DMG_MIN = 2;
 export const PLAYER_DMG_MAX = 5;
 // Fat tails, the same for every living thing that swings — the world never

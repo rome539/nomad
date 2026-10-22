@@ -20,6 +20,7 @@
     "test:gatehouse": "node scripts/test-build-guard.mjs && node scripts/test-gatehouse-roster.mjs",
     "test:reconnect": "node scripts/test-reconnect.mjs",
     "test:catchup": "node scripts/test-catchup.mjs",
+    "test:invites": "node scripts/test-invites.mjs",
     "test:combat": "node scripts/test-combat.mjs",
     "test:styles": "node scripts/test-styles.mjs",
     "test:sound": "node scripts/test-world-sound.mjs",

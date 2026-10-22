@@ -142,6 +142,7 @@ export interface Creature {
   carries?: string[]; // gear it visibly bears (worn/wielded at spawn, or scavenged) — spills on death
   traits?: string[]; // mob trait lottery: rolled at spawn (e.g. "runt") — behavior + look-line, not drops
   patientSpent?: boolean; // `patient` has landed its one heavy blow; the rest are ordinary (see MOB_PATIENT_MULT)
+  stoleInvite?: string;
   stoleJournal?: string; // the snatched thing's instance identity: when `stole` is a journal, its journalId rides here so the pages survive the theft (spills instanced; bare `stole` was eating books — rome, 2026-07-18)
   fed?: number; // grave-hyena: corpses eaten; enough and it turns bold
   fedAt?: number; // corvid: last time a wanderer fed it — a full bird won't be fed again for a while (RAVEN_BARTER_WAIT_MS)
@@ -295,7 +296,8 @@ export interface RotEntry {
 // holds instance state that must survive the drop. Today: journals (journalId).
 export interface GroundInstance {
   itemId: string;
-  journalId: string;
+  journalId?: string;
+  inviteCode?: string;
 }
 
 // Everything the world needs to keep existing while nobody watches.

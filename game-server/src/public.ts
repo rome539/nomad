@@ -2561,6 +2561,23 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   </div>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script type="module">
+// Hold the letter before any choice of key, then leave a clean address.
+var pendingInvite = "";
+try {
+  var inviteUrl = new URL(location.href);
+  if (inviteUrl.searchParams.has("invite")) {
+    var inviteValue = inviteUrl.searchParams.get("invite");
+    if (/^[A-Za-z0-9]{10}$/.test(inviteValue || "")) {
+      pendingInvite = inviteValue;
+      try { localStorage.setItem("nomad_invite", pendingInvite); } catch (e) {}
+    }
+    inviteUrl.searchParams.delete("invite");
+    history.replaceState(history.state, "", inviteUrl.pathname + inviteUrl.search + inviteUrl.hash);
+  }
+  if (!pendingInvite) pendingInvite = localStorage.getItem("nomad_invite") || "";
+} catch (e) {}
+if (!/^[A-Za-z0-9]{10}$/.test(pendingInvite)) pendingInvite = "";
+
 // Our own copy, served by this same worker (/nostr.js) — never a public CDN.
 // generateSecretKey mints the key that IS the player's account; code that does
 // that cannot come from a third party's server. See src/nostr-entry.mjs.
@@ -4795,6 +4812,35 @@ async function fetchProfileName(pk) {
 // Fire-and-forget. The room already heard you over the socket; if a relay is
 // down, or a signer refuses, the conversation carries on regardless.
 var SPEECH_KIND = 24914;
+// A note leaves only after the player asks with the button or typed command.
+async function postInvite(f) {
+  var epoch = identityEpoch;
+  try {
+    var evt = { kind: 1, created_at: Math.floor(Date.now()/1000), tags: [["t", "nomad"]],
+      content: f.message + "\\n\\nhttps://nomadmud.com/?invite=" + f.code };
+    var ev;
+    if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
+    else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
+    else if (method === "guest" && sk) ev = finalizeEvent(evt, sk);
+    else throw new Error("Your key is not ready.");
+    if (epoch !== identityEpoch) return;
+    if (!gpubPool) gpubPool = new (await import("/nostr.js")).SimplePool();
+    await Promise.any(gpubPool.publish(SPEECH_RELAYS, ev));
+    if (epoch === identityEpoch) print("Your letter has gone out onto the road.", "sys");
+  } catch (e) { if (epoch === identityEpoch) print("The letter did not reach the road. Try invite post again.", "sys"); }
+}
+function showInvite(f) {
+  if (!/^[A-Za-z0-9]{10}$/.test(f.code || "") || typeof f.message !== "string") return;
+  if (f.post) { postInvite(f); return; }
+  var epoch = identityEpoch;
+  var button = document.createElement("button");
+  button.type = "button";
+  button.textContent = "Post to Nostr";
+  button.onclick = function () { if (epoch === identityEpoch) sendCmd("invite post"); };
+  log.appendChild(button);
+  log.scrollTop = log.scrollHeight;
+}
+
 var SPEECH_RELAYS = ["wss://relay.damus.io", "wss://relay.primal.net", "wss://nos.lol", "wss://nostr.mom"];
 var gpubPool = null;
 async function publishSpeech(text, tag) {
@@ -5444,6 +5490,7 @@ async function connect() {
   var stallWatch = null;
   dialAttempt++;
   var sock = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : "")
+    + (pendingInvite ? "&invite=" + encodeURIComponent(pendingInvite) : "")
     + "&tell=1&pid=" + encodeURIComponent(pageId) + "&att=" + dialAttempt);
   ws = sock;
   var mine = function () { return ws === sock && epoch === identityEpoch; };
@@ -5461,6 +5508,8 @@ async function connect() {
   ws.onopen = function () {
     if (!mine()) return;
     opened = true;
+    pendingInvite = "";
+    try { localStorage.removeItem("nomad_invite"); } catch (e) {}
     connecting = false; // the wire is up — a wake event may dial again freely (the readyState===1 guard also holds)
     freshLoad = false; // the scroll is (being) painted now — any later reweave is a true seamless one
     failedOpens = 0;
@@ -5499,6 +5548,7 @@ async function connect() {
     // lesson text. Other output stays in history, hidden by tutorial mode.
     if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls, f.who, f.sp, !!(f.sounds && f.sounds.length)); if (Array.isArray(f.sounds)) f.sounds.slice(0, 4).forEach(function (cue, i) { heardSound(cue, i * .8); }); }
     else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp, !!(f.act || f.far)); if (f.act) heardSound(f); if (f.far) farSound(f.far); }
+    else if (f.t === "invite") showInvite(f);
     else if (f.t === "status") {
       // A real room change is the only thing that should re-fold the chips
       // (rome, 2026-07-26): keyed on the suggest LIST before, so a mob simply
@@ -9802,10 +9852,10 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "105";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "43";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "44";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "31";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "15";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "16";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10070,7 +10120,11 @@ var ROOM_PLATE = {
   // The other three conditions stay unshot for the older reason: under a roof
   // they would be three photographs spent on the light in one slot. See
   // SHELTERED and WEATHER_FROM_INSIDE.
-  "the-last-shelter": "night night-torch",
+  //
+  // DAY CAME BACK (rome, 2026-10-22): the plates were repainted on the built
+  // constants and a day plate was shot with them, so the shelter takes the
+  // usual three.
+  "the-last-shelter": "day night night-torch",
   // THE LION'S GROUND. Three rooms of the bone fan, shot as open hillside and
   // cut on the skyline like every other outdoor plate.
   "the-dry-bones":    "day night night-torch fog rain snow",
@@ -10082,12 +10136,13 @@ var ROOM_PLATE = {
   // shared sky is drawn behind an opaque picture and never seen. That costs
   // nothing and is the honest composition — the room says there is no way up.
   "the-back-wall":    "day night night-torch fog rain snow",
-  // AND WHAT IS BEHIND IT. One plate, and one is the whole set: the room reports
-  // sky "in", SKY_BASE maps that to the day slot, and "in" is not in TORCH_HOURS
-  // so no flame ever swaps it. It is also in DARK_ROOMS, which means nobody has
-  // ever seen this room without a light in their hand — so the single plate is
-  // painted already lit by the torch you must be carrying to be standing in it.
-  "the-kept-room":    "day",
+  // AND WHAT IS BEHIND IT. The room reports sky "in", SKY_BASE maps that to the
+  // day slot, and with no day plate listed the first condition, night, stands
+  // in. It is in DARK_ROOMS, so a light in your hand makes it dark enough for a
+  // flame and the torch plate shows; a light that has gone out leaves the dark
+  // one. (It was a single torch-lit "day" plate until rome, 2026-10-22, had it
+  // shot as night and night-torch like the other dark rooms.)
+  "the-kept-room":    "night night-torch",
   // TWO ROOMS THAT BORROW. Same conditions as the plate they point at — see
   // PLATE_OF below for why they are not simply copies of the files.
   "the-bone-ground":  "day night night-torch fog rain snow",

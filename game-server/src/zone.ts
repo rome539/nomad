@@ -55,6 +55,7 @@ import {
   parseTraits,
   loadLeaderboard,
 } from "./world";
+import * as invites from "./invites";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
 import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed } from "./zone-util";
@@ -1364,6 +1365,7 @@ export class ZoneDO implements DurableObject {
     }
 
     const { row, created } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
+    const invited = created && qs.has("invite") && await invites.claim(this, pubkey, qs.get("invite")!);
     const items = await loadInventory(this.env.DB, pubkey);
 
     // One body per soul: a second connection displaces the first. With
@@ -1472,6 +1474,7 @@ export class ZoneDO implements DurableObject {
     } else {
       this.send(session, `NOMAD. You are ${session.name}.`);
       if (created) {
+        if (invited) this.send(session, "You wake with a letter tucked among your things.");
         this.send(
           session,
           [
@@ -2185,6 +2188,7 @@ export class ZoneDO implements DurableObject {
       return this.send(session, "Not while something is trying to kill you.");
     }
     switch (cmd.verb) {
+      case "invite": return invites.command(this, session, cmd.arg);
       case "help": return this.send(session, HELP_TEXT);
       case "look": return verbs.cmdLook(this, session, cmd.arg);
       case "go": return verbs.cmdGo(this, session, cmd.arg);
@@ -2668,7 +2672,8 @@ export class ZoneDO implements DurableObject {
       session.items.splice(session.items.indexOf(carried), 1);
       await removeItemRow(this.env.DB, carried.rowId);
       if (carried.serial !== null) await voidMint(this.env.DB, carried.serial);
-      this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
+      if (carried.inviteCode) this.dropInstance(session.roomId, carried.itemId, undefined, carried.inviteCode);
+      else this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
       this.stampFresh(session.roomId, carried.itemId);
       if (itmpl.edible && !FOOD_KEEPS.has(carried.itemId)) this.rot.push({ itemId: carried.itemId, roomId: session.roomId, at: Date.now() + ROT_MS });
       if (!creature.target) creature.target = session.pubkey;
@@ -2703,7 +2708,8 @@ export class ZoneDO implements DurableObject {
       ? false // the hammerstone survives every landing — dense past its size
       : chance(HOLLOW.has(tmpl.id) ? THROW_SHATTER_HOLLOW : THROW_SHATTER);
     if (!shattered) {
-      this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
+      if (carried.inviteCode) this.dropInstance(session.roomId, carried.itemId, undefined, carried.inviteCode);
+    else this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
       this.stampFresh(session.roomId, carried.itemId);
       if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // a thrown blade (or stone) keeps its wear where it lands
       if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // and the engraving rides the landing
@@ -2771,7 +2777,8 @@ export class ZoneDO implements DurableObject {
     // It leaves your hand and lies where it falls — no target, so no shatter roll.
     session.items.splice(session.items.indexOf(carried), 1);
     await removeItemRow(this.env.DB, carried.rowId);
-    this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
+    if (carried.inviteCode) this.dropInstance(session.roomId, carried.itemId, undefined, carried.inviteCode);
+    else this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
     this.stampFresh(session.roomId, carried.itemId);
     if (this.isGear(carried.itemId)) this.groundCond.set(`${carried.itemId}@${session.roomId}`, carried.condition); // wear rides the landing
     if (carried.loreId) this.groundLore.set(`${carried.itemId}@${session.roomId}`, carried.loreId); // the engraving too
@@ -3495,7 +3502,7 @@ export class ZoneDO implements DurableObject {
 
   public stackable(itemId: string, serial: number | null, journalId?: string): boolean {
     if (serial !== null || journalId) return false;
-    if (MAP_ITEMS.has(itemId) || itemId === JOURNAL_ITEM) return false;
+    if (itemId === "invite-letter" || MAP_ITEMS.has(itemId) || itemId === JOURNAL_ITEM) return false;
     return !this.isGear(itemId);
   }
 
@@ -3916,9 +3923,9 @@ export class ZoneDO implements DurableObject {
 
 
 
-  public dropInstance(roomId: string, itemId: string, journalId: string): void {
+  public dropInstance(roomId: string, itemId: string, journalId?: string, inviteCode?: string): void {
     const here = this.groundInstances.get(roomId) ?? [];
-    here.push({ itemId, journalId });
+    here.push({ itemId, journalId, inviteCode });
     this.groundInstances.set(roomId, here);
   }
 
@@ -5179,6 +5186,7 @@ export class ZoneDO implements DurableObject {
                 // A stolen journal keeps its pages: the row dies here, so its
                 // instance identity must ride the thief or the book comes back blank.
                 creature.stoleJournal = loot.journalId;
+                creature.stoleInvite = loot.inviteCode;
                 this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and bolts! (kill it to get it back)`);
                 this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears something from ${victim.name} and flees!`, victim.pubkey, false);
               }
@@ -6815,10 +6823,10 @@ export class ZoneDO implements DurableObject {
     // and it's on the floor where it fell. (Ground items land fresh, no seal.)
     if (creature.stole) {
       const stolen = this.world!.itemTemplates.get(creature.stole);
-      if (creature.stoleJournal) {
+      if (creature.stoleJournal || creature.stoleInvite) {
         // A stolen journal lands INSTANCED — its pages ride the book to whoever
         // loots it (same door a death-drop uses; a plain spill was a blank book).
-        this.dropInstance(creature.roomId, creature.stole, creature.stoleJournal);
+        this.dropInstance(creature.roomId, creature.stole, creature.stoleJournal, creature.stoleInvite);
       } else {
         this.ground.set(creature.roomId, [...(this.ground.get(creature.roomId) ?? []), creature.stole]);
         this.stampFresh(creature.roomId, creature.stole);
@@ -6828,6 +6836,7 @@ export class ZoneDO implements DurableObject {
       this.armStrayDecay(creature.roomId);
       creature.stole = undefined;
       creature.stoleJournal = undefined;
+      creature.stoleInvite = undefined;
     }
     this.addTrace(creature.roomId, {
       kind: HOLLOW.has(tmpl.id) ? "remains" : "blood",
@@ -7135,10 +7144,10 @@ export class ZoneDO implements DurableObject {
     if (scattered.length > 0) {
       // Journals fall instanced (their pages ride the book to whoever loots it);
       // everything else spills as plain loot.
-      this.ground.set(fell, [...(this.ground.get(fell) ?? []), ...scattered.filter((c) => !c.journalId).map((c) => c.itemId)]);
-      for (const c of scattered) if (!c.journalId) this.stampFresh(fell, c.itemId);
+      this.ground.set(fell, [...(this.ground.get(fell) ?? []), ...scattered.filter((c) => !c.journalId && !c.inviteCode).map((c) => c.itemId)]);
+      for (const c of scattered) if (!c.journalId && !c.inviteCode) this.stampFresh(fell, c.itemId);
       for (const c of scattered) {
-        if (c.journalId) { this.dropInstance(fell, c.itemId, c.journalId); continue; }
+        if (c.journalId || c.inviteCode) { this.dropInstance(fell, c.itemId, c.journalId, c.inviteCode); continue; }
         if (this.world!.itemTemplates.get(c.itemId)?.edible && !FOOD_KEEPS.has(c.itemId)) {
           this.rot.push({ itemId: c.itemId, roomId: fell, at: Date.now() + ROT_MS });
         }

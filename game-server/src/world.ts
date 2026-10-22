@@ -466,6 +466,7 @@ export interface CarriedItem {
   serial: number | null;
   equipped: boolean; // worn/wielded — at most one per slot
   condition: number; // 0-100; use + rust wear it down (sealed gear is frozen)
+  inviteCode?: string; // the standing letter this copy carries
   journalId?: string; // only a journal: the stable id its pages are keyed to
   loreId?: string; // engraved gear: the gate's mark — its deeds-ledger key, enduring past every serial (077)
   acquiredAt?: number; // unix seconds the row was cut/taken — the deep-heart rots against this
@@ -482,10 +483,10 @@ export interface CarriedItem {
 // is loaded separately and never scatters.
 export async function loadInventory(db: D1Database, pubkey: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, lore_id, acquired_at, rolled_traits, fuel FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, equipped, condition, journal_id, invite_code, lore_id, acquired_at, rolled_traits, fuel FROM player_items WHERE pubkey = ? AND container = '' ORDER BY acquired_at")
     .bind(pubkey)
-    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string; fuel: number | null }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits), fuel: r.fuel || undefined }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; equipped: number; condition: number; journal_id: string; invite_code: string; lore_id: string; acquired_at: number; rolled_traits: string; fuel: number | null }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: !!r.equipped, condition: r.condition ?? 100, journalId: r.journal_id || undefined, inviteCode: r.invite_code || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits), fuel: r.fuel || undefined }));
 }
 
 // Persist a gear instance's worn-down condition (rounded to the D1 integer).
@@ -516,10 +517,10 @@ export async function setEquipped(db: D1Database, rowId: string, equipped: boole
 // anything that happens to the body that owns it. Condition is preserved.
 export async function loadContainer(db: D1Database, pubkey: string, container: string): Promise<CarriedItem[]> {
   const res = await db
-    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, lore_id, acquired_at, rolled_traits, container_at, fuel FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
+    .prepare("SELECT id, item_id, signed_serial, condition, journal_id, invite_code, lore_id, acquired_at, rolled_traits, container_at, fuel FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
     .bind(pubkey, container)
-    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; lore_id: string; acquired_at: number; rolled_traits: string; container_at: number | null; fuel: number | null }>();
-  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, containerAt: r.container_at ?? undefined, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits), fuel: r.fuel || undefined }));
+    .all<{ id: string; item_id: string; signed_serial: number | null; condition: number; journal_id: string; invite_code: string; lore_id: string; acquired_at: number; rolled_traits: string; container_at: number | null; fuel: number | null }>();
+  return (res.results ?? []).map((r) => ({ rowId: r.id, itemId: r.item_id, serial: r.signed_serial, equipped: false, condition: r.condition ?? 100, journalId: r.journal_id || undefined, inviteCode: r.invite_code || undefined, loreId: r.lore_id || undefined, acquiredAt: r.acquired_at, containerAt: r.container_at ?? undefined, rolledTraits: r.rolled_traits || undefined, rolledMap: parseTraits(r.rolled_traits), fuel: r.fuel || undefined }));
 }
 
 // Move a pack instance into a gate container, or back onto the body (''). The
@@ -883,4 +884,18 @@ export async function journalStudy(db: D1Database, journalId: string, templateId
     )
     .bind(journalId, templateId)
     .run();
+}
+
+export async function setItemInviteCode(db: D1Database, rowId: string, code: string): Promise<void> {
+  await db.prepare("UPDATE player_items SET invite_code = ? WHERE id = ?").bind(code, rowId).run();
+}
+
+// Shared by wearing gear and first-entry provisioning; callers handle narration.
+export async function equipCarried(db: D1Database, carried: CarriedItem, current?: CarriedItem): Promise<void> {
+  if (current) {
+    await setEquipped(db, current.rowId, false);
+    current.equipped = false;
+  }
+  await setEquipped(db, carried.rowId, true);
+  carried.equipped = true;
 }

@@ -11,8 +11,9 @@ import { BEAST_PATH_KEY } from "./world";
 import * as paths from "./paths";
 import * as clues from "./clues";
 import * as keys from "./keys";
+import * as invites from "./invites";
 import {
-  setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
+  equipCarried, setItemInviteCode, setEquipped, setStance, removeItemRow, insertLoot, setItemJournalId,
   journalLoad, mapInkLoad, renamePlayer, itemAcquiredAt, savePlayer, voidMint, loadContainer,
   loadLeaderboard, leaderboardRank, playerFoodHeal,
   setItemLoreId, setItemFuel, deedsBump, trait, hasTrait, parseTraits,
@@ -623,6 +624,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // A deliberate look always gives the full scene — and marks the room known,
   // so from here you get the brief view unless you ask again.
   if (!arg) { z.markWalked(session); return z.send(session, z.describeRoom(session, true, true)); }
+  if (await invites.read(z, session, arg)) return;
   const world = z.world!;
 
   if (arg === "self" || arg === "me" || arg === "myself") return z.send(session, selfExamine(z, session));
@@ -2216,8 +2218,8 @@ export async function dropCarried(z: ZoneDO, session: Session, carried: CarriedI
   if (carried.serial !== null) await voidMint(z.env.DB, carried.serial);
   // A journal keeps its pages when it hits the floor (they're keyed to the
   // book, not the row) — it lands instanced so the next hand inherits them.
-  if (carried.journalId) {
-    z.dropInstance(session.roomId, itemId, carried.journalId);
+  if (carried.journalId || carried.inviteCode) {
+    z.dropInstance(session.roomId, itemId, carried.journalId, carried.inviteCode);
   } else {
     z.ground.set(session.roomId, [...(z.ground.get(session.roomId) ?? []), itemId]);
     z.stampFresh(session.roomId, itemId);
@@ -2341,12 +2343,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
   }
   // One item per slot — set down whatever occupies it first.
   const current = z.equippedItem(session, tmpl.slot);
-  if (current) {
-    current.carried.equipped = false;
-    await setEquipped(z.env.DB, current.carried.rowId, false);
-  }
-  carried.equipped = true;
-  await setEquipped(z.env.DB, carried.rowId, true);
+  await equipCarried(z.env.DB, carried, current?.carried);
   if (fighting) session.staggered = true;
   // Raising a shield tells you its price up front: you fight around it, and the
   // bigger the guard the more it drags your blows (wallDrag). A buckler is free.
@@ -3720,23 +3717,26 @@ export function takeGroundInstance(z: ZoneDO, roomId: string, arg: string): Grou
 export async function getInstanced(z: ZoneDO, session: Session, inst: GroundInstance): Promise<void> {
   const tmpl = z.world!.itemTemplates.get(inst.itemId)!;
   if (!z.packRoom(session, inst.itemId)) {
-    z.dropInstance(session.roomId, inst.itemId, inst.journalId); // put it back down
+    z.dropInstance(session.roomId, inst.itemId, inst.journalId, inst.inviteCode); // put it back down
     return z.send(session, `Your pack is full (${z.packCap(session)} slots) — no room for ${tmpl.name}.`);
   }
   const rowId = uuid();
-  const carried: CarriedItem = { rowId, itemId: inst.itemId, serial: null, equipped: false, condition: 100, journalId: inst.journalId };
+  const carried: CarriedItem = { rowId, itemId: inst.itemId, serial: null, equipped: false, condition: 100, journalId: inst.journalId, inviteCode: inst.inviteCode };
   session.items.push(carried);
   await insertLoot(z.env.DB, rowId, session.pubkey, inst.itemId, null);
-  await setItemJournalId(z.env.DB, rowId, inst.journalId);
+  if (inst.journalId) await setItemJournalId(z.env.DB, rowId, inst.journalId);
+  if (inst.inviteCode) await setItemInviteCode(z.env.DB, rowId, inst.inviteCode);
   let stooped = "";
   if (z.inCombat(session)) { session.staggered = true; stooped = " You stoop for it under the swing — an opening."; }
-  if (inst.itemId === DETAILED_MAP) {
+  if (inst.inviteCode) {
+    z.send(session, `You take ${tmpl.name}.` + stooped);
+  } else if (inst.itemId === DETAILED_MAP) {
     // A surveyor's copy off the stones: the take-line reads the INK, not the
     // hunt — a well-walked chart is the whole reason to stoop for it.
-    const inked = (await mapInkLoad(z.env.DB, inst.journalId)).length;
+    const inked = (await mapInkLoad(z.env.DB, inst.journalId!)).length;
     z.send(session, `You take ${tmpl.name}.` + (inked > 1 ? ` ${inked} halls are already set down in another hand — someone else's walking, now yours.` : "") + stooped);
   } else {
-    const pages = (await journalLoad(z.env.DB, inst.journalId)).length;
+    const pages = (await journalLoad(z.env.DB, inst.journalId!)).length;
     z.send(session, `You take ${tmpl.name}.` + (pages ? ` Its pages are already ${pages > 8 ? "densely" : "half"} filled — someone else's hunting, now yours.` : "") + stooped);
   }
   z.roomFeed(session.roomId, `${session.name} takes ${tmpl.name}.`, session.pubkey, false); // loot stays LOCAL: a broadcast pickup is a ganker's shopping list (rome, 2026-07-15)

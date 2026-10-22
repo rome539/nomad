@@ -5,6 +5,7 @@
 // seam moved. `import type` for ZoneDO keeps this a compile-time reference, so
 // there's no runtime import cycle.
 import { handleLoadout } from "./loadouts";
+import * as invites from "./invites";
 import type { ZoneDO } from "./zone";
 import { MAX_BATCH_ROWS, SECRET_INPUT } from "./security";
 import type { Session } from "./zone-types";
@@ -2792,6 +2793,8 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // Not a verb we know? Then it wasn't meant as one. Say it.
   if (!cmd || "miss" in cmd) return gatehouseSay(z, session, text);
   const v = cmd.verb;
+  if (v === "invite") return invites.command(z, session, cmd.arg);
+  if (v === "look" && await invites.read(z, session, cmd.arg)) return;
   if (v === "say") return gatehouseSay(z, session, cmd.arg);
   // A no-argument command carrying trailing words was a SENTENCE, not a command:
   // "i am trying to quit" is speech, not inventory; "who knows" is speech, not

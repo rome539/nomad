@@ -3,6 +3,7 @@
 // did-you-mean suggestion when the verb is close but wrong.
 
 export type Verb =
+  | "invite"
   | "look"
   | "board"
   | "post"
@@ -218,7 +219,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   abandon: "abandon", forsake: "abandon", vacate: "abandon",
   bar: "bar", barricade: "bar", fortify: "bar",
   build: "build", construct: "build",
-  bunk: "bunk", invite: "bunk", house: "bunk", shelter: "bunk",
+  bunk: "bunk", invite: "invite", house: "bunk", shelter: "bunk",
   unbunk: "unbunk", evict: "unbunk", turnout: "unbunk",
   den: "den", home: "den", holding: "den", hearth: "den",
   stow: "stow", shelve: "stow",
@@ -355,6 +356,7 @@ export function parse(input: string): ParseResult | null {
 
   // say keeps the player's original casing and filler words; a name is yours
   // exactly as you capitalize it; the wall gets your words verbatim.
+  if (verb === "invite") return { verb, arg: input.trim().slice(head.length).trim() };
   if (verb === "say") return { verb, arg: rest };
   if (verb === "shout") return { verb, arg: rest };
   if (verb === "tell") return { verb, arg: rest }; // "<name> <words>" — the words are theirs, verbatim
@@ -522,6 +524,7 @@ export const HELP_TEXT = [
   "                    can have (a hearth, oiled hides over the shelf, a bone",
   "                    rattle on the door, a second rack, a larder) and what each",
   "                    costs; 'build <thing>' puts it up out of your pack.",
+  "  invite [message] send for someone; invite post carries the letter to Nostr.",
   "  bunk <name>       hand somebody a key. They have to be standing in front of",
   "                    you. (unbunk takes it back — from anywhere, and you don't",
   "                    have to be alive to type it.) Draw steel on anybody under",
