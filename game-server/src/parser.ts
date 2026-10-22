@@ -74,6 +74,8 @@ export type Verb =
   | "abandon"
   | "bar"
   | "build"
+  | "stretch"
+  | "draw"
   | "bunk"
   | "unbunk"
   | "den"
@@ -219,6 +221,8 @@ const VERB_ALIASES: Record<string, Verb> = {
   abandon: "abandon", forsake: "abandon", vacate: "abandon",
   bar: "bar", barricade: "bar", fortify: "bar",
   build: "build", construct: "build",
+  stretch: "stretch", scrape: "stretch", tan: "stretch",
+  draw: "draw",
   bunk: "bunk", invite: "invite", house: "bunk", shelter: "bunk",
   unbunk: "unbunk", evict: "unbunk", turnout: "unbunk",
   den: "den", home: "den", holding: "den", hearth: "den",
@@ -521,9 +525,15 @@ export const HELP_TEXT = [
   "                    no wanderer without a key. Unbarred it stops nothing, and",
   "                    most doors out there are unbarred.",
   "  build [thing]     inside your own den: 'build' alone lists what else a den",
-  "                    can have (a hearth, oiled hides over the shelf, a bone",
-  "                    rattle on the door, a second rack, a larder) and what each",
-  "                    costs; 'build <thing>' puts it up out of your pack.",
+  "                    can have (a hearth, a smoke rack over it, oiled hides over",
+  "                    the shelf, a bone rattle on the door, a second rack, a",
+  "                    larder, a water butt, a whetstone, a stretching frame,",
+  "                    stakes outside, a slit in the wall) and what each costs;",
+  "                    'build <thing>' puts it up out of your pack. With a hearth",
+  "                    you cook at home, and the smoke rack cures at home.",
+  "  stretch <pelt>    (scrape) — in your den, on the stretching frame: a pelt or",
+  "                    hide off a kill comes off as leather.",
+  "  draw water        in your den: a draught out of the water butt. Rain fills it.",
   "  bunk <name>       hand somebody a key. They have to be standing in front of",
   "                    you. (unbunk takes it back — from anywhere, and you don't",
   "                    have to be alive to type it.) Draw steel on anybody under",

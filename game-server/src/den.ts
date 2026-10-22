@@ -43,14 +43,18 @@
 // enemy can learn, and the walk home is a walk you now have a reason to survive.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
-import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow } from "./world";
+import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow, insertLoot, itemAcquiredAt } from "./world";
+import * as events from "./events";
+import { uuid } from "./rng";
 import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_IRON, DEN_BAR_SCRAP,
   DEN_RAISE_IRON, DEN_RAISE_SCRAP, DEN_RAISE_WOOD, DEN_RAISE_LEATHER, DEN_MIN_GATE_STEPS,
   DEN_BUILDS, DEN_RACK_CAP, DEN_HIDES_RUST_MULT, DEN_LARDER_AGE_MULT, DEN_RATTLE_EVERY_MS,
   LEATHER_ID, WOOD_ID, OUTDOOR_ROOMS, SEA_ROOMS, STUFF_WORD,
   COLD_STORE_ROOMS, COLD_CONTAINER, OSSUARY_ROOM, OSSUARY_CONTAINER,
-  DEN_RUST_PER_HOUR, DEN_RUST_FLOOR, DEN_WAKE_CHANCE, SEALED_WEAR_MULT, GEAR_FAILING_AT, GEAR_WORN_AT } from "./zone-data";
-import { nameMatches, shortName, isNight } from "./zone-util";
+  DEN_RUST_PER_HOUR, DEN_RUST_FLOOR, DEN_WAKE_CHANCE, SEALED_WEAR_MULT, GEAR_FAILING_AT, GEAR_WORN_AT,
+  DEN_BUTT_CAP, DEN_BUTT_RAIN_MS, DEN_FIRE_MS, DEN_STAKES_WOUND, DEN_PELT_LEATHER,
+  CURE_RECIPES, COOK_RECIPES, FOOD_KEEPS, GATE_CURE_MS } from "./zone-data";
+import { nameMatches, shortName, isNight, foodState, cap } from "./zone-util";
 import { MOUNTAIN_QUARTER_ROOMS, WOOD_QUARTERS } from "./detail";
 
 export interface Den {
@@ -66,6 +70,15 @@ export interface Den {
   rattle: boolean;
   rack: boolean;
   larder: boolean;
+  // ...and the second six (mig 327).
+  smoke: boolean;
+  butt: boolean;
+  whet: boolean;
+  frame: boolean;
+  stakes: boolean;
+  slit: boolean;
+  water: number;       // draughts in the butt, as last counted
+  waterAt: number;     // when it was last counted (the rain is reckoned from here)
   holderName: string;  // cached off the players row so an offline holder is still a NAME on the door, not a hex stub
   keys: Map<string, number>; // pubkey -> granted_at (the bunks; the holder is not in here)
 }
@@ -81,13 +94,15 @@ export interface Den {
 export async function loadDens(z: ZoneDO): Promise<Map<string, Den>> {
   const dens = new Map<string, Den>();
   const rows = (await z.env.DB.prepare(
-    "SELECT d.room_id, d.holder, d.claimed_at, d.tended_at, d.barred, d.hearth, d.hides, d.rattle, d.rack, d.larder, COALESCE(p.name, '') AS holder_name FROM dens d LEFT JOIN players p ON p.pubkey = d.holder")
-    .all<{ room_id: string; holder: string; claimed_at: number; tended_at: number; barred: number; hearth: number; hides: number; rattle: number; rack: number; larder: number; holder_name: string }>()).results ?? [];
+    "SELECT d.room_id, d.holder, d.claimed_at, d.tended_at, d.barred, d.hearth, d.hides, d.rattle, d.rack, d.larder, d.smoke, d.butt, d.whet, d.frame, d.stakes, d.slit, d.butt_water, d.butt_at, COALESCE(p.name, '') AS holder_name FROM dens d LEFT JOIN players p ON p.pubkey = d.holder")
+    .all<{ room_id: string; holder: string; claimed_at: number; tended_at: number; barred: number; hearth: number; hides: number; rattle: number; rack: number; larder: number; smoke: number; butt: number; whet: number; frame: number; stakes: number; slit: number; butt_water: number; butt_at: number; holder_name: string }>()).results ?? [];
   for (const r of rows) {
     dens.set(r.holder, {
       roomId: r.room_id, holder: r.holder, claimedAt: r.claimed_at,
       tendedAt: r.tended_at, barred: r.barred === 1,
       hearth: r.hearth === 1, hides: r.hides === 1, rattle: r.rattle === 1, rack: r.rack === 1, larder: r.larder === 1,
+      smoke: r.smoke === 1, butt: r.butt === 1, whet: r.whet === 1, frame: r.frame === 1, stakes: r.stakes === 1, slit: r.slit === 1,
+      water: r.butt_water, waterAt: r.butt_at,
       holderName: r.holder_name, keys: new Map(),
     });
   }
@@ -463,6 +478,7 @@ export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promi
   const den: Den = {
     roomId, holder: session.pubkey, claimedAt: now, tendedAt: now, barred: false,
     hearth: false, hides: false, rattle: false, rack: false, larder: false,
+    smoke: false, butt: false, whet: false, frame: false, stakes: false, slit: false, water: 0, waterAt: now,
     holderName: session.name, keys: new Map(),
   };
   z.dens.set(session.pubkey, den);
@@ -647,6 +663,9 @@ export async function cmdBuild(z: ZoneDO, session: Session, arg: string): Promis
   if (!key) return z.send(session, "You do not know how to build that here. ('build' alone lists what a den can have.)");
   const b = DEN_BUILDS[key]!;
   if (den[key as keyof Den] === true) return z.send(session, `There is already ${b.name} here.`);
+  if (b.needs && den[b.needs as keyof Den] !== true) {
+    return z.send(session, `${cap(b.name)} wants ${DEN_BUILDS[b.needs]?.name ?? b.needs} under it first.`);
+  }
   if (z.inCombat(session)) return z.send(session, "Not with something in the room that wants you dead.");
   if (b.cost.some((p) => countOf(session, p.id) < p.n)) {
     return z.send(session, `${b.name.charAt(0).toUpperCase() + b.name.slice(1)} wants ${priceText(b.cost)} out of your pack. You have ${b.cost.map((p) => `${countOf(session, p.id)} ${STUFF_WORD[p.id] ?? (p.id === IRON_ID ? "iron" : p.id)}`).join(", ")}.`);
@@ -672,6 +691,7 @@ export function lightHearth(z: ZoneDO, session: Session): string {
   session.items.splice(session.items.indexOf(wood), 1);
   void removeItemRow(z.env.DB, wood.rowId).catch(() => { /* the fire is lit either way; a lost delete is one stray bundle */ });
   session.hearthLit = den.roomId;
+  denFire.set(den.holder, Date.now() + DEN_FIRE_MS);
   return "You feed a bundle of split wood to the hearth and lie down beside it. The warmth comes up off the stones.";
 }
 export function hearthWarm(z: ZoneDO, session: Session): boolean {
@@ -1282,6 +1302,32 @@ export function keepingDen(z: ZoneDO, session: Session): Den | undefined {
 // exactly like standing in the street outside it — the same failure the shelf
 // had. The gatehouse already does this ("The Gatehouse", not the gate room's
 // name); a den is the same shape and gets the same honesty.
+// WHAT THE INSIDE LOOKS LIKE (rome, 2026-10-22: 'look' in his den gave him
+// the lane outside). Behind the door the room is the house, not the ground it
+// stands on: the frame every den has, then each thing built in it, in the
+// order it would catch your eye. The same room the picture shows - timber
+// walls, the shelf, the bed, the mat on the floor.
+export function interiorDescription(z: ZoneDO, session: Session): string {
+  const d = insideOf(z, session.pubkey);
+  if (!d || d.roomId !== session.roomId) return "";
+  const own = d.holder === session.pubkey;
+  const bits = [own
+    ? "Four walls of split timber and a roof over them, put up with your own hands. A shelf runs along the back wall, a frame bed with hides on it stands against the side, and a rush mat covers the earth floor."
+    : "Four walls of split timber and a roof over them, somebody else's work. A shelf along the back wall, a frame bed with hides on it, a rush mat on the earth floor."];
+  if (d.hearth) bits.push("In the corner, a ring of stones with an iron grate in it, and a smoke-hole cut in the roof above.");
+  if (d.rack) bits.push("A second rack of split wood is pinned up beside the shelf.");
+  if (d.hides) bits.push("Oiled hides hang down over the shelf against the damp.");
+  if (d.larder) bits.push("One corner is boxed in with split wood and lined with leather: the larder.");
+  if (d.rattle) bits.push("A cord of bone and horn is strung across the inside of the door.");
+  if (d.smoke) bits.push("A rack of split wood hangs over the hearth, black with smoke.");
+  if (d.butt) bits.push(d.water > 0 ? `A water butt stands under the roof edge by the door, ${d.water >= DEN_BUTT_CAP ? "full" : "with water in it"}.` : "A water butt stands under the roof edge by the door, dry.");
+  if (d.whet) bits.push("A whetstone sits in its frame by the wall, with an iron crank.");
+  if (d.frame) bits.push("A stretching frame leans against the wall.");
+  if (d.stakes) bits.push("Outside, the stakes you drove are in the ground where only you know them.");
+  if (d.slit) bits.push("A narrow slit cut through the wall beside the door, with a leather flap over it.");
+  return bits.join(" ");
+}
+
 export function roomTitle(z: ZoneDO, session: Session, name: string): string {
   const inside = insideOf(z, session.pubkey);
   if (!inside || inside.roomId !== session.roomId) return name;
@@ -1333,4 +1379,238 @@ function holderName(z: ZoneDO, den: Den): string {
 async function nameOf(z: ZoneDO, pubkey: string): Promise<string | null> {
   const row = await z.env.DB.prepare("SELECT name FROM players WHERE pubkey = ?").bind(pubkey).first<{ name: string }>();
   return row?.name ?? null;
+}
+
+
+// ---------------------------------------------------------------------------
+// THE SECOND SIX (rome, 2026-10-22, mig 327). What a den does with them. Each
+// one works only for the holder, standing inside their own door: a den is a
+// house, not a public works, and a bunk is a bed, not a share in the tools.
+
+function ownInside(z: ZoneDO, session: Session): Den | undefined {
+  const d = insideOf(z, session.pubkey);
+  return d && d.roomId === session.roomId && d.holder === session.pubkey ? d : undefined;
+}
+export function hasWork(z: ZoneDO, session: Session, key: "smoke" | "butt" | "whet" | "frame" | "hearth"): boolean {
+  return !!ownInside(z, session)?.[key];
+}
+
+// THE DEN'S FIRE. A bundle of split wood in the hearth burns DEN_FIRE_MS, and
+// cooking and the smoke rack both work off it while it lasts. Lying down by
+// the hearth lights it too. Held in memory: a fire does not outlast the world
+// waking up again, and nothing is lost if it goes out early - the next bundle
+// lights it.
+const denFire = new Map<string, number>();
+function fireLit(d: Den): boolean { return (denFire.get(d.holder) ?? 0) > Date.now(); }
+async function kindle(z: ZoneDO, session: Session, d: Den): Promise<string | null> {
+  if (fireLit(d)) return "";
+  const wood = session.items.find((c) => c.itemId === WOOD_ID && c.serial === null);
+  if (!wood) return null;
+  session.items.splice(session.items.indexOf(wood), 1);
+  await removeItemRow(z.env.DB, wood.rowId);
+  denFire.set(d.holder, Date.now() + DEN_FIRE_MS);
+  return "You put a bundle of split wood in the hearth and get it going. ";
+}
+
+// THE SMOKE RACK. Your own racks behind your own door: the gate's safe cure,
+// out here. It rides the rot clock the same way (kind "dencure", roomId = your
+// pubkey) and is taken down only by a 'cure' in this den. Returns false when
+// this is not the place, so the ordinary racks answer instead.
+export async function denCure(z: ZoneDO, session: Session, arg: string): Promise<boolean> {
+  const d = ownInside(z, session);
+  if (!d?.smoke) return false;
+  const world = z.world!;
+  const now = Date.now();
+  let collected = 0;
+  for (const r of z.rot.filter((r) => r.kind === "dencure" && r.roomId === session.pubkey && r.at <= now)) {
+    const out = CURE_RECIPES[r.itemId] ?? "smoked-haunch";
+    if (!z.packRoom(session, out)) continue;
+    const id = uuid();
+    await insertLoot(z.env.DB, id, session.pubkey, out, null);
+    session.items.push({ rowId: id, itemId: out, serial: null, equipped: false, condition: 100 });
+    z.rot.splice(z.rot.indexOf(r), 1);
+    collected++;
+  }
+  const got = collected ? `You take ${collected === 1 ? "a cured piece" : collected + " cured pieces"} down off the rack, black and keeping. ` : "";
+  if (arg) {
+    const named = (c: CarriedItem) => nameMatches(world.itemTemplates.get(c.itemId)!.name, arg);
+    const carried = session.items.find((c) => CURE_RECIPES[c.itemId] && c.serial === null && named(c)) ?? session.items.find(named);
+    if (!carried) { z.send(session, got + "You carry nothing like that.", got ? "gain" : undefined); return true; }
+    if (!CURE_RECIPES[carried.itemId]) { z.send(session, got + `${cap(world.itemTemplates.get(carried.itemId)!.name)} won't cure. The rack is for raw meat and fresh-caught fish.`, got ? "gain" : undefined); return true; }
+    if (carried.serial !== null) { z.send(session, got + "That one's sealed for extraction. Break the seal before you'd hang it in the smoke."); return true; }
+    const lit = await kindle(z, session, d);
+    if (lit === null) { z.send(session, got + "The hearth is cold, and the rack cures nothing without smoke. You have no split wood on you to light it."); return true; }
+    const idx = session.items.indexOf(carried);
+    if (idx === -1) { z.send(session, "That's already left your pack."); return true; }
+    session.items.splice(idx, 1);
+    await removeItemRow(z.env.DB, carried.rowId);
+    z.rot.push({ itemId: carried.itemId, roomId: session.pubkey, at: now + GATE_CURE_MS, kind: "dencure" });
+    const mins = Math.round(GATE_CURE_MS / 60_000);
+    z.send(session, got + lit + `You hang ${world.itemTemplates.get(carried.itemId)!.name} on the rack over the hearth. Give it about ${mins} minutes; it cures while you are gone, and nobody else will take it down. ('cure' reads the rack.)`, "gain");
+    z.sendCtx(session);
+    z.markSimDirty();
+    return true;
+  }
+  const still = z.rot.filter((r) => r.kind === "dencure" && r.roomId === session.pubkey && r.at > now);
+  const stuck = z.rot.filter((r) => r.kind === "dencure" && r.roomId === session.pubkey && r.at <= now);
+  let hanging = "";
+  if (still.length) {
+    const mins = Math.max(1, Math.ceil((Math.min(...still.map((r) => r.at)) - now) / 60_000));
+    hanging = ` ${still.length === 1 ? "A piece hangs" : still.length + " pieces hang"} in the smoke, about ${mins} minute${mins === 1 ? "" : "s"} yet.`;
+  }
+  if (stuck.length) hanging += ` ${stuck.length === 1 ? "A cured piece waits" : stuck.length + " cured pieces wait"} on the rack, but your pack is full.`;
+  const raw = session.items.some((c) => CURE_RECIPES[c.itemId] && c.serial === null);
+  z.send(session, (got + "The rack hangs over the hearth. Hang raw meat or a fresh catch on it ('cure haunch', 'cure fish'); the hearth wants a bundle of split wood if it is cold." + (raw ? "" : " (You've nothing raw to hang.)") + hanging).trim(), collected ? "gain" : undefined);
+  if (collected) { z.sendCtx(session); z.markSimDirty(); }
+  return true;
+}
+
+// COOKING AT HOME. The hearth is a fire like any other: a catch goes on it and
+// comes off at once. Returns false when there is no hearth of yours here.
+export async function denCook(z: ZoneDO, session: Session, arg: string): Promise<boolean> {
+  const d = ownInside(z, session);
+  if (!d?.hearth) return false;
+  const world = z.world!;
+  const cookable = session.items.filter((c) => COOK_RECIPES[c.itemId] && c.serial === null);
+  if (!arg) {
+    z.send(session, (fireLit(d) ? "The hearth is burning. " : "The hearth is cold; cooking will put a bundle of split wood in it. ")
+      + (cookable.length ? `You carry ${cookable.map((c) => world.itemTemplates.get(c.itemId)!.name).join(", ")}. ('cook <catch>')` : "You carry nothing a fire would improve."), "evt");
+    return true;
+  }
+  const named = (c: CarriedItem) => nameMatches(world.itemTemplates.get(c.itemId)!.name, arg);
+  const carried = cookable.find(named) ?? session.items.find(named);
+  if (!carried) { z.send(session, "You carry nothing like that."); return true; }
+  const outId = COOK_RECIPES[carried.itemId];
+  const rawT = world.itemTemplates.get(carried.itemId)!;
+  if (!outId) {
+    z.send(session, FOOD_KEEPS.has(carried.itemId)
+      ? `${cap(rawT.name)} has been through a fire already, or a barrel. Cooking it twice takes it the wrong way.`
+      : `${cap(rawT.name)} is not for the fire. This is for what comes out of water: a fish, an eel, a crab, an egg. Raw meat is the smoke rack's business.`);
+    return true;
+  }
+  if (carried.serial !== null) { z.send(session, "That one's sealed for extraction. Break the seal before you'd put it on a fire."); return true; }
+  const age = await itemAcquiredAt(z.env.DB, carried.rowId);
+  if (foodState(age ?? undefined, carried.itemId) === "spoiled") { z.send(session, `${cap(rawT.name)} has gone. The fire will not take the rot back out.`); return true; }
+  const lit = await kindle(z, session, d);
+  if (lit === null) { z.send(session, "The hearth is cold, and you have no split wood on you to light it."); return true; }
+  const idx = session.items.indexOf(carried);
+  if (idx === -1) { z.send(session, "That's already left your pack."); return true; }
+  session.items.splice(idx, 1);
+  await removeItemRow(z.env.DB, carried.rowId);
+  const rowId = uuid();
+  await insertLoot(z.env.DB, rowId, session.pubkey, outId, null);
+  session.items.push({ rowId, itemId: outId, serial: null, equipped: false, condition: 100 });
+  z.send(session, lit + `You set ${rawT.name} over the hearth and turn it once. It comes off as ${world.itemTemplates.get(outId)!.name}. (It will not keep. That is what the rack is for.)`, "gain");
+  z.sendStatus(session);
+  z.sendCtx(session);
+  z.markSimDirty();
+  return true;
+}
+
+// THE WATER BUTT. Rain off the roof fills it a draught at a time
+// (DEN_BUTT_RAIN_MS of rain each), whether anybody is home or not; 'draw'
+// takes one out as water to carry. Read every tick, written only on a change.
+export function fillButts(z: ZoneDO, now: number): void {
+  for (const d of z.dens.values()) {
+    if (!d.butt) continue;
+    if (d.water >= DEN_BUTT_CAP || !events.raining(z, d.roomId)) { d.waterAt = now; continue; }
+    if (now - d.waterAt < DEN_BUTT_RAIN_MS) continue;
+    d.water += 1;
+    d.waterAt = now;
+    void z.env.DB.prepare("UPDATE dens SET butt_water = ?, butt_at = ? WHERE room_id = ? AND holder = ?")
+      .bind(d.water, now, d.roomId, d.holder).run().catch(() => {});
+  }
+}
+export async function cmdDraw(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const d = ownInside(z, session);
+  if (!d?.butt) return z.send(session, "There is nothing here to draw from.");
+  if (arg && !/water|butt|drink|draught/i.test(arg)) return z.send(session, "The butt holds water, and nothing else.");
+  if (d.water <= 0) return z.send(session, "The butt is dry. It wants rain.");
+  if (!z.packRoom(session, "well-water")) return z.send(session, "You have no room to carry it.");
+  const rowId = uuid();
+  await insertLoot(z.env.DB, rowId, session.pubkey, "well-water", null);
+  session.items.push({ rowId, itemId: "well-water", serial: null, equipped: false, condition: 100 });
+  d.water -= 1;
+  await z.env.DB.prepare("UPDATE dens SET butt_water = ?, butt_at = ? WHERE room_id = ? AND holder = ?")
+    .bind(d.water, d.waterAt, d.roomId, d.holder).run();
+  z.send(session, `You draw off a draught of rainwater. ${d.water === 0 ? "That was the last of it." : `The butt holds ${d.water} more.`}`, "gain");
+  z.sendCtx(session);
+}
+
+// THE STRETCHING FRAME. A pelt or a hide off your kills comes off the frame as
+// leather offcuts, more for a better pelt (DEN_PELT_LEATHER by rarity), which
+// is what the den itself is built and mended with.
+function isPelt(z: ZoneDO, itemId: string): boolean {
+  return /(^|-)(pelt|hide|skin)$/.test(itemId) && !z.isGear(itemId);
+}
+export async function cmdStretch(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const d = ownInside(z, session);
+  if (!d?.frame) return z.send(session, "You have no frame here to stretch anything on.");
+  if (z.inCombat(session)) return z.send(session, "Not with something in the room that wants you dead.");
+  const world = z.world!;
+  const pelts = session.items.filter((c) => isPelt(z, c.itemId));
+  if (!arg) return z.send(session, pelts.length
+    ? `The frame leans against the wall. You carry ${pelts.map((c) => world.itemTemplates.get(c.itemId)!.name).join(", ")}. ('stretch <pelt>')`
+    : "The frame leans against the wall, empty. A pelt or a hide off a kill goes on it.");
+  const carried = pelts.find((c) => nameMatches(world.itemTemplates.get(c.itemId)!.name, arg)) ?? z.findCarried(session, arg);
+  if (!carried) return z.send(session, "You carry nothing like that.");
+  const t = world.itemTemplates.get(carried.itemId)!;
+  if (!isPelt(z, carried.itemId)) return z.send(session, `${cap(t.name)} is not a pelt. The frame takes a skin off a kill.`);
+  if (carried.serial !== null) return z.send(session, "That one's sealed. Break the seal before you'd put a knife to it.");
+  const n = DEN_PELT_LEATHER[t.rarity] ?? 2;
+  const idx = session.items.indexOf(carried);
+  if (idx === -1) return z.send(session, "That's already left your pack.");
+  session.items.splice(idx, 1);
+  await removeItemRow(z.env.DB, carried.rowId);
+  let kept = 0;
+  for (let i = 0; i < n; i++) {
+    if (!z.packRoom(session, LEATHER_ID)) break;
+    const rowId = uuid();
+    await insertLoot(z.env.DB, rowId, session.pubkey, LEATHER_ID, null);
+    session.items.push({ rowId, itemId: LEATHER_ID, serial: null, equipped: false, condition: 100 });
+    kept++;
+  }
+  z.send(session, `You peg ${t.name} out on the frame and scrape it down. It comes off as ${kept} piece${kept === 1 ? "" : "s"} of leather.` + (kept < n ? " The rest you have no room to carry, and it goes in the fire." : ""), "gain");
+  z.sendCtx(session);
+}
+
+// THE STAKES. Once a night, the first thing to come onto the ground of a den
+// that has them runs onto them: a quarter of what it can take, never the last
+// of it. The holder and everyone bunked there know where they are.
+const stakedAt = new Map<string, number>();
+export function stakesBite(z: ZoneDO, roomId: string, who: { pubkey?: string; name: string; hp: number; maxHp: number }, silent = false): number {
+  if (!isNight()) return 0;
+  const now = Date.now();
+  for (const d of z.dens.values()) {
+    if (d.roomId !== roomId || !d.stakes) continue;
+    if (who.pubkey && (who.pubkey === d.holder || d.keys.has(who.pubkey))) continue;
+    if (now - (stakedAt.get(d.holder) ?? 0) < 12 * 3_600_000) continue;
+    stakedAt.set(d.holder, now);
+    const wound = Math.min(Math.max(0, who.hp - 1), Math.max(1, Math.round(who.maxHp * DEN_STAKES_WOUND)));
+    if (!silent) {
+      z.roomFeed(roomId, `${cap(who.name)} comes onto the ground in the dark and runs onto a stake.`, who.pubkey, false);
+      for (const s of z.sessions.values()) {
+        if (s.roomId === roomId && insideOf(z, s.pubkey) === d) z.send(s, "Outside, something runs onto the stakes, and the sound of it comes through the wall.", "evt");
+      }
+    }
+    return wound;
+  }
+  return 0;
+}
+
+// THE SLIT. From inside, what is standing on the ground outside.
+export function slitLine(z: ZoneDO, session: Session): string {
+  const d = insideOf(z, session.pubkey);
+  if (!d || d.roomId !== session.roomId || !d.slit) return "";
+  const world = z.world!;
+  const seen: string[] = [];
+  for (const c of z.creaturesInRoom(d.roomId)) {
+    if (c.hidden || c.aloft !== undefined) continue;
+    seen.push(world.mobTemplates.get(c.templateId)?.name ?? "something");
+  }
+  for (const s of z.sessions.values()) {
+    if (s === session || s.roomId !== d.roomId || s.hp <= 0 || z.outOfWorld(s) || insideOf(z, s.pubkey)) continue;
+    seen.push(s.name);
+  }
+  return seen.length ? `Through the slit: ${seen.join(", ")}, on the ground outside.` : "Through the slit, the ground outside is empty.";
 }

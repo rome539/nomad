@@ -21,7 +21,7 @@ import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord,
 import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
-  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, TORCH_ITEM,
+  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, FENCE_MATS, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, SOUP_ITEM, SOUP_WARM_MS, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
@@ -575,14 +575,45 @@ export function fenceGuard(z: ZoneDO, session: Session): string | null {
 // "bare shelf" any more (rome, 2026-07-20) — it's simply not on offer until it
 // cycles back.
 export function inStock(z: ZoneDO, itemId: string): boolean {
-  return (z.fenceOut.get(itemId) ?? 0) <= Date.now();
+  // Off the shelf for a while (the rotation) beats everything; a material on
+  // the shelf is in stock only while there is some of it left.
+  if ((z.fenceOut.get(itemId) ?? 0) > Date.now()) return false;
+  const left = matLeft(z, itemId);
+  return left === null || left > 0;
+}
+
+// HOW MANY OF A MATERIAL HE HAS LEFT (mig 328), or null for anything that is
+// not one. Counted lazily: whatever has come back since the last look is
+// added now, a piece every everyMs, up to the cap. A fresh world starts full.
+export function matLeft(z: ZoneDO, itemId: string): number | null {
+  const m = FENCE_MATS[itemId];
+  if (!m) return null;
+  const now = Date.now();
+  const s = z.fenceMats.get(itemId) ?? { n: m.cap, at: now };
+  if (s.n >= m.cap) { s.n = m.cap; s.at = now; }
+  else {
+    const back = Math.floor((now - s.at) / m.everyMs);
+    if (back > 0) { s.n = Math.min(m.cap, s.n + back); s.at = s.n >= m.cap ? now : s.at + back * m.everyMs; }
+  }
+  z.fenceMats.set(itemId, s);
+  return s.n;
+}
+function takeMat(z: ZoneDO, itemId: string): void {
+  const left = matLeft(z, itemId);
+  if (left === null) return;
+  const s = z.fenceMats.get(itemId)!;
+  if (s.n >= FENCE_MATS[itemId]!.cap) s.at = Date.now(); // the clock starts with the first one sold
+  s.n = Math.max(0, s.n - 1);
+  z.markSimDirty();
 }
 
 // The basics the keeper ALWAYS keeps: food, water, dressings, torches, scrap.
 // Everything else — gear and oddments — rotates in and out.
 export function fenceStaple(z: ZoneDO, itemId: string): boolean {
   const t = z.world!.itemTemplates.get(itemId);
-  return !!t && (!!t.edible || t.staunch > 0 || itemId === TORCH_ITEM || itemId === SCRAP_ID || itemId === SOUP_ITEM);
+  // The materials are not staples (rome, 2026-10-22): they run out (matLeft)
+  // AND they rotate off the shelf like the gear, so they are not always there.
+  return !!t && (!!t.edible || t.staunch > 0 || itemId === TORCH_ITEM || itemId === SOUP_ITEM);
 }
 
 // The shelf ROTATES (rome, 2026-07-20): the keeper doesn't stock his whole
@@ -710,7 +741,8 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
     if (!inStock(z, s.itemId)) { absent.push(t.name); continue; }
     const k = shelfOf(z, t.id);
     if (!onShelf.has(k)) onShelf.set(k, []);
-    onShelf.get(k)!.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade`);
+    const left = matLeft(z, s.itemId);
+    onShelf.get(k)!.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade${left !== null ? `, ${left} on the shelf` : ""}`);
   }
   const many = onShelf.size > 1;
   for (const [k, label] of SHELVES) {
@@ -739,8 +771,16 @@ export function cartCost(trade: { wants: { cost: number }[] }): number {
 export const BUY_COUNT_MAX = 20;
 export function startBuy(z: ZoneDO, session: Session, stock: { itemId: string; cost: number }, n = 1): string {
   const t = z.world!.itemTemplates.get(stock.itemId)!;
-  const count = Math.max(1, Math.min(BUY_COUNT_MAX, Math.floor(n) || 1));
+  let count = Math.max(1, Math.min(BUY_COUNT_MAX, Math.floor(n) || 1));
   const cart = session.buying ?? { wants: [], paid: 0, escrow: [] };
+  // A material sells only as far as the shelf holds, counting what is already
+  // on your side of the counter.
+  const left = matLeft(z, stock.itemId);
+  if (left !== null) {
+    const room = left - cart.wants.filter((w) => w.itemId === stock.itemId).length;
+    if (room <= 0) return `The keeper shakes his head. "That's all the ${t.name.replace(/^(a|an|some)\s+/i, "")} I've got. More comes in."`;
+    count = Math.min(count, room);
+  }
   const fresh = cart.wants.length === 0;
   for (let i = 0; i < count; i++) cart.wants.push({ itemId: stock.itemId, cost: stock.cost });
   session.buying = cart;
@@ -978,6 +1018,7 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
       const t = world.itemTemplates.get(w.itemId);
       if (t) lastOnes.push(t.name);
     }
+    takeMat(z, w.itemId); // a material leaves the shelf for good, until more comes in
     const bought = world.itemTemplates.get(w.itemId)!;
     // A WORD OF THE BOXES is not goods — the keeper sells what he's heard.
     // He names the room where a roaming strongbox sits RIGHT NOW (a locked one
@@ -1282,7 +1323,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
       const t = world.itemTemplates.get(s.itemId);
       return t ? {
         id: s.itemId, name: t.name, rarity: t.rarity, slot: t.slot, cost: s.cost, kind: kindOf(t),
-        stat: z.itemStat(t).replace(/^ \(|\)$/g, ""),
+        stat: z.itemStat(t).replace(/^ \(|\)$/g, "") + (matLeft(z, s.itemId) !== null ? `${z.itemStat(t) ? " · " : ""}${matLeft(z, s.itemId)} on the shelf` : ""),
       } : null;
     })
     .filter((s) => s !== null);
@@ -1563,7 +1604,8 @@ export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promi
   // scrap: the stone keeps a WORKING edge, not a good one — it takes a dull
   // piece up to WHET_CAP and no further. Past that, a piece wants the forge.
   // No clock, no state: the cap IS the law.
-  if (WHETSTONE_ROOMS.has(session.roomId)) {
+  // ...and the stone in your own den is one of them (mig 327).
+  if (WHETSTONE_ROOMS.has(session.roomId) || den.hasWork(z, session, "whet")) {
     if (z.inCombat(session)) return z.send(session, "Not while something is trying to kill you.");
     if (!arg) return z.send(session, "Repair what? (the stone here keeps a working edge — it will not make good steel)");
     const carried = z.findCarried(session, arg);

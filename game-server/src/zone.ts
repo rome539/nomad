@@ -280,6 +280,7 @@ export class ZoneDO implements DurableObject {
   // itemId -> ms the keeper restocks it. A bare shelf is a bare shelf for
   // everyone (gate.ts owns the churn); survives hibernation.
   public fenceOut = new Map<string, number>();
+  public fenceMats = new Map<string, { n: number; at: number }>(); // the keeper's materials (gate.matLeft)
   // The keeper's bounty board: [trophyId, foodId, count?] currently posted.
   // Rotates like the fence; survives hibernation (gate.ts owns the churn).
   public bounties: [string, string, number?][] = [];
@@ -696,6 +697,7 @@ export class ZoneDO implements DurableObject {
       this.openDoors = new Set(saved.openDoors);
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
+      this.fenceMats = new Map(Object.entries(saved.fenceMats ?? {}));
       this.bounties = saved.bounties ?? [];
       this.nextBountyChurnAt = saved.nextBountyChurnAt ?? 0;
       this.nextFenceChurnAt = saved.nextFenceChurnAt ?? 0;
@@ -1079,6 +1081,7 @@ export class ZoneDO implements DurableObject {
       openDoors: [...this.openDoors],
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
       fenceOut: Object.fromEntries(this.fenceOut),
+      fenceMats: Object.fromEntries(this.fenceMats),
       bounties: this.bounties,
       nextBountyChurnAt: this.nextBountyChurnAt,
       nextFenceChurnAt: this.nextFenceChurnAt,
@@ -1172,6 +1175,7 @@ export class ZoneDO implements DurableObject {
     this.openDoors.clear();
     this.doorCloseAt.clear();
     this.fenceOut.clear();
+    this.fenceMats.clear();
     this.bounties = [];
     this.nextBountyChurnAt = 0;
     this.nextFenceChurnAt = 0;
@@ -2281,6 +2285,8 @@ export class ZoneDO implements DurableObject {
       case "abandon": return den.cmdAbandon(this, session);
       case "bar": return den.cmdBar(this, session);
       case "build": return den.cmdBuild(this, session, cmd.arg);
+      case "stretch": return den.cmdStretch(this, session, cmd.arg);
+      case "draw": return den.cmdDraw(this, session, cmd.arg);
       case "bunk": return den.cmdBunk(this, session, cmd.arg);
       case "unbunk": return den.cmdUnbunk(this, session, cmd.arg);
       case "den": return den.cmdDen(this, session);
@@ -5957,6 +5963,7 @@ export class ZoneDO implements DurableObject {
     }
 
     ai.hearthDraws(this, now); // a den's fire after dark pulls on the hungry next door
+    den.fillButts(this, now);  // the rain off a den roof fills its butt
     this.applyRot(now, false);
     this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches
     this.sweepSpoiledHearts(now, false);
@@ -6250,7 +6257,7 @@ export class ZoneDO implements DurableObject {
       // Gate-smokehouse cures live in `rot` for the free persistence but never
       // touch a floor — they're collected lazily at the gate (cureAtGate). Keep
       // them regardless of maturity; the owner's visit is what resolves them.
-      if (r.kind === "gatecure") return true;
+      if (r.kind === "gatecure" || r.kind === "dencure") return true;
       if (r.at > now) return true;
       const here = this.ground.get(r.roomId) ?? [];
       const idx = here.indexOf(r.itemId);
@@ -7591,7 +7598,13 @@ export class ZoneDO implements DurableObject {
       return `Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water.${redEyesInDark} A light would show it. (light a torch, or feel your way back the way you came)`;
     }
     const title = den.roomTitle(this, session, room.name);
-    const lines = full ? [title, room.description] : [title];
+    // BEHIND YOUR DOOR THE ROOM IS THE HOUSE (rome, 2026-10-22). The den stands
+    // on the site's room id, so every line below that describes the ground -
+    // its words, the post, the weather, the night sky, the ways on, the tracks,
+    // what lies on it - was being read out indoors. Inside, the house speaks
+    // instead, and the ground's lines wait for 'out'.
+    const indoors = den.interiorDescription(this, session);
+    const lines = full ? [title, indoors || room.description] : [title];
     // WHO LIVES HERE (mig 162). A holding says how it stands as part of the room
     // rather than as something you have to ask for — an empty roof advertises
     // itself, an occupied one names its holder, and a barred door is visible
@@ -7602,13 +7615,15 @@ export class ZoneDO implements DurableObject {
       // And from inside your own barred house, what is waiting outside it.
       const wl = den.windowLine(this, session);
       if (wl) lines.push(wl);
+      const sl = den.slitLine(this, session);
+      if (sl) lines.push(sl);
     }
     // THE FINGERPOST, where there is one (detail.SIGNPOSTS). The room says the
     // post is there; reading the arms is a `look`, because a sign you have to
     // walk up to is a sign, and one that recites itself at you is a menu. This
     // sits past the pitch-dark return above on purpose — nobody reads a
     // signpost in the black, and the dark is the one thing that beats it.
-    const sign = full ? SIGNPOSTS[room.id] : undefined;
+    const sign = full && !indoors ? SIGNPOSTS[room.id] : undefined;
     if (sign) lines.push(`${sign.post} (look at the sign)`);
     // THE WAYSTONES (rome, 2026-08-15). The fingerpost above says where the
     // ROADS go; this says where the DOOR is, which is the thing a person who is
@@ -7620,21 +7635,21 @@ export class ZoneDO implements DurableObject {
     // The direction is COMPUTED (lore.buildWayHome), never written down, so it
     // cannot rot when the world grows — and it names the nearest door from THIS
     // stone, which is not always the one you came in by.
-    if (full && WAYSTONES.has(room.id)) {
+    if (full && !indoors && WAYSTONES.has(room.id)) {
       const w = this.wayHome.get(room.id);
       if (w) lines.push(`${waystoneLine(room.id)} The arm cut into it points ${w.dir}: ${wayFar(w.dist)}.`);
     }
     // The sky's phase, spoken where the sky can reach you: coming rain, rain,
     // or the mud it left. Legibility rule — you always know what weather
     // you're standing in.
-    const sky = events.skyClause(this, room.id);
+    const sky = indoors ? "" : events.skyClause(this, room.id);
     if (sky) lines.push(sky.trim());
     // The night-clock itself gets a line too, same legibility rule as
     // weather — this only runs past the pitch-dark return above, so it's
     // either a torch holding the dark at bay or a full moon lighting the
     // grounds outright; either way, say which (rome, 2026-07-22).
     // skyClause already describes a blood moon; do not repeat it here.
-    if (OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
+    if (!indoors && OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
       lines.push(isFullMoon()
         ? "A full moon rides high and white — the grounds lie almost as bright as day."
         // Whose light it is matters here: this line runs for anyone the room is
@@ -7698,7 +7713,7 @@ export class ZoneDO implements DurableObject {
     const heldWays = ai.heldExits(this, session);
     // ...and the animal paths this wanderer has seen used, named for what they are.
     const known = paths.knownPathsHere(this, session).map((e) => `${e.dir} (animal path)`);
-    lines.push(exits.length
+    if (!indoors) lines.push(exits.length
       ? `Exits: ${[...exits.map((e) => heldWays.has(e.dir) ? `${e.dir} (held)` : e.dir), ...known].join(", ")}.`
       : "There is no way out.");
     if (heldWays.size) {
@@ -7707,9 +7722,9 @@ export class ZoneDO implements DurableObject {
         : `They have taken ${heldWays.size} of the ways out and are working on the rest.`);
     }
 
-    lines.push(...this.traceLines(room.id, Date.now()));
+    if (!indoors) lines.push(...this.traceLines(room.id, Date.now()));
     // Crows coming down over a death somewhere in sight (clues.ts).
-    const crows = clues.crowsLine(this, room.id);
+    const crows = indoors ? "" : clues.crowsLine(this, room.id);
     if (crows) lines.push(crows);
     // A great ring of keys is heard before it is seen, and it is never still (keys.ts).
     for (const c of this.creaturesInRoom(room.id)) {
@@ -7734,7 +7749,9 @@ export class ZoneDO implements DurableObject {
 
     // A tide-drowned room keeps its floor to itself: whatever lies here lies
     // under black water, unseen until someone goes down after it (cmdDive).
-    if (events.tideFlooded(this, room.id)) {
+    if (indoors) {
+      // What lies on the ground outside is outside; the shelf is 'den'.
+    } else if (events.tideFlooded(this, room.id)) {
       lines.push("The floor is gone under the water; whatever lies here is down there with it.");
     } else {
       // A torch someone set (or dropped) on the stone, still burning — the room's

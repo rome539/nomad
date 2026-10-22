@@ -175,6 +175,7 @@ async function cureAtGate(z: ZoneDO, session: Session, arg: string): Promise<voi
 export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
   if (z.outOfWorld(session)) return cureAtGate(z, session, arg); // behind the gate door: the SAFE racks
+  if (await den.denCure(z, session, arg)) return; // the rack over your own hearth
   if (!SMOKEHOUSE_ROOMS.has(session.roomId)) {
     return z.send(session, "There are no smoke-racks here. The old smokehouse lies deep below the larder; there is a fire-ring under the erratic at the foot of the mountain, a smoke house standing on the crossing's shingle, and a burner's flat in the wood where the ground is still black — or cure it safe at any gate ('cure' behind the door).");
   }
@@ -278,6 +279,7 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
 export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
   if (z.outOfWorld(session)) return cookAtGate(z, session, arg);
+  if (!z.inCombat(session) && await den.denCook(z, session, arg)) return; // your own hearth
   // Not with something trying to kill you — the same line the angler gets, for
   // the same reason: this is a crouch, not a gulp. (`eat` stays allowed mid-
   // fight; bolting cold food is desperation and it costs you your guard.)
@@ -1382,6 +1384,13 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   const from = session.roomId;
   session.roomId = exit.to_room;
   den.rattle(z, session.roomId, session.pubkey); // a bone rattle on a door here hears you come
+  // ...and stakes in the ground here find you first, once a night (mig 327).
+  const staked = den.stakesBite(z, session.roomId, { pubkey: session.pubkey, name: session.name, hp: session.hp, maxHp: session.maxHp });
+  if (staked) {
+    session.hp -= staked;
+    z.send(session, "Your foot goes onto something sharp in the dark: a stake, driven in and angled out. It goes in deep before you can stop.", "dmgin");
+    z.sendStatus(session);
+  }
   ai.shadowFollow(z, session, from, session.roomId, Date.now()); // a wolf testing you comes after
   session.movedAt = Date.now();
   // Charge only a completed step, after every blocked-exit/failed-flight check.

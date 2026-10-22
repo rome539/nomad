@@ -289,7 +289,9 @@ export interface RotEntry {
   // holds the PUBKEY (not a room), it never resolves onto a floor (the sweep skips
   // it), and it's collected lazily when the owner is next at the gate. Slower than
   // the deep racks (GATE_CURE_MS), the price of it being unlift-able.
-  kind?: "rot" | "crumble" | "sodden" | "wilt" | "cure" | "gatecure";
+  // "dencure": the same, on the smoke rack over a den's hearth (mig 327); taken
+  // down only by a 'cure' in that den.
+  kind?: "rot" | "crumble" | "sodden" | "wilt" | "cure" | "gatecure" | "dencure";
 }
 
 // A carryable on the floor that can't be reduced to a bare template id — it
@@ -315,6 +317,7 @@ export interface SimState {
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
   doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)
   fenceOut?: Record<string, number>;
+  fenceMats?: Record<string, { n: number; at: number }>; // the keeper's materials as last counted (mig 328)
   bloodOn?: Record<string, number[]>; // pubkey -> kill timestamps; the evidence walks around on the murderer // itemId -> ms the keeper restocks it (bare shelves — the market has other customers)
   nextStoneAt?: number; // ms the world next mints a hammerstone into a random haunt (no farmable spot)
   nextBrandAt?: number; // ms the world next rolls a longbrand into fire-keeping country (the rare torch, same law)

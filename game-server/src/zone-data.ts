@@ -1449,6 +1449,18 @@ export const STONE_MINT_ODDS = 0.25;             // ...and 1 check in 4 mints �
 // his gear/oddments simply aren't on offer — not "sold out" on a bare shelf,
 // just not carried right now — and they cycle back over an hour or three. The
 // basics (food, water, dressings, torches, scrap) are always kept.
+// THE KEEPER'S MATERIALS RUN OUT (rome, 2026-10-22, mig 328). Each making on
+// the shelf is a stock that sells down and comes back one piece every
+// `everyMs`, up to `cap`. One keeper behind every gate, so one stock for all of
+// them. Scrap used to be bottomless, which made iron as free as trade goods.
+export const FENCE_MATS: Record<string, { cap: number; everyMs: number }> = {
+  "scrap-iron":      { cap: 15, everyMs: 8 * 60_000 },
+  "iron":            { cap: 3,  everyMs: 45 * 60_000 },
+  "split-wood":      { cap: 12, everyMs: 10 * 60_000 },
+  "leather-offcuts": { cap: 10, everyMs: 12 * 60_000 },
+  "bone-offcuts":    { cap: 10, everyMs: 12 * 60_000 },
+  "linen-strips":    { cap: 10, everyMs: 12 * 60_000 },
+};
 export const FENCE_ABSENT_FRACTION = 0.33; // share of the ROTATING catalog gone at any time
 export const FENCE_OUT_MIN_MS = 60 * 60_000;  // an absent item stays gone this long...
 export const FENCE_OUT_MAX_MS = 180 * 60_000; // ...to this — "for some time", then it's back
@@ -7043,7 +7055,7 @@ export const DEN_BAR_SCRAP = 3;
 // WHAT ELSE A DEN CAN HAVE (rome, 2026-10-19: more than the bar). Each is an
 // OBJECT you build once, the bar's own shape, never a level. Costs are paid out
 // of the pack, on the spot. What each does is read where it bites (den.ts).
-export const DEN_BUILDS: Record<string, { name: string; cost: { id: string; n: number }[]; does: string; built: string }> = {
+export const DEN_BUILDS: Record<string, { name: string; cost: { id: string; n: number }[]; does: string; built: string; needs?: string }> = {
   hearth: {
     name: "a hearth", cost: [{ id: "split-wood", n: 10 }, { id: "iron", n: 1 }],
     does: "rest by it mends like the gatehouse fire, and the cold cannot reach it; it burns a bundle of split wood each time you lie down",
@@ -7069,7 +7081,46 @@ export const DEN_BUILDS: Record<string, { name: string; cost: { id: string; n: n
     does: "food on the shelf goes off at half the rate",
     built: "You box in a corner with split wood, line it with leather, and set it where the draught is coolest. Food kept in it will keep longer.",
   },
+  // THE SECOND SIX (rome, 2026-10-22, mig 327). What lets a den feed and mend
+  // itself without becoming a second gatehouse: food, water, an edge, leather,
+  // and two ways of knowing what is outside before it is inside.
+  smoke: {
+    name: "a smoke rack over the hearth", cost: [{ id: "split-wood", n: 6 }], needs: "hearth",
+    does: "'cure' hangs raw meat or fish in the hearth smoke; it cures while you are gone and nobody else can take it down",
+    built: "You pin a rack of split wood up over the hearth, high enough to catch the smoke and clear of the flame. Meat hung here cures while you are away, and nobody else's hand will reach it.",
+  },
+  butt: {
+    name: "a water butt", cost: [{ id: "split-wood", n: 6 }, { id: "leather-offcuts", n: 4 }],
+    does: "the rain off the roof fills it, up to 6 draughts of water; 'draw water' takes one",
+    built: "You coop a butt out of split wood, seal the seams with leather, and set it under the edge of the roof where the rain runs off. It will fill when it rains.",
+  },
+  whet: {
+    name: "a whetstone", cost: [{ id: "split-wood", n: 4 }, { id: "iron", n: 1 }],
+    does: "'repair' keeps a working edge here, like the garrison's old stones: up to worn, never back to sound",
+    built: "You set a flat stone in a frame of split wood and fit an iron crank to the wheel. It keeps a working edge, not a good one: past that, a piece wants a forge.",
+  },
+  frame: {
+    name: "a stretching frame", cost: [{ id: "split-wood", n: 8 }],
+    does: "'stretch <pelt>' scrapes a pelt or hide down to leather",
+    built: "You lash a frame of split wood together and lean it against the wall. A pelt pegged out on it and scraped will come off as leather.",
+  },
+  stakes: {
+    name: "stakes in the ground outside", cost: [{ id: "split-wood", n: 8 }, { id: "iron", n: 2 }],
+    does: "the first thing to come onto the ground after dark runs onto them and is hurt, once a night; you, and those you have bunked, know where they are",
+    built: "You drive sharpened stakes into the ground outside, iron-tipped and angled out, where something coming in the dark will not see them. You know where every one of them is.",
+  },
+  slit: {
+    name: "a slit in the wall", cost: [{ id: "leather-offcuts", n: 2 }],
+    does: "'look' from inside shows what is standing on the ground outside",
+    built: "You cut a narrow slit through the wall beside the door, at eye height, and hang a leather flap over it. You can see the ground outside without opening anything.",
+  },
 };
+// The second six's numbers (mig 327).
+export const DEN_BUTT_CAP = 6;                    // draughts the water butt holds
+export const DEN_BUTT_RAIN_MS = 10 * 60_000;      // one draught for every ten minutes of rain on the roof
+export const DEN_FIRE_MS = 30 * 60_000;           // a bundle of split wood in the hearth burns this long for cooking and curing
+export const DEN_STAKES_WOUND = 0.25;             // a share of what it can take, never the last of it
+export const DEN_PELT_LEATHER: Record<string, number> = { common: 2, uncommon: 3, rare: 4, epic: 5, legendary: 5 };
 export const DEN_RACK_CAP = 20;
 export const DEN_HIDES_RUST_MULT = 0.5;
 export const DEN_LARDER_AGE_MULT = 0.5;

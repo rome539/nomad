@@ -21,7 +21,7 @@ import { hasTrait } from "./world";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, LANTERN_FAT_MS, LANTERN_WELL_MS, FAT_ITEM, seesArt,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
-  SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES,
+  SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES, DEN_BUILDS,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS, CACHE_ART, HOLLOW,} from "./zone-data";
 
@@ -455,7 +455,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // Named, like the cure and cook chips: a bare `repair` at the stone only
     // asks "repair what?", and a chip that answers with a question is a dead
     // tap. The worst piece first — the one the stone helps most.
-    if (WHETSTONE_ROOMS.has(session.roomId)) {
+    if (WHETSTONE_ROOMS.has(session.roomId) || den.hasWork(z, session, "whet")) {
       const dull = session.items
         .filter((c) => c.equipped && z.isGear(c.itemId) && c.condition < WHET_CAP)
         .sort((a, b) => a.condition - b.condition)[0];
@@ -519,7 +519,23 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         suggest.push("out", "den");
         if (inside.holder === session.pubkey && !inside.barred) suggest.push("bar");
         // ...and 'build', while there is still something a den could have.
-        if (inside.holder === session.pubkey && !(inside.hearth && inside.hides && inside.rattle && inside.rack && inside.larder)) suggest.push("build");
+        if (inside.holder === session.pubkey && Object.keys(DEN_BUILDS).some((k) => (inside as unknown as Record<string, unknown>)[k] !== true)) suggest.push("build");
+        // What the house's own works can do with what you carry (mig 327),
+        // each named only when it has something to work on.
+        if (inside.holder === session.pubkey) {
+          const named = (want: (id: string) => boolean) => {
+            const c = session.items.find((i) => i.serial === null && want(i.itemId));
+            return c ? shortName(world.itemTemplates.get(c.itemId)!.name) : "";
+          };
+          if (inside.smoke) {
+            const raw = named((id) => !!CURE_RECIPES[id]);
+            if (raw) suggest.push(`cure ${raw}`);
+            else if (z.rot.some((r) => r.kind === "dencure" && r.roomId === session.pubkey)) suggest.push("cure");
+          }
+          if (inside.hearth && !fighting) { const fish = named((id) => !!COOK_RECIPES[id]); if (fish) suggest.push(`cook ${fish}`); }
+          if (inside.butt && inside.water > 0) suggest.push("draw water");
+          if (inside.frame) { const pelt = named((id) => /(^|-)(pelt|hide|skin)$/.test(id) && !z.isGear(id)); if (pelt) suggest.push(`stretch ${pelt}`); }
+        }
         suggest.push(DEN_CHIP);
       } else {
         // Out on the site — and that is ALL it is (rome, 2026-08-07). The street

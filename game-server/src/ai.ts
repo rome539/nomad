@@ -5,6 +5,7 @@ import * as exhaustion from "./exhaustion";
 // boss's rage, and the migration that refills the world. Free functions over a
 // ZoneDO (its tick and combat live in zone.ts and call in here).
 import type { ZoneDO } from "./zone";
+import * as den from "./den";
 import { shelteredInDen, rattle, hearthWarm } from "./den";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
@@ -105,6 +106,10 @@ export function bloodlineHome(z: ZoneDO, tmpl: MobTemplate, den: string): string
 export async function arrivalHabits(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now: number, silent: boolean): Promise<void> {
   const here = creature.roomId;
   const world = z.world!;
+  // A DEN'S STAKES (mig 327): the first thing onto staked ground after dark
+  // runs onto them, once a night, and is hurt but never killed by it.
+  const staked = den.stakesBite(z, here, { name: tmpl.name, hp: creature.hp, maxHp: tmpl.max_hp }, silent);
+  if (staked) creature.hp -= staked;
   const others = [...z.creatures.values()].filter((c) => c.id !== creature.id && c.roomId === here);
   // The bear takes the wolves' kill.
   const gives = KILL_TAKERS.get(tmpl.id);
