@@ -2562,21 +2562,35 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script type="module">
 // Hold the letter before any choice of key, then leave a clean address.
+// It is KEPT until the world says a new soul has used it (frame "invite-used"),
+// not dropped at the first connection: a link opened on a browser that already
+// has a key connects that old wanderer first, and the letter has to survive
+// until the new key it was meant for walks in. A week, then it is let go.
 var pendingInvite = "";
+var INVITE_KEEP_MS = 7 * 86400000;
 try {
   var inviteUrl = new URL(location.href);
   if (inviteUrl.searchParams.has("invite")) {
     var inviteValue = inviteUrl.searchParams.get("invite");
     if (/^[A-Za-z0-9]{10}$/.test(inviteValue || "")) {
       pendingInvite = inviteValue;
-      try { localStorage.setItem("nomad_invite", pendingInvite); } catch (e) {}
+      try { localStorage.setItem("nomad_invite", pendingInvite + "|" + Date.now()); } catch (e) {}
     }
     inviteUrl.searchParams.delete("invite");
     history.replaceState(history.state, "", inviteUrl.pathname + inviteUrl.search + inviteUrl.hash);
   }
-  if (!pendingInvite) pendingInvite = localStorage.getItem("nomad_invite") || "";
+  if (!pendingInvite) {
+    var heldInvite = (localStorage.getItem("nomad_invite") || "").split("|");
+    var heldAt = Number(heldInvite[1]) || Date.now();
+    if (Date.now() - heldAt < INVITE_KEEP_MS) pendingInvite = heldInvite[0];
+    else localStorage.removeItem("nomad_invite");
+  }
 } catch (e) {}
 if (!/^[A-Za-z0-9]{10}$/.test(pendingInvite)) pendingInvite = "";
+function dropInvite() {
+  pendingInvite = "";
+  try { localStorage.removeItem("nomad_invite"); } catch (e) {}
+}
 
 // Our own copy, served by this same worker (/nostr.js) — never a public CDN.
 // generateSecretKey mints the key that IS the player's account; code that does
@@ -4816,8 +4830,12 @@ var SPEECH_KIND = 24914;
 async function postInvite(f) {
   var epoch = identityEpoch;
   try {
-    var evt = { kind: 1, created_at: Math.floor(Date.now()/1000), tags: [["t", "nomad"]],
-      content: f.message + "\\n\\nhttps://nomadmud.com/?invite=" + f.code };
+    // The card rides IN the note as an image link (with its imeta), because a
+    // client's link preview cannot be trusted to read a page this size.
+    var card = "https://nomadmud.com/og.jpg";
+    var evt = { kind: 1, created_at: Math.floor(Date.now()/1000),
+      tags: [["t", "nomad"], ["imeta", "url " + card, "m image/jpeg", "dim 1200x630", "alt NOMAD, a living text dungeon on Nostr"]],
+      content: f.message + "\\n\\nhttps://nomadmud.com/?invite=" + f.code + "\\n\\n" + card };
     var ev;
     if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
     else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
@@ -5508,8 +5526,6 @@ async function connect() {
   ws.onopen = function () {
     if (!mine()) return;
     opened = true;
-    pendingInvite = "";
-    try { localStorage.removeItem("nomad_invite"); } catch (e) {}
     connecting = false; // the wire is up — a wake event may dial again freely (the readyState===1 guard also holds)
     freshLoad = false; // the scroll is (being) painted now — any later reweave is a true seamless one
     failedOpens = 0;
@@ -5549,6 +5565,7 @@ async function connect() {
     if (f.kind === 24912) { if (guideActive() && f.cls === "amb") return; print(f.text, f.cls, f.who, f.sp, !!(f.sounds && f.sounds.length)); if (Array.isArray(f.sounds)) f.sounds.slice(0, 4).forEach(function (cue, i) { heardSound(cue, i * .8); }); }
     else if (f.kind === 24913) { if (guideActive()) return; print(f.text, f.cls || "feed", f.who, f.sp, !!(f.act || f.far)); if (f.act) heardSound(f); if (f.far) farSound(f.far); }
     else if (f.t === "invite") showInvite(f);
+    else if (f.t === "invite-used") dropInvite();
     else if (f.t === "status") {
       // A real room change is the only thing that should re-fold the chips
       // (rome, 2026-07-26): keyed on the suggest LIST before, so a mob simply

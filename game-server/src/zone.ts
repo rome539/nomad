@@ -1475,6 +1475,8 @@ export class ZoneDO implements DurableObject {
       this.send(session, `NOMAD. You are ${session.name}.`);
       if (created) {
         if (invited) this.send(session, "You wake with a letter tucked among your things.");
+        // A new soul came in carrying a letter: the page may let it go now.
+        if (qs.has("invite")) { try { session.ws.send(JSON.stringify({ v: 0, t: "invite-used" })); } catch {} }
         this.send(
           session,
           [

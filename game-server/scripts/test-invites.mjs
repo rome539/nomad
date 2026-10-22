@@ -93,7 +93,13 @@ try {
     const ctx={URL,location:{href:'https://nomadmud.com/?invite='+first.code+'&keep=1#door'},history:{state:null,replaceState:(_s,_t,url)=>{cleaned=url;}},localStorage:{setItem:(k,v)=>{if(blocked)throw Error('blocked');stored.set(k,v);},getItem:k=>stored.get(k)}};
     vm.createContext(ctx);vm.runInContext(capture,ctx);
     assert.equal(ctx.pendingInvite,first.code);assert.equal(cleaned,'/?keep=1#door');
-    if(!blocked) assert.equal(stored.get('nomad_invite'),first.code);
+    if(!blocked) assert.match(stored.get('nomad_invite'),new RegExp('^'+first.code+'\\|\\d+$'));
+  }
+  // Held from an earlier visit: survives a plain reload for a week, then is let go.
+  for(const [age,want] of [[3600e3,first.code],[8*86400e3,'']]) {
+    const removed=[];const held={URL,location:{href:'https://nomadmud.com/'},history:{state:null,replaceState:()=>{}},localStorage:{setItem:()=>{},getItem:()=>first.code+'|'+(Date.now()-age),removeItem:k=>removed.push(k)}};
+    vm.createContext(held);vm.runInContext(capture,held);assert.equal(held.pendingInvite,want);
+    if(!want) assert.deepEqual(removed,['nomad_invite']);
   }
   const bad={URL,location:{href:'https://nomadmud.com/?invite=invalid'},history:{state:null,replaceState:()=>{}},localStorage:{setItem:()=>assert.fail('invalid code stored'),getItem:()=>null}};
   vm.createContext(bad);vm.runInContext(capture,bad);assert.equal(bad.pendingInvite,'');
@@ -106,7 +112,7 @@ try {
     const posts=[];const signed=[];const signer=async e=>{signed.push(e);return {...e,sig:'test'};};
     const ctx={identityEpoch:1,method,sk:'test',finalizeEvent:signer,window:{nostr:{signEvent:signer}},ensureBunkerClient:async()=>({signEvent:signer}),gpubPool:{publish:(relays,e)=>{posts.push(e);return [Promise.resolve()];}},SPEECH_RELAYS:['mock'],print:()=>{}};
     vm.createContext(ctx);vm.runInContext(script,ctx);await ctx.postInvite(first);
-    assert.equal(posts.length,1);assert.equal(signed[0].kind,1);assert.equal(JSON.stringify(signed[0].tags),'[["t","nomad"]]');assert.equal(signed[0].content,'Come Home\n\nhttps://nomadmud.com/?invite='+first.code);
+    assert.equal(posts.length,1);assert.equal(signed[0].kind,1);assert.equal(signed[0].tags[0].join(),'t,nomad');assert.equal(signed[0].tags[1][0],'imeta');assert.equal(signed[0].tags[1][1],'url https://nomadmud.com/og.jpg');assert.equal(signed[0].content,'Come Home\n\nhttps://nomadmud.com/?invite='+first.code+'\n\nhttps://nomadmud.com/og.jpg');
   }
   console.log('PASS: guest, extension and bunker client signing publish the requested kind-1 note to mocked relays.');
 } finally {db.close();saved.close();rmSync(dir,{recursive:true,force:true});}
