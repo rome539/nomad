@@ -1474,7 +1474,7 @@ export class ZoneDO implements DurableObject {
     } else {
       this.send(session, `NOMAD. You are ${session.name}.`);
       if (created) {
-        if (invited) this.send(session, "You wake with a letter tucked among your things.");
+        if (invited) this.send(session, invites.arrivalLine(this, items));
         // A new soul came in carrying a letter: the page may let it go now.
         if (qs.has("invite")) { try { session.ws.send(JSON.stringify({ v: 0, t: "invite-used" })); } catch {} }
         this.send(
@@ -1523,6 +1523,9 @@ export class ZoneDO implements DurableObject {
       }
       this.actorFeed(session, session.roomId, `${session.name} blinks into being.`, "who");
     }
+    // A letter followed by a wanderer who has walked before: a line and a ration,
+    // once per character (invites.returning).
+    if (!created && qs.has("invite")) await invites.returning(this, session, qs.get("invite")!);
     // YOU WERE INSIDE. A fresh Session is built with away = false, so a frayed
     // socket used to fling you out of the gatehouse and into the dungeon — out of
     // the one room whose whole job is that nothing can do that to you. The door

@@ -84,9 +84,23 @@ try {
   reset();seed('prior-one',now);seed('prior-two',now);
   await invites.claim(z,'newcomer',first.code);
   assert.deepEqual((await world.loadInventory(env.DB,'newcomer')).map(i=>i.itemId),['invite-letter']);
+  assert.match(invites.arrivalLine(z,await world.loadInventory(env.DB,'newcomer')),/Nothing else came with it\.$/);
+  assert.match(frames.at(-1).text,/Nothing else went with it/);
   reset();seed('prior-one',now);seed('prior-two',now-86401);
   await invites.claim(z,'newcomer',first.code);assert.equal((await world.loadInventory(env.DB,'newcomer')).length,12);
+  { const line=invites.arrivalLine(z,await world.loadInventory(env.DB,'newcomer'));
+    assert.match(line,/dressed you for the road/);assert.match(line,/You are wearing .+\./);assert.match(line,/In your pack: 2 x .*hardtack/); }
   console.log('PASS: third arrival gets only a letter; rolling 24-hour expiry frees a gift.');
+  // A wanderer already on the road: a line and rations, once ever; your own letter gives nothing.
+  { const vet=await make('Rustpilgrim');vet.name='Rustpilgrim';const before=vet.items.length;
+    await invites.returning(z,vet,first.code);
+    assert.match(frames.at(-2).text,/meant for someone new to the road\. A little food was folded in with it: 2 x .*hardtack.*cold water\.$/);
+    assert.match(frames.at(-1).text,/Rustpilgrim, already on the road, has read your letter\./);
+    assert.equal(vet.items.length,before+3);
+    const n=frames.length;await invites.returning(z,vet,first.code);assert.equal(frames.length,n);assert.equal(vet.items.length,before+3);
+    const n2=frames.length;await invites.returning(z,sender,first.code);
+    assert.equal(frames.length,n2+1);assert.match(frames.at(-1).text,/in your own hand/); }
+  console.log('PASS: a wanderer already on the road gets a line and rations once; the sender is told; your own letter gives nothing.');
   const capture=PAGE.slice(PAGE.indexOf('var pendingInvite = "";'),PAGE.indexOf('if (!/^[A-Za-z0-9]{10}$/.test(pendingInvite)) pendingInvite = "";') + 'if (!/^[A-Za-z0-9]{10}$/.test(pendingInvite)) pendingInvite = "";'.length);
   for(const blocked of [false,true]) {
     const stored=new Map();let cleaned='';
