@@ -9355,7 +9355,17 @@ function fsIs() { return !!(document.fullscreenElement || document.webkitFullscr
 // page lock that key while fullscreen: a tap then reaches the map and the
 // modals as it always did, and HOLDING Esc is what leaves. Other browsers have
 // no such lock, and there 'fullscreen' typed or the settings toggle still work.
+// SAFARI GIVES THE PAGE NO SAY (rome, 2026-10-22). It spends Esc on leaving
+// fullscreen and lets no page hold the key, so the map's Esc can never come
+// first there. What it can do is still be the map's Esc: when fullscreen ends
+// on its own (not by the toggle) with the map or the journal open, they close
+// with it, so the one press does what it was pressed for.
+var fsWas = false, fsByToggle = false;
 function renderFs() {
+  if (fsWas && !fsIs() && !fsByToggle && (mapEl.classList.contains("open") || jrnlEl.classList.contains("open"))) {
+    closeMap(); closeJournal();
+  }
+  fsWas = fsIs(); fsByToggle = false;
   fsbtn.textContent = fsIs() ? "on" : "off";
   fsbtn.className = fsIs() ? "on" : "";
   var kb = navigator.keyboard;
@@ -9367,8 +9377,14 @@ function renderFs() {
 function setFullscreen(on) {
   if (!fsAvail()) { print("This browser cannot go fullscreen. On a phone, add NOMAD to your home screen instead.", "sys"); return; }
   if (on === fsIs()) return;
+  fsByToggle = true;
+  // Hold Esc BEFORE asking for the screen, as Chrome's own guide does it: a
+  // lock taken after the switch lands too late on some builds, and the first
+  // Esc goes to the browser.
+  var kb = navigator.keyboard;
+  try { if (on && kb && kb.lock) { var lk0 = kb.lock(["Escape"]); if (lk0 && lk0.catch) lk0.catch(function () {}); } } catch (e) {}
   try {
-    var p = on ? (fsRoot.requestFullscreen ? fsRoot.requestFullscreen() : fsRoot.webkitRequestFullscreen())
+    var p = on ? (fsRoot.requestFullscreen ? fsRoot.requestFullscreen({ navigationUI: "hide" }) : fsRoot.webkitRequestFullscreen())
                : (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen());
     if (p && p.catch) p.catch(function () {});
   } catch (e) {}
