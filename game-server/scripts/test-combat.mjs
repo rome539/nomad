@@ -30,9 +30,10 @@ try {
       for(let i=1;i<=rounds;i++){E.exert(e,weight);if(i<rounds)assert.ok(e.units<1000);}
       assert.equal(e.units,1000);
     }
-    for (const [units,penalty] of [[0,0],[249,0],[250,3],[499,3],[500,6],[749,6],[750,9],[1000,9]]) {
+    // a share of the blow, not a flat cut (rome, 2026-10-22)
+    for (const [units,penalty,twelve] of [[0,0,12],[249,0,12],[250,15,10],[499,15,10],[500,30,8],[749,30,8],[750,45,7],[1000,45,7]]) {
       assert.equal(E.playerPenalty({units}),penalty);
-      assert.equal(E.playerDamage(12,{units}),12-penalty);
+      assert.equal(E.playerDamage(12,{units}),twelve);
       assert.equal(E.playerDamage(1,{units}),1);
     }
     const e={units:1000,at:0,mode:'rest'};
@@ -93,9 +94,10 @@ try {
   {
     const {z,a,b}=fixture();
     a.exhaustion={units:250,at:Date.now(),mode:'combat'};
-    await attackPlayer(z,a,b);assert.equal(b.hp,57,'PvP opener loses three damage after mitigation');
-    await tickPvp(z);assert.equal(b.hp,56,'normal PvP hit loses the same flat three');
-    a.exhaustion.units=1000;await tickPvp(z);assert.equal(b.hp,55,'exhausted hits retain one damage');
+    // a share, not a flat cut (rome, 2026-10-22): 6 -> 5 and 4 -> 3 at 15%, 4 -> 2 at 45%
+    await attackPlayer(z,a,b);assert.equal(b.hp,55,'PvP opener loses fifteen percent after mitigation');
+    await tickPvp(z);assert.equal(b.hp,52,'normal PvP hit loses the same fifteen percent');
+    a.exhaustion.units=1000;await tickPvp(z);assert.equal(b.hp,50,'spent hits lose forty-five percent');
     assert.equal(a.exhaustion.units,1000,'individual hits never add per-round effort');
     console.log('PASS: PvP opening and follow-up damage, final floor, no per-hit effort.');
   }

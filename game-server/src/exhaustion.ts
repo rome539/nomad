@@ -59,10 +59,13 @@ export function walk(e: Exhaustion, weight: number, now: number): void {
   e.units = Math.min(FATIGUE_CAP, Math.round((e.units + (20 + 1.1 * Math.max(0, weight)) / 10) * 100) / 100);
   e.walkingUntil = e.at + WALK_RECOVERY_DELAY_MS;
 }
-// THREE STEPS, NOT FIVE (rome, 2026-10-12): -3 a quarter of the way down, -6 at
-// half, -9 for the last quarter. (Was -2 every 200 units, five steps to -10.)
-export function playerPenalty(e?: Exhaustion): number { return 3 * Math.min(3, Math.floor((e?.units ?? 0) / 250)); }
-export function playerDamage(damage: number, e?: Exhaustion): number { return Math.max(1, damage - playerPenalty(e)); }
+// THREE STEPS, NOT FIVE (rome, 2026-10-12): a quarter of the way down, at half,
+// and for the last quarter. A SHARE, NOT A FLAT CUT (rome, 2026-10-22): the
+// steps were -3/-6/-9 points, which took four fifths of a +4 weapon's blow at
+// half stamina and barely touched a heavy one. Now every blow loses the same
+// share: 15, 30, 45 percent. playerPenalty is that percentage.
+export function playerPenalty(e?: Exhaustion): number { return 15 * Math.min(3, Math.floor((e?.units ?? 0) / 250)); }
+export function playerDamage(damage: number, e?: Exhaustion): number { return Math.max(1, Math.round(damage * (100 - playerPenalty(e)) / 100)); }
 export function recoveryRemaining(e: Exhaustion): number | null {
   if (!RATE[e.mode]) return null;
   const wait = e.units && e.mode === "passive" ? Math.max(0, (e.walkingUntil ?? e.at) - e.at) / 1000 : 0;
