@@ -389,6 +389,15 @@ export class ZoneDO implements DurableObject {
     await this.state.storage.put("loadouts:" + pubkey, sets);
   }
 
+  // The census's hourly readings (verbs.recordCensus).
+  public async censusHistory(): Promise<verbs.CensusSnap[]> {
+    return await this.state.storage.get<verbs.CensusSnap[]>("census:hist") ?? [];
+  }
+
+  public async saveCensusHistory(hist: verbs.CensusSnap[]): Promise<void> {
+    await this.state.storage.put("census:hist", hist);
+  }
+
   // You wake at a random SPAWN, so no death sends you back to a route you
   // already know cold. Spawns are not the same thing as gates any more (mig
   // 126): a gatehouse far out on a road is somewhere to bank, not somewhere the
@@ -971,6 +980,7 @@ export class ZoneDO implements DurableObject {
       ai.applyArrivals(this, t, true);
       ai.scheduleArrivals(this, t);
       ai.rangePack(this, t); // the coyotes keep choosing ground while the world sleeps, and the wander above walks them to it
+      verbs.noteCensus(this, t); // the census's hourly reading, through the gap too (saved by the next live tick)
     }
     this.rustFloors(now, true); // the gap's whole weather on the floors, in one pass
     this.pruneTraces(now);
@@ -5942,6 +5952,7 @@ export class ZoneDO implements DurableObject {
     // one animal doing one thing to every band at once (ai.drakePassage).
     ai.drakePassage(this, now);
     ai.rangePack(this, now); // the coyotes go where the world is fullest
+    await verbs.recordCensus(this, now); // an hourly reading of every count, for the census's trend
     // While the deep door is SEALED, the deep coughs one of its own up into the
     // shallows on a slow clock — the world minting the corpse-key. Once someone's
     // heart opens the door (or the King's death re-seals it), the clock just idles.

@@ -619,6 +619,7 @@ function chooseGround(z: ZoneDO, lead: Creature, now: number): void {
   if (!room) return;
   lead.rangeBand = best;
   lead.rangeSince = now;
+  lead.rangeScore = bestScore;
   lead.home = room;
 }
 

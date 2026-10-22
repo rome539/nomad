@@ -135,6 +135,7 @@ export interface Creature {
   rangeBand?: string;   // a RANGER's chosen ground: the band the pack is working (ai.rangePack)
   rangeSince?: number;  // when the pack took that ground
   rangeAt?: number;     // when the pack next weighs the world again
+  rangeScore?: number;  // what that ground scored when it was chosen (the census shows it)
   patrolIdx?: number; // position along a patrol route, if it keeps one
   phase?: number; // boss rage tier (0/1/2), climbs at hp thresholds
   stole?: string; // cutpurse: the item id it grabbed and ran with (dropped on death)

@@ -56,6 +56,7 @@ import {
   MILESTONES,
   groundWord, carveMedium, footfall, HEARD_EMPTY,
   LANTERN_ITEM, LANTERN_FAT_MS, SLOT_WORD,
+  RANGERS, HUNGRY_AT,
 } from "./zone-data";
 import { gatehouseFeed, throughTheDoor, worksBar } from "./gate";
 
@@ -2616,15 +2617,112 @@ export function cmdSkies(z: ZoneDO, session: Session): void {
   z.send(session, lines.join("\n"));
 }
 
-export function cmdCensus(z: ZoneDO, session: Session): void {
+// THE CENSUS'S MEMORY (2026-10-21). One reading an hour of every kind's count,
+// the last CENSUS_KEEP of them, so the census can say which way a number is
+// going and not only where it stands. Catch-up takes its readings in memory
+// (it cannot write) and the next live tick saves them, so a night nobody was
+// on for still has its hours.
+export interface CensusSnap { at: number; n: Record<string, number> }
+const CENSUS_SNAP_MS = 60 * 60_000;
+const CENSUS_KEEP = 25;
+const censusPending = new WeakMap<ZoneDO, { lastAt: number; snaps: CensusSnap[] }>();
+
+function censusCounts(z: ZoneDO): Record<string, number> {
+  // Every kind with spawn rows is written, at 0 if none stand - so a kind that
+  // is missing from an old reading did not exist yet, and shows no change.
+  const n: Record<string, number> = {};
+  for (const s of z.world!.mobSpawns) n[s.template_id] = 0;
+  for (const c of z.creatures.values()) n[c.templateId] = (n[c.templateId] ?? 0) + 1;
+  return n;
+}
+
+export function noteCensus(z: ZoneDO, at: number): void {
+  let p = censusPending.get(z);
+  if (!p) { p = { lastAt: 0, snaps: [] }; censusPending.set(z, p); }
+  if (at - p.lastAt < CENSUS_SNAP_MS) return;
+  p.lastAt = at;
+  p.snaps.push({ at, n: censusCounts(z) });
+}
+
+export async function recordCensus(z: ZoneDO, now: number): Promise<void> {
+  const p = censusPending.get(z);
+  // First tick after a wake: learn when the last saved reading was, so a fresh
+  // wake does not read again the moment it opens its eyes.
+  if (!p) {
+    const hist = await z.censusHistory();
+    censusPending.set(z, { lastAt: hist.at(-1)?.at ?? 0, snaps: [] });
+  }
+  noteCensus(z, now);
+  const q = censusPending.get(z)!;
+  if (!q.snaps.length) return;
+  const hist = await z.censusHistory();
+  const lastSaved = hist.at(-1)?.at ?? 0;
+  for (const snap of q.snaps) if (snap.at - lastSaved >= CENSUS_SNAP_MS || !hist.length) hist.push(snap);
+  q.snaps = [];
+  await z.saveCensusHistory(hist.slice(-CENSUS_KEEP));
+}
+
+export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {
   if (session.pubkey !== CENSUS_PUBKEY) return z.send(session, "The deep keeps its own count.");
   const world = z.world!;
+  const now = Date.now();
   const counts = new Map<string, number>();
   for (const c of z.creatures.values()) counts.set(c.templateId, (counts.get(c.templateId) ?? 0) + 1);
   const byMob = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  const lines = [`Alive in the deep (${z.creatures.size}):`];
+  // THE WAY IT IS GOING: the reading nearest 6h and 24h back.
+  const hist = await z.censusHistory();
+  const back = (ms: number) => [...hist].reverse().find((h) => h.at <= now - ms + 10 * 60_000);
+  const h6 = back(6 * 60 * 60_000), h24 = back(24 * 60 * 60_000);
+  const delta = (id: string, n: number, h: CensusSnap | undefined, label: string) => {
+    if (!h || h.n[id] === undefined) return "";
+    const d = n - h.n[id];
+    return ` ${label} ${d > 0 ? "+" + d : d < 0 ? "−" + -d : "±0"}`;
+  };
+  // WHERE, AGAINST WHAT: each band's living count over its spawn rows. A "!"
+  // is under a quarter of its cap.
+  const band = (roomId: string) => z.regionOf(roomId) || "under";
+  const capOf = new Map<string, Map<string, number>>(), aliveOf = new Map<string, Map<string, number>>();
+  const bump = (m: Map<string, Map<string, number>>, id: string, b: string) => {
+    let x = m.get(id);
+    if (!x) { x = new Map(); m.set(id, x); }
+    x.set(b, (x.get(b) ?? 0) + 1);
+  };
+  for (const s of world.mobSpawns) bump(capOf, s.template_id, band(s.room_id));
+  for (const c of z.creatures.values()) bump(aliveOf, c.templateId, band(c.roomId));
+  const lines = [`Alive in the deep (${z.creatures.size}):` + (hist.length ? "" : "  (no hourly readings yet: the trend fills in over the next day)")];
   for (const [id, n] of byMob) {
-    lines.push(`  ${world.mobTemplates.get(id)?.name ?? id} — ${n}`);
+    const caps = capOf.get(id), alive = aliveOf.get(id);
+    const bands = [...new Set([...(caps?.keys() ?? []), ...(alive?.keys() ?? [])])].map((b) => {
+      const a = alive?.get(b) ?? 0, c = RANGERS.has(id) ? 0 : caps?.get(b) ?? 0; // a pack that ranges has no band to fall short in
+      if (!a && !c) return null;
+      return c ? `${b} ${a}/${c}${a / c < 0.25 ? " !" : ""}` : `${b} ${a}`;
+    });
+    lines.push(`  ${world.mobTemplates.get(id)?.name ?? id} — ${n}${delta(id, n, h6, "6h")}${delta(id, n, h24, "· 24h")}   [${bands.filter(Boolean).join(", ")}]`);
+  }
+  // ...and the kinds with rows and nobody standing: gone, not merely low.
+  const gone = [...capOf.keys()].filter((id) => !counts.has(id));
+  if (gone.length) {
+    lines.push("", `None alive (${gone.length}):`);
+    for (const id of gone) {
+      const was = h6?.n[id] || h24?.n[id];
+      lines.push(`  ${world.mobTemplates.get(id)?.name ?? id}${was ? ` — was ${was}` : ""}   [${[...capOf.get(id)!.entries()].map(([b, c]) => `${b} 0/${c} !`).join(", ")}]`);
+    }
+  }
+  // THE PACKS THAT RANGE (RANGERS): where each is, the ground it chose and why.
+  for (const tid of [...RANGERS]) {
+    const pack = [...z.creatures.values()].filter((c) => c.templateId === tid).sort((a, b) => (a.id < b.id ? -1 : 1));
+    const rows = world.mobSpawns.filter((s) => s.template_id === tid).length;
+    const name = world.mobTemplates.get(tid)?.name ?? tid;
+    lines.push("", `The ${name.replace(/^an? /, "")}s (${pack.length} of ${rows}${pack.length && ai.packBroken(z, pack[0]) ? ", BROKEN: running from every fight" : ""}):`);
+    const lead = pack[0];
+    if (!lead) { lines.push("  (none alive)"); continue; }
+    const ago = (t?: number) => t ? `${Math.round((now - t) / 60_000)}m ago` : "never";
+    lines.push(`  ground: ${lead.rangeBand ?? "(not chosen yet)"}, chosen ${ago(lead.rangeSince)}${lead.rangeScore !== undefined ? `, score ${lead.rangeScore.toFixed(2)}` : ""}; heading for ${world.rooms.get(lead.home ?? "")?.name ?? lead.home ?? "?"}; weighs again in ${Math.max(0, Math.round(((lead.rangeAt ?? now) - now) / 60_000))}m`);
+    for (const c of pack) {
+      const max = world.mobTemplates.get(c.templateId)?.max_hp ?? c.hp;
+      const doing = c.target ? "fighting" : c.holding ? "on a kill" : c.asleep ? "asleep" : (c.hunger ?? 0) >= HUNGRY_AT ? "hungry" : "fed";
+      lines.push(`  ${world.rooms.get(c.roomId)?.name ?? c.roomId} (${band(c.roomId)}) — ${Math.round(c.hp)}/${max} hp, ${doing}`);
+    }
   }
   // THE MARKS, off the same walk. The tally above says what is alive; this says
   // which of them came out of the lottery carrying something. Worth its own
