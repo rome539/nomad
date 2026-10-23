@@ -16,7 +16,7 @@ import * as events from "./events"; // the keeper speaks of what is actually run
 import { WOOD_QUARTERS, MAP_QUARTERS, MOB_LORE } from "./detail";
 import { LAST_HAND, LAST_HAND_END, UNMADE } from "./zone-data";
 import {
-  MAP_ITEMS, DETAILED_MAP, FULL_MAP, CRUDE_DROP_MIN, CRUDE_DROP_MAX, CRUDE_BAD_MIN, CRUDE_BAD_MAX,
+  MAP_ITEMS, DETAILED_MAP, CRUDE_MAP, FULL_MAP, CRUDE_FILL_MIN, CRUDE_FILL_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM, MOB_TRAIT_DOES, MOB_TRAITS, MOB_FAMILY_NAME,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
@@ -85,7 +85,9 @@ export function milestoneRead(z: ZoneDO, session: Session): void {
 // it never got one, warm the ink cache, and set down the room underfoot.
 export async function inkRooms(z: ZoneDO, session: Session): Promise<void> {
   for (const carried of session.items) {
-    if (carried.itemId !== DETAILED_MAP) continue;
+    // A crude copy takes ink the same way (rome, 2026-10-23): what you walk with
+    // it is set down true on top of whatever the copyist drew.
+    if (carried.itemId !== DETAILED_MAP && carried.itemId !== CRUDE_MAP) continue;
     if (!carried.journalId) {
       // A copy that never got a name (bought, found, or owned from before the
       // blank) starts its ink here.
@@ -108,7 +110,7 @@ export async function inkRooms(z: ZoneDO, session: Session): Promise<void> {
 export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const maps = session.items.filter((c) => MAP_ITEMS.has(c.itemId));
   if (!maps.length) {
-    return z.send(session, "You carry no map. The keeper sells them — a true one dear, a crude one cheap.");
+    return z.send(session, "You carry no map. The keeper sells them — a surveyor's blank dear, a half-drawn crude one cheap.");
   }
   // Name one, or default to the best you hold (a true map over a crude one).
   let carried = arg ? maps.find((c) => nameMatches(z.world!.itemTemplates.get(c.itemId)!.name, arg)) : null;
@@ -120,7 +122,7 @@ export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<
   const detailed = whole || carried.itemId === DETAILED_MAP;
   // A chart records nothing: it was finished before you were born, and walking
   // around holding it does not teach it anything.
-  if (detailed && !whole) await inkRooms(z, session);
+  if (!whole) await inkRooms(z, session);
   sendMap(z, session, carried, detailed);
   if (whole) {
     return z.send(session, "You unfold the finished chart. All of it, at once — every hall and ride and stair, in one hand. Somebody walked this whole place with a chain and wrote down what they found, and then, apparently, stopped.");
@@ -131,22 +133,21 @@ export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<
       ? "You unroll the surveyor's blank — empty but for the ground underfoot. It charts what its carrier walks, set down true."
       : `You unroll the surveyor's map. ${inked} halls are set down true, walked in by the hands that carried it.`);
   }
-  // The unfold reads the hand that drew this copy — the one honest thing a
-  // crude map tells you is how far to trust the rest of it.
-  const hand = crudeHand(carried.rowId);
+  // The unfold reads the hand that drew this copy: how much of the world the
+  // copyist got down. What is drawn is true; the rest is yours to walk in.
+  const hand = crudeHand(carried.journalId ?? carried.rowId);
   z.send(session, hand >= 0.75
-    ? "You unfold the crude map. The hand that drew it was careful — most of these ways should hold."
+    ? "You unfold the crude map. Whoever copied it got a good deal of the world down, roughly but true. The gaps are yours to walk in."
     : hand < 0.3
-      ? "You unfold the crude map. The hand that drew it was drunk, hurried, or lying. Scrawl and guesswork."
-      : "You unfold the crude map. Some of these ways are right. Trust it at your peril.");
+      ? "You unfold the crude map. Scraps of the world, set down true, with wide blanks between. What you walk, it takes."
+      : "You unfold the crude map. Patches of the world drawn in, true as far as they go, and blank between. What you walk, it takes.");
 }
 
-// The hand that drew a given copy: rolled once off the copy's row id, so it's
-// RNG at the moment the copy comes into your life and fixed forever after —
-// this scrap was always this good, or this bad. Salted so it never correlates
-// with the lie-pattern stream seeded off the bare row id.
-function crudeHand(rowId: string): number {
-  return mulberry32(hashSeed(rowId + ":hand"))();
+// The hand that drew a given copy, rolled off the copy's own identity (its
+// journalId once it has one, which rides it through drops and deaths), so this
+// scrap was always this full, or this bare.
+function crudeHand(id: string): number {
+  return mulberry32(hashSeed(id + ":hand"))();
 }
 
 // ---- THE CANONICAL WORLD GRID ---------------------------------------------
@@ -347,10 +348,9 @@ export function mapRegionOf(z: ZoneDO, id: string): string {
     : GROUNDS_ROOMS.has(id) ? "out" : OVERWORKS_ROOMS.has(id) ? "sky" : WARRENS_ROOMS.has(id) ? "warrens" : z.regionOf(id);
 }
 
-// Build and send the map frame. A detailed map is the true graph and lights
-// its rooms 'known' on the HUD; a crude map is deterministically lied — some
-// rooms missing, some exits wrong — seeded off the book so it's consistently
-// (not randomly) wrong, and it reveals nothing it can be trusted on.
+// Build and send the map frame. A surveyor's map is what its carriers walked
+// and lights its rooms 'known' on the HUD; a crude map is a true scatter of the
+// world the copyist got down, plus what its carriers walked, and lights nothing.
 function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: boolean): void {
   const world = z.world!;
   // A FINISHED CHART IS ALREADY EVERYWHERE. It carries no ink of its own — the
@@ -359,12 +359,15 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
   // below this line is the machinery for a map that has to be earned; a chart
   // that was earned by somebody else, a long time ago, skips all of it.
   const complete = carried.itemId === FULL_MAP;
-  const rnd = detailed ? null : mulberry32(hashSeed(carried.rowId));
-  // A bad hand slides both lie rates toward their worst rail; a careful one
-  // toward the best. The hand is per-copy and permanent (see crudeHand).
-  const hand = detailed ? 1 : crudeHand(carried.rowId);
-  const dropRoom = CRUDE_DROP_MIN + (1 - hand) * (CRUDE_DROP_MAX - CRUDE_DROP_MIN);
-  const badExit = CRUDE_BAD_MIN + (1 - hand) * (CRUDE_BAD_MAX - CRUDE_BAD_MIN);
+  // A CRUDE COPY IS TRUE AS FAR AS IT GOES (rome, 2026-10-23). The copyist got
+  // some share of the world down (its hand, CRUDE_FILL_*), picked room by room
+  // off the copy's own identity, so the same copy always shows the same rooms
+  // and a second copy shows different ones; whatever its carriers walked is
+  // inked on top. Nothing on it lies.
+  const copy = carried.journalId ?? carried.rowId;
+  const hand = detailed ? 1 : crudeHand(copy);
+  const fill = CRUDE_FILL_MIN + hand * (CRUDE_FILL_MAX - CRUDE_FILL_MIN);
+  const drawn = (id: string) => mulberry32(hashSeed(copy + ":" + id))() < fill;
   const roomIds = [...world.rooms.keys()];
   // Which rooms make it onto the paper. A SURVEYOR'S copy holds exactly its own
   // ink — the halls its carriers walked while holding it — plus the gates
@@ -373,7 +376,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
   // scatter of everything else, right or not.
   const ink = complete
     ? new Set<string>(roomIds)   // all of it, and it stays all of it
-    : detailed ? (session.mapInk?.get(carried.journalId ?? "") ?? new Set<string>()) : null;
+    : (session.mapInk?.get(carried.journalId ?? "") ?? new Set<string>());
   const shown = new Set<string>();
   for (const id of roomIds) {
     if (detailed) {
@@ -385,8 +388,8 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // before he has taken a step outside, which is both a lie about what the
       // copy has charted and the whole of the exploration given away on a blank
       // sheet. A surveyor's map holds EXACTLY what its carriers walked.
-      if (ink!.has(id) || id === session.roomId) shown.add(id);
-    } else if (z.regionOf(id) === "gate" || id === session.roomId || rnd!() >= dropRoom) {
+      if (ink.has(id) || id === session.roomId) shown.add(id);
+    } else if (ink.has(id) || id === session.roomId || drawn(id)) {
       shown.add(id);
     }
   }
@@ -416,30 +419,17 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     const realExits = world.exits.get(id) ?? [];
     const exits: { dir: string; to: string; toName: string }[] = [];
     for (const e of realExits) {
-      if (!detailed) {
-        if (rnd!() < badExit) {
-          // A lie: half the time the exit's simply missing, half the time it
-          // points at the wrong room (one that's on this map).
-          if (rnd!() < 0.5) continue;
-          const others = [...shown].filter((r) => r !== id);
-          const wrong = others[Math.floor(rnd!() * others.length)] ?? e.to_room;
-          exits.push({ dir: e.dir, to: wrong, toName: world.rooms.get(wrong)?.name ?? "somewhere" });
-          continue;
-        }
-      }
-      // A surveyor's copy draws only passages between halls it holds — a door
-      // into somewhere unwalked isn't on the paper yet, and mustn't leak the
-      // far room's name. (The room's own prose still names its exits; the map
-      // records where you've BEEN.)
-      if (detailed && !shown.has(e.to_room)) continue;
+      // Either kind of copy draws only passages between halls it holds — a door
+      // into somewhere not on the paper mustn't leak the far room's name. (The
+      // room's own prose still names its exits.)
+      if (!shown.has(e.to_room)) continue;
       exits.push({ dir: e.dir, to: e.to_room, toName: world.rooms.get(e.to_room)?.name ?? e.to_room });
     }
     // A band with no frame of its own falls in with the halls rather than
     // throwing the whole map away over one unlabelled room.
-    // A TRUE map carries its canonical position (worldGrid) so islands sit where
-    // they really are; a CRUDE map deliberately does not — it is a shattered
-    // pack of lies and the client's own packing is the right look for it.
-    const at = detailed ? worldGrid(z).at.get(id) : undefined;
+    // Every copy carries the room's canonical position (worldGrid), so islands
+    // sit where they really are: a crude map is true now, as far as it goes.
+    const at = worldGrid(z).at.get(id);
     (regions[mapRegionOf(z, id)] ?? regions.upper).rooms.push({
       id, name: room.name, exits, here: id === session.roomId,
       gate: world.entryRooms.has(id) ? 1 : 0,

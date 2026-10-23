@@ -183,6 +183,14 @@ for (const k of denKeys) if (!dens.some(d => d.room_id === k.room_id && d.holder
 for (const r of rows) if (r.container.startsWith('den:') && !world.rooms.has(r.container.slice(4)))
   flag('on a den shelf in a room that does not exist', who(r.pubkey), `${named(r.item_id)} at ${r.container.slice(4)}`);
 
+// ---- templates: bleed is damage a tick, always a whole number (2026-10-23:
+// the old grey shipped with 0.3, written as if it were odds). Stun stays a
+// chance and may be a fraction.
+for (const t of all("SELECT id, bleed FROM mob_templates WHERE bleed != CAST(bleed AS INTEGER)"))
+  flag('creature with a fractional bleed', t.id, String(t.bleed));
+for (const t of all("SELECT id, bleed FROM item_templates WHERE bleed != CAST(bleed AS INTEGER)"))
+  flag('item with a fractional bleed', t.id, String(t.bleed));
+
 // ---- letters
 const invites = new Map(all('SELECT * FROM invites').map(i => [i.code, i]));
 for (const c of all('SELECT * FROM invite_claims')) {

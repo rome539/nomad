@@ -8240,9 +8240,8 @@ function buildMapGraph(f) {
   // a gap in the paper, and every room you HAVE seen is in the same square it
   // was in last week and will be in next year.
   //
-  // The one exception stays the crude map, which ships no coordinates on
-  // purpose: it is a shattered pack of lies and gets laid out here, locally,
-  // because there is nothing true to plot.
+  // The crude map ships coordinates too since it stopped lying (2026-10-23);
+  // anything that arrives without them still gets laid out here, locally.
   var placed = {}, labels = [];
   var canon = true;
   for (var cq = 0; cq < order.length; cq++) {
@@ -8670,12 +8669,12 @@ function renderMap(f) {
     ? "Scratched into the plaster by everyone who walked it and made it back."
     : detailed
       ? "Set down true, hall by hall \\u2014 as far as this copy's carriers have walked."
-      : "Copied from half a memory. Some of it is right. Trust it at your peril.";
+      : "Somebody's rough copy, true as far as it goes \\u2014 and what you walk with it, it takes.";
   document.getElementById("maphint").textContent = wall
     ? "drag to pan \\u00b7 pinch or scroll to zoom"
     : detailed
       ? "drag to pan \\u00b7 pinch or scroll to zoom"
-      : "an unreliable copy \\u00b7 drag to pan";
+      : "drag to pan \\u00b7 pinch or scroll to zoom";
   // A true map is knowledge kept: its rooms light gold on the HUD hereafter.
   if (detailed && Array.isArray(f.reveal)) {
     for (var i = 0; i < f.reveal.length; i++) knownRooms[f.reveal[i]] = 1;
@@ -10259,6 +10258,11 @@ var ROOM_PLATE = {
   // Keeper's Hall Floor. All four are outdoors and take the full six.
   "the-birdless-acre": "day night night-torch fog rain snow",
   "the-moon-glade":    "day night night-torch fog rain snow",
+  // Behind the glade: its own ground, so its own plate (PLATE_OF).
+  "the-white-ride":    "day night night-torch fog rain snow",
+  "the-gnawed-stand":  "day night night-torch fog rain snow",
+  "the-picked-bones":  "day night night-torch fog rain snow",
+  "the-grey-lie":      "day night night-torch fog rain snow",
   "the-heart-of-it":   "day night night-torch fog rain snow",
   "the-hall-floor":    "day night night-torch fog rain snow",
   // ...and two with a roof over them - the counting house and the den under the
@@ -10498,6 +10502,11 @@ var ROOM_PLATE = {
 // horn and a skull — which is the Bone Ground's own sentence, word for word.
 var PLATE_OF = {
   "the-bone-ground": "the-dry-bones",
+  // BEHIND THE MOON DOOR IS ONE PLACE (rome, 2026-10-23): the four rooms the
+  // old grey's ground added past the glade had fallen back to plain wood
+  // ground, a different picture a step past the door. They paint the glade.
+  "the-white-ride": "the-moon-glade", "the-gnawed-stand": "the-moon-glade",
+  "the-picked-bones": "the-moon-glade", "the-grey-lie": "the-moon-glade",
   "the-oxide-flat":  "the-ochre-shelf",
   // ---- THE FORTRESS. One plate serves every room of a kind, which is the only
   // reason 108 rooms cost 31 pictures. The stem is the plate; the key is the room.

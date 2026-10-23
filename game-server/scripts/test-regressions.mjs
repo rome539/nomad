@@ -27,6 +27,7 @@ try {
         "export {ZoneDO} from './zone';",
         "export {parse} from './parser';",
         "export * as den from './den';",
+        "export {cmdMap} from './lore';",
         "export {cmdGo} from './verbs';",
         "export {receiptGoods, goodsWorth, worthMark, worthPips} from './gate';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
@@ -40,7 +41,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -240,6 +241,61 @@ try {
   check('the rough mark is one to four pips by band', () => {
     assert.deepEqual([0.1, 1.9, 2, 4.9, 5, 14.9, 15, 20].map(worthMark), [1, 1, 2, 2, 3, 3, 4, 4]);
     assert.equal(worthPips(3), '\u25cf\u25cf\u25cf\u25cb');
+  });
+
+  // ---------------------------------------------------------------- maps
+  console.log('the crude map');
+  // A line of 200 rooms, r0 - r1 - ... - r199, each joined east to the next.
+  function mapWorld(journalId) {
+    const z = new ZoneDO({}, {});
+    const rooms = new Map(), exits = new Map();
+    for (let i = 0; i < 200; i++) {
+      rooms.set('r' + i, { id: 'r' + i, name: 'Room ' + i, region: 'mountain' });
+      exits.set('r' + i, [...(i < 199 ? [{ dir: 'east', to_room: 'r' + (i + 1) }] : []), ...(i > 0 ? [{ dir: 'west', to_room: 'r' + (i - 1) }] : [])]);
+    }
+    z.world = { rooms, exits, entryRooms: new Set(), safeRooms: new Set(),
+      itemTemplates: new Map([['crude-map', { id: 'crude-map', name: 'a crude map', slot: '' }]]) };
+    z.mapGrid = { at: new Map(), bands: [] };
+    z.dens = new Map(); z.inDen = new Map();
+    z.send = () => {};
+    const rec = recorder(); z.env = { DB: rec.DB };
+    const frames = [];
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'r50', items: [{ rowId: 'row1', itemId: 'crude-map', serial: null, equipped: false, condition: 100, journalId }],
+      ws: { send: (m) => frames.push(JSON.parse(m)) } };
+    z.sessions = new Map([['me', me]]);
+    return { z, me, frames };
+  }
+  const shownOf = (f) => f.regions.flatMap((r) => r.rooms);
+  await checkAsync('a crude map shows real rooms and only true passages (2026-10-23, it used to lie)', async () => {
+    const { z, me, frames } = mapWorld('map-test-a');
+    await cmdMap(z, me, '');
+    const rooms = shownOf(frames.at(-1));
+    const ids = new Set(rooms.map((r) => r.id));
+    for (const r of rooms) for (const e of r.exits) {
+      assert.ok(ids.has(e.to), 'a passage to a room not on the paper');
+      const n = Number(r.id.slice(1)), m = Number(e.to.slice(1));
+      assert.equal(Math.abs(n - m), 1, `${r.id} -> ${e.to} is not a real passage`);
+      assert.equal(e.dir, m > n ? 'east' : 'west', 'a passage drawn the wrong way');
+    }
+    assert.ok(ids.has('r50'), 'where you stand is always drawn');
+    assert.ok(ids.size >= 200 * 0.08 && ids.size <= 200 * 0.6, 'filled about 15-45%, got ' + ids.size);
+  });
+  await checkAsync('the same copy shows the same rooms every time; another copy shows others', async () => {
+    const a1 = mapWorld('map-test-a'); await cmdMap(a1.z, a1.me, '');
+    const a2 = mapWorld('map-test-a'); await cmdMap(a2.z, a2.me, '');
+    const b = mapWorld('map-test-b'); await cmdMap(b.z, b.me, '');
+    const key = (w) => shownOf(w.frames.at(-1)).map((r) => r.id).sort().join(',');
+    assert.equal(key(a1), key(a2));
+    assert.notEqual(key(a1), key(b));
+  });
+  await checkAsync('what you walk with a crude map is inked onto it', async () => {
+    const { z, me, frames } = mapWorld('map-test-a');
+    await cmdMap(z, me, '');
+    const before = new Set(shownOf(frames.at(-1)).map((r) => r.id));
+    const blank = [...Array(200).keys()].map((i) => 'r' + i).find((id) => !before.has(id));
+    me.roomId = blank; await cmdMap(z, me, '');
+    me.roomId = 'r50'; await cmdMap(z, me, '');
+    assert.ok(shownOf(frames.at(-1)).some((r) => r.id === blank), 'a walked room stays on the paper');
   });
 
   console.log(`\n${passed} regression checks pass`);

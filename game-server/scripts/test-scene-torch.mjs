@@ -628,6 +628,12 @@ t("a window room is its night plate at night", strip(sceneEl.style.backgroundIma
 t("...with the night sky in its window", /\/sky\/night/.test(skyEl.style.backgroundImage), skyEl.style.backgroundImage);
 ctx.paint("den", "in", "", "loft-d", 0, 0, "the-lodge-loft", 0, 0, true, 0);
 t("...and its day plate by day", strip(sceneEl.style.backgroundImage) === "/room-bg/the-lodge-loft-day.webp", strip(sceneEl.style.backgroundImage));
+// BEHIND THE MOON DOOR IS ONE PLACE (2026-10-23): the four rooms past the glade
+// paint the glade's own plate, not plain wood ground.
+for (const room of ["the-white-ride", "the-gnawed-stand", "the-picked-bones", "the-grey-lie"]) {
+  ctx.paint("wood", "moon", "oak", "mg-" + room, 0, 0, room, 0, 0, false, 1);
+  t(room + " paints the Moon Glade", strip(sceneEl.style.backgroundImage) === "/room-bg/the-moon-glade-night.webp", strip(sceneEl.style.backgroundImage));
+}
 
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");

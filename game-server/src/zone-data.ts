@@ -819,16 +819,13 @@ export const FISH_COOLDOWN_MS = 6000;  // each cast is a deliberate wait
 // the SURFACE pools when it opens (the storm-angler's moment stays real).
 export const FISH_POOL_CATCHES = 5;
 export const FISH_POOL_REST_MS = 25 * 60_000;
-// How much a crude map lies: how much of the map it omits, and how many of the
-// exits it does show are wrong (dropped or pointing at the wrong room). No two
-// copyists worked alike — each copy rolls a hand (rome, 2026-07-13: RNG decides
-// the map's condition) that slides both rates between these rails. A careful
-// hand omits little; a drunk one hands you noise. Averages sit near the old
-// flat 0.30 / 0.15.
-export const CRUDE_DROP_MIN = 0.10;   // best hand: ~10% of rooms missing
-export const CRUDE_DROP_MAX = 0.50;   // worst hand: half the keep isn't on it
-export const CRUDE_BAD_MIN = 0.05;    // best hand: ~5% of shown exits lie
-export const CRUDE_BAD_MAX = 0.25;    // worst hand: a quarter walk you wrong
+// HOW MUCH OF A CRUDE MAP IS ALREADY DRAWN (rome, 2026-10-23: crude maps
+// tell the real rooms, randomly filled out, and you fill in the rest). Nothing
+// on one is false any more. Each copy rolls a hand (rome, 2026-07-13: RNG
+// decides the map's condition) that sets how much of the world the copyist got
+// down, between these rails; everything its carrier walks is inked on top.
+export const CRUDE_FILL_MIN = 0.15;   // careless hand: about a seventh of the world
+export const CRUDE_FILL_MAX = 0.45;   // careful hand: nearly half
 export const SALVAGE_YIELD: Record<string, number> = { common: 1, uncommon: 2, rare: 4, epic: 8 };
 export const REPAIR_COST: Record<string, number> = { common: 1, uncommon: 1, rare: 2, epic: 3 };
 // WHAT THE VICE GIVES BACK, AND WHAT THE MEND TAKES (rome, 2026-10-19). Every
@@ -7585,6 +7582,9 @@ export const ART_ROOMS = new Set<string>([
   // plate. Everything else in the wood stands on one of its seven grounds.
   "the-birdless-acre",  // the moon door
   "the-moon-glade",     // what is behind it
+  // ...and the four rooms behind the glade, which are the same moonlit ground
+  // and paint the glade's own plate (rome, 2026-10-23; PLATE_OF in public.ts).
+  "the-white-ride", "the-gnawed-stand", "the-picked-bones", "the-grey-lie",
   "the-heart-of-it",    // the Woodward
   "the-hall-floor",     // the Keeper of the Holding
   "the-bounds-house",

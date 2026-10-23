@@ -450,9 +450,9 @@ export const GUIDE_PAGE = `<!doctype html>
   <p>Nothing hands you a map. Knowledge is a thing you find, carry, and can lose
   like anything else.</p>
   <ul>
-    <li>A <b>surveyor's map</b> is true. A <b>crude map</b> is somebody's honest
-    attempt, and it is wrong in ways that are consistent — the same copy lies the
-    same way every time you open it.</li>
+    <li>A <b>surveyor's map</b> starts blank and sets down true every room you
+    walk with it. A <b>crude map</b> is somebody's rough copy: patches of the
+    world already drawn, true as far as they go, and it takes what you walk too.</li>
     <li>A <b>journal</b> is somebody's record. It can be taken off them.</li>
     <li>The <b>wall chart</b> in the gatehouse is shared: what one wanderer carves
     into it, every wanderer reads.</li>
