@@ -519,7 +519,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         suggest.push("out", "den");
         if (inside.holder === session.pubkey && !inside.barred) suggest.push("bar");
         // ...and 'build', while there is still something a den could have.
-        if (inside.holder === session.pubkey && Object.keys(DEN_BUILDS).some((k) => (inside as unknown as Record<string, unknown>)[k] !== true)) suggest.push("build");
+        const working = inside.holder === session.pubkey ? den.buildingNow(session.pubkey) : undefined;
+        if (working) suggest.push(`build ${working}`); // half-done: the chip keeps you at it
+        else if (inside.holder === session.pubkey && Object.keys(DEN_BUILDS).some((k) => !den.isBuilt(inside, k))) suggest.push("build");
         // What the house's own works can do with what you carry (mig 327),
         // each named only when it has something to work on.
         if (inside.holder === session.pubkey) {
@@ -534,6 +536,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
           }
           if (inside.hearth && !fighting) { const fish = named((id) => !!COOK_RECIPES[id]); if (fish) suggest.push(`cook ${fish}`); }
           if (inside.butt && inside.water > 0) suggest.push("draw water");
+          if (inside.bolthole && !fighting) suggest.push("bolt");
           if (inside.frame) { const pelt = named((id) => /(^|-)(pelt|hide|skin)$/.test(id) && !z.isGear(id)); if (pelt) suggest.push(`stretch ${pelt}`); }
         }
         suggest.push(DEN_CHIP);

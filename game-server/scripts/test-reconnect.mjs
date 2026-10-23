@@ -16,7 +16,7 @@ function setup() {
   const c = {
     Date: { now: () => now }, setTimeout: (f, ms) => { timers.set(++id, { f, ms }); return id; },
     clearTimeout: i => timers.delete(i), setInterval: f => { c.beat = f; return 999; }, clearInterval() {},
-    identityEpoch: 0, crossed: true, stilled: false, connecting: false, ws: null,
+    identityEpoch: 0, crossed: true, stilled: false, connecting: false, ws: null, pendingInvite: '',
     sessionToken: 'synthetic', method: 'guest', retryMs: 1000, openedAt: 0, lastDialAt: 0,
     pongTimer: null, probeWire: null, pendingLookAt: 0, hbTimer: null, frayTimer: null, frayTold: false,
     failedOpens: 0, freshLoad: true, dialAttempt: 0, pageId: 'test', CONNECT_STALL_MS: 10000, FRAY_QUIET_MS: 3000,

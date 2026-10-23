@@ -7,3 +7,4 @@ dist/
 # scratch file the served-script parse gate writes and deletes
 .served-check.mjs
 .mob-desc-cache.json
+.test-logs/

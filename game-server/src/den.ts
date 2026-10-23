@@ -43,7 +43,7 @@
 // enemy can learn, and the walk home is a walk you now have a reason to survive.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
-import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow, insertLoot, itemAcquiredAt } from "./world";
+import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow, insertLoot, itemAcquiredAt, savePlayer } from "./world";
 import * as events from "./events";
 import { uuid } from "./rng";
 import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_IRON, DEN_BAR_SCRAP,
@@ -53,7 +53,9 @@ import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_
   COLD_STORE_ROOMS, COLD_CONTAINER, OSSUARY_ROOM, OSSUARY_CONTAINER,
   DEN_RUST_PER_HOUR, DEN_RUST_FLOOR, DEN_WAKE_CHANCE, SEALED_WEAR_MULT, GEAR_FAILING_AT, GEAR_WORN_AT,
   DEN_BUTT_CAP, DEN_BUTT_RAIN_MS, DEN_FIRE_MS, DEN_STAKES_WOUND, DEN_PELT_LEATHER,
-  CURE_RECIPES, COOK_RECIPES, FOOD_KEEPS, GATE_CURE_MS } from "./zone-data";
+  CURE_RECIPES, COOK_RECIPES, FOOD_KEEPS, GATE_CURE_MS,
+  DEN_BUILD_WORK, DEN_BUILD_BEAT_MS, DEN_TOOL_WORD, type DenTool,
+  DEN_CELLAR_AGE_MULT, DEN_CELLAR_ROOM, DEN_SNARE_EVERY_MS, DEN_SNARE_ODDS, DEN_SNARE_CATCH } from "./zone-data";
 import { nameMatches, shortName, isNight, foodState, cap } from "./zone-util";
 import { MOUNTAIN_QUARTER_ROOMS, WOOD_QUARTERS } from "./detail";
 
@@ -77,6 +79,10 @@ export interface Den {
   frame: boolean;
   stakes: boolean;
   slit: boolean;
+  cellar: boolean;     // the second level (mig 329)
+  bolthole: string;    // the room the bolt-hole comes up in, "" for none
+  snares: boolean;
+  snareAt: number;     // when the snares were last looked at
   water: number;       // draughts in the butt, as last counted
   waterAt: number;     // when it was last counted (the rain is reckoned from here)
   holderName: string;  // cached off the players row so an offline holder is still a NAME on the door, not a hex stub
@@ -94,8 +100,8 @@ export interface Den {
 export async function loadDens(z: ZoneDO): Promise<Map<string, Den>> {
   const dens = new Map<string, Den>();
   const rows = (await z.env.DB.prepare(
-    "SELECT d.room_id, d.holder, d.claimed_at, d.tended_at, d.barred, d.hearth, d.hides, d.rattle, d.rack, d.larder, d.smoke, d.butt, d.whet, d.frame, d.stakes, d.slit, d.butt_water, d.butt_at, COALESCE(p.name, '') AS holder_name FROM dens d LEFT JOIN players p ON p.pubkey = d.holder")
-    .all<{ room_id: string; holder: string; claimed_at: number; tended_at: number; barred: number; hearth: number; hides: number; rattle: number; rack: number; larder: number; smoke: number; butt: number; whet: number; frame: number; stakes: number; slit: number; butt_water: number; butt_at: number; holder_name: string }>()).results ?? [];
+    "SELECT d.room_id, d.holder, d.claimed_at, d.tended_at, d.barred, d.hearth, d.hides, d.rattle, d.rack, d.larder, d.smoke, d.butt, d.whet, d.frame, d.stakes, d.slit, d.butt_water, d.butt_at, d.cellar, d.bolthole, d.snares, d.snare_at, COALESCE(p.name, '') AS holder_name FROM dens d LEFT JOIN players p ON p.pubkey = d.holder")
+    .all<{ room_id: string; holder: string; claimed_at: number; tended_at: number; barred: number; hearth: number; hides: number; rattle: number; rack: number; larder: number; smoke: number; butt: number; whet: number; frame: number; stakes: number; slit: number; butt_water: number; butt_at: number; cellar: number; bolthole: string; snares: number; snare_at: number; holder_name: string }>()).results ?? [];
   for (const r of rows) {
     dens.set(r.holder, {
       roomId: r.room_id, holder: r.holder, claimedAt: r.claimed_at,
@@ -103,6 +109,7 @@ export async function loadDens(z: ZoneDO): Promise<Map<string, Den>> {
       hearth: r.hearth === 1, hides: r.hides === 1, rattle: r.rattle === 1, rack: r.rack === 1, larder: r.larder === 1,
       smoke: r.smoke === 1, butt: r.butt === 1, whet: r.whet === 1, frame: r.frame === 1, stakes: r.stakes === 1, slit: r.slit === 1,
       water: r.butt_water, waterAt: r.butt_at,
+      cellar: r.cellar === 1, bolthole: r.bolthole ?? "", snares: r.snares === 1, snareAt: r.snare_at,
       holderName: r.holder_name, keys: new Map(),
     });
   }
@@ -379,7 +386,7 @@ export function canBuildHere(z: ZoneDO, roomId: string): boolean {
 
 // What the shelf holds of everything that is not gear: more with a second rack.
 export function denCap(den: Den | undefined): number {
-  return den?.rack ? DEN_RACK_CAP : DEN_CAP;
+  return (den?.rack ? DEN_RACK_CAP : DEN_CAP) + (den?.cellar ? DEN_CELLAR_ROOM : 0);
 }
 
 // A BARRED DOOR STOPS PEOPLE TOO (rome, 2026-08-03: "what about gankers?"), and
@@ -479,6 +486,7 @@ export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promi
     roomId, holder: session.pubkey, claimedAt: now, tendedAt: now, barred: false,
     hearth: false, hides: false, rattle: false, rack: false, larder: false,
     smoke: false, butt: false, whet: false, frame: false, stakes: false, slit: false, water: 0, waterAt: now,
+    cellar: false, bolthole: "", snares: false, snareAt: now,
     holderName: session.name, keys: new Map(),
   };
   z.dens.set(session.pubkey, den);
@@ -525,9 +533,59 @@ export async function cmdEnterDen(z: ZoneDO, session: Session, arg: string): Pro
       : "Anything on the ground outside can walk straight in after you. A bar would end that.",
   ].join("\n"));
   z.roomFeed(session.roomId, `${session.name} steps through a door and it closes.`, session.pubkey, false);
+  if (den.holder === session.pubkey) await checkSnares(z, session, den);
   z.sendStatus(session); // the bar has to say you're inside the moment you are
   z.sendCtx(session);
   return true;
+}
+
+// THE SNARE LINE (mig 329). Read when the holder comes home: one try for every
+// night that has passed since they last looked (DEN_SNARE_EVERY_MS, three at
+// most), each catching DEN_SNARE_ODDS of the time. What is caught goes on the
+// shelf, where it waits - and ages - like anything else put there.
+async function checkSnares(z: ZoneDO, session: Session, d: Den): Promise<void> {
+  if (!d.snares) return;
+  const now = Date.now();
+  const tries = Math.min(3, Math.floor((now - d.snareAt) / DEN_SNARE_EVERY_MS));
+  if (tries <= 0) return;
+  d.snareAt += tries * DEN_SNARE_EVERY_MS;
+  const caught: string[] = [];
+  for (let i = 0; i < tries; i++) {
+    if (Math.random() >= DEN_SNARE_ODDS) continue;
+    const id = DEN_SNARE_CATCH[Math.floor(Math.random() * DEN_SNARE_CATCH.length)]!;
+    const rowId = uuid();
+    await insertLoot(z.env.DB, rowId, session.pubkey, id, null);
+    await setContainer(z.env.DB, rowId, container(d.roomId));
+    caught.push(z.world!.itemTemplates.get(id)?.name ?? id);
+  }
+  await z.env.DB.prepare("UPDATE dens SET snare_at = ? WHERE room_id = ? AND holder = ?").bind(d.snareAt, d.roomId, d.holder).run();
+  z.send(session, caught.length
+    ? `On the way in you walk the snare line. It held ${caught.join(" and ")}, and that goes on the shelf.`
+    : "On the way in you walk the snare line. Nothing in it, and one of them sprung and empty.", caught.length ? "gain" : undefined);
+}
+
+// THE BOLT-HOLE (mig 329). Out through the tunnel and up in the next room over,
+// and nobody at your own door sees you go. Not with something on you: a
+// tunnel is a crawl, and you cannot crawl away from a fight.
+export async function cmdBolt(z: ZoneDO, session: Session): Promise<void> {
+  const d = insideOf(z, session.pubkey);
+  if (!d || d.roomId !== session.roomId || d.holder !== session.pubkey || !d.bolthole) {
+    return z.send(session, "There is no way out of here but the door.");
+  }
+  if (z.inCombat(session)) return z.send(session, "Not with something on you. A tunnel is a crawl.");
+  if (!z.world!.rooms.has(d.bolthole)) return z.send(session, "The bolt-hole has fallen in somewhere along its length.");
+  const from = session.roomId;
+  z.inDen.delete(session.pubkey);
+  session.roomId = d.bolthole;
+  session.movedAt = Date.now();
+  z.send(session, "You get down into the bolt-hole and crawl the length of it in the dark, and come up through the turf somewhere else.");
+  z.actorFeed(session, session.roomId, `${session.name} comes up out of the ground.`, "who", false);
+  z.sendStatus(session);
+  z.send(session, z.enterDescribe(session));
+  z.refreshRoomCtx(from);
+  z.refreshRoomCtx(session.roomId);
+  await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
+  z.markSimDirty();
 }
 
 export function cmdLeaveDen(z: ZoneDO, session: Session): boolean {
@@ -641,6 +699,39 @@ export async function cmdBar(z: ZoneDO, session: Session): Promise<void> {
 // object, built once, from your own door, paid out of the pack on the spot.
 // 'build' alone is the list — what stands, and what the rest would cost.
 
+// THE RIGHT TOOL, in your hand or anywhere in the pack, as the pick at the tide
+// door is. Read off what the weapon is, not a list: an axe, a hatchet, a
+// cleaver or a billhook for timber; anything that stuns, or a pick, hammer,
+// mallet or maul, for stone and iron; any edge that cuts for the fine work.
+// Is this thing up in the den? Every build is a flag except the bolt-hole,
+// which is the room it comes up in; "barred" is the bar, needed under the
+// bolt-hole.
+export function isBuilt(d: Den, key: string): boolean {
+  if (key === "bolthole") return d.bolthole !== "";
+  return (d as unknown as Record<string, unknown>)[key] === true;
+}
+function needsName(key: string): string {
+  return key === "barred" ? "the bar on the door" : DEN_BUILDS[key]?.name.replace(/^a /, "the ") ?? key;
+}
+const DIR_WORDS: Record<string, string> = { north: "north", south: "south", east: "east", west: "west", up: "up", down: "down", n: "north", s: "south", e: "east", w: "west", u: "up", d: "down" };
+
+// Half-done work, by holder. In memory: a restart loses the beats, never the
+// materials (those leave the pack only when the work is finished).
+const buildJobs = new Map<string, { key: string; done: number; at: number }>();
+export function buildingNow(pubkey: string): string | undefined { return buildJobs.get(pubkey)?.key; }
+
+export function denTool(z: ZoneDO, session: Session, kind: DenTool): CarriedItem | undefined {
+  const fits = (c: CarriedItem): boolean => {
+    const t = z.world!.itemTemplates.get(c.itemId);
+    if (!t || t.slot !== "weapon") return false;
+    if (kind === "wood") return /axe|hatchet|cleaver|billhook|hedge-bill/.test(t.id);
+    if (kind === "heavy") return t.stun > 0 || /pick|hammer|mallet|maul/.test(t.id);
+    if (kind === "dig") return /pick/.test(t.id);
+    return t.bleed > 0;
+  };
+  return session.items.find((c) => c.equipped && fits(c)) ?? session.items.find(fits);
+}
+
 export async function cmdBuild(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const den = insideOf(z, session.pubkey);
   if (!den || den.roomId !== session.roomId) {
@@ -655,25 +746,65 @@ export async function cmdBuild(z: ZoneDO, session: Session, arg: string): Promis
     const lines = ["What a den can have:"];
     lines.push(`  a bar on the door — ${den.barred ? "fitted" : `${DEN_BAR_IRON} iron and ${DEN_BAR_SCRAP} scrap ('bar')`}`);
     for (const [key, b] of Object.entries(DEN_BUILDS)) {
-      lines.push(`  ${b.name} — ${den[key as keyof Den] === true ? "built" : `${priceText(b.cost)} ('build ${key}')`}: ${b.does}.`);
+      lines.push(`  ${b.name} — ${isBuilt(den, key) ? "built" : `${priceText(b.cost)}${b.needs ? `, once ${needsName(b.needs)} is in` : ""}${b.require ? `; it cannot be done without ${DEN_TOOL_WORD[b.require]}` : b.tool ? `, quicker with ${DEN_TOOL_WORD[b.tool]}` : ""} ('build ${key}')`}: ${b.does}.`);
     }
     return z.send(session, lines.join("\n"));
   }
   const key = Object.keys(DEN_BUILDS).find((k) => k === want || want.startsWith(k.slice(0, 4)) || nameMatches(DEN_BUILDS[k]!.name, want));
+  // The bolt-hole is dug toward something: 'build bolthole north'.
+  const boltDir = key === "bolthole" ? Object.entries(DIR_WORDS).find(([w]) => new RegExp(`\\b${w}$`).test(want))?.[1] : undefined;
   if (!key) return z.send(session, "You do not know how to build that here. ('build' alone lists what a den can have.)");
   const b = DEN_BUILDS[key]!;
-  if (den[key as keyof Den] === true) return z.send(session, `There is already ${b.name} here.`);
-  if (b.needs && den[b.needs as keyof Den] !== true) {
-    return z.send(session, `${cap(b.name)} wants ${DEN_BUILDS[b.needs]?.name ?? b.needs} under it first.`);
+  if (isBuilt(den, key)) return z.send(session, `There is already ${b.name} here.`);
+  if (b.needs && !isBuilt(den, b.needs)) {
+    return z.send(session, `${cap(b.name)} wants ${needsName(b.needs)} in first.`);
+  }
+  // THE SECOND LEVEL WANTS ITS TOOL (mig 329): not quicker with it, impossible without.
+  if (b.require && !denTool(z, session, b.require)) {
+    return z.send(session, `${cap(b.name)} is no work for bare hands. You would need ${DEN_TOOL_WORD[b.require]}.`);
+  }
+  if (key === "bolthole") {
+    const exits = z.world!.exits.get(den.roomId) ?? [];
+    if (!boltDir) return z.send(session, `Dig it which way? The ground here goes ${exits.map((e) => e.dir).join(", ")}. ('build bolthole <direction>')`);
+    if (!exits.some((e) => e.dir === boltDir)) return z.send(session, `There is no ground ${boltDir} of here to come up in. It goes ${exits.map((e) => e.dir).join(", ")}.`);
   }
   if (z.inCombat(session)) return z.send(session, "Not with something in the room that wants you dead.");
   if (b.cost.some((p) => countOf(session, p.id) < p.n)) {
     return z.send(session, `${b.name.charAt(0).toUpperCase() + b.name.slice(1)} wants ${priceText(b.cost)} out of your pack. You have ${b.cost.map((p) => `${countOf(session, p.id)} ${STUFF_WORD[p.id] ?? (p.id === IRON_ID ? "iron" : p.id)}`).join(", ")}.`);
   }
+  // THE WORK (DEN_BUILD_WORK). A beat of it per 'build', the right tool doing
+  // two; the materials stay in the pack until the last beat lands, so walking
+  // off half-done costs nothing but the time.
+  const now = Date.now();
+  const job = buildJobs.get(session.pubkey);
+  const doing = job && job.key === key ? job : { key, done: 0, at: 0 };
+  if (now < doing.at) return z.send(session, "Your hands are still busy with the last of it. A moment, then 'build' again.", "dmgin");
+  const tool = b.tool ? denTool(z, session, b.tool) : undefined;
+  doing.done += tool ? 2 : 1;
+  doing.at = now + DEN_BUILD_BEAT_MS;
+  if (doing.done < DEN_BUILD_WORK) {
+    buildJobs.set(session.pubkey, doing);
+    const toolName = tool ? z.world!.itemTemplates.get(tool.itemId)?.name ?? "your tool" : "";
+    const left = DEN_BUILD_WORK - doing.done;
+    z.send(session, (tool
+      ? `You set to ${b.name} with ${toolName}, and it goes quickly.`
+      : `You set to ${b.name} with your bare hands, and it is slow going.${b.tool ? ` (${DEN_TOOL_WORD[b.tool]} would make short work of it.)` : ""}`)
+      + ` ${left <= (tool ? 2 : 1) ? "One more go and it is done." : "There is a good deal of it left."} ('build ${key}' to keep at it.)`);
+    z.roomSound(den.roomId, "Somebody is working at something {dir}, steadily.");
+    return;
+  }
+  buildJobs.delete(session.pubkey);
   for (const p of b.cost) await spend(z, session, p.id, p.n);
-  (den as unknown as Record<string, boolean>)[key] = true;
-  // The column name is the key itself, from a fixed table, never the player's words.
-  await z.env.DB.prepare(`UPDATE dens SET ${key} = 1 WHERE room_id = ? AND holder = ?`).bind(den.roomId, den.holder).run();
+  if (key === "bolthole") {
+    den.bolthole = (z.world!.exits.get(den.roomId) ?? []).find((e) => e.dir === boltDir)!.to_room;
+    await z.env.DB.prepare("UPDATE dens SET bolthole = ? WHERE room_id = ? AND holder = ?").bind(den.bolthole, den.roomId, den.holder).run();
+  } else {
+    (den as unknown as Record<string, boolean>)[key] = true;
+    if (key === "snares") den.snareAt = Date.now();
+    // The column name is the key itself, from a fixed table, never the player's words.
+    await z.env.DB.prepare(`UPDATE dens SET ${key} = 1${key === "snares" ? ", snare_at = ?" : ""} WHERE room_id = ? AND holder = ?`)
+      .bind(...(key === "snares" ? [den.snareAt] : []), den.roomId, den.holder).run();
+  }
   z.send(session, b.built, "gain");
   z.roomFeed(den.roomId, `Somebody is working behind one of the doors here — the sound of it carries.`, session.pubkey, false);
   z.sendCtx(session);
@@ -809,7 +940,7 @@ export async function rustShelf(z: ZoneDO, held: CarriedItem[], den?: Den): Prom
     // moves with it so the same hours are never given twice.
     if (den?.larder && z.world!.itemTemplates.get(c.itemId)?.edible && c.acquiredAt !== undefined) {
       const since = c.containerAt ?? now;
-      const back = Math.floor((now - since) / 1000 * (1 - DEN_LARDER_AGE_MULT));
+      const back = Math.floor((now - since) / 1000 * (1 - (den.cellar ? DEN_CELLAR_AGE_MULT : DEN_LARDER_AGE_MULT)));
       if (back > 0) {
         c.acquiredAt += back;
         c.containerAt = now;
@@ -1325,6 +1456,9 @@ export function interiorDescription(z: ZoneDO, session: Session): string {
   if (d.frame) bits.push("A stretching frame leans against the wall.");
   if (d.stakes) bits.push("Outside, the stakes you drove are in the ground where only you know them.");
   if (d.slit) bits.push("A narrow slit cut through the wall beside the door, with a leather flap over it.");
+  if (d.cellar) bits.push("A hatch in the larder floor opens on the root cellar, cold and still.");
+  if (d.bolthole) bits.push("Beside the wall a dark hole goes down and away under it: the bolt-hole.");
+  if (d.snares) bits.push("Your snare line runs past the stakes outside.");
   return bits.join(" ");
 }
 
@@ -1557,6 +1691,9 @@ export async function cmdStretch(z: ZoneDO, session: Session, arg: string): Prom
   const t = world.itemTemplates.get(carried.itemId)!;
   if (!isPelt(z, carried.itemId)) return z.send(session, `${cap(t.name)} is not a pelt. The frame takes a skin off a kill.`);
   if (carried.serial !== null) return z.send(session, "That one's sealed. Break the seal before you'd put a knife to it.");
+  // A pelt comes off the frame under a blade, and not otherwise.
+  const blade = denTool(z, session, "fine");
+  if (!blade) return z.send(session, `You would need a knife or a blade to take ${t.name} down to leather.`);
   const n = DEN_PELT_LEATHER[t.rarity] ?? 2;
   const idx = session.items.indexOf(carried);
   if (idx === -1) return z.send(session, "That's already left your pack.");
@@ -1570,7 +1707,7 @@ export async function cmdStretch(z: ZoneDO, session: Session, arg: string): Prom
     session.items.push({ rowId, itemId: LEATHER_ID, serial: null, equipped: false, condition: 100 });
     kept++;
   }
-  z.send(session, `You peg ${t.name} out on the frame and scrape it down. It comes off as ${kept} piece${kept === 1 ? "" : "s"} of leather.` + (kept < n ? " The rest you have no room to carry, and it goes in the fire." : ""), "gain");
+  z.send(session, `You peg ${t.name} out on the frame and take it down with ${z.world!.itemTemplates.get(blade.itemId)?.name ?? "your blade"}. It comes off as ${kept} piece${kept === 1 ? "" : "s"} of leather.` + (kept < n ? " The rest you have no room to carry, and it goes in the fire." : ""), "gain");
   z.sendCtx(session);
 }
 

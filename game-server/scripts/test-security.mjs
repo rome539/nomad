@@ -245,7 +245,15 @@ try {
 
  // Real SQLite exercises the actual conditional SQL, not a mock success count.
  const sql=new DatabaseSync(':memory:');
- sql.exec("CREATE TABLE player_items(id TEXT PRIMARY KEY,item_id TEXT,pubkey TEXT,container TEXT,condition INTEGER DEFAULT 100,equipped INTEGER DEFAULT 0,signed_serial INTEGER,journal_id TEXT,lore_id TEXT,acquired_at INTEGER DEFAULT 1,rolled_traits TEXT,container_at INTEGER); CREATE TABLE auth_spent(jti TEXT PRIMARY KEY,exp INTEGER);");
+ sql.exec("CREATE TABLE player_items(id TEXT PRIMARY KEY,item_id TEXT,pubkey TEXT,acquired_at INTEGER DEFAULT 1); CREATE TABLE auth_spent(jti TEXT PRIMARY KEY,exp INTEGER);");
+ // Every column a migration has added to player_items, so a new one can't
+ // leave this table behind the real schema again.
+ const {readdirSync,readFileSync}=await import('node:fs');
+ const migDir=join(root,'game-server/migrations');
+ const cols=new Set();
+ for(const f of readdirSync(migDir).filter(f=>f.endsWith('.sql')).sort())
+  for(const m of readFileSync(join(migDir,f),'utf8').matchAll(/ALTER TABLE player_items ADD COLUMN (\w+)([^;]*);/g))
+   if(!cols.has(m[1])){cols.add(m[1]);sql.exec('ALTER TABLE player_items ADD COLUMN '+m[1]+m[2]);}
  let reads=0;
  const sqliteDB={prepare(query){return {bind(...args){return {async all(){reads++;return {results:sql.prepare(query).all(...args)};},async run(){return {meta:{changes:Number(sql.prepare(query).run(...args).changes)}};}};}};}};
  const item=id=>({rowId:id,itemId:id,serial:null,equipped:false,condition:100});

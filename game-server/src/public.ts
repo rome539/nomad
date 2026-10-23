@@ -12424,9 +12424,11 @@ var lastCovered = false;
 // wet midnight (the den, below).
 var lastNight = 0;
 function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered, night) {
+  // The sky name stands in for the roof only when the frame left "covered" out
+  // (the night line once sat between these two and took the else for itself).
   if (covered !== undefined) lastCovered = !!covered;
-  if (night !== undefined && night !== null) lastNight = night ? 1 : 0;
   else if (sky !== undefined && sky !== null) lastCovered = sky === "in";
+  if (night !== undefined && night !== null) lastNight = night ? 1 : 0;
   // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
   // walking off a flooded shoal onto a dry road has to put the sheet away, so
   // an absent field is zero rather than "leave it as it was".

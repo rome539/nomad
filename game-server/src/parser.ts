@@ -75,6 +75,7 @@ export type Verb =
   | "bar"
   | "build"
   | "stretch"
+  | "bolt"
   | "draw"
   | "bunk"
   | "unbunk"
@@ -223,6 +224,7 @@ const VERB_ALIASES: Record<string, Verb> = {
   build: "build", construct: "build",
   stretch: "stretch", scrape: "stretch", tan: "stretch",
   draw: "draw",
+  bolt: "bolt", tunnel: "bolt",
   bunk: "bunk", invite: "invite", house: "bunk", shelter: "bunk",
   unbunk: "unbunk", evict: "unbunk", turnout: "unbunk",
   den: "den", home: "den", holding: "den", hearth: "den",
@@ -534,11 +536,20 @@ export const HELP_TEXT = [
   "                    the shelf, a bone rattle on the door, a second rack, a",
   "                    larder, a water butt, a whetstone, a stretching frame,",
   "                    stakes outside, a slit in the wall) and what each costs;",
-  "                    'build <thing>' puts it up out of your pack. With a hearth",
-  "                    you cook at home, and the smoke rack cures at home.",
+  "                    'build <thing>' sets to work on it, and it takes a few",
+  "                    goes; the right tool, in hand or pack, does it in half (an",
+  "                    axe for timber, something heavy for stone and iron, a blade",
+  "                    for the fine work). The materials go when it is done. With",
+  "                    a hearth you cook at home, and the smoke rack cures there.",
   "  stretch <pelt>    (scrape) — in your den, on the stretching frame: a pelt or",
-  "                    hide off a kill comes off as leather.",
+  "                    hide off a kill comes off as leather. It needs a blade.",
   "  draw water        in your den: a draught out of the water butt. Rain fills it.",
+  "  bolt              in your den, with a bolt-hole dug: out through the tunnel",
+  "                    and up in the next room over, unseen at your own door.",
+  "                    The second-level builds (a root cellar under the larder,",
+  "                    a bolt-hole under a barred door, a snare line past the",
+  "                    stakes) need their tool to build at all: a pick, a pick,",
+  "                    and a blade.",
   "  bunk <name>       hand somebody a key. They have to be standing in front of",
   "                    you. (unbunk takes it back — from anywhere, and you don't",
   "                    have to be alive to type it.) Draw steel on anybody under",

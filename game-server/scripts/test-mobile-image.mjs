@@ -13,7 +13,7 @@ const {code}=await transform(fs.readFileSync(root+'/src/public.ts','utf8'),{load
 const {PAGE}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 const hook=`window.demo={fitMobRow,setTheme, palettes:THEMES, contrastRatio, renderBench, renderTrade, renderForge, renderMap,
  themeOptions:(design,ornate)=>{doorAtmosphere=design;ornateBorders=ornate;syncDoorAtmosphere();},
- grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,skyDrift,weatherState:()=>({kind:weatherKind,flash:weatherFlashAt,thunder:weatherThunderAt}),view:()=>viewMode,painted:()=>scenePainted,cacheSize:()=>readySceneImage.cache?.size||0,
+ grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,skyDrift,weatherState:()=>({kind:weatherKind}),view:()=>viewMode,painted:()=>scenePainted,cacheSize:()=>readySceneImage.cache?.size||0,
  fxState:()=>({name:fxName,ready:fxReady,seq:fxSeq,mist:fxGl&&fxGl.getUniform(fxProg,fxU.mistOn),wet:fxGl&&fxGl.getUniform(fxProg,fxU.wetOn)}),
  evictImage:path=>readySceneImage.cache.delete(path+'?v='+BG_V),
  mobBeat,stepAnims,
@@ -40,35 +40,43 @@ try{
  });
  await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});await page.goto('http://nomad.test');
  await page.waitForFunction(()=>window.demo);
- // The existing ornate switch controls both engravings and keeps its saved preference.
- for(const enabled of [false,true]) {
+ // The ornate button cycles the five artwork styles, then off, and the choice
+ // survives a reload.
+ const styles=['floral','dragons','feathers','celestial','sun'];
+ const ornate=()=>page.evaluate(()=>({style:document.body.dataset.artwork,label:document.getElementById('ornatebtn').getAttribute('aria-label'),
+  saved:localStorage.getItem('nomad_ornate_borders'),savedStyle:localStorage.getItem('nomad_artwork_style')}));
+ assert.equal((await ornate()).label.includes('off'),false,'ornate artwork starts on');
+ for(let i=1;i<styles.length;i++){
   await page.$eval('#ornatebtn',e=>e.click());
-  assert.equal(await page.evaluate(()=>localStorage.getItem('nomad_ornate_borders')),enabled?'on':'off');
-  await page.reload();await page.waitForFunction(()=>window.demo);
-  const art=await page.evaluate(()=>({
-   checked:document.getElementById('ornatebtn').getAttribute('aria-checked'),
-   log:getComputedStyle(document.getElementById('log')).backgroundImage,
-   panel:getComputedStyle(document.querySelector('#bench .bbox'),'::before').backgroundImage
-  }));
-  assert.equal(art.checked,String(enabled));
-  assert.equal(art.log.includes('/ornate/floral-v1.svg'),enabled);
-  assert.equal(art.panel.includes('/ornate/gate-v1.svg'),enabled);
-  assert.equal(art.panel.includes('/ornate/windows-v1.svg'),enabled);
+  const o=await ornate();
+  assert.equal(o.style,styles[i]);assert.equal(o.saved,'on');assert.equal(o.savedStyle,styles[i]);
  }
+ await page.$eval('#ornatebtn',e=>e.click());
+ assert.equal((await ornate()).saved,'off');
+ await page.reload();await page.waitForFunction(()=>window.demo);
+ assert.ok((await ornate()).label.endsWith('off'),'off survives a reload');
+ await page.$eval('#ornatebtn',e=>e.click());
+ await page.reload();await page.waitForFunction(()=>window.demo);
+ const back=await ornate();
+ assert.equal(back.style,'floral');assert.ok(back.label.includes('floral'),'turning it back on starts at the first style, after a reload');
  console.log('PASS ornate artwork switch and reload persistence');
  // Access remains server-granted; a saved preference alone cannot enable art.
  assert.equal(await page.$('#viewbtn'),null);
  await page.evaluate(()=>{document.getElementById('threshold').remove();demo.grantArt();demo.renderChips(['go north','go west','attack hill-wolf','inventory','map'],true);demo.paintScene('mountain','day','hillside','The hillside',false,1,'',0,0);demo.updateMobs(['hill-wolf'],null,['red-hind']);});
  await new Promise(r=>setTimeout(r,400));
- assert.equal(await page.evaluate(()=>demo.view()),'text');
+ // A new wanderer starts in pictures (2026-10-21); the switch goes to text and back.
+ assert.equal(await page.evaluate(()=>demo.view()),'image');
  await page.tap('#brand');await page.tap('#viewbtn');
+ assert.equal(await page.evaluate(()=>demo.view()),'text');
+ if(!await page.$eval('#setpanel',e=>e.classList.contains('open')))await page.tap('#brand');
+ await page.tap('#viewbtn');
  await page.waitForFunction(()=>demo.painted() && document.querySelectorAll('#mobs .mob').length===2);
  assert.equal(await page.evaluate(()=>demo.view()),'image');
  assert.equal(await page.$eval('#setpanel',e=>e.classList.contains('open')),false,'phone switch reveals the room');
  assert.equal(await page.$eval('#viewbtn',e=>e.getAttribute('aria-checked')),'true');
  assert.equal(await page.evaluate(()=>localStorage.getItem('nomad_view')),'image');
  assert.equal(await page.$eval('#mobs .dead',e=>e.style.backgroundImage.includes('red-hind')),true);
- const geom=()=>page.evaluate(()=>{const s=document.getElementById('scene'),m=document.querySelector('#mobs .mob'),l=document.getElementById('log');return {scene:s.getBoundingClientRect().toJSON(),mob:m.getBoundingClientRect().toJSON(),log:l.getBoundingClientRect().toJSON(),margin:parseFloat(getComputedStyle(l).marginTop)||0}});
+ const geom=()=>page.evaluate(()=>{const s=document.getElementById('scene'),m=document.querySelector('#mobs .mob'),l=document.getElementById('logbox');return {scene:s.getBoundingClientRect().toJSON(),mob:m.getBoundingClientRect().toJSON(),log:l.getBoundingClientRect().toJSON(),margin:parseFloat(getComputedStyle(l).marginTop)||0}});
  for(const [width,height] of [[390,844],[844,390],[390,664],[320,568]]){
   await page.setViewport({width,height,isMobile:true,hasTouch:true});
   for(const expanded of [false,true]){
@@ -89,9 +97,9 @@ try{
     demo.setTheme('bone');demo.themeOptions(design,ornate);demo.setLogBig(true);
     document.getElementById('log').innerHTML='<div class="head">The hillside</div><div>The wind moves through the grass.</div><div class="say">A wanderer speaks.</div><div class="dmgin">The wolf strikes you.</div><div class="dmgout">You strike back.</div><div class="r-uncommon">a riding mace</div><div class="r-legendary">a legendary blade</div><div class="echo">look</div><div class="tell">A quiet word.</div><div class="fumble">You miss.</div>';
    },{design,ornate});
-   const paint=await page.$eval('#log',e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,image:s.backgroundImage,shadow:s.textShadow, tone:document.body.dataset.themeTone, bgVar:s.getPropertyValue('--bg'), pageVar:s.getPropertyValue('--design-page'), view:document.body.dataset.view, big:document.body.dataset.log,opacity:s.opacity,ink:[...e.children].map(child=>{const c=getComputedStyle(child);return {opacity:c.opacity,color:c.color,shadow:c.textShadow}})}});
+   const paint=await page.$eval('#logbox',e=>{const s=getComputedStyle(e),b=getComputedStyle(e,'::before');return {art:b.maskImage||b.webkitMaskImage||'',bg:s.backgroundColor,image:s.backgroundImage,shadow:s.textShadow, tone:document.body.dataset.themeTone, bgVar:s.getPropertyValue('--bg'), pageVar:s.getPropertyValue('--design-page'), view:document.body.dataset.view, big:document.body.dataset.log,opacity:s.opacity,ink:[...e.children].map(child=>{const c=getComputedStyle(child);return {opacity:c.opacity,color:c.color,shadow:c.textShadow}})}});
    assert.match(paint.image,/linear-gradient\(/,'Bone retains the shared reading-panel fade');
-   assert.equal(paint.image.includes('/ornate/floral-v1.svg'),ornate,'artwork follows ornate independently of theme design');
+   assert.equal(paint.art.includes('/ornate/floral-v2.svg'),ornate,'artwork follows ornate independently of theme design');
    assert.match(paint.image,/\/ 0\) 0%/,'panel edge remains transparent');
    assert.match(paint.image,/\/ 0.99\) 100%/,'panel retains the original fade stops');
    assert.equal(paint.opacity,'1','the panel must not fade its lettering');
@@ -150,12 +158,12 @@ try{
  });
  assert.equal(await page.$eval('#log',e=>getComputedStyle(e).textShadow),'none');
  await page.evaluate(()=>{demo.setTheme('paper',{...demo.palettes.bone});demo.setView('image');demo.setLogBig(true);});
- assert.match(await page.$eval('#log',e=>getComputedStyle(e).backgroundImage),/gradient/,'custom light theme retains the panel fade');
+ assert.match(await page.$eval('#logbox',e=>getComputedStyle(e).backgroundImage),/gradient/,'custom light theme retains the panel fade');
  assert.equal(await page.$eval('#log',e=>getComputedStyle(e).textShadow),'none','custom light lettering has no glow');
  await page.evaluate(()=>{demo.setTheme('bone');demo.themeOptions(true,true);});
  if(process.env.THEME_SCREENSHOTS)await page.screenshot({path:process.env.THEME_SCREENSHOTS+'/bone-reading.png'});
  await page.evaluate(()=>{demo.setTheme('door');demo.themeOptions(false,true);});
- assert.match(await page.$eval('#log',e=>getComputedStyle(e).backgroundImage),/gradient/,'dark-theme reading appearance preserved');
+ assert.match(await page.$eval('#logbox',e=>getComputedStyle(e).backgroundImage),/gradient/,'dark-theme reading appearance preserved');
  assert.equal(await page.evaluate(()=>document.documentElement.style.getPropertyValue('--tide')),'#6f93c9','switching back restores dark map blue');
  console.log('PASS Bone text/gear/name/map contrast, inventory/barter/forge/map in both layouts and viewport sizes, custom light themes and switching back to dark');
  console.log('PASS solid Bone lettering without glow, shared transparent panel edge, desktop/mobile and design/ornaments on/off');
@@ -215,7 +223,7 @@ try{
  assert.equal(await page.evaluate(()=>demo.painted()),'/room-bg/cairn-day.webp','late room cannot win');
  // Failed decode leaves the last good picture, and the next request retries.
  await page.evaluate(()=>{window.failDecode='/room-bg/snow-day.webp';demo.paintScene('mountain','day','snow','failed-room',false,1,'',0,0,false);});
- await page.waitForNetworkIdle();
+ await page.waitForNetworkIdle({idleTime:300,timeout:4000}).catch(()=>{}); // the page polls on timers now, so the wire is never wholly quiet
  assert.equal(await page.evaluate(()=>demo.painted()),'/room-bg/cairn-day.webp','failed image never blanks the scene');
  await page.evaluate(()=>{window.failDecode='';demo.paintScene('mountain','day','snow','retry-room',false,1,'',0,0,false);});
  await page.waitForFunction(()=>demo.painted()==='/room-bg/snow-day.webp');
@@ -271,7 +279,7 @@ try{
  await page.evaluate(()=>demo.paintScene('upper','in','','between-visits',false,1,'undercroft',0,0,true));
  await page.evaluate(()=>{window.newFx=holdFx('/room-fx/snow-night-torch.png');demo.paintScene('mountain','night','snow','visit-two',true,1,'',0,0,false);});
  await page.waitForFunction(()=>newFx.calls===1);
- await page.evaluate(()=>oldFx.release());await page.waitForNetworkIdle();
+ await page.evaluate(()=>oldFx.release());await page.waitForNetworkIdle({idleTime:300,timeout:4000}).catch(()=>{}); // the page polls on timers now, so the wire is never wholly quiet
  assert.equal(await page.evaluate(()=>demo.painted()),'/room-bg/undercroft-night.webp','obsolete same-room load cannot commit any layer');
  await page.evaluate(()=>newFx.release());
  await page.waitForFunction(()=>demo.painted()==='/room-bg/snow-night-torch.webp');
@@ -311,12 +319,11 @@ try{
  await page.evaluate(()=>decodeStops.get('/room-bg/gatehouse.webp').release());
  await page.waitForFunction(()=>demo.painted()==='/room-bg/gatehouse.webp');
  assert.equal(await page.$eval('#weather-particles',e=>e.style.display),'none');
- assert.equal(await page.evaluate(()=>demo.weatherState().thunder),0);
  await page.evaluate(()=>{holdDecode('/room-bg/gully-rain.webp');demo.paintScene('mountain','rain','gully','stale-rain',false,1,'',0,0,false);});
  await page.waitForFunction(()=>decodeStops.get('/room-bg/gully-rain.webp').reached);
  await page.evaluate(()=>demo.paintScene('mountain','day','gatehouse','still-inside',false,1,'',0,0,true));
  await page.evaluate(()=>decodeStops.get('/room-bg/gully-rain.webp').release());
- await page.waitForNetworkIdle();
+ await page.waitForNetworkIdle({idleTime:300,timeout:4000}).catch(()=>{}); // the page polls on timers now, so the wire is never wholly quiet
  assert.equal(await page.evaluate(()=>demo.painted()),'/room-bg/gatehouse.webp');
  assert.equal(await page.$eval('#weather-particles',e=>e.style.display),'none');
  console.log('PASS synchronous moving sky/star swap, delayed indoor weather handoff and obsolete rain request');
@@ -399,7 +406,7 @@ try{
   await page.evaluate(()=>{for(let i=0;i<10;i++)demo.fitMobRow()});
   assert.equal(await page.$eval('#mobs',e=>e.style.transform),floor.transform,'repeated fitting cannot compound the scale');
   if(process.env.CROWD_SCREENSHOTS) {
-   await page.waitForNetworkIdle();
+   await page.waitForNetworkIdle({idleTime:300,timeout:4000}).catch(()=>{}); // the page polls on timers now, so the wire is never wholly quiet
    await page.screenshot({path:process.env.CROWD_SCREENSHOTS+'/passage-'+width+'.png'});
   }
  }

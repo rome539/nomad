@@ -38,16 +38,26 @@ const lines = src.split("\n");
 const wrong = [], bare = [];
 lines.forEach((l, i) => {
   if (/^\s*\/\//.test(l)) return;                       // comments may name anything
-  const dir = (l.match(/["(]\/(mob|room-bg|room-fx|sky|card-bg|door-bg)\//) || [])[1];
-  if (!dir) return;
   // A path being STORED is not a path being fetched: scene and sky are built
   // here and stamped where they are handed to the browser, and scenePainted is
   // bookkeeping that never reaches the network. Only a URL going straight into
   // src or backgroundImage has to carry its stamp on this line.
   if (/^\s*(scene|sky|scenePainted)\s*=/.test(l)) return;
-  if (!/\?v=/.test(l)) { bare.push((i + 1) + ": /" + dir + "/"); return; }
-  const used = (l.match(/\?v=" \+ (\w+)/) || [])[1];
-  if (used !== OWNS[dir]) wrong.push((i + 1) + ": /" + dir + "/ uses " + used + ", wants " + OWNS[dir]);
+  // Each asset path on the line is checked against the stamp right after it,
+  // so a line building two URLs (a loot picture or a mob picture) reads each.
+  // A path inside indexOf() is a lookup, not a fetch.
+  const re = /["(]\/(mob|room-bg|room-fx|sky|card-bg|door-bg)\//g;
+  let m;
+  while ((m = re.exec(l))) {
+    const dir = m[1];
+    if (/indexOf\($/.test(l.slice(0, m.index))) continue;
+    const rest = l.slice(m.index);
+    const next = rest.slice(1).search(/["(]\/(mob|room-bg|room-fx|sky|card-bg|door-bg|loot)\//);
+    const own = next < 0 ? rest : rest.slice(0, next + 1);
+    if (!/\?v=/.test(own)) { bare.push((i + 1) + ": /" + dir + "/"); continue; }
+    const used = (own.match(/\?v=" \+ (\w+)/) || [])[1];
+    if (used !== OWNS[dir]) wrong.push((i + 1) + ": /" + dir + "/ uses " + used + ", wants " + OWNS[dir]);
+  }
 });
 t("no asset URL is built without a version stamp", bare.length === 0, bare.join("; ") || "all stamped");
 t("no asset URL carries another kind's stamp", wrong.length === 0, wrong.join("; ") || "all correct");

@@ -2287,6 +2287,7 @@ export class ZoneDO implements DurableObject {
       case "build": return den.cmdBuild(this, session, cmd.arg);
       case "stretch": return den.cmdStretch(this, session, cmd.arg);
       case "draw": return den.cmdDraw(this, session, cmd.arg);
+      case "bolt": return den.cmdBolt(this, session);
       case "bunk": return den.cmdBunk(this, session, cmd.arg);
       case "unbunk": return den.cmdUnbunk(this, session, cmd.arg);
       case "den": return den.cmdDen(this, session);
@@ -2721,6 +2722,7 @@ export class ZoneDO implements DurableObject {
     // and old iron (the hollow) — and gone is gone.
     session.items.splice(session.items.indexOf(carried), 1);
     await removeItemRow(this.env.DB, carried.rowId);
+    if (carried.serial !== null) await voidMint(this.env.DB, carried.serial); // the ground keeps no seals
     const shattered = THROW_TOUGH.has(carried.itemId)
       ? false // the hammerstone survives every landing — dense past its size
       : chance(HOLLOW.has(tmpl.id) ? THROW_SHATTER_HOLLOW : THROW_SHATTER);
@@ -2794,6 +2796,7 @@ export class ZoneDO implements DurableObject {
     // It leaves your hand and lies where it falls — no target, so no shatter roll.
     session.items.splice(session.items.indexOf(carried), 1);
     await removeItemRow(this.env.DB, carried.rowId);
+    if (carried.serial !== null) await voidMint(this.env.DB, carried.serial);
     if (carried.inviteCode) this.dropInstance(session.roomId, carried.itemId, undefined, carried.inviteCode);
     else this.ground.set(session.roomId, [...(this.ground.get(session.roomId) ?? []), carried.itemId]);
     this.stampFresh(session.roomId, carried.itemId);
@@ -7175,11 +7178,14 @@ export class ZoneDO implements DurableObject {
       this.ground.set(fell, [...(this.ground.get(fell) ?? []), ...scattered.filter((c) => !c.journalId && !c.inviteCode).map((c) => c.itemId)]);
       for (const c of scattered) if (!c.journalId && !c.inviteCode) this.stampFresh(fell, c.itemId);
       for (const c of scattered) {
+        // The seal cracks first, for everything: a sealed map or journal falls
+        // as its own copy, and the continue below used to skip this line, so
+        // its seal stayed live on the ledger forever (found 2026-10-23).
+        if (c.serial !== null) await voidMint(this.env.DB, c.serial);
         if (c.journalId || c.inviteCode) { this.dropInstance(fell, c.itemId, c.journalId, c.inviteCode); continue; }
         if (this.world!.itemTemplates.get(c.itemId)?.edible && !FOOD_KEEPS.has(c.itemId)) {
           this.rot.push({ itemId: c.itemId, roomId: fell, at: Date.now() + ROT_MS });
         }
-        if (c.serial !== null) await voidMint(this.env.DB, c.serial);
         if (this.isGear(c.itemId)) this.groundCond.set(`${c.itemId}@${fell}`, c.condition); // the spill keeps its wear
         if (c.itemId === LANTERN_ITEM) this.groundCond.set(light.fuelKey(fell), c.fuel ?? 0); // ...and a lantern its fat
         if (c.rolledTraits) this.groundRolled.set(`${c.itemId}@${fell}`, c.rolledTraits); // and whatever it rolled — the looter inherits the roll (099)
@@ -8680,6 +8686,7 @@ export class ZoneDO implements DurableObject {
     const idx = session.items.indexOf(carried);
     if (idx >= 0) session.items.splice(idx, 1);
     await removeItemRow(this.env.DB, carried.rowId);
+    if (carried.serial !== null) await voidMint(this.env.DB, carried.serial); // gone is gone, seal and all
     this.send(session, `${cap(tmpl.name)} is worn through — it comes apart in your ${tmpl.slot === "weapon" ? "grip" : "hands"} and is gone.`, "wear");
     this.sendStatus(session); // the pill goes with the piece, not on the next beat
     this.refreshRoomCtx(session.roomId);

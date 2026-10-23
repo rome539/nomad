@@ -41,7 +41,7 @@ ok(other === '""' || other === "''",
 
 // ...and the client side of the contract, so the two cannot drift apart.
 const pc = strip(P);
-ok(/if\s*\(\s*place\s*!==\s*undefined\s*\)\s*lastPlace\s*=/.test(pc),
+ok(/if\s*\(\s*place\s*!==\s*undefined\s*\)\s*\{?\s*lastPlace\s*=/.test(pc),
    "the client still clears lastPlace only on a present field");
 
 console.log(fail ? "\n" + fail + " FAILED" : "\nplace clears — a singular room stays where it is");

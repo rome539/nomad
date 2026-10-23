@@ -7055,29 +7055,29 @@ export const DEN_BAR_SCRAP = 3;
 // WHAT ELSE A DEN CAN HAVE (rome, 2026-10-19: more than the bar). Each is an
 // OBJECT you build once, the bar's own shape, never a level. Costs are paid out
 // of the pack, on the spot. What each does is read where it bites (den.ts).
-export const DEN_BUILDS: Record<string, { name: string; cost: { id: string; n: number }[]; does: string; built: string; needs?: string }> = {
+export const DEN_BUILDS: Record<string, { name: string; cost: { id: string; n: number }[]; does: string; built: string; needs?: string; tool?: DenTool; require?: DenTool }> = {
   hearth: {
-    name: "a hearth", cost: [{ id: "split-wood", n: 10 }, { id: "iron", n: 1 }],
+    name: "a hearth", tool: "heavy", cost: [{ id: "split-wood", n: 10 }, { id: "iron", n: 1 }],
     does: "rest by it mends like the gatehouse fire, and the cold cannot reach it; it burns a bundle of split wood each time you lie down",
     built: "You lay a ring of stones, set an iron grate in it, and cut a smoke-hole in the roof. A den with a fire in it is a different place to come home to. (It burns split wood: a bundle each time you rest by it.)",
   },
   hides: {
-    name: "oiled hides over the shelf", cost: [{ id: "leather-offcuts", n: 8 }],
+    name: "oiled hides over the shelf", tool: "fine", cost: [{ id: "leather-offcuts", n: 8 }],
     does: "gear on the shelf rusts at half the rate",
     built: "You stitch the offcuts into a cover, work oil into it, and hang it over the shelf. The damp will find its way under, but slowly.",
   },
   rattle: {
-    name: "a bone rattle on the door", cost: [{ id: "bone-offcuts", n: 6 }],
+    name: "a bone rattle on the door", tool: "fine", cost: [{ id: "bone-offcuts", n: 6 }],
     does: "anything coming onto the ground outside wakes you before it is on you",
     built: "You string the bone and horn on a cord across the inside of the door. Anything that comes onto the ground outside sets it going.",
   },
   rack: {
-    name: "a second rack", cost: [{ id: "split-wood", n: 10 }],
+    name: "a second rack", tool: "wood", cost: [{ id: "split-wood", n: 10 }],
     does: "the shelf holds 20 of everything that is not gear, not 12",
     built: "You pin a second rack of split wood up beside the first. More room for the things that are not gear.",
   },
   larder: {
-    name: "a larder", cost: [{ id: "split-wood", n: 6 }, { id: "leather-offcuts", n: 4 }],
+    name: "a larder", tool: "wood", cost: [{ id: "split-wood", n: 6 }, { id: "leather-offcuts", n: 4 }],
     does: "food on the shelf goes off at half the rate",
     built: "You box in a corner with split wood, line it with leather, and set it where the draught is coolest. Food kept in it will keep longer.",
   },
@@ -7085,36 +7085,68 @@ export const DEN_BUILDS: Record<string, { name: string; cost: { id: string; n: n
   // itself without becoming a second gatehouse: food, water, an edge, leather,
   // and two ways of knowing what is outside before it is inside.
   smoke: {
-    name: "a smoke rack over the hearth", cost: [{ id: "split-wood", n: 6 }], needs: "hearth",
+    name: "a smoke rack over the hearth", tool: "wood", cost: [{ id: "split-wood", n: 6 }], needs: "hearth",
     does: "'cure' hangs raw meat or fish in the hearth smoke; it cures while you are gone and nobody else can take it down",
     built: "You pin a rack of split wood up over the hearth, high enough to catch the smoke and clear of the flame. Meat hung here cures while you are away, and nobody else's hand will reach it.",
   },
   butt: {
-    name: "a water butt", cost: [{ id: "split-wood", n: 6 }, { id: "leather-offcuts", n: 4 }],
+    name: "a water butt", tool: "wood", cost: [{ id: "split-wood", n: 6 }, { id: "leather-offcuts", n: 4 }],
     does: "the rain off the roof fills it, up to 6 draughts of water; 'draw water' takes one",
     built: "You coop a butt out of split wood, seal the seams with leather, and set it under the edge of the roof where the rain runs off. It will fill when it rains.",
   },
   whet: {
-    name: "a whetstone", cost: [{ id: "split-wood", n: 4 }, { id: "iron", n: 1 }],
+    name: "a whetstone", tool: "heavy", cost: [{ id: "split-wood", n: 4 }, { id: "iron", n: 1 }],
     does: "'repair' keeps a working edge here, like the garrison's old stones: up to worn, never back to sound",
     built: "You set a flat stone in a frame of split wood and fit an iron crank to the wheel. It keeps a working edge, not a good one: past that, a piece wants a forge.",
   },
   frame: {
-    name: "a stretching frame", cost: [{ id: "split-wood", n: 8 }],
+    name: "a stretching frame", tool: "wood", cost: [{ id: "split-wood", n: 8 }],
     does: "'stretch <pelt>' scrapes a pelt or hide down to leather",
     built: "You lash a frame of split wood together and lean it against the wall. A pelt pegged out on it and scraped will come off as leather.",
   },
   stakes: {
-    name: "stakes in the ground outside", cost: [{ id: "split-wood", n: 8 }, { id: "iron", n: 2 }],
+    name: "stakes in the ground outside", tool: "heavy", cost: [{ id: "split-wood", n: 8 }, { id: "iron", n: 2 }],
     does: "the first thing to come onto the ground after dark runs onto them and is hurt, once a night; you, and those you have bunked, know where they are",
     built: "You drive sharpened stakes into the ground outside, iron-tipped and angled out, where something coming in the dark will not see them. You know where every one of them is.",
   },
   slit: {
-    name: "a slit in the wall", cost: [{ id: "leather-offcuts", n: 2 }],
+    name: "a slit in the wall", tool: "fine", cost: [{ id: "leather-offcuts", n: 2 }],
     does: "'look' from inside shows what is standing on the ground outside",
     built: "You cut a narrow slit through the wall beside the door, at eye height, and hang a leather flap over it. You can see the ground outside without opening anything.",
   },
+  // THE SECOND LEVEL (rome, 2026-10-22, mig 329). Each stands on a first-level
+  // build (`needs`) and does not go up at all without its tool (`require`).
+  cellar: {
+    name: "a root cellar under the larder", cost: [{ id: "split-wood", n: 8 }, { id: "iron", n: 1 }], needs: "larder", tool: "dig", require: "dig",
+    does: "food on the shelf keeps four times as long, and the shelf holds 8 more of everything that is not gear",
+    built: "You break the floor of the larder open with the pick and dig down until the air goes cold and still, then shore the sides with split wood. Food kept down here hardly ages at all.",
+  },
+  bolthole: {
+    name: "a bolt-hole", cost: [{ id: "split-wood", n: 10 }, { id: "iron", n: 1 }], needs: "barred", tool: "dig", require: "dig",
+    does: "a tunnel under the wall to the next room over ('build bolthole <direction>' says which); 'bolt' takes you out through it, unseen at your own door",
+    built: "You dig down beside the wall and out under it, shoring as you go, until the pick breaks turf again. It comes up in the next room over, under cover. Nobody watching your door will see you leave.",
+  },
+  snares: {
+    name: "a snare line", cost: [{ id: "linen-strips", n: 4 }, { id: "split-wood", n: 2 }], needs: "stakes", tool: "fine", require: "fine",
+    does: "most nights something small runs into them, and it is waiting on your shelf when you come in",
+    built: "You cut and set a line of snares along the runs past the stakes, low and fine, where small things go at night.",
+  },
 };
+// THE WORK OF IT (rome, 2026-10-22: a pick digs the tide door faster, and a
+// den should go up the same way). Every build is DEN_BUILD_WORK beats of
+// 'build <thing>', a beat at most every DEN_BUILD_BEAT_MS, and the right tool
+// in hand or pack does two beats' work in one. The materials are spent when
+// the last beat lands. Which tool: an axe for the woodwork, something heavy
+// for the stone and iron, a blade for the fine work.
+export type DenTool = "wood" | "heavy" | "fine" | "dig";
+export const DEN_BUILD_WORK = 4;
+export const DEN_BUILD_BEAT_MS = 8_000;
+export const DEN_TOOL_WORD: Record<DenTool, string> = { wood: "an axe", heavy: "a hammer, a mace or a pick", fine: "a knife or any blade", dig: "a pick" };
+export const DEN_CELLAR_AGE_MULT = 0.25;   // food on a cellared shelf ages at a quarter
+export const DEN_CELLAR_ROOM = 8;          // ...and the shelf holds this many more
+export const DEN_SNARE_EVERY_MS = 12 * 3_600_000; // one try a night
+export const DEN_SNARE_ODDS = 0.6;
+export const DEN_SNARE_CATCH = ["hare-carcass", "rat-meat"];
 // The second six's numbers (mig 327).
 export const DEN_BUTT_CAP = 6;                    // draughts the water butt holds
 export const DEN_BUTT_RAIN_MS = 10 * 60_000;      // one draught for every ten minutes of rain on the roof

@@ -30,7 +30,7 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +grab("MOB_EYES")+"\n"
   +'var viewMode="image", lastMobs="", anims=[], animTimer=null, stillness=false, MOB_V="13";\n'
   // The floor bag and the chests ride the same paint (2026-10-12/13).
-  +grab("CHEST_ART")+"\n"+'var LOOT_BAGS=[], mobLoose=0, mobChests=[], LOOT_V="1";\n'+fn("lootBag")+"\n"
+  +block("CHEST_ART")+"\n"+'var LOOT_BAGS=[], mobLoose=0, mobChests=[], LOOT_V="1";\n'+fn("lootBag")+"\n"
   +'var lastSky="day", lastRed=0;\n'
   // setSky now sets BOTH, because the tests were written when one value carried
   // both facts. setRed below is what a blood moon behind weather looks like: the
@@ -42,7 +42,7 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +"mobsEl = _stub;   // the lifted block declares its own, which the stub must win\n"
   +"ctx.clearAnims=function(){ anims.length=0; mobHold=0; lastMobs=''; }; ctx.paintMobs=paintMobs; ctx.mobBeat=mobBeat; ctx.made=()=>made; ctx.anims=()=>anims; ctx.mobVh=mobVh;";
 new Function("ctx","_stub","document","window",code)(ctx,mobsEl,
-  {createElement:()=>el(), getElementById:()=>null}   /* no #scene: picBoxPx falls back to the window, its text-mode path */,{innerWidth:1512,innerHeight:850});
+  {createElement:()=>el(), getElementById:()=>null, body:{setAttribute(){},removeAttribute(){},classList:{add(){},remove(){},toggle(){}}}}   /* no #scene: picBoxPx falls back to the window, its text-mode path */,{innerWidth:1512,innerHeight:850});
 
 let fail=0; const t=(n,c,e)=>{console.log((c?"  ok   ":"  FAIL ")+n+(e?"   "+e:""));if(!c)fail++;};
 

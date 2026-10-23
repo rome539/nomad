@@ -23,6 +23,7 @@ function hideModalChat(){} function setNote(e,t){e.textContent=t || ''} function
 function rarityClass(r){return 'r-'+r}
 function gearNameSpan(n){var e=document.createElement('span');e.textContent=n;return e}
 var knownRooms={}; function sndOne(){} function fitPicture(){} function closeJournal(){}
+${PAGE.match(/var SLOT_WORD = \{[^}]*\};/)[0]}
 ${modalJS}
 ${mapJS}
 ${focusJS}

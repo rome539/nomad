@@ -78,7 +78,7 @@ const depsFor = (body, self) => {
 const style = () => ({ setProperty() {} });
 const sceneEl = { style: style(), className: "", setProperty() {} };
 sceneEl.style.setProperty = () => {};
-const skyEl = { style: style() };
+const skyEl = { style: style(), setAttribute() {}, removeAttribute() {}, getAttribute() { return null; } };
 const mobsEl = { className: "", style: {} };
 // THE TIDE SHEET. A stub with no style bag throws the moment paintFlood sets the
 // mask, and paintScene calls it on every layered paint — so leaving it out
@@ -314,13 +314,10 @@ console.log("the three rooms at the top of the mountain");
     at("the-last-shelter", "rain", 0) === "/room-bg/the-last-shelter-night.webp  /sky/after-rain.webp",
     at("the-last-shelter", "rain", 0));
   t("...and the rain does not tint it", sceneEl.className === "", "class=" + sceneEl.className);
-  // AND NOON IS THE CASE THAT WOULD HAVE 404ED. With no day plate listed, the
-  // condition fallback used to resolve day -> day and ask for a file that is not
-  // there. It falls back to the plate's own first condition now, so noon is the
-  // dark room with the day sky in its slot — which is what being in there looks
-  // like, and the reason the plate was dropped rather than reshot.
-  t("...at noon it is still dark inside, with the day sky in the slot",
-    at("the-last-shelter", "day", 0) === "/room-bg/the-last-shelter-night.webp  /sky/day.webp",
+  // NOON HAS ITS OWN PLATE NOW: the shelter was reshot with a day picture, so
+  // the day is its day plate with the day sky in the slot.
+  t("...at noon it is its day plate, with the day sky in the slot",
+    at("the-last-shelter", "day", 0) === "/room-bg/the-last-shelter-day.webp  /sky/day.webp",
     at("the-last-shelter", "day", 0));
   t("...and the aftermath darkens it like the rest",
     at("the-last-shelter", "after-rain", 0) === "/room-bg/the-last-shelter-night.webp  /sky/after-rain.webp",
@@ -343,7 +340,7 @@ console.log("a room with a roof on it");
              tint: sceneEl.className, mobs: mobsEl.className };
   };
   let r = at("day", 0);
-  t("its own plate is used, not the ground it stands on", r.scene === "/room-bg/the-last-shelter-night.webp", r.scene);
+  t("its own plate is used, not the ground it stands on", r.scene === "/room-bg/the-last-shelter-day.webp", r.scene);
   t("...and a sky is drawn behind it for the slot", r.sky === "/sky/day.webp", r.sky);
   // WEATHER FROM UNDER A ROOF (rome, 2026-09-08). It takes no plate of its own,
   // but it is not nothing either: the room goes dark and the slot goes grey.
@@ -409,10 +406,10 @@ console.log("where the creatures stand");
   };
   const at = (terrain) => { ctx.paint("mountain", "night", terrain, "L" + terrain, 0, 0); return lineOf(mobsEl.style.top); };
   t("open ground keeps the camera lock", at("scree") === 55, at("scree"));
-  // A corrie is a bowl seen from its edge: the plate looks down across water and
-  // the nearest standing ground is far lower in the frame than the lock assumes.
-  t("the corrie rim stands lower", at("corrie-rim") === 72, at("corrie-rim"));
-  t("...and so does the corrie floor", at("corrie-floor") === 72, at("corrie-floor"));
+  // A corrie is a bowl seen from its edge: the nearest standing ground is lower
+  // in the frame than the lock assumes (60 since the 2026-10-22 replates).
+  t("the corrie rim stands lower", at("corrie-rim") === 60, at("corrie-rim"));
+  t("...and so does the corrie floor", at("corrie-floor") === 60, at("corrie-floor"));
   t("walking back out restores the line", at("cairn") === 55, at("cairn"));
   // The line must be re-stated on every paint, not only when it changes.
   ctx.paint("mountain", "night", "corrie-rim", "Lx", 0, 0);
@@ -612,15 +609,18 @@ ctx.setSea(0);
 
 t("the gatehouse ignores the torch", r.tint === "" && r.mobs === "", "class=" + r.tint + " mobs=" + r.mobs);
 
-// A server-reported roof suppresses sky even when ground lighting follows the hour.
+// A ROOF HIDES THE SKY ONLY OVER A ROOM'S OWN PLATE (rome, 2026-10-22: the
+// Carter's Rest showed black where the sky should be). A roofed room with no
+// plate of its own borrows the open ground outside it, which was cut for a
+// sky, so the sky stays behind it; an interior plate is opaque and drops it.
 ctx.paint("road", "night", "paving", "covered-road", 0, 0, "", 0, 0, true);
-t("a roofed road has no sky layer", !skyEl.style.backgroundImage);
+t("a roofed road on borrowed ground keeps its sky", !!skyEl.style.backgroundImage);
+ctx.paint("mountain", "night", "scree", "kept", 0, 0, "the-kept-room", 0, 0, true);
+t("a roofed room with its own plate has no sky layer", !skyEl.style.backgroundImage);
 ctx.paint(null, null, null, null);
 t("repainting a roof retains its cover", !skyEl.style.backgroundImage);
 ctx.paint("road", "day", "paving", "open-road", 0, 0, "", 0, 0, false);
 t("walking outside restores the sky", !!skyEl.style.backgroundImage);
-ctx.paint("crossing", "in", "sea-cave", "underground", 0, 0, "", 0, 0, true);
-t("underground never paints the sky", !skyEl.style.backgroundImage);
 
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");

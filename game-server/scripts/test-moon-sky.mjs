@@ -11,6 +11,9 @@ const {default:puppeteer}=await import(requireCapture.resolve('puppeteer-core'))
 const root=fileURLToPath(new URL('..',import.meta.url));
 const {code}=await transform(fs.readFileSync(root+'/src/public.ts','utf8'),{loader:'ts',format:'esm'});
 const {PAGE}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+const SKY_W={moon:+PAGE.match(/moon: \[(\d+), \d+\]/)[1],blood:+PAGE.match(/blood: \[(\d+), \d+\]/)[1]};
+const fm=PAGE.match(/name === "blood" \? \[(\d+), (\d+), (\d+)\] : name === "moon" \? \[(\d+), (\d+), (\d+)\]/);
+const FOCUS={blood:[+fm[1],+fm[2],+fm[3]],moon:[+fm[4],+fm[5],+fm[6]]};
 const hook=`window.demo={skyPick,fitSky,grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,view:()=>viewMode,painted:()=>scenePainted};`;
 const pageHTML=PAGE.replace(/<script src="https:\/\/accounts.google.com[^>]*><\/script>/,'').replace('</script>\n</body>',hook+'</script>\n</body>');
 const browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
@@ -37,10 +40,13 @@ try{
    for(let day=0;day<12;day++) {
     await page.evaluate(({kind,day})=>{demo.paintScene('mountain',kind,'moor','audit-moon-'+day,0,day);demo.fitPicture();},{kind,day});
     await page.waitForFunction(kind=>document.getElementById('sky').style.backgroundImage.includes('/sky/'+kind+'.webp'),{},kind);
-    const sky=await page.evaluate(()=>{demo.fitPicture();const e=document.getElementById('sky'),r=e.getBoundingClientRect();return {w:r.width,h:r.height,position:e.style.backgroundPosition,turn:e.style.transform};});
+    const sky=await page.evaluate(()=>{demo.fitPicture();const e=document.getElementById('sky'),r=e.getBoundingClientRect();return {w:r.width,h:r.height,position:e.style.backgroundPosition,size:e.style.backgroundSize,turn:e.style.transform};});
     turns.add(sky.turn);assert(['','scaleX(-1)'].includes(sky.turn),'calendar skies never turn upside down');
-    const [x,y]=sky.position.split(' ').map(parseFloat),s=Math.max(sky.w/1584,sky.h/993);
-    const [cx,cy,radius]=kind==='blood'?[462,169,83]:[468,185,68];
+    // The skies are two-screen strips now (2026-09-28), so the scale is read
+    // off the size the page drew the picture at, and the disc is where it sits
+    // in that picture (the client's fitSky focus).
+    const [x,y]=sky.position.split(' ').map(parseFloat),s=parseFloat(sky.size)/SKY_W[kind];
+    const [cx,cy,radius]=FOCUS[kind];
     const px=x+cx*s,py=y+cy*s,r=radius*s;
     assert(px-r>=-1&&px+r<=sky.w+1&&py-r>=-1&&py+r<=sky.h+1,'moon must remain inside viewport: '+JSON.stringify({kind,width,height,sky,px,py,r}));
    }

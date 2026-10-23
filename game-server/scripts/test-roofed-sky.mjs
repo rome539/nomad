@@ -39,12 +39,14 @@ function skyFor(id, { night = false, raining = false, inside = false } = {}) {
     events: {
       weatherNow: () => (raining ? "rain" : ""), snowed: () => false,
       foggy: () => false, raining: () => raining, phaseOf: () => "",
+      wxPhase: () => "", afterRainCleared: () => true, rainNearby: () => false,
     },
     isNight: () => night, isBloodMoon: () => false, isFullMoon: () => false,
     eclipsePhase: () => "idle", isDusk: () => false, isDawn: () => false,
     session: { pubkey: "k", roomId: id },
     self: {
       outOfWorld: () => inside,
+      inGatehouse: { has: () => inside },
       world: { entryRooms: { has: (r) => r === "the-relay-house" }, rooms: { get: (r) => ROOMS[r] } },
       artSkyFor: null,
     },

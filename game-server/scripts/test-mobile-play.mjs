@@ -21,7 +21,7 @@ var BENCH_CHIP='inventory',DEN_CHIP='shelf',TRADE_CHIP='trade',FORGE_CHIP='forge
 var hist=[],histAt=-1,viewMode='text',MODAL_SURFACES='#bench, #trade, #mapm, #jrnl, #idpanel, #setpanel';
 var soundOn=false,actx=null;
 function sendCmd(s){sent.push(s)} function benchSend(s){sent.push('bench:'+s)} function tradeSend(){} function forgeSend(){} function bountySend(){}
-function maybeReload(){} function fitMobRow(){} function playSounds(){} function classify(){return ''}
+function maybeReload(){} function fitMobRow(){} function fitSky(){} function playSounds(){} function classify(){return ''}
 function paintVoice(el,t){el.textContent=t} function modalChatPush(){}
 ${['chipLabel','chipKind','chipButton','renderChips','installModalTapGuard','fitPicture','print'].map(fn).join('\n')}
 installModalTapGuard(chipsEl,false);

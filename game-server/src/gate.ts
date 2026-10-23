@@ -1093,14 +1093,7 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   }
   const change = trade.paid > cost ? " He gives no change." : "";
   const seals = cracked ? " He cracks the gate's seals without ceremony." : "";
-  // ONE LINE PER KIND, WITH A COUNT (rome, 2026-10-22: a big order read out
-  // every bundle of wood one at a time, the length of the window).
-  const counts = new Map<string, number>();
-  for (const l of slid) counts.set(l, (counts.get(l) ?? 0) + 1);
-  const rows = [...counts].map(([l, n]) => n > 1 ? `${n} \u00d7 ${l}` : l);
-  const goods = rows.length === 1 && slid.length === 1
-    ? `The keeper slides ${slid[0]} across the counter.`
-    : `The keeper slides it all across the counter:\n  ${rows.join("\n  ")}`;
+  const goods = receiptGoods(slid);
   session.buying = undefined;
   // No per-purchase broadcast: an active shopper was flooding the whole gatehouse
   // with "X trades at the keeper's hatch." on every settle (rome, 2026-07-18).
@@ -1110,6 +1103,17 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     ? ` You took the last ${lastOnes.map((n) => n.replace(/^(a|an|some|the)\s+/i, "")).join(" and the last ")} he had; that shelf behind him stands bare.`
     : "";
   return `${line}${seals}\n${goods}${change} The keeper's wares carry the gate's mark already — sealed, and yours.${bare}`;
+}
+
+// ONE LINE PER KIND, WITH A COUNT (rome, 2026-10-22: a big order read out
+// every bundle of wood one at a time, the length of the window).
+export function receiptGoods(slid: string[]): string {
+  const counts = new Map<string, number>();
+  for (const l of slid) counts.set(l, (counts.get(l) ?? 0) + 1);
+  const rows = [...counts].map(([l, n]) => n > 1 ? `${n} \u00d7 ${l}` : l);
+  return rows.length === 1 && slid.length === 1
+    ? `The keeper slides ${slid[0]} across the counter.`
+    : `The keeper slides it all across the counter:\n  ${rows.join("\n  ")}`;
 }
 
 export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promise<void> {
