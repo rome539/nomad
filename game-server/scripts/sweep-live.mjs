@@ -190,6 +190,10 @@ for (const t of all("SELECT id, bleed FROM mob_templates WHERE bleed != CAST(ble
   flag('creature with a fractional bleed', t.id, String(t.bleed));
 for (const t of all("SELECT id, bleed FROM item_templates WHERE bleed != CAST(bleed AS INTEGER)"))
   flag('item with a fractional bleed', t.id, String(t.bleed));
+// ...and a creature's second drop is never its first one over again (2026-10-23:
+// the roe deer's haunch came twice, once as its trophy and once as its meat).
+for (const t of all("SELECT k.template_id, k.key_item FROM mob_keys k JOIN mob_templates m ON m.id = k.template_id WHERE k.key_item = m.loot_item"))
+  flag('creature that drops the same thing twice', t.template_id, t.key_item);
 
 // ---- letters
 const invites = new Map(all('SELECT * FROM invites').map(i => [i.code, i]));
