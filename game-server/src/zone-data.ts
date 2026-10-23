@@ -908,6 +908,13 @@ export function stuffCount(name: string, n: number): string {
 // The gate keeper deals in kind: barter value ≥ this and his manner changes.
 // What clears the bar is never written down anywhere a player can read.
 export const RICH_TENDER = 15;
+// WHAT YOUR GOODS ARE WORTH, AND HOW YOU COME TO KNOW IT (rome, 2026-10-23).
+// The barter window marks each of your goods with a rough worth from the start
+// (one to four pips, the bands below), and once you have sold the keeper this
+// many of a kind you know its price outright, and the mark becomes the number.
+export const KEEPER_LEARN_SALES = 3;
+export const WORTH_MARK_AT = [2, 5, 15];   // under 2 is one pip, 2-4 two, 5-14 three, 15 and up four
+
 // The hard currency wears many faces (mig 089): a kept tin, a crushed pack off a
 // dead soldier, a twist of hand-rolled leaf from the deep. All worth the same
 // (barter 20 — rich tender), all smokeable, and NONE of it ever named as money

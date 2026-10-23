@@ -18,7 +18,7 @@ import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, isFullMoon, moonPhase, eclipsePhase, skyBand, halfFrac } from "./zone-util";
-import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
+import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, KEEPER_LEARN_SALES, WORTH_MARK_AT, GEAR_FAILING_AT, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, FENCE_MATS, TORCH_ITEM,
@@ -923,6 +923,35 @@ export async function cmdBounty(z: ZoneDO, session: Session, arg: string): Promi
   return z.send(session, lines.join("\n"));
 }
 
+// WHAT ONE COPY FETCHES (rome, 2026-10-23: worn gear should be worth less than
+// sound). Gear pays its barter scaled by its condition, and gear at the edge of
+// failing (GEAR_FAILING_AT) fetches nothing. The chalked want doubles whatever
+// is left. Everything that is not gear pays its barter flat.
+export function goodsWorth(z: ZoneDO, c: CarriedItem): number {
+  const t = z.world!.itemTemplates.get(c.itemId);
+  const base = t?.barter ?? 0;
+  if (base <= 0) return 0;
+  let worth = base;
+  if (z.isGear(c.itemId)) {
+    if (c.condition <= GEAR_FAILING_AT) return 0;
+    worth = base * Math.min(100, c.condition) / 100;
+  }
+  return roundTender(worth * events.wantMult(z, c.itemId));
+}
+// One to four pips for a worth nobody has learned yet.
+export function worthMark(worth: number): number {
+  return 1 + WORTH_MARK_AT.filter((at) => worth >= at).length;
+}
+export function worthPips(mark: number): string {
+  return "\u25cf".repeat(mark) + "\u25cb".repeat(4 - mark);
+}
+// The kinds this wanderer knows the price of: sold KEEPER_LEARN_SALES or more.
+export async function keeperKnows(z: ZoneDO, pubkey: string): Promise<Set<string>> {
+  const res = await z.env.DB.prepare("SELECT item_id FROM keeper_known WHERE pubkey = ? AND sold >= ?")
+    .bind(pubkey, KEEPER_LEARN_SALES).all<{ item_id: string }>();
+  return new Set((res.results ?? []).map((r) => r.item_id));
+}
+
 export async function offerCore(z: ZoneDO, session: Session, carried: CarriedItem, from: string): Promise<string> {
   const world = z.world!;
   const trade = session.buying!;
@@ -935,11 +964,12 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
   // deal. Stash and salvage silently unequip, but those keep the piece or its
   // metal — this hands it across a counter and it is GONE.
   if (carried.equipped) return `You'd have to take ${t.name} off first. The keeper deals in goods, not the clothes on your back.`;
-  trade.escrow.push({ row: carried.rowId, from });
   // The chalked want (events): the thing on the hatch counts double while
   // the chalk lasts — and his manner gives it away before any tally could.
   const wanted = events.wantMult(z, carried.itemId);
-  const worth = t.barter * wanted;
+  const worth = goodsWorth(z, carried);
+  if (worth <= 0) return `The keeper turns ${t.name} over and hands it back. It's past mending, and no use to him.`;
+  trade.escrow.push({ row: carried.rowId, from });
   trade.paid = roundTender(trade.paid + worth);
   // His manner is the only appraisal anyone gets.
   let line: string;
@@ -980,13 +1010,19 @@ export async function offerCore(z: ZoneDO, session: Session, carried: CarriedIte
     if (item) onCounter.push({ entry: e, item });
   }
   trade.escrow = onCounter.map((o) => o.entry);
-  trade.paid = roundTender(onCounter.reduce(
-    (sum, o) => sum + (world.itemTemplates.get(o.item.itemId)?.barter ?? 0) * events.wantMult(z, o.item.itemId), 0));
+  trade.paid = roundTender(onCounter.reduce((sum, o) => sum + goodsWorth(z, o.item), 0));
   if (trade.paid < cost) {
     trade.settling = false; // the settle didn't happen — a later offer may square it
     return `${line} The keeper re-counts and shakes his head — the counter's short. (${trade.paid} of ${cost}.)`;
   }
   let cracked = false;
+  // Every kind sold counts toward knowing its price (KEEPER_LEARN_SALES).
+  const soldKinds = new Map<string, number>();
+  for (const o of onCounter) soldKinds.set(o.item.itemId, (soldKinds.get(o.item.itemId) ?? 0) + 1);
+  for (const [itemId, n] of soldKinds) {
+    await z.env.DB.prepare("INSERT INTO keeper_known (pubkey, item_id, sold) VALUES (?, ?, ?) ON CONFLICT(pubkey, item_id) DO UPDATE SET sold = sold + excluded.sold")
+      .bind(session.pubkey, itemId, n).run();
+  }
   for (const o of onCounter) {
     if (o.item.serial !== null) {
       await voidMint(z.env.DB, o.item.serial);
@@ -1203,7 +1239,36 @@ export async function cmdOffer(z: ZoneDO, session: Session, arg: string): Promis
     z.sendCtx(session);
     return z.send(session, "You wave the trade off. The keeper sweeps your goods back across the counter without a word.");
   }
-  if (!arg) return z.send(session, `You've laid ${trade.paid} of ${cartCost(trade)} on the counter so far.`);
+  if (!arg) {
+    // The window's goods column, as text (modal changes mirror text): what you
+    // could lay down, each with its rough mark, or its price once you know it.
+    const known = await keeperKnows(z, session.pubkey);
+    const lines = [`You've laid ${trade.paid} of ${cartCost(trade)} on the counter so far. What you could offer:`];
+    const places: Array<[string, CarriedItem[]]> = [
+      ["pack", session.items],
+      ["lockbox", await loadContainer(z.env.DB, session.pubkey, "lockbox")],
+      ["vault", await loadContainer(z.env.DB, session.pubkey, "vault")],
+    ];
+    for (const [place, pool] of places) {
+      const rows = new Map<string, { name: string; n: number; w: number; id: string }>();
+      for (const c of pool) {
+        const t = z.world!.itemTemplates.get(c.itemId);
+        if (!t || (t.barter ?? 0) <= 0 || c.equipped || trade.escrow.some((e) => e.row === c.rowId)) continue;
+        const w = goodsWorth(z, c);
+        const key = `${t.id}|${w}`;
+        const r = rows.get(key) ?? { name: t.name, n: 0, w, id: t.id };
+        r.n++; rows.set(key, r);
+      }
+      if (!rows.size) continue;
+      lines.push(`  ${place}:`);
+      for (const r of rows.values()) {
+        const worth = r.w <= 0 ? "no use to him" : known.has(r.id) ? String(r.w) : worthPips(worthMark(r.w));
+        lines.push(`    ${r.name}${r.n > 1 ? ` (x${r.n})` : ""} \u2014 ${worth}`);
+      }
+    }
+    if (lines.length === 1) lines.push("  nothing he'd take.");
+    return z.send(session, lines.join("\n"));
+  }
   // Search your keepings in order — pack, then lockbox, then vault — for the
   // first match not already on the counter, preferring an unsealed copy so the
   // trade never cracks a seal it doesn't need. Same reach as the modal's tabs.
@@ -1282,8 +1347,12 @@ export async function handleTrade(z: ZoneDO, session: Session, frame: any): Prom
       // unsealed copy — no point cracking a seal the trade doesn't need.
       const src = frame.src === "lockbox" || frame.src === "vault" ? frame.src : "";
       const pool = src === "" ? session.items : await loadContainer(z.env.DB, session.pubkey, src);
+      // The row names a worth as well as a kind (a worn copy and a sound one
+      // are separate rows), so the button offers a copy of the row it is on.
+      const rowWorth = typeof frame.w === "number" ? frame.w : undefined;
       const candidates = pool.filter(
-        (c) => c.itemId === frame.row && !session.buying!.escrow.some((e) => e.row === c.rowId),
+        (c) => c.itemId === frame.row && !session.buying!.escrow.some((e) => e.row === c.rowId)
+          && (rowWorth === undefined || goodsWorth(z, c) === rowWorth),
       );
       // Same preference as the typed path: the spare before the worn one.
       const looseC = candidates.filter((c) => !c.equipped);
@@ -1378,21 +1447,30 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     })
     .filter((s) => s !== null);
   // Your side of the counter, one tab per keeping: pack, lockbox, vault.
-  // What he'd take, collapsed by kind — never a value shown; his manner
-  // when you offer is the only appraisal. Sealed goods trade too (he
+  // What he'd take, collapsed by kind AND by what a copy fetches, so a worn
+  // sword and a sound one are two rows. Each row carries a rough mark (one to
+  // four pips) until you have sold him enough of that kind to know its price,
+  // and then the price itself (rome, 2026-10-23). Sealed goods trade too (he
   // cracks the seal when the deal closes), so the vault's wealth counts.
+  const known = await keeperKnows(z, session.pubkey);
   const tally = (pool: CarriedItem[]) => {
-    // Anchor each kind at its FIRST appearance in the pool (Map insertion order),
+    // Anchor each row at its FIRST appearance in the pool (Map insertion order),
     // then count only the copies not yet on the counter. Escrowed copies still
-    // register the kind's position, so laying one on the counter never reshuffles
+    // register the row's position, so laying one on the counter never reshuffles
     // the list — the row just decrements, and vanishes when its last copy is offered.
-    const goods = new Map<string, { id: string; name: string; rarity: string; slot: string; kind: string; n: number }>();
+    const goods = new Map<string, { id: string; name: string; rarity: string; slot: string; kind: string; n: number; w: number; mark: number; price?: number }>();
     for (const c of pool) {
       const t = world.itemTemplates.get(c.itemId);
       if (!t || (t.barter ?? 0) <= 0) continue;
       if (c.equipped) continue; // what you're wearing isn't stock (rome, 2026-07-30) — take it off first, same law as 'drop'
-      let g = goods.get(t.id);
-      if (!g) { g = { id: t.id, name: t.name, rarity: t.rarity, slot: t.slot, kind: kindOf(t), n: 0 }; goods.set(t.id, g); }
+      const w = goodsWorth(z, c);
+      const key = `${t.id}|${w}`;
+      let g = goods.get(key);
+      if (!g) {
+        g = { id: t.id, name: t.name, rarity: t.rarity, slot: t.slot, kind: kindOf(t), n: 0, w, mark: w > 0 ? worthMark(w) : 0 };
+        if (known.has(t.id)) g.price = w;
+        goods.set(key, g);
+      }
       if (!session.buying?.escrow.some((e) => e.row === c.rowId)) g.n += 1;
     }
     return [...goods.values()].filter((g) => g.n > 0);

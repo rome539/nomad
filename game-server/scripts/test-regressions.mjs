@@ -28,7 +28,7 @@ try {
         "export {parse} from './parser';",
         "export * as den from './den';",
         "export {cmdGo} from './verbs';",
-        "export {receiptGoods} from './gate';",
+        "export {receiptGoods, goodsWorth, worthMark, worthPips} from './gate';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon} from './zone-util';",
       ].join('\n'),
@@ -40,7 +40,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdGo, receiptGoods, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ZoneDO, parse, den, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -214,6 +214,32 @@ try {
     const loop = src.slice(src.indexOf('for (const c of scattered) {'), src.indexOf('this.armStrayDecay(fell);'));
     const v = loop.indexOf('voidMint('), d = loop.indexOf('this.dropInstance(');
     assert.ok(v >= 0 && d >= 0 && v < d, 'voidMint has to run before the dropInstance continue');
+  });
+
+  // ---------------------------------------------------------------- worth
+  console.log('what goods fetch');
+  const worthZone = () => {
+    const z = new ZoneDO({}, {});
+    z.world = { itemTemplates: new Map([
+      ['sword', { id: 'sword', name: 'a sword', slot: 'weapon', barter: 10 }],
+      ['tail', { id: 'tail', name: 'a rat tail', slot: '', barter: 0.1 }],
+      ['tin', { id: 'tin', name: 'a tin', slot: '', barter: 20 }],
+    ]) };
+    z.wants = []; z.chalk = undefined;
+    return z;
+  };
+  check('worn gear fetches less than sound, and failing gear nothing (2026-10-23)', () => {
+    const z = worthZone();
+    const at = (condition) => goodsWorth(z, { itemId: 'sword', condition, serial: null });
+    assert.equal(at(100), 10);
+    assert.equal(at(60), 6);
+    assert.ok(at(60) < at(100));
+    assert.equal(at(12), 0, 'at the failing mark he will not take it');
+    assert.equal(goodsWorth(z, { itemId: 'tail', condition: 5, serial: null }), 0.1, 'non-gear is not scaled by condition');
+  });
+  check('the rough mark is one to four pips by band', () => {
+    assert.deepEqual([0.1, 1.9, 2, 4.9, 5, 14.9, 15, 20].map(worthMark), [1, 1, 2, 2, 3, 3, 4, 4]);
+    assert.equal(worthPips(3), '\u25cf\u25cf\u25cf\u25cb');
   });
 
   console.log(`\n${passed} regression checks pass`);

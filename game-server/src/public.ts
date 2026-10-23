@@ -689,6 +689,7 @@ export const PAGE = `<!doctype html>
   /* Off the shelf, not out of the world: dim, no price, nothing to press. */
   #trade .trow.tgone .nm { color: var(--dim); }
   #trade .trow.tgone .tcost { color: var(--line); }
+  #trade .trow .tworth { letter-spacing: 0.08em; white-space: nowrap; }
   #trade .tgnote { color: var(--dim); font-size: 11px; font-style: italic; padding: 5px 0 2px; }
   #trade .trow button {
     background: transparent; border: 1px solid var(--border); border-radius: 4px;
@@ -7156,8 +7157,10 @@ var tradeTab = "pack"; // which keeping the goods column shows: pack | lockbox |
 var tradeState = null; // last trade payload, so tab switches re-render locally
 document.getElementById("tclose").addEventListener("click", function () { tradeSend("close"); });
 
-function tradeSend(action, row, src, n) {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "trade", action: action, row: row || "", src: src || "", n: n || 1 }));
+function tradeSend(action, row, src, n, w) {
+  var frame = { v: 0, t: "trade", action: action, row: row || "", src: src || "", n: n || 1 };
+  if (typeof w === "number") frame.w = w; // which goods row: a worn copy and a sound one are two
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(frame));
   // If the wire is gone the frame goes nowhere \u2014 so a CLOSE still closes,
   // locally. Nothing traps a wanderer behind a panel that cannot answer.
   else if (action === "close") closeTrade();
@@ -7258,6 +7261,15 @@ function tradeItemNode(it, place) {
     co.className = "tcost";
     co.textContent = String(it.cost);
     wrap.appendChild(co);
+  } else if (place === "goods") {
+    // WHAT IT FETCHES (rome, 2026-10-23): a rough mark of one to four pips
+    // until you have sold him enough of the kind to know its price outright.
+    var wo = document.createElement("span");
+    wo.className = "tcost tworth";
+    wo.textContent = !it.mark ? "no use" : typeof it.price === "number" ? String(it.price)
+      : "\u25cf\u25cf\u25cf\u25cf".slice(0, it.mark) + "\u25cb\u25cb\u25cb\u25cb".slice(0, 4 - it.mark);
+    wo.title = !it.mark ? "past mending; he won't take it" : typeof it.price === "number" ? "what he pays for this" : "roughly what he'd give; sell a few and you'll know";
+    wrap.appendChild(wo);
   }
   var b = document.createElement("button");
   b.type = "button";
@@ -7298,7 +7310,7 @@ function tradeItemNode(it, place) {
       if (tradeOfferAt && Date.now() - tradeOfferAt < 5000) return;
       tradeOfferAt = Date.now();
       document.querySelectorAll("#trade button.toffer").forEach(function (x) { x.disabled = true; });
-      tradeSend("offer", it.id, src);
+      tradeSend("offer", it.id, src, 1, it.w);
     });
   }
   wrap.appendChild(b);
