@@ -9958,7 +9958,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 var MOB_V  = "105";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "45";      // /room-bg/  the room plates - 91MB, the expensive one
-var SKY_V  = "31";      // /sky/      the ten skies
+var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FX_V   = "17";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
@@ -11195,7 +11195,9 @@ var NO_GROUND_TINT = { dawn: 1, dusk: 1, blood: 1, "wet-night": 1, "wet-dusk": 1
 // than as a sky. Both are in the pools to be looked at, and they are the first
 // things to cut if they do not hold: deleting the entry is the whole cost.
 var SKY_POOL = {
-  day:   ["day", "day/x", "day/y", "day/xy"],
+  // THE DAY SKY STAYS RIGHT SIDE UP (rome, 2026-10-23, with his repainted
+  // day-seamless): mirrored for variety, never turned over.
+  day:   ["day", "day/x"],
   night: ["night", "night/x", "night/y", "night/xy"],
   // THE DUSK SKY WAS REPLACED, NOT ADDED TO (rome, 2026-09-08). The one it
   // replaced ran 24 31 40 49 86 from the top of the frame down; this one runs

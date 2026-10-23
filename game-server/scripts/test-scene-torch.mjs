@@ -233,7 +233,9 @@ console.log("one sky, turned, is more than one sky");
     ctx.paint("mountain", "day", "scree", "t" + d, 0, d);
     turns.add(skyEl.style.transform || "none");
   }
-  t("a day owns all four turns of its sky", turns.size === 4, [...turns].join("  "));
+  // THE DAY STAYS RIGHT SIDE UP (rome, 2026-10-23): plain and mirrored, never
+  // turned over.
+  t("a day is plain or mirrored, never upside down", turns.size === 2 && turns.has("none") && turns.has("scaleX(-1)"), [...turns].join("  "));
 
   // A CALENDAR SKY MAY NOT BE SWAPPED. Swapping is the move that can lie — a
   // full moon lights the ground and shuts a door, so its picture is a statement
