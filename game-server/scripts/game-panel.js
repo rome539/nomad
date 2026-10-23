@@ -373,19 +373,21 @@
     // sealed room, and only the hour - never the weather - for the road's
     // roofed rooms, which see out but are not rained on (zone.ts artSkyFor).
     var seen = ambSeen[v + "|" + h], covered = seen && seen.covered ? true : undefined;
+    // ...and the night flag the server sends beside the sky, for every kind of
+    // place: the night hours carry it, and ?night=1 raises it under any weather
+    // (rain after dark). Rooms and gates were painted without it, so a sealed
+    // room with a window read noon at every hour (2026-10-23).
+    var nightFlag = /[?&]night=1/.test(location.search) || h === "night" || h === "moon" || h === "blood" || h === "wet-night" ? 1 : 0;
     var roofSky = !covered ? h : seen.band !== "road" ? "in"
       : (h === "rain" || h === "snow" || h === "fog" || h === "after-rain") ? "day" : h;
     if (v.indexOf("room:") === 0) {
       var r = v.slice(5);
-      paintScene("upper", roofSky, "", r, torch, skyRollN, r, 0, red, covered);
+      paintScene("upper", roofSky, "", r, torch, skyRollN, r, 0, red, covered, nightFlag);
     } else if (v.indexOf("gate:") === 0) {
-      paintScene("mountain", roofSky, v, "preview-gate", torch, skyRollN, "", 0, red, covered);
+      paintScene("mountain", roofSky, v, "preview-gate", torch, skyRollN, "", 0, red, covered, nightFlag);
     } else {
       // THE GROUND'S OWN REGION, as the game sends it - this said "mountain" for
       // every ground, so the beach got the mountain's birds (2026-10-20)
-      // ...and the night flag the server sends beside the sky: the night hours
-      // carry it, and ?night=1 raises it under any weather (rain after dark)
-      var nightFlag = /[?&]night=1/.test(location.search) || h === "night" || h === "moon" || h === "blood" || h === "wet-night" ? 1 : 0;
       paintScene(BAND_OF[groundAt[v.slice(7)]] || "mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red, undefined, nightFlag);
     }
     fitPicture();

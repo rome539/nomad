@@ -621,6 +621,13 @@ ctx.paint(null, null, null, null);
 t("repainting a roof retains its cover", !skyEl.style.backgroundImage);
 ctx.paint("road", "day", "paving", "open-road", 0, 0, "", 0, 0, false);
 t("walking outside restores the sky", !!skyEl.style.backgroundImage);
+// A SEALED ROOM WITH A WINDOW TAKES ITS HOUR FROM THE NIGHT FLAG (2026-10-23:
+// the Lodge Loft was noon at every hour, because a roof's sky name is "in").
+ctx.paint("den", "in", "", "loft-n", 0, 0, "the-lodge-loft", 0, 0, true, 1);
+t("a window room is its night plate at night", strip(sceneEl.style.backgroundImage) === "/room-bg/the-lodge-loft-night.webp", strip(sceneEl.style.backgroundImage));
+t("...with the night sky in its window", /\/sky\/night/.test(skyEl.style.backgroundImage), skyEl.style.backgroundImage);
+ctx.paint("den", "in", "", "loft-d", 0, 0, "the-lodge-loft", 0, 0, true, 0);
+t("...and its day plate by day", strip(sceneEl.style.backgroundImage) === "/room-bg/the-lodge-loft-day.webp", strip(sceneEl.style.backgroundImage));
 
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");

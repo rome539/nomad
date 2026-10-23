@@ -4832,10 +4832,15 @@ var SPEECH_KIND = 24914;
 async function postInvite(f) {
   var epoch = identityEpoch;
   try {
-    // Only the words and the link: the link's own page carries the card, so a
-    // client shows the picture as the link's preview, not as a posted image.
+    // The words, what the letter brings, and the link: the link's own page
+    // carries the card, so a client shows the picture as the link's preview,
+    // not as a posted image. The two lines below are rome's (2026-10-23): one
+    // for someone new, one for someone already playing.
     var evt = { kind: 1, created_at: Math.floor(Date.now()/1000), tags: [["t", "nomad"]],
-      content: f.message + "\\n\\nhttps://nomadmud.com/i/" + f.code };
+      content: f.message
+        + "\\n\\nNew to NOMAD? Claim your beginner's kit: gear on your back, food and water, a torch, linen and a surveyor's map."
+        + "\\nAlready playing? The first three each day get a day's supplies and some makings, once per character."
+        + "\\n\\nhttps://nomadmud.com/i/" + f.code };
     var ev;
     if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
     else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
@@ -12508,6 +12513,12 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // roof in bad weather — there is no rain sky in the game, and a dark room
     // under a bright noon sky would be the wrong half of the picture.
     var slot = lastSky;
+    // A SEALED ROOM'S SKY NAME IS "in" AT EVERY HOUR (rome, 2026-10-23: the
+    // Lodge Loft showed its day picture, and blue sky in its slit, on a wet
+    // night). The server sends no sky for a room under a roof, only the night
+    // flag beside it, and "in" maps to day - so every window room was noon
+    // around the clock. Under a roof the hour comes from the flag.
+    if (lastSky === "in") { pbase = lastNight ? "night" : "day"; slot = pbase; }
     if (shut && WEATHER_FROM_INSIDE[lastSky]) { pbase = "night"; slot = "after-rain"; }
     // A ROOF WITH AN OVERCAST PICTURE (the den, rome 2026-10-19). Its daylight
     // comes in through gaps, so a wet or grey day is not the night plate - it is

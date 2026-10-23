@@ -51,7 +51,7 @@ try{
     assert(px-r>=-1&&px+r<=sky.w+1&&py-r>=-1&&py+r<=sky.h+1,'moon must remain inside viewport: '+JSON.stringify({kind,width,height,sky,px,py,r}));
    }
    assert.equal(turns.size,2,'exercise both original and mirrored skies');
-   await page.waitForNetworkIdle({idleTime:100,timeout:10000});
+   await page.waitForNetworkIdle({idleTime:100,timeout:10000}).catch(()=>{}); // the page polls on timers, so under load the wire may never go quiet
    if(process.env.MOON_SCREENSHOT_DIR){fs.mkdirSync(process.env.MOON_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.MOON_SCREENSHOT_DIR,kind+'-'+width+'.png')});}
   }
   console.log('PASS full/blood moon framing and horizontal-only mirroring',width,height);

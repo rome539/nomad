@@ -1,8 +1,9 @@
 // Standing letters: issued only on request, honored only at a soul's first arrival.
-import { rand } from "./rng";
+import { rand, randInt } from "./rng";
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
-import { equipCarried, insertLoot, loadInventory, loadContainer, setItemInviteCode } from "./world";
+import { equipCarried, insertLoot, loadInventory, loadContainer, setItemInviteCode, setContainer } from "./world";
+import { VAULT_CAP } from "./zone-data";
 
 export const CODE = /^[A-Za-z0-9]{10}$/;
 export const KIT = ["sharpened-rib", "leather-cap", "rag-vest", "tattered-cloak", "worn-boots", "battered-buckler"];
@@ -22,9 +23,24 @@ export function rollKit(random: () => number = rand): string[] {
     return lucky ? KIT_UPGRADES[item] || item : item;
   });
 }
-const SUPPLIES = ["hardtack", "hardtack", "well-water", "linen-strips", "torch"];
-// What a letter carries for a wanderer who is already on the road: food, once.
-const RATIONS = ["hardtack", "hardtack", "well-water"];
+// ...and a surveyor's map, so a newcomer walks in able to see where they are
+// going (rome, 2026-10-23).
+const SUPPLIES = ["hardtack", "hardtack", "well-water", "linen-strips", "torch", "surveyor-map"];
+// What a letter carries for a wanderer who is already on the road, once: a
+// day's worth of keeping yourself going, and makings in amounts that differ
+// letter to letter (rome, 2026-10-23).
+export const ROAD_SUPPLIES: ReadonlyArray<[string, number, number]> = [
+  ["hardtack", 4, 4], ["well-water", 2, 2], ["linen-dressing", 2, 2], ["torch", 2, 2],
+  ["scrap-iron", 3, 8], ["split-wood", 2, 6], ["leather-offcuts", 1, 4],
+  ["bone-offcuts", 1, 4], ["linen-strips", 1, 4], ["iron", 0, 2],
+];
+// How many wanderers already on the road one letter pays out to, per 24 hours.
+export const RETURNING_PER_DAY = 3;
+export function rollRoadSupplies(roll: (min: number, max: number) => number = randInt): string[] {
+  const out: string[] = [];
+  for (const [id, min, max] of ROAD_SUPPLIES) for (let n = roll(min, max); n > 0; n--) out.push(id);
+  return out;
+}
 const DEFAULT = "There is room beside the fire. Take the road down. I will look for you.";
 type Invite = { code: string; inviter: string; message: string };
 
@@ -67,11 +83,13 @@ export async function claim(z: ZoneDO, pubkey: string, code: string): Promise<bo
   const invite = await z.env.DB.prepare("SELECT code, inviter, message FROM invites WHERE code = ?").bind(code).first<Invite>();
   if (!invite || invite.inviter === pubkey) return false;
   const now = Math.floor(Date.now() / 1000);
-  // Reserve the daily gift in the same statement as the unique claim: two
-  // concurrent arrivals cannot both observe the last free place.
+  // EVERY NEWCOMER GETS THE KIT (rome, 2026-10-23). There was a cap of two a
+  // day per inviter, and the claim is keyed on the newcomer, so a third arrival
+  // that day lost the kit for good on their first login. The claim is still
+  // once per soul, at first arrival only.
   const result = await z.env.DB.prepare(`INSERT OR IGNORE INTO invite_claims (newcomer, code, inviter, gifted, claimed_at)
-    SELECT ?, ?, ?, CASE WHEN (SELECT COUNT(*) FROM invite_claims WHERE inviter = ? AND gifted = 1 AND claimed_at > ?) < 2 THEN 1 ELSE 0 END, ?`)
-    .bind(pubkey, code, invite.inviter, invite.inviter, now - 86400, now).run();
+    VALUES (?, ?, ?, 1, ?)`)
+    .bind(pubkey, code, invite.inviter, now).run();
   if (!result.meta.changes) return false;
   const row = await z.env.DB.prepare("SELECT gifted FROM invite_claims WHERE newcomer = ?").bind(pubkey).first<{ gifted: number }>();
   if (row?.gifted) {
@@ -86,9 +104,7 @@ export async function claim(z: ZoneDO, pubkey: string, code: string): Promise<bo
   const sender = z.sessions.get(invite.inviter);
   if (sender && !sender.linkdeadUntil) {
     const newcomer = await z.env.DB.prepare("SELECT name FROM players WHERE pubkey = ?").bind(pubkey).first<{ name: string }>();
-    if (newcomer) z.send(sender, newcomer.name + (row?.gifted
-      ? " has arrived with your letter still folded in their hand, and the bundle you sent went with it."
-      : " has arrived with your letter still folded in their hand. Nothing else went with it; you have sent all you can spare today."));
+    if (newcomer) z.send(sender, newcomer.name + " has arrived with your letter still folded in their hand, and the bundle you sent went with it.");
   }
   return true;
 }
@@ -96,21 +112,36 @@ export async function claim(z: ZoneDO, pubkey: string, code: string): Promise<bo
 // A LETTER THAT FINDS SOMEONE ALREADY ON THE ROAD (rome, 2026-10-22). The kit
 // is for a first arrival only, but a wanderer who follows a link must not be
 // met with silence: they are told the letter was meant for someone new, and a
-// little food comes with it. ONCE PER CHARACTER, EVER — the claim row is keyed
+// day's supplies come with it (ROAD_SUPPLIES). ONCE PER CHARACTER, EVER — the claim row is keyed
 // on the pubkey like a newcomer's, so a second link (or the same one again)
-// finds the row and says nothing. Your own letter gives you nothing. Rations
-// sit outside the two-a-day kit cap (gifted stays 0): they are worth almost
-// nothing and a character must already exist to collect them.
+// finds the row and says nothing. Your own letter gives you nothing. The
+// supplies are not a kit (gifted stays 0), and a character must already
+// exist to collect them.
 export async function returning(z: ZoneDO, session: Session, code: string): Promise<void> {
   if (!CODE.test(code)) return;
   const invite = await z.env.DB.prepare("SELECT code, inviter, message FROM invites WHERE code = ?").bind(code).first<Invite>();
   if (!invite) return;
   const now = Math.floor(Date.now() / 1000);
-  const result = await z.env.DB.prepare("INSERT OR IGNORE INTO invite_claims (newcomer, code, inviter, gifted, claimed_at) VALUES (?, ?, ?, 0, ?)")
-    .bind(session.pubkey, code, invite.inviter, now).run();
-  if (!result.meta.changes) return;
   if (invite.inviter === session.pubkey) {
-    z.send(session, "The letter is in your own hand. It is for someone else to carry here.");
+    const mine = await z.env.DB.prepare("INSERT OR IGNORE INTO invite_claims (newcomer, code, inviter, gifted, claimed_at) VALUES (?, ?, ?, 0, ?)")
+      .bind(session.pubkey, code, invite.inviter, now).run();
+    if (mine.meta.changes) z.send(session, "The letter is in your own hand. It is for someone else to carry here.");
+    return;
+  }
+  // A CAP FOR THOSE ALREADY ON THE ROAD (rome, 2026-10-23: so the makings are
+  // not farmed by characters made to follow their own maker's letter). One
+  // letter pays out to RETURNING_PER_DAY of them in any 24 hours; newcomers
+  // are never capped. Reserved in the same statement as the claim, so two at
+  // once cannot both take the last place. Past the cap nothing is written:
+  // the claim is once per character, and burning it here would lose them the
+  // supplies for good, so they can follow the letter again tomorrow.
+  const result = await z.env.DB.prepare(`INSERT OR IGNORE INTO invite_claims (newcomer, code, inviter, gifted, claimed_at)
+    SELECT ?, ?, ?, 0, ?
+     WHERE (SELECT COUNT(*) FROM invite_claims WHERE inviter = ? AND gifted = 0 AND newcomer != inviter AND claimed_at > ?) < ?`)
+    .bind(session.pubkey, code, invite.inviter, now, invite.inviter, now - 86400, RETURNING_PER_DAY).run();
+  if (!result.meta.changes) {
+    const had = await z.env.DB.prepare("SELECT 1 AS x FROM invite_claims WHERE newcomer = ?").bind(session.pubkey).first();
+    if (!had) z.send(session, "A letter finds you, meant for someone new to the road. Whatever was folded in with it has gone to others already today. Follow it again tomorrow.");
     return;
   }
   // The letter itself comes too, so it can be read like a newcomer's.
@@ -120,16 +151,33 @@ export async function returning(z: ZoneDO, session: Session, code: string): Prom
     await setItemInviteCode(z.env.DB, rowId, code);
     session.items.push({ rowId, itemId: "invite-letter", serial: null, equipped: false, condition: 100, inviteCode: code, acquiredAt: now });
   }
-  const given: string[] = [];
-  for (const id of RATIONS) if (await z.grantItem(session, id)) given.push(id);
+  // Into the pack while it has room; past that (slots, or the food, torch and
+  // dressing ceilings) into the vault, and the line says which went where.
+  const packed: string[] = [], banked: string[] = [], lost: string[] = [];
+  let vault: Awaited<ReturnType<typeof loadContainer>> | undefined;
+  for (const id of rollRoadSupplies()) {
+    if (await z.grantItem(session, id)) { packed.push(id); continue; }
+    vault ??= await loadContainer(z.env.DB, session.pubkey, "vault");
+    if (z.hasRoom(vault, id, VAULT_CAP, "vault")) {
+      const rowId = crypto.randomUUID();
+      await insertLoot(z.env.DB, rowId, session.pubkey, id, null, 100, now, "");
+      await setContainer(z.env.DB, rowId, "vault");
+      vault.push({ rowId, itemId: id, serial: null, equipped: false, condition: 100 });
+      banked.push(id);
+    } else lost.push(id);
+  }
   const sender = await z.env.DB.prepare("SELECT name FROM players WHERE pubkey = ?").bind(invite.inviter).first<{ name: string }>();
   const from = sender?.name || "a wanderer";
   const name = (id: string) => z.world?.itemTemplates.get(id)?.name ?? id;
-  const counts = new Map<string, number>();
-  for (const id of given) counts.set(id, (counts.get(id) ?? 0) + 1);
-  const food = [...counts].map(([id, n]) => (n > 1 ? n + " x " : "") + name(id)).join(", ");
+  const list = (ids: string[]) => {
+    const counts = new Map<string, number>();
+    for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+    return [...counts].map(([id, n]) => (n > 1 ? n + " x " : "") + name(id)).join(", ");
+  };
   z.send(session, "A letter from " + from + " finds you, though it was meant for someone new to the road. ('look letter' reads it.)"
-    + (food ? " A little food was folded in with it: " + food + "." : " There was food folded in with it, but your pack has no room."), "gain");
+    + (packed.length ? " Folded in with it, a day's supplies: " + list(packed) + "." : "")
+    + (banked.length ? (packed.length ? " Your pack could take no more, so the rest went to your vault: " : " Your pack is full, so it all went to your vault: ") + list(banked) + "." : "")
+    + (lost.length ? " There was more, but your vault had no room for it: " + list(lost) + "." : ""), "gain");
   const other = z.sessions.get(invite.inviter);
   if (other && !other.linkdeadUntil) z.send(other, session.name + ", already on the road, has read your letter.");
 }
