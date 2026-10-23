@@ -1726,9 +1726,13 @@ export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promi
     const carried = z.findCarried(session, arg);
     if (!carried) return z.send(session, "You carry nothing like that.");
     if (!z.isGear(carried.itemId)) return z.send(session, "The stone keeps an edge. It has nothing for that.");
-    if (carried.condition >= 100) return z.send(session, "It is already whole. The stone has nothing to give it.");
-    if (carried.condition >= WHET_CAP) return z.send(session, "It is already past what a stone can keep. It wants a forge.");
-    carried.condition = Math.min(WHET_CAP, carried.condition + WHET_GAIN);
+    // In WHOLE numbers, as the condition is shown and saved (rome, 2026-10-23:
+    // a glaive at 59.6 read 60, kept its repair chip, and a tap moved it 0.4
+    // with the whole "an edge again" line). The stone judges what you see.
+    const cond = Math.round(carried.condition);
+    if (cond >= 100) return z.send(session, "It is already whole. The stone has nothing to give it.");
+    if (cond >= WHET_CAP) return z.send(session, "It is already past what a stone can keep. It wants a forge.");
+    carried.condition = Math.min(WHET_CAP, cond + WHET_GAIN);
     await setItemCondition(z.env.DB, carried.rowId, carried.condition);
     z.send(session, "You work the piece over the stone — long, even passes, and the old rhythm comes back by itself. It answers with an edge again. A working edge. (past this, it wants a forge)", "gain");
     z.roomFeed(session.roomId, `${session.name} works a piece over the stone, and the ring of it carries.`, session.pubkey, false);

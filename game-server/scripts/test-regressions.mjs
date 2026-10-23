@@ -29,7 +29,8 @@ try {
         "export * as den from './den';",
         "export {cmdMap} from './lore';",
         "export {cmdGo} from './verbs';",
-        "export {receiptGoods, goodsWorth, worthMark, worthPips} from './gate';",
+        "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair} from './gate';",
+        "export {WHETSTONE_ROOMS, WHET_CAP} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon} from './zone-util';",
       ].join('\n'),
@@ -41,7 +42,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, WHETSTONE_ROOMS, WHET_CAP, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -296,6 +297,23 @@ try {
     me.roomId = blank; await cmdMap(z, me, '');
     me.roomId = 'r50'; await cmdMap(z, me, '');
     assert.ok(shownOf(frames.at(-1)).some((r) => r.id === blank), 'a walked room stays on the paper');
+  });
+
+  // ---------------------------------------------------------------- whetstone
+  console.log('the whetstone');
+  await checkAsync('a piece at 59.6 reads 60 and the stone says so, not a silent 0.4 (2026-10-23)', async () => {
+    const { z, me, last } = denWorld();
+    z.inDen.delete('me');
+    me.roomId = [...WHETSTONE_ROOMS][0];
+    const rec = recorder(); z.env = { DB: rec.DB };
+    const glaive = { rowId: 'g1', itemId: 'hand-axe', serial: null, equipped: true, condition: WHET_CAP - 0.4 };
+    me.items.push(glaive);
+    await cmdRepair(z, me, 'axe');
+    assert.match(last(), /already past what a stone can keep/);
+    assert.equal(glaive.condition, WHET_CAP - 0.4, 'nothing moved');
+    glaive.condition = 44.6;
+    await cmdRepair(z, me, 'axe');
+    assert.equal(glaive.condition, 60, 'the stone takes it up in whole numbers');
   });
 
   console.log(`\n${passed} regression checks pass`);

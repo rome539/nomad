@@ -457,7 +457,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // tap. The worst piece first — the one the stone helps most.
     if (WHETSTONE_ROOMS.has(session.roomId) || den.hasWork(z, session, "whet")) {
       const dull = session.items
-        .filter((c) => c.equipped && z.isGear(c.itemId) && c.condition < WHET_CAP)
+        .filter((c) => c.equipped && z.isGear(c.itemId) && Math.round(c.condition) < WHET_CAP) // as shown, like cmdRepair
         .sort((a, b) => a.condition - b.condition)[0];
       if (dull) suggest.push(`repair ${shortName(world.itemTemplates.get(dull.itemId)!.name)}`);
     }

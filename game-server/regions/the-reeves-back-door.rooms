@@ -1,0 +1,15 @@
+# THE REEVE'S BACK DOOR (rome, 2026-10-23). The middle of the hamlet had no
+# way onto the West Road where the road runs down its east side: the Reeve's
+# House stood one step from the Gorse Break with a wall between. A back door
+# now. It takes no den ground: the two rooms it brings inside 22 steps of the
+# Wood Gate, the North House and the Reeve's Loft, are both under a roof.
+
+!region den
+
+## the-reeves-house | attachment: a back door onto the road
+!existing
+> east the-gorse-break
+
+## the-gorse-break | attachment: the reeve's back door, off the road
+!existing
+> west the-reeves-house
