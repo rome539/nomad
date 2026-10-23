@@ -7237,6 +7237,12 @@ function statTokenClass(tok) {
   if (/wards|quiet|slick|strapped|spiked|reach/.test(tok)) return "st-gain";
   return "st-dim"; // heavy, light, two-handed
 }
+// One goods row's worth, as both layouts show it.
+function goodsWorthText(it) {
+  if (!it.mark) return "no use";
+  if (typeof it.price === "number") return String(it.price);
+  return "\u25cf\u25cf\u25cf\u25cf".slice(0, it.mark) + "\u25cb\u25cb\u25cb\u25cb".slice(0, 4 - it.mark);
+}
 function tradeItemNode(it, place) {
   var wrap = document.createElement("div");
   wrap.className = "trow";
@@ -7266,8 +7272,7 @@ function tradeItemNode(it, place) {
     // until you have sold him enough of the kind to know its price outright.
     var wo = document.createElement("span");
     wo.className = "tcost tworth";
-    wo.textContent = !it.mark ? "no use" : typeof it.price === "number" ? String(it.price)
-      : "\u25cf\u25cf\u25cf\u25cf".slice(0, it.mark) + "\u25cb\u25cb\u25cb\u25cb".slice(0, 4 - it.mark);
+    wo.textContent = goodsWorthText(it);
     wo.title = !it.mark ? "past mending; he won't take it" : typeof it.price === "number" ? "what he pays for this" : "roughly what he'd give; sell a few and you'll know";
     wrap.appendChild(wo);
   }
@@ -7884,7 +7889,7 @@ function mudDetailSource(type,it,place,source){
  if(type==='forge'&&place==='recipe'){var rarity=nm.querySelector('.rar');if(rarity)rarity.remove()}
  if(it.stat){var stats=document.createElement('div');stats.className='mud-stats';it.stat.split(', ').forEach(function(t){var token=document.createElement('span');token.className=statTokenClass(t);token.textContent=t;stats.appendChild(token)});nm.after(stats)}
  var acts=source.querySelector('.acts');
- if(type==='trade'){acts=document.createElement('div');acts.className='acts';var buy=source.querySelector('button.tbuy')||source.querySelector('button'),cost=source.querySelector('.tcost'),q=source.querySelector('.qty');if(cost){cost.className='mud-cost';cost.textContent='Cost: '+it.cost;acts.appendChild(cost)}if(q){acts.appendChild(q);q.dispatchEvent(new Event('mudcost'))}acts.appendChild(buy);source.appendChild(acts)}
+ if(type==='trade'){acts=document.createElement('div');acts.className='acts';var buy=source.querySelector('button.tbuy')||source.querySelector('button'),cost=source.querySelector('.tcost'),q=source.querySelector('.qty');if(cost){cost.className='mud-cost';cost.textContent=place==='goods'?'Worth: '+goodsWorthText(it):'Cost: '+it.cost;acts.appendChild(cost)}if(q){acts.appendChild(q);q.dispatchEvent(new Event('mudcost'))}acts.appendChild(buy);source.appendChild(acts)}
  if(type==='forge'&&place==='recipe'){var cost=source.querySelector('.cost');if(cost){cost.className='mud-cost';cost.textContent='Materials: '+cost.textContent;acts.prepend(cost)}}
 }
 function mudRow(type,it,place,source){
@@ -7893,10 +7898,10 @@ function mudRow(type,it,place,source){
  var row=document.createElement('div');row.className=(type==='trade'?'trow':'bitem')+' mud-row';row.tabIndex=0;row.setAttribute('role','button');if(type==='forge')row.dataset.canForge=String(!!it.can);
  var name=document.createElement('span');name.className='nm';var realName=source.querySelector('.nm>span');name.appendChild(realName?realName.cloneNode(true):document.createTextNode(it.name));
  var qty=document.createElement('span');qty.className='mud-qty';qty.textContent=it.n>1?'×'+it.n:'';
- var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
+ var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(place==='goods'?goodsWorthText(it):it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
  if(it.equipped)state.classList.add('equipped');
  var search=document.createElement('span');search.className='tags mud-search';search.textContent=source.querySelector('.nm').textContent+' '+(it.stat||'');
- row.append(name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)};mudRecords[type].push(record);
+ row.append(name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)+(typeof it.w==='number'?'|'+it.w:'')};mudRecords[type].push(record);
  row.setAttribute('aria-label',it.name+(state.textContent?', '+state.textContent:''));function choose(){mudSelected[type]=record.key;mudReader(type)}row.onclick=choose;row.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();choose()}};return row;
 }
 var originalBenchItem=benchItemNode;benchItemNode=function(it,place){var source=originalBenchItem(it,place);addItemDescription(it,place,source);return modalLayout==='classic'?source:mudRow('bench',it,place,source)};
