@@ -29,7 +29,8 @@ try {
         "export * as den from './den';",
         "export {cmdMap} from './lore';",
         "export {cmdGo} from './verbs';",
-        "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair} from './gate';",
+        "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade} from './gate';",
+        "export {cmdLook} from './verbs';",
         "export {WHETSTONE_ROOMS, WHET_CAP} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon} from './zone-util';",
@@ -42,7 +43,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, WHETSTONE_ROOMS, WHET_CAP, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, WHETSTONE_ROOMS, WHET_CAP, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -186,6 +187,35 @@ try {
     await den.cmdBuild(z, me, 'bolthole west');
     assert.match(last(), /no ground west/);
   });
+  await checkAsync("'build' lists only what is left; what stands is one line (2026-10-23)", async () => {
+    const { z, me, d, last } = denWorld();
+    d.barred = true; d.hearth = true;
+    await den.cmdBuild(z, me, '');
+    const out = last();
+    assert.match(out, /^Up already: a bar on the door, a hearth/);
+    assert.doesNotMatch(out, /'bar'\)|'build hearth'|— built|— fitted/, 'something built is still on the list');
+    assert.match(out, /'build smoke'/);
+  });
+  await checkAsync("'build' alone keeps at half-done work, as the busy line says (2026-10-23)", async () => {
+    const { z, me, d, last } = denWorld();
+    d.hearth = true;
+    for (let i = 0; i < 6; i++) me.items.push({ rowId: 'w' + i, itemId: 'split-wood', serial: null });
+    await den.cmdBuild(z, me, '');
+    assert.match(last(), /could still have/, 'with nothing under way it is the list');
+    const realNow = Date.now;
+    try {
+      let t = realNow();
+      Date.now = () => t;
+      await den.cmdBuild(z, me, 'smoke');
+      assert.match(last(), /smoke rack.*slow going/);
+      await den.cmdBuild(z, me, '');
+      assert.match(last(), /still busy/);
+      t += 60_000;
+      await den.cmdBuild(z, me, '');
+      assert.doesNotMatch(last(), /could still have/);
+      assert.match(last(), /smoke rack/);
+    } finally { Date.now = realNow; }
+  });
   check('the work takes ' + DEN_BUILD_WORK + ' beats by hand and half that with the tool', () => {
     assert.equal(DEN_BUILD_WORK % 2, 0, 'a tool does two beats, so the work must be even');
   });
@@ -242,6 +272,35 @@ try {
   check('the rough mark is one to four pips by band', () => {
     assert.deepEqual([0.1, 1.9, 2, 4.9, 5, 14.9, 15, 20].map(worthMark), [1, 1, 2, 2, 3, 3, 4, 4]);
     assert.equal(worthPips(3), '\u25cf\u25cf\u25cf\u25cb');
+  });
+
+  // ---------------------------------------------------------------- the shelf
+  console.log("the keeper's shelf");
+  function shelfWorld() {
+    const z = worthZone();
+    z.world.itemTemplates.set('sword', { ...z.world.itemTemplates.get('sword'), description: 'A plain sword, nicked at the edge.', rarity: 'common' });
+    z.world.fenceStock = [{ itemId: 'sword', cost: 7 }];
+    z.world.entryRooms = new Set(['gate']);
+    z.world.rooms = new Map([['gate', { id: 'gate', name: 'The Gate', region: 'gate' }]]);
+    z.world.exits = new Map(); z.world.caches = []; z.world.mobTemplates = new Map();
+    const rec = recorder(); z.env = { DB: rec.DB };
+    const said = [], frames = [];
+    z.send = (_s, text) => { said.push(text); };
+    z.litFor = () => true; z.inCombat = () => false;
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'gate', items: [], ws: { send: (m) => frames.push(JSON.parse(m)) } };
+    z.sessions = new Map([['me', me]]);
+    return { z, me, said, frames };
+  }
+  await checkAsync('the barter window carries what the keeper sells, to look at (2026-10-23)', async () => {
+    const { z, me, frames } = shelfWorld();
+    await sendTrade(z, me);
+    const f = frames.find((x) => x.t === 'trade');
+    assert.equal(f.stock[0].description, 'A plain sword, nicked at the edge.');
+  });
+  await checkAsync('typed look at the hatch reads the shelf', async () => {
+    const { z, me, said } = shelfWorld();
+    await cmdLook(z, me, 'sword');
+    assert.match(said.at(-1) ?? '', /nicked at the edge/);
   });
 
   // ---------------------------------------------------------------- maps

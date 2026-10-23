@@ -2307,6 +2307,7 @@ export const PAGE = `<!doctype html>
 body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classic"] .mud-reader{display:none!important}
 #bench .mud-description{margin:8px 0;color:var(--bone);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
 #bench .mud-description[hidden]{display:none!important}
+#trade .trow>.tdesc{flex:1 1 100%;margin:4px 0 2px;color:var(--bone);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
 #bench .list-tools .loadout-opener{background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--gold);padding:7px 10px;font:inherit;cursor:pointer}
 #bench .list-tools .loadout-opener[hidden]{display:none}
 #bench .list-sections .loadout-opener{margin-left:auto;color:var(--gold)}
@@ -7875,11 +7876,21 @@ document.getElementById('modallayoutbtn').addEventListener('click',function(){
 function addItemDescription(it,place,source){
  var acts=source.querySelector('.acts');
  if(it.description){
-  var description=document.createElement('p');description.className='mud-description';description.id='mud-description-'+place+'-'+it.row;description.hidden=true;description.textContent=it.description;
+  var description=document.createElement('p');description.className='mud-description';description.id='mud-description-'+place+'-'+(it.row??it.id)+(typeof it.w==='number'?'-'+it.w:'');description.hidden=true;description.textContent=it.description;
   var look=document.createElement('button');look.type='button';look.textContent='Look';look.setAttribute('aria-expanded','false');look.setAttribute('aria-controls',description.id);
   look.addEventListener('click',function(){description.hidden=!description.hidden;look.setAttribute('aria-expanded',String(!description.hidden));look.textContent=description.hidden?'Look':'Hide description'});
   acts.prepend(look);source.insertBefore(description,acts);
  }
+}
+
+// THE KEEPER'S SHELF CAN BE LOOKED AT (rome, 2026-10-23): the classic row gets
+// the same Look toggle, its description folding open under the row.
+function tradeDescription(it,place,source){
+ if(!it.description)return;
+ var description=document.createElement('p');description.className='mud-description tdesc';description.id='mud-description-'+place+'-'+(it.row??it.id)+(typeof it.w==='number'?'-'+it.w:'');description.hidden=true;description.textContent=it.description;
+ var look=document.createElement('button');look.type='button';look.textContent='Look';look.setAttribute('aria-expanded','false');look.setAttribute('aria-controls',description.id);
+ look.addEventListener('click',function(){description.hidden=!description.hidden;look.setAttribute('aria-expanded',String(!description.hidden));look.textContent=description.hidden?'Look':'Hide description'});
+ var buy=source.querySelector('button.tbuy')||source.querySelector(':scope>button');if(buy)source.insertBefore(look,buy);else source.appendChild(look);source.appendChild(description);
 }
 
 // Compact item lists share one selected-item reading and action area.
@@ -7910,7 +7921,7 @@ function mudRow(type,it,place,source){
  row.setAttribute('aria-label',it.name+(state.textContent?', '+state.textContent:''));function choose(){mudSelected[type]=record.key;mudReader(type)}row.onclick=choose;row.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();choose()}};return row;
 }
 var originalBenchItem=benchItemNode;benchItemNode=function(it,place){var source=originalBenchItem(it,place);addItemDescription(it,place,source);return modalLayout==='classic'?source:mudRow('bench',it,place,source)};
-var originalTradeItem=tradeItemNode;tradeItemNode=function(it,place){var source=originalTradeItem(it,place);return modalLayout==='classic'?source:mudRow('trade',it,place,source)};
+var originalTradeItem=tradeItemNode;tradeItemNode=function(it,place){var source=originalTradeItem(it,place);if(modalLayout==='classic'){tradeDescription(it,place,source);return source}var row=mudRow('trade',it,place,source);addItemDescription(it,place,source);return row};
 var originalForgeItem=forgeItemNode;forgeItemNode=function(it){var source=originalForgeItem(it);return modalLayout==='classic'?source:mudRow('forge',it,'recipe',source)};
 var originalForgeSheet=forgeSheetNode;forgeSheetNode=function(it){var source=originalForgeSheet(it);return modalLayout==='classic'?source:mudRow('forge',it,'read',source)};
 function mudRefresh(type){

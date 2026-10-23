@@ -717,7 +717,7 @@ const DIR_WORDS: Record<string, string> = { north: "north", south: "south", east
 
 // Half-done work, by holder. In memory: a restart loses the beats, never the
 // materials (those leave the pack only when the work is finished).
-const buildJobs = new Map<string, { key: string; done: number; at: number }>();
+const buildJobs = new Map<string, { key: string; want: string; done: number; at: number }>();
 export function buildingNow(pubkey: string): string | undefined { return buildJobs.get(pubkey)?.key; }
 
 export function denTool(z: ZoneDO, session: Session, kind: DenTool): CarriedItem | undefined {
@@ -740,14 +740,24 @@ export async function cmdBuild(z: ZoneDO, session: Session, arg: string): Promis
       : "There is nothing of yours here to build on. A den comes first ('settle').");
   }
   if (den.holder !== session.pubkey) return z.send(session, `This is ${holderName(z, den)}'s den. What goes up in it is theirs to decide.`);
-  const want = arg.trim().toLowerCase();
+  // 'build' alone KEEPS AT the half-done work (rome, 2026-10-23: the busy line
+  // said "then 'build' again" and 'build' gave the list). Only with nothing
+  // under way is it the list.
+  const want = arg.trim().toLowerCase() || (buildJobs.get(session.pubkey)?.want ?? "");
   if (want === "bar" || want === "a bar") return cmdBar(z, session);
   if (!want) {
-    const lines = ["What a den can have:"];
-    lines.push(`  a bar on the door — ${den.barred ? "fitted" : `${DEN_BAR_IRON} iron and ${DEN_BAR_SCRAP} scrap ('bar')`}`);
+    // WHAT IS LEFT, NOT WHAT IS DONE (rome, 2026-10-23): what already stands
+    // is one line at the top, and the list is only what you could still put up.
+    const up = [...(den.barred ? ["a bar on the door"] : []), ...Object.entries(DEN_BUILDS).filter(([key]) => isBuilt(den, key)).map(([, b]) => b.name)];
+    const lines = up.length ? [`Up already: ${up.join(", ")}.`] : [];
+    const left: string[] = [];
+    if (!den.barred) left.push(`  a bar on the door — ${DEN_BAR_IRON} iron and ${DEN_BAR_SCRAP} scrap ('bar')`);
     for (const [key, b] of Object.entries(DEN_BUILDS)) {
-      lines.push(`  ${b.name} — ${isBuilt(den, key) ? "built" : `${priceText(b.cost)}${b.needs ? `, once ${needsName(b.needs)} is in` : ""}${b.require ? `; it cannot be done without ${DEN_TOOL_WORD[b.require]}` : b.tool ? `, quicker with ${DEN_TOOL_WORD[b.tool]}` : ""} ('build ${key}')`}: ${b.does}.`);
+      if (isBuilt(den, key)) continue;
+      left.push(`  ${b.name} — ${priceText(b.cost)}${b.needs ? `, once ${needsName(b.needs)} is in` : ""}${b.require ? `; it cannot be done without ${DEN_TOOL_WORD[b.require]}` : b.tool ? `, quicker with ${DEN_TOOL_WORD[b.tool]}` : ""} ('build ${key}'): ${b.does}.`);
     }
+    if (left.length) lines.push("What your den could still have:", ...left);
+    else lines.push("Everything a den can have is up in this one.");
     return z.send(session, lines.join("\n"));
   }
   const key = Object.keys(DEN_BUILDS).find((k) => k === want || want.startsWith(k.slice(0, 4)) || nameMatches(DEN_BUILDS[k]!.name, want));
@@ -777,7 +787,7 @@ export async function cmdBuild(z: ZoneDO, session: Session, arg: string): Promis
   // off half-done costs nothing but the time.
   const now = Date.now();
   const job = buildJobs.get(session.pubkey);
-  const doing = job && job.key === key ? job : { key, done: 0, at: 0 };
+  const doing = job && job.key === key ? job : { key, want, done: 0, at: 0 };
   if (now < doing.at) return z.send(session, "Your hands are still busy with the last of it. A moment, then 'build' again.", "dmgin");
   const tool = b.tool ? denTool(z, session, b.tool) : undefined;
   doing.done += tool ? 2 : 1;

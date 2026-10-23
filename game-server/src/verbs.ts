@@ -59,7 +59,7 @@ import {
   LANTERN_ITEM, LANTERN_FAT_MS, SLOT_WORD,
   RANGERS, HUNGRY_AT,
 } from "./zone-data";
-import { gatehouseFeed, throughTheDoor, worksBar } from "./gate";
+import { gatehouseFeed, inStock, throughTheDoor, worksBar } from "./gate";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
 export function cmdXyzzy(z: ZoneDO, session: Session): void {
@@ -811,6 +811,16 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
           + " Back it goes, and the latch clicks home.",
       );
     }
+  }
+  // THE KEEPER'S SHELF (rome, 2026-10-23): what he has on offer at the hatch
+  // can be looked at before you buy it, in the barter window and typed alike.
+  if (!blind && world.entryRooms.has(session.roomId)) {
+    const shelf = world.fenceStock.find((s) => {
+      const t = world.itemTemplates.get(s.itemId);
+      return !!t && inStock(z, s.itemId) && nameMatches(t.name, arg);
+    });
+    const t = shelf && world.itemTemplates.get(shelf.itemId);
+    if (t) return z.send(session, `On the keeper's shelf: ${t.description}${z.itemStat(t)}`);
   }
   // THE ROOM ITSELF IS LOOKABLE-AT NOW (rome, 2026-08-06: "how and where can we
   // make the lore deeper? (make the world feel alive)").

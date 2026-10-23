@@ -1429,6 +1429,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
       const t = world.itemTemplates.get(s.itemId);
       return t ? {
         id: s.itemId, name: t.name, rarity: t.rarity, slot: t.slot, cost: s.cost, kind: kindOf(t),
+        description: t.description ?? "",
         stat: z.itemStat(t).replace(/^ \(|\)$/g, "") + (matLeft(z, s.itemId) !== null ? `${z.itemStat(t) ? " · " : ""}${matLeft(z, s.itemId)} on the shelf` : ""),
       } : null;
     })
@@ -1458,7 +1459,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
     // then count only the copies not yet on the counter. Escrowed copies still
     // register the row's position, so laying one on the counter never reshuffles
     // the list — the row just decrements, and vanishes when its last copy is offered.
-    const goods = new Map<string, { id: string; name: string; rarity: string; slot: string; kind: string; n: number; w: number; mark: number; price?: number }>();
+    const goods = new Map<string, { id: string; name: string; rarity: string; slot: string; kind: string; description: string; n: number; w: number; mark: number; price?: number }>();
     for (const c of pool) {
       const t = world.itemTemplates.get(c.itemId);
       if (!t || (t.barter ?? 0) <= 0) continue;
@@ -1467,7 +1468,7 @@ export async function sendTrade(z: ZoneDO, session: Session, note?: string): Pro
       const key = `${t.id}|${w}`;
       let g = goods.get(key);
       if (!g) {
-        g = { id: t.id, name: t.name, rarity: t.rarity, slot: t.slot, kind: kindOf(t), n: 0, w, mark: w > 0 ? worthMark(w) : 0 };
+        g = { id: t.id, name: t.name, rarity: t.rarity, slot: t.slot, kind: kindOf(t), description: t.description ?? "", n: 0, w, mark: w > 0 ? worthMark(w) : 0 };
         if (known.has(t.id)) g.price = w;
         goods.set(key, g);
       }
