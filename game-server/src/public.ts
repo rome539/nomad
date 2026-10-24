@@ -10000,7 +10000,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "109";      // /mob/      strips and their eye layers
+var MOB_V  = "110";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "45";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
@@ -11543,7 +11543,7 @@ var MOB_LINE = {
   "deep-dark": 55,
   "kings-rooms": 55,
   "waiting-hall": 55,
-  "sunken-throne": 55,
+  "sunken-throne": 61,   // once he has stood up, the Forgotten King is on the floor below the platform (rome, 2026-10-24)
   "kings-hoard": 55,
   "gods-pool": 58,   // the Drowned God a little forward (rome, 2026-10-24): his back foot went into the pool when he struck
   "marrow-seat": 55,
@@ -11559,8 +11559,11 @@ var MOB_LINE = {
 // the CSS default), which puts him in the chair. Fitted by compositing each
 // king's real frame at his real in-game size onto the plate. The God's Pool has
 // no entry on purpose: the Drowned God's seat is a crouch on the rim.
+// ONE FRAME SET LOWER, as a share of the sprite's height (rome, 2026-10-24:
+// the Forgotten King's death, just a little down).
+var FRAME_DROP = { "forgotten-king": { death: 0.03 } };
 var SEAT_ON = {
-  "sunken-throne": { up: 0.14, s: 0.90 },   // the Forgotten King
+  "sunken-throne": { up: 0.305, s: 1.09 },  // the Forgotten King: the redrawn seat drawn at the live king's size (rome, 2026-10-24)
   "marrow-seat":   { up: 0.03, s: 0.95 },   // the Marrow-King
 };
 // The day count from the server: one number, the same for everybody, up by one
@@ -13758,7 +13761,7 @@ var MOB_ANIM = {
   "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "grave-hyena":   { n: 8, aspect: 1.128, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "forgotten-king":   { n: 8, aspect: 1.027, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"sweep":6,"death":7} },
+  "forgotten-king":   { n: 8, aspect: 0.826, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "two-hound":   { n: 6, aspect: 1.287, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "pale-stalker":   { n: 8, aspect: 1.638, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"lurk":6,"death":7} },
@@ -15039,15 +15042,20 @@ function stepAnims() {
     // ...and while he is seated, in the throne rather than on the air in front of it (SEAT_ON).
     // Read live, not kept on the sprite: the row outlives a repaint of the room it
     // stands in, and the throne only lines up with a king alone in the middle of it.
-    var seat = p.k === a.spec.f["keep-the-seat"] && anims.length === 1 && mobsEl.children.length === 1
+    // The rise is still in the chair (rome, 2026-10-24): only once he is up is he on the floor below.
+    var seat = (p.k === a.spec.f["keep-the-seat"] || p.k === a.spec.f["stand-from-the-throne"]) && anims.length === 1 && mobsEl.children.length === 1
       && typeof SEAT_ON !== "undefined" && mobsEl.dataset ? SEAT_ON[mobsEl.dataset.seat || ""] || null : null;
+    // ...and a frame set lower where it was drawn high (FRAME_DROP). Inline, not a
+    // helper: the driver test and the preview lift this loop whole.
+    var drop = 0, fd = typeof FRAME_DROP !== "undefined" ? FRAME_DROP[a.id] : null;
+    if (fd) for (var fdn in fd) if (a.spec.f[fdn] === p.k) drop = fd[fdn];
     a.el.style.backgroundPositionX = (p.k * 100 / (a.spec.n - 1)) + "%";
     if (MOB_EYES[a.id]) eyeColour(a, p.k);
     // the strike itself comes out of the dark whole
     a.el.style.opacity = a.state === "lurk" && a.phase !== "attack" && a.phase !== "death" ? String(LURK_FADE) : "";
     if (a.el.dataset) a.el.dataset.death = p.k === a.spec.f.death ? "1" : "";
     a.el.style.transform = "translate(" + (p.x * 100).toFixed(1) + "%,"
-      + (-(p.air + (a.lift || 0) + (seat ? seat.up : 0)) * 100).toFixed(1) + "%)"
+      + (-(p.air + (a.lift || 0) + (seat ? seat.up : 0) - drop) * 100).toFixed(1) + "%)"
       + " rotate(" + ((a.rot || 0) * 57.3).toFixed(2) + "deg) scale(" + (p.s * (seat ? seat.s : 1)).toFixed(3) + ")";
   }
   if (mobHold && now >= mobHold) releaseMobs();

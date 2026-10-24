@@ -90,7 +90,10 @@ const SAME_ART = { "warden": ["warden-surface"] };
 // nearer 1.7x. This grows that pose alone, from its feet, before the shared
 // crop - so the frame gets taller and every other pose keeps its own size
 // relative to the box (the MOB_SPRITE number takes up the difference).
-const POSE_GROW = { "brown-bear": { "inspect-upright": 1.3 } };
+const POSE_GROW = { "brown-bear": { "inspect-upright": 1.3 },
+  // the redrawn king's call-the-dark came out smaller than the man standing
+  // in idle: 333 eye-to-feet against 387, both upright (rome, 2026-10-24)
+  "forgotten-king": { "call-the-dark": 1.16 } };
 const BODY_SCALE = {
   "the-pilot": 0.933, "the-drove-master": 0.973, "wood-stag": 0.970,
   "the-old-glutton": 0.951, "snow-fox": 0.968, "lead-dog": 0.962,
@@ -334,6 +337,13 @@ for (const [id, dir] of [...found].sort()) {
     for (let i = 0; i < order.length; i++) {
       if (!fs.existsSync(eyeFiles[i])) { eyeFrames.push(await sharp(blank).png().toBuffer()); continue; }
       let e = await sharp(eyeFiles[i]).toBuffer();
+      // A GROWN POSE GROWS ITS EYES TOO (rome, 2026-10-24: the Forgotten King's
+      // call-the-dark was grown and its eyes were not, so they sat off the skull
+      // and the blue sockets were never painted over).
+      if (grow[order[i]]) {
+        const gm = await sharp(e).metadata();
+        e = await sharp(e).resize(Math.round(gm.width * grow[order[i]]), Math.round(gm.height * grow[order[i]])).png().toBuffer();
+      }
       const em = await sharp(e).metadata();
       // the same bottom-align shift the base got, so the eyes ride with the head
       if (em.width !== cw || em.height !== ch)

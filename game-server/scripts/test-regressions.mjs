@@ -884,6 +884,15 @@ try {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /"gods-pool": 58,/);
   });
+  check('the Forgotten King sits and rises in his chair at the live king size, then stands on the floor below (2026-10-24)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /"sunken-throne": 61,/);
+    assert.match(pub, /var FRAME_DROP = \{ "forgotten-king": \{ death: 0\.03 \} \};/, 'his death a little lower');
+    assert.match(pub, /"sunken-throne": \{ up: 0\.305, s: 1\.09 \}/);
+    assert.match(pub, /p\.k === a\.spec\.f\["keep-the-seat"\] \|\| p\.k === a\.spec\.f\["stand-from-the-throne"\]/);
+    const strips = readFileSync(new URL('./build-mob-strips.mjs', import.meta.url), 'utf8');
+    assert.match(strips, /"forgotten-king": \{ "call-the-dark": 1\.16 \}/);
+  });
 
   // ---------------------------------------------------------------- the rising dead
   console.log('the dead that get up');

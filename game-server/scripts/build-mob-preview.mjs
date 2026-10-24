@@ -201,7 +201,13 @@ for (const f of fs.readdirSync(path.join(GAME, "public/mob")))
   if (f.endsWith(".eyes.webp")) EYES[f.slice(0, -10)] = 1;
 
 const CONSTS = block("CALM_POSES") + "\n" + block("ATTACK_S");
-const DRIVER = [block("NOT_AN_IDLE"), block("EVENT_POSES"), fn("mobActs"), fn("poseAt"), fn("mobBeat"), block("LURK_FADE"), fn("stepAnims"), fn("applyState")].join("\n");
+// One statement, for a table that sits in a run of other vars (FRAME_DROP).
+const stmt = (name) => {
+  const i = src.search(new RegExp("^var " + name + " = ", "m"));
+  if (i < 0) throw new Error("no var " + name);
+  return src.slice(i, src.indexOf(";\n", i) + 1);
+};
+const DRIVER = [block("NOT_AN_IDLE"), block("EVENT_POSES"), fn("mobActs"), fn("poseAt"), fn("mobBeat"), block("LURK_FADE"), stmt("FRAME_DROP"), fn("stepAnims"), fn("applyState")].join("\n");
 
 // THE OTHER TWO LAYERS. A creature on a flat brown field is half a preview: the
 // game is a sky, a keyed ground in front of it, and the animals standing on
