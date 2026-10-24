@@ -2803,7 +2803,7 @@ export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {
 export async function cmdLeaderboard(z: ZoneDO, session: Session): Promise<void> {
   const TOP = 10;
   const boards: Array<{ key: "legend" | "trophies"; head: string }> = [
-    { key: "legend", head: "— legend: kings felled, blood spilled, all slain —" },
+    { key: "legend", head: "— legend: kings felled, blood spilled, all slain, creatures known —" },
     { key: "trophies", head: "— trophies: the deepest hoards —" },
   ];
   // LIVE, not as-last-published: the numbers are computed at read time now, so

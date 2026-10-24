@@ -517,7 +517,8 @@ export const GUIDE_PAGE = `<!doctype html>
     <em>brought home and kept</em>. Die with it all on your back and the board
     knows.</li>
     <li><b>Legend</b> — everything you have killed for as long as you have lived,
-    with kings and wanderers weighing heaviest. This one cannot be lost, only
+    with kings and wanderers weighing heaviest, and every creature whose full
+    account you have written in your own journal. This one cannot be lost, only
     added to.</li>
   </ul>
   <p>Your entry is <strong>signed by the dungeon, not by you</strong>. That is the

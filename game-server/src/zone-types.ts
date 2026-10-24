@@ -90,13 +90,14 @@ export interface Session {
   kills: number; // tallies cached from D1; recordKill/recordDeath keep the truth
   deaths: number;
   bossKills: number;
+  accounts?: number; // full journal accounts finished (the legend board's fourth column)
   pvpKills: number;
   tokens: number;
   tokensAt: number; // ms of last refill
   nextThrowAt: number; // ms — one throw per round; the arm needs its follow-through
   visited: Set<string>; // rooms seen THIS session — a room you know shows brief, not the full prose again
   mapInk?: Map<string, Set<string>>; // per carried surveyor's copy (its journalId): rooms inked onto it — cache over map_ink, loaded on first touch
-  studied?: Set<string>; // templateIds already studied across every carried journal — cache over journal_logs so the SYNC chip builder can hide a redundant `study` (sendCtx runs every combat round; it can't read D1). undefined = not hydrated yet, and the chip shows, same as before the cache existed
+  studied?: Map<string, Set<string>>; // templateId -> the behaviours already written down across every carried journal (study.ts) — cache over journal_logs so the SYNC chip builder can hide a redundant `study` (sendCtx runs every combat round; it can't read D1). undefined = not hydrated yet, and the chip shows, same as before the cache existed
   lastAmbientAt: number; // ms of the last atmosphere line (rate-limits the dungeon's breathing)
   lastAmbientLine?: string; // the last one said — never said twice running, however small the pool
   keeperTold: Map<string, number>; // template id -> how many lines of that keeper's story you have heard (persisted, players.keeper_told)
@@ -170,6 +171,7 @@ export interface Creature {
   mournedAt?: number; // grave-hyena: the `at` of the kin-corpse it last keened over, so each body is mourned once
   murmuredAt?: number; // HOLLOW: last time it breathed a name into the dark (the cooldown anchor)
   gorged?: boolean; // this sleep began on a corpse it had just eaten — the only state that earns the bones line
+  eatingUntil?: number; // a meal holds it over the food until then, and it reads as eating (study.ts EAT_SHOW_MS; ephemeral)
   asleep?: boolean; // warm blood only: dozing — skips its whole act loop; wakes to entry/noise rolls (the wakeListeners law), a blow, or its own clock
   sleepUntil?: number; // when the doze ends on its own
   thirstAt?: number; // hyenas: when the next watering run calls

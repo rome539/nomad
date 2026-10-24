@@ -34,7 +34,11 @@ try {
         "export * as body from './body';",
         "export * as ratking from './ratking';",
         "export * as coughing from './cough';",
-        "export {reconcilePopulation} from './ai';",
+        "export {reconcilePopulation, ate} from './ai';",
+        "export * as study from './study';",
+        "export {cmdStudy, cmdJournal} from './lore';",
+        "export * as rising from './rising';",
+        "export {loadLeaderboard} from './world';",
         "export {PATROLS, WARRENS_ROOMS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
@@ -48,7 +52,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, rising, loadLeaderboard, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -646,6 +650,181 @@ try {
     assert.match(zone, /black water fills your lungs[^\n]*\n\s*cough\.swallowedWater\(victim\)/);
     assert.match(ev, /a wall comes down in a long roar of stone[^\n]*\n\s*cough\.dust\(z, roomId\)/);
     assert.match(zone, /cough\.tick\(this, now\)/);
+  });
+
+  // ---------------------------------------------------------------- study by behaviour
+  console.log('study by behaviour');
+  check('each kind asks only for the behaviours it has (2026-10-24)', () => {
+    assert.deepEqual(study.required('skeleton'), ['about', 'dead'], 'the hollow neither sleep nor eat');
+    assert.deepEqual(study.required('rat-king'), ['about', 'feeding', 'dead'], 'the king eats and never sleeps');
+    for (const id of ['three-hound', 'two-hound']) assert.deepEqual(study.required(id), ['about', 'asleep', 'dead'], id + ' has nothing to eat at its post');
+    assert.deepEqual(study.required('hill-wolf'), ['about', 'asleep', 'feeding', 'hungry', 'dead']);
+    assert.deepEqual(study.required('roe-deer'), ['about', 'asleep', 'feeding', 'dead'], 'a napper is asked to be caught asleep; a floor eater never hungry');
+    assert.deepEqual(study.writes('roe-deer', 'feeding'), ['feeding', 'hungry'], 'seeing a floor eater feed writes its hunger too');
+    assert.deepEqual(study.writes('hill-wolf', 'feeding'), ['feeding'], 'a hunter has to be caught hungry on its own');
+    const zs = new ZoneDO({}, {}); zs.variantBase = new Map();
+    assert.equal(study.soundLine(zs, 'rat'), 'Claws skitter.', 'the book drops the direction the world fills in');
+    assert.match(study.soundLine(zs, 'rat-king'), /^Something heavy drags itself, and a great many small claws hurry along with it\. Standing still: a wet, rattling breath/);
+  });
+  check('a meal holds the animal over it, and it reads as feeding (2026-10-24)', () => {
+    const z = new ZoneDO({}, {});
+    z.sentinelAwake = () => true;
+    const c = { id: 'c', templateId: 'roe-deer', hunger: 10, nextWanderAt: 0 };
+    assert.equal(study.behaviourNow(z, c), 'about');
+    const now = Date.now();
+    ate(c, now);
+    assert.equal(study.behaviourNow(z, c, now + 60_000), 'feeding');
+    assert.ok(c.nextWanderAt >= now + 60_000, 'it stays put over the meal');
+    assert.equal(study.behaviourNow(z, c, now + 3 * 60_000), 'about', 'and the meal ends');
+  });
+  function studyWorld() {
+    const { db, D1 } = sqliteD1();
+    db.exec("CREATE TABLE player_accounts(pubkey TEXT, template_id TEXT, at INTEGER, PRIMARY KEY(pubkey, template_id)); ALTER TABLE players ADD COLUMN accounts INTEGER NOT NULL DEFAULT 0; INSERT INTO players(pubkey, name) VALUES ('me', 'Rome')");
+    db.exec("CREATE TABLE journal_logs(journal_id TEXT, template_id TEXT, kills INTEGER DEFAULT 0, studied INTEGER DEFAULT 0, seen TEXT NOT NULL DEFAULT '', met TEXT NOT NULL DEFAULT '', PRIMARY KEY(journal_id, template_id))");
+    const z = new ZoneDO({}, {});
+    z.env = { DB: D1 };
+    const wolfT = { id: 'hill-wolf', name: 'a hill wolf', level: 3, description: 'A grey wolf.', armor: 0, loot_item: null, is_boss: 0 };
+    z.world = new Proxy({ mobTemplates: new Map([['hill-wolf', wolfT]]), mobSpawns: [], mobKeys: [] },
+      { get: (t, k) => k in t ? t[k] : (typeof k === 'string' ? (t[k] = new Map()) : undefined) });
+    z.creatures = new Map(); z.traces = new Map(); z.sessions = new Map();
+    const said = [];
+    z.send = (_s, t) => said.push(t);
+    z.inCombat = () => false; z.mossUnseen = () => false; z.sentinelAwake = () => true;
+    z.roomFeed = z.sendCtx = z.refreshRoomCtx = () => undefined;
+    z.bearsClause = () => ''; z.hoardManifest = () => ''; z.condition = () => 'unhurt';
+    const wolf = { id: 'w1', templateId: 'hill-wolf', roomId: 'r', hp: 20, hunger: 0, nextWanderAt: 0, asleep: true };
+    z.creatures.set('w1', wolf);
+    z.regionOf = () => 'wood'; z.variantBase = new Map([['white-wolf', 'hill-wolf']]);
+    z.findCreatureIn = (room, arg) => [...z.creatures.values()].find((c) => c.roomId === room && /wolf/.test(arg)) ?? null;
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'r', items: [{ rowId: 'j', itemId: 'journal', journalId: 'jrn-1' }] };
+    const seen = () => db.prepare("SELECT seen FROM journal_logs WHERE template_id = 'hill-wolf'").get()?.seen;
+    return { z, me, wolf, said, seen, db };
+  }
+  await checkAsync('a study writes what the creature is doing, and the same behaviour twice adds nothing (2026-10-24)', async () => {
+    const { z, me, wolf, said, seen } = studyWorld();
+    await cmdStudy(z, me, 'wolf');
+    assert.equal(seen(), 'asleep');
+    assert.match(said.at(-1), /You watch a hill wolf sleeping/);
+    assert.match(said.at(-1), /still to see it about its business, eating, hungry and dead/);
+    await cmdStudy(z, me, 'wolf');
+    assert.match(said.at(-1), /already set down a hill wolf sleeping/);
+    wolf.asleep = false; wolf.hunger = 60;
+    await cmdStudy(z, me, 'wolf');
+    assert.equal(seen(), 'asleep,hungry');
+  });
+  await checkAsync('studying the dead reads the body and uses it up (2026-10-24)', async () => {
+    const { z, me, said, seen } = studyWorld();
+    const body = { kind: 'blood', at: Date.now(), label: 'a hill wolf', id: 'hill-wolf' };
+    z.traces.set('r', [body, { kind: 'blood', at: Date.now(), label: 'Rome', id: 'nomad' }]);
+    await cmdStudy(z, me, 'dead wolf');
+    assert.equal(seen(), 'dead', 'the living wolf in the room is not the one studied');
+    assert.match(said.at(-1), /Any weapon can find the gap/);
+    assert.deepEqual(z.traces.get('r').map((t) => t.id), ['nomad'], 'the wolf body is gone; a nomad is never a study');
+    await cmdStudy(z, me, 'dead wolf');
+    assert.match(said.at(-1), /Nothing by that name/);
+  });
+  await checkAsync('a full account wants every behaviour and the kills (2026-10-24)', async () => {
+    const { z, me, wolf, said, db } = studyWorld();
+    db.prepare("INSERT INTO journal_logs VALUES ('jrn-1', 'hill-wolf', 6, 1, 'about,feeding,hungry,dead', '')").run();
+    await cmdStudy(z, me, 'wolf');
+    assert.match(said.at(-1), /Its account is complete/);
+    db.prepare("UPDATE journal_logs SET seen = 'about,feeding,hungry', kills = 6").run();
+    wolf.asleep = false; wolf.hunger = 0;
+    await cmdStudy(z, me, 'wolf'); // about, already seen
+    assert.match(said.at(-1), /already set down/);
+  });
+
+  await checkAsync('the journal reads as text: its page, its sound, where it was met, its forms (2026-10-24)', async () => {
+    const { z, me, wolf, said, db } = studyWorld();
+    z.world.mobTemplates.set('white-wolf', { id: 'white-wolf', name: 'a white wolf', level: 4, description: 'A pale wolf.', armor: 0 });
+    me.ws = { send: () => {} };
+    wolf.asleep = false;
+    await cmdStudy(z, me, 'wolf');
+    z.regionOf = () => 'upper';
+    wolf.hunger = 60;
+    await cmdStudy(z, me, 'wolf');
+    z.regionOf = () => 'wood'; wolf.asleep = true;
+    await cmdStudy(z, me, 'wolf'); // back in the wood: the place is not written twice
+    assert.equal(db.prepare("SELECT met FROM journal_logs WHERE template_id = 'hill-wolf'").get().met, 'wood,upper');
+    db.prepare("INSERT INTO journal_logs VALUES ('jrn-1', 'white-wolf', 1, 0, '', 'wood')").run();
+    await cmdJournal(z, me, '');
+    assert.match(said.at(-1), /2 creatures written down:\n  a white wolf — hunted, 1 kill\n  a hill wolf — sighted, 0 kills/);
+    await cmdJournal(z, me, 'hill wolf');
+    const page = said.at(-1);
+    assert.match(page, /^a hill wolf — sighted, 0 kills/);
+    assert.match(page, /Hungry\. Hungry, it eyes/);
+    assert.match(page, /Met in The Wood and The Halls\./);
+    assert.match(page, /Its rarer forms you have met: a white wolf\./);
+    assert.match(page, /Still to see it eating and dead/);
+    assert.match(page, /Asleep\. /);
+    await cmdJournal(z, me, 'white');
+    assert.match(said.at(-1), /A rare blood of a hill wolf\./);
+  });
+
+  await checkAsync('finishing a page puts it on the legend board once; a book found full gives nothing (2026-10-24)', async () => {
+    const { z, me, wolf, db } = studyWorld();
+    const accounts = () => db.prepare("SELECT accounts FROM players WHERE pubkey = 'me'").get().accounts;
+    db.prepare("INSERT INTO journal_logs VALUES ('jrn-1', 'hill-wolf', 6, 1, 'about,feeding,hungry,dead', '')").run();
+    await cmdStudy(z, me, 'wolf'); // asleep: this study finishes it
+    assert.equal(accounts(), 1);
+    assert.equal(me.accounts, 1);
+    wolf.asleep = false;
+    await cmdStudy(z, me, 'wolf');
+    assert.equal(accounts(), 1, 'once per kind');
+    // Somebody else's book, already full: writing more in it (a pale crawler
+    // caught dozing, which its account never asked for) is not finishing it.
+    z.world.mobTemplates.set('pale-crawler', { id: 'pale-crawler', name: 'a pale crawler', level: 3, description: 'Pale.', armor: 0 });
+    z.creatures.clear();
+    z.creatures.set('pc', { id: 'pc', templateId: 'pale-crawler', roomId: 'r', hp: 10, hunger: 0, nextWanderAt: 0, asleep: true });
+    z.findCreatureIn = (room, arg) => [...z.creatures.values()].find((c) => c.roomId === room && /crawler/.test(arg)) ?? null;
+    db.prepare("INSERT INTO journal_logs VALUES ('jrn-1', 'pale-crawler', 6, 1, 'about,feeding,hungry,dead', '')").run();
+    await cmdStudy(z, me, 'crawler');
+    assert.equal(db.prepare("SELECT seen FROM journal_logs WHERE template_id = 'pale-crawler'").get().seen, 'about,asleep,feeding,hungry,dead', 'the doze is written down');
+    assert.equal(accounts(), 1, 'a page found full is not yours');
+  });
+
+  await checkAsync('the legend board counts a full account at 10 (2026-10-24)', async () => {
+    const { db, D1 } = sqliteD1();
+    db.exec("DROP TABLE players; CREATE TABLE players(pubkey TEXT PRIMARY KEY, name TEXT, kills INTEGER DEFAULT 0, boss_kills INTEGER DEFAULT 0, pvp_kills INTEGER DEFAULT 0, accounts INTEGER DEFAULT 0, lb_published_at INTEGER)");
+    db.exec("INSERT INTO players VALUES ('a', 'A', 5, 0, 0, 3, 1), ('b', 'B', 30, 0, 0, 0, 1)");
+    const top = await loadLeaderboard(D1, 'legend', 10, { bossPts: 100, pvpPts: 25, accountPts: 10, trophyIds: [] });
+    assert.deepEqual(top.map((e) => [e.name, e.score]), [['A', 35], ['B', 30]]);
+  });
+
+  // ---------------------------------------------------------------- the rising dead
+  console.log('the dead that get up');
+  await checkAsync('a revenant falls like the dead, and only gets up a while later (2026-10-24)', async () => {
+    const z = new ZoneDO({}, {});
+    rising.resetForTest(z);
+    const keep = new Set(['constructor', 'onCreatureDeath', 'killVerbOf']);
+    for (let p = Object.getPrototypeOf(z); p && p !== Object.prototype; p = Object.getPrototypeOf(p))
+      for (const k of Object.getOwnPropertyNames(p)) if (!keep.has(k) && typeof p[k] === 'function') z[k] = () => undefined;
+    const said = []; z.send = (_s, t) => said.push(t);
+    z.feedKill = () => '';
+    z.creatures = new Map(); z.sessions = new Map(); z.traces = new Map();
+    z.addTrace = (room, tr) => z.traces.set(room, [...(z.traces.get(room) ?? []), tr]);
+    const tmpl = { id: 'twice-dead', name: 'a twice-dead', max_hp: 30, level: 3, is_boss: 0 };
+    z.world = new Proxy({ mobTemplates: new Map([['twice-dead', tmpl]]) }, { get: (t, k) => k in t ? t[k] : (typeof k === 'string' ? (t[k] = new Map()) : undefined) });
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'r', items: [], kills: 0, bossKills: 0, target: 'td' };
+    z.sessions.set('me', me);
+    const c = { id: 'td', templateId: 'twice-dead', roomId: 'r', hp: 0, hunger: 0, grudges: [], target: 'me', nextWanderAt: 0 };
+    z.creatures.set('td', c);
+    await z.onCreatureDeath(me, c, tmpl);
+    assert.equal(z.creatures.has('td'), false, 'it is down, off the board');
+    assert.equal(me.target, null, 'the fight is over');
+    assert.equal(me.kills, 0, 'no kill on the sheet for a false fall');
+    assert.equal(z.traces.get('r')?.[0]?.id, 'twice-dead', 'a body lies there');
+    rising.tick(z, Date.now() + 10_000);
+    assert.equal(z.creatures.has('td'), false, 'not at once');
+    rising.tick(z, Date.now() + 50_000);
+    assert.ok(z.creatures.has('td'), 'it gets up');
+    assert.equal(c.hp, 12, 'weaker than before');
+    assert.equal(c.target, 'me', 'and comes for the one who put it down');
+    assert.equal((z.traces.get('r') ?? []).length, 0, 'the body was it');
+    c.hp = 0;
+    await z.onCreatureDeath(me, c, tmpl).catch(() => {}); // the real fall: stubs end it early, but it must not rise
+    rising.tick(z, Date.now() + 100_000);
+    assert.equal(z.creatures.has('td'), false, 'the second fall is the last');
   });
 
   // ---------------------------------------------------------------- whetstone

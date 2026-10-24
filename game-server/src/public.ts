@@ -8720,6 +8720,7 @@ var jBody = document.getElementById("jbody");
 document.getElementById("jclose").addEventListener("click", closeJournal);
 function closeJournal() { jrnlEl.classList.remove("open"); hideModalChat(); }
 var JTIER = { 1: "sighted", 2: "hunted", 3: "known cold" };
+var JSEEN = { asleep: "Asleep", feeding: "Feeding", hungry: "Hungry", dead: "Dead" };
 function renderJournal(f) {
   jBody.textContent = "";
   var entries = f.entries || [];
@@ -8748,8 +8749,35 @@ function renderJournal(f) {
     tier.className = "jtier";
     tier.textContent = (JTIER[e.tier] || "noted") + " \\u00b7 " + e.kills + (e.kills === 1 ? " kill" : " kills") + (e.studied ? " \\u00b7 studied" : "");
     card.appendChild(tier);
+    if (e.formOf) { var fo = document.createElement("div"); fo.className = "jnat"; fo.textContent = e.formOf; card.appendChild(fo); }
     if (e.nature) { var nat = document.createElement("div"); nat.className = "jnat"; nat.textContent = e.nature; card.appendChild(nat); }
     if (e.note) { var no = document.createElement("div"); no.className = "jnote"; no.textContent = e.note; card.appendChild(no); }
+    // ONE LINE PER BEHAVIOUR SEEN (study.ts, 2026-10-24): asleep, feeding,
+    // hungry, dead. The server sends only what this book has seen.
+    var sn = e.seen || [];
+    for (var si = 0; si < sn.length; si++) {
+      var sl = document.createElement("div");
+      sl.className = "jnat";
+      var sk = document.createElement("b");
+      sk.textContent = (JSEEN[sn[si].k] || sn[si].k) + ". ";
+      sl.appendChild(sk);
+      sl.appendChild(document.createTextNode(sn[si].text));
+      card.appendChild(sl);
+    }
+    // Its sound and its prints (once watched), where the book has met it, and
+    // the rarer forms of it met. The text journal reads the same (lore.ts).
+    function jline(label, text) {
+      if (!text) return;
+      var d = document.createElement("div");
+      d.className = "jnat";
+      if (label) { var b = document.createElement("b"); b.textContent = label + ". "; d.appendChild(b); }
+      d.appendChild(document.createTextNode(text));
+      card.appendChild(d);
+    }
+    jline("Its sound", e.sound);
+    jline("Its prints", e.tracks);
+    jline("", e.met);
+    jline("", e.forms);
     // The field note: what a FULL account is worth, and the only part of the
     // page that is knowledge rather than description or behaviour. Server-gated
     // to tier 3 (lore.ts) — this is the reward for having filled the page.
@@ -8782,7 +8810,11 @@ function renderJournal(f) {
       // short. The number is the SERVER's (lore.killsForAccount, 9 minus the
       // creature's level) and rides on the entry \\u2014 a boss wants three, a rat
       // wants eight, and the client must never hold its own copy of that.
-      if (e.tier >= 2) {
+      // The server says what the page still wants (study.ts); the old rule
+      // below is only for a server that does not yet send it.
+      if (typeof e.lock === "string") {
+        lk.textContent = e.lock;
+      } else if (e.tier >= 2) {
         var need = (e.want || 3) - e.kills;
         lk.textContent = !e.studied
           ? (need > 0

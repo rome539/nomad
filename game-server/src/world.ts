@@ -329,6 +329,7 @@ export interface PlayerRow {
   kills: number; // creatures destroyed
   deaths: number;
   boss_kills: number;
+  accounts?: number; // full journal accounts this wanderer finished, one per kind (mig 339; the legend board counts them)
   pvp_kills: number; // self-publishable only; the world's narration never names killers
   stance: string; // "reckless" | "steady" | "guarded" — persisted play-style
   exhaustion?: string;
@@ -590,8 +591,8 @@ export interface LbEntry {
 // LEGEND, LIVE: boss kills and blood are columns on the row, so the whole board
 // is one cheap query and can never be stale. Weights are passed in rather than
 // imported — world.ts is the data layer and does not read tuning.
-function legendExpr(bossPts: number, pvpPts: number): string {
-  return `(boss_kills * ${bossPts} + pvp_kills * ${pvpPts} + kills)`;
+function legendExpr(bossPts: number, pvpPts: number, accountPts: number): string {
+  return `(boss_kills * ${bossPts} + pvp_kills * ${pvpPts} + kills + accounts * ${accountPts})`;
 }
 
 // TROPHIES, LIVE: the barter value of every trophy a wanderer holds, anywhere
@@ -644,9 +645,9 @@ export async function loadLeaderboard(
   db: D1Database,
   board: "legend" | "trophies",
   limit: number,
-  opts: { bossPts: number; pvpPts: number; trophyIds: string[] },
+  opts: { bossPts: number; pvpPts: number; accountPts: number; trophyIds: string[] },
 ): Promise<LbEntry[]> {
-  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts);
+  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts, opts.accountPts);
   // The expression appears TWICE (select list and filter). It used to bind its
   // id list on both, which is what broke the board — the ids are inlined now
   // (trophySumSelect), so this binds exactly one parameter, always.
@@ -664,9 +665,9 @@ export async function leaderboardRank(
   db: D1Database,
   pubkey: string,
   board: "legend" | "trophies",
-  opts: { bossPts: number; pvpPts: number; trophyIds: string[] },
+  opts: { bossPts: number; pvpPts: number; accountPts: number; trophyIds: string[] },
 ): Promise<{ rank: number; score: number } | null> {
-  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts);
+  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts, opts.accountPts);
   // Same fix as the board above: the ids are inlined, so each of these binds one.
   const me = await db
     .prepare(`SELECT ${expr} AS score, p.lb_published_at AS pub FROM players p WHERE p.pubkey = ?`)
@@ -842,25 +843,32 @@ export interface JournalRow {
   templateId: string;
   kills: number;
   studied: boolean;
+  seen: string; // the behaviours it has been studied in, comma-packed (study.ts, mig 339)
+  met: string;  // the regions the book has met it in (study or kill), comma-packed (mig 339)
 }
 
 // Every entry written in a given book.
 export async function journalLoad(db: D1Database, journalId: string): Promise<JournalRow[]> {
   const res = await db
-    .prepare("SELECT template_id, kills, studied FROM journal_logs WHERE journal_id = ?")
+    .prepare("SELECT template_id, kills, studied, seen, met FROM journal_logs WHERE journal_id = ?")
     .bind(journalId)
-    .all<{ template_id: string; kills: number; studied: number }>();
-  return (res.results ?? []).map((r) => ({ templateId: r.template_id, kills: r.kills, studied: !!r.studied }));
+    .all<{ template_id: string; kills: number; studied: number; seen: string | null; met: string | null }>();
+  return (res.results ?? []).map((r) => ({ templateId: r.template_id, kills: r.kills, studied: !!r.studied, seen: r.seen ?? "", met: r.met ?? "" }));
 }
 
+// Add the region just written (excluded.met) to a row's `met` list, once: left
+// alone when it is blank or already there.
+const metAdd = "CASE WHEN excluded.met = '' OR instr(',' || met || ',', ',' || excluded.met || ',') > 0 THEN met WHEN met = '' THEN excluded.met ELSE met || ',' || excluded.met END";
+
 // One more kill of a creature, written in the book you were holding when it fell.
-export async function journalBumpKill(db: D1Database, journalId: string, templateId: string): Promise<void> {
+// `region` joins the places the book has met it (metAdd: once each, in order).
+export async function journalBumpKill(db: D1Database, journalId: string, templateId: string, region = ""): Promise<void> {
   await db
     .prepare(
-      "INSERT INTO journal_logs (journal_id, template_id, kills, studied) VALUES (?, ?, 1, 0) " +
-      "ON CONFLICT(journal_id, template_id) DO UPDATE SET kills = kills + 1",
+      "INSERT INTO journal_logs (journal_id, template_id, kills, studied, met) VALUES (?, ?, 1, 0, ?) " +
+      "ON CONFLICT(journal_id, template_id) DO UPDATE SET kills = kills + 1, met = " + metAdd,
     )
-    .bind(journalId, templateId)
+    .bind(journalId, templateId, region)
     .run();
 }
 
@@ -875,14 +883,26 @@ export async function journalTraitAdd(db: D1Database, journalId: string, trait: 
     .bind(journalId, trait, Math.floor(Date.now() / 1000)).run();
 }
 
-// Mark a creature studied in the book (the observation half of a full account).
-export async function journalStudy(db: D1Database, journalId: string, templateId: string): Promise<void> {
+// A FULL ACCOUNT FINISHED (2026-10-24): written once per kind per wanderer, to
+// whoever's own study or kill completed the page, and kept like a kill (losing
+// the book does not take it back). True when this was the first time.
+export async function creditAccount(db: D1Database, pubkey: string, templateId: string): Promise<boolean> {
+  const r = await db.prepare("INSERT OR IGNORE INTO player_accounts (pubkey, template_id, at) VALUES (?, ?, ?)")
+    .bind(pubkey, templateId, Math.floor(Date.now() / 1000)).run();
+  if (!r.meta?.changes) return false;
+  await db.prepare("UPDATE players SET accounts = accounts + 1 WHERE pubkey = ?").bind(pubkey).run();
+  return true;
+}
+
+// Mark a creature studied in the book (the observation half of a full account),
+// with every behaviour it has now been seen in (`seen`, packed by study.ts).
+export async function journalStudy(db: D1Database, journalId: string, templateId: string, seen: string, region = ""): Promise<void> {
   await db
     .prepare(
-      "INSERT INTO journal_logs (journal_id, template_id, kills, studied) VALUES (?, ?, 0, 1) " +
-      "ON CONFLICT(journal_id, template_id) DO UPDATE SET studied = 1",
+      "INSERT INTO journal_logs (journal_id, template_id, kills, studied, seen, met) VALUES (?, ?, 0, 1, ?, ?) " +
+      "ON CONFLICT(journal_id, template_id) DO UPDATE SET studied = 1, seen = excluded.seen, met = " + metAdd,
     )
-    .bind(journalId, templateId)
+    .bind(journalId, templateId, seen, region)
     .run();
 }
 

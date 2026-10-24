@@ -60,6 +60,7 @@ import {
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING,
+  EAT_SHOW_MS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -125,6 +126,7 @@ export async function arrivalHabits(z: ZoneDO, creature: Creature, tmpl: MobTemp
       }
       for (const w of wolves) await creatureMoves(z, w, now, "flee", silent);
       creature.hunger = 0;
+      ate(creature, now);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + 8);
       if (!silent) { z.fxFed(here, tmpl.id); z.refreshRoomCtx(here); }
     }
@@ -725,6 +727,13 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     if (creature.target) {
       const mark = [...z.sessions.values()].find((s) => s.pubkey === creature.target && !z.outOfWorld(s));
       return mark ? `fixed on ${mark.name}` : "on the hunt";
+    }
+    // A MEAL TAKES TIME (EAT_SHOW_MS): the animal over its food reads as eating,
+    // in the body it has, and that is what a study catches as "feeding".
+    if ((creature.eatingUntil ?? 0) > Date.now()) {
+      return BEAKS.has(creature.templateId) ? "head down over a meal, tearing at it with its bill"
+        : COILS.has(creature.templateId) ? "working a meal slowly down its throat"
+        : "head down, eating";
     }
     // Nothing has it fixed on a fight — so read what it's actually DOING. The
     // legibility law covers peace too: a scavenger tearing a body, a hyena
@@ -1796,6 +1805,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       z.roamed.delete(`${eaten}@${creature.roomId}`);
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       creature.hunger = Math.max(0, creature.hunger - MEAL_ITEM); // a found meal, not a kill
+      ate(creature);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
       z.addTrace(creature.roomId, { kind: "scraps", at });
       if (!silent) {
@@ -1848,6 +1858,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       // within the hour now, which is what a thing living on scraps does.
       // A bear on its own feeding ground eats a real meal (OWN_FORAGE_MEAL_LEFT).
       creature.hunger = grazeHere && OWN_FORAGE_ROOMS.has(creature.templateId) ? Math.min(creature.hunger, OWN_FORAGE_MEAL_LEFT) : Math.max(0, creature.hunger - MEAL_GRAZE);
+      ate(creature, at);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.mastOn(z) ? Math.round(FORAGE_HEAL * MAST_FORAGE_MULT)
         : grazeHere && events.wrackIn(z, creature.roomId) ? Math.round(FORAGE_HEAL * WRACK_FORAGE_MULT)
         : grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT)
@@ -2081,6 +2092,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt);
       creature.hunger = 0;
+      ate(creature);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`, undefined, false);
@@ -2155,6 +2167,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     releaseHold(z, creature);
     preyFalls(z, victim, vt);
     creature.hunger = 0;
+    ate(creature);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} finishes it, and stands over what is left.`, undefined, false);
@@ -2591,6 +2604,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     list.splice(idx, 1);
     if (list.length === 0) z.traces.delete(creature.roomId);
     creature.hunger = Math.max(0, creature.hunger - MEAL_CORPSE); // a whole body, and it still is not a kill
+    ate(creature);
     // WHAT THE CORPSE IS WORTH TO THIS ONE. A bone-cracker gets through to the
     // marrow and takes double; a sour-gutted thing eats and is no better for it.
     // Both make the FLOOR of a fight tactical rather than scenery: with bodies
@@ -4422,6 +4436,7 @@ function drakeLands(z: ZoneDO, creature: Creature, tmpl: MobTemplate): void {
   creature.nextWanderAt = Date.now();
   if (prey) {
     creature.hunger = 0;
+    ate(creature);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + SCAVENGER_HEAL);
     z.addTrace(creature.roomId, { kind: "remains", at: Date.now(), label: prey });
     skySight(z, "mountain", "It comes back over the mountain lower and slower than it went, and it is carrying something. Whatever it took was not small.", creature.roomId);
@@ -4595,6 +4610,13 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
 //               the corpse on it, and it has no feeding path of any kind — the
 //               same trap the drowners were in. Keep it off the clock rather
 //               than give it a mouth with nothing to put in it.
+// A meal holds the animal over it for EAT_SHOW_MS: it stays put, and reads as
+// eating (creatureTell; the study's "feeding").
+export function ate(c: Creature, now = Date.now()): void {
+  c.eatingUntil = now + EAT_SHOW_MS;
+  c.nextWanderAt = Math.max(c.nextWanderAt, c.eatingUntil);
+}
+
 export function hungers(templateId: string): boolean {
   // A CREATURE THE SIM GIVES NO WAY TO EAT MUST NOT DISPLAY HUNGER (rome,
   // 2026-08-08, reading "A root-thing is here, restless with hunger"). The rule
@@ -4608,8 +4630,14 @@ export function hungers(templateId: string): boolean {
   // bleed 0 — nothing in it pumps). PROVISIONED are men with camps and larders.
   // Anything with a real feeding route — graze, corpse, prey, or you — is not
   // on this list and hungers exactly as it always did.
+  //
+  // SENTINELS too (rome, 2026-10-24: the hounds were not actually eating). Their
+  // only route was prey walking in, and the wander rule turns everything away
+  // from a sentinel's post, and a sentinel never leaves it. So nothing ever
+  // came, and the hunger banked to the cap behind a door nobody passed.
   return !HOLLOW.has(templateId) && !CORRODERS.has(templateId) && !DROWNERS.has(templateId)
-    && !HOARDERS.has(templateId) && !ROOTED.has(templateId) && !PROVISIONED.has(templateId);
+    && !HOARDERS.has(templateId) && !ROOTED.has(templateId) && !PROVISIONED.has(templateId)
+    && !SENTINELS.has(templateId);
 }
 
 // HOW FAST IT BURNS — the companion to hungers(), and here for the same reason

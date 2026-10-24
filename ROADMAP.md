@@ -361,6 +361,13 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **THE KEEPER BUYS A FULL ACCOUNT** *(parked 2026-10-24, rome: "later")*. Once
+  study by behaviour shipped, a finished journal page (every behaviour the
+  animal has, plus its kills) is real work, and the only thing it pays out is
+  knowing the animal. The idea: sell a full account at the hatch, for barter or
+  for one of the keeper's tellings. Open questions: does the page leave your
+  book (a copy, or the page itself), and is it once per kind per wanderer.
+
 - **THE HERALD — a rout that fetches the den** *(parked 2026-08-24 — rome:
   "we can apply that behaviour to a specific mob for a better outcome")*.
   Offered as a mob-lottery trait and turned down as one, deliberately: a random

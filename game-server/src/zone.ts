@@ -43,7 +43,7 @@ import {
   voidMint,
   deedsBump,
   setItemJournalId, setItemFuel,
-  journalBumpKill, journalTraitAdd, journalLoad,
+  journalBumpKill, creditAccount, journalTraitAdd, journalLoad,
   type World,
   type MobTemplate,
   type ItemTemplate,
@@ -79,6 +79,7 @@ import * as trade from "./trade";
 import * as den from "./den";
 import * as body from "./body";
 import * as ratking from "./ratking";
+import * as rising from "./rising";
 import * as cough from "./cough";
 import * as dice from "./dice";
 import * as works from "./works";
@@ -128,7 +129,7 @@ import { FORGE_STOCK,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, GATEHOUSE_AMBIENT_CEILING_MS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
-  LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS,
+  LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
   SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
@@ -1827,6 +1828,7 @@ export class ZoneDO implements DurableObject {
       kills: row.kills ?? 0,
       deaths: row.deaths ?? 0,
       bossKills: row.boss_kills ?? 0,
+      accounts: row.accounts ?? 0,
       pvpKills: row.pvp_kills ?? 0,
       tokens: RATE_CAPACITY,
       tokensAt: Date.now(),
@@ -2266,7 +2268,7 @@ export class ZoneDO implements DurableObject {
       case "publish": return this.cmdPublish(session, cmd.arg);
       case "map": return lore.cmdMap(this, session, cmd.arg);
       case "study": return lore.cmdStudy(this, session, cmd.arg);
-      case "journal": return lore.cmdJournal(this, session);
+      case "journal": return lore.cmdJournal(this, session, cmd.arg);
       case "fish": return verbs.cmdFish(this, session);
       case "listen": return verbs.cmdListen(this, session, cmd.arg);
       case "dive": return verbs.cmdDive(this, session, cmd.arg);
@@ -3577,10 +3579,10 @@ export class ZoneDO implements DurableObject {
   // What the boards need to compute a score in SQL: the two weights, and the
   // set of item ids that count as trophies. One place, so the in-game board,
   // `publish score` and the door outside all reckon the same way.
-  public lbOpts(): { bossPts: number; pvpPts: number; trophyIds: string[] } {
+  public lbOpts(): { bossPts: number; pvpPts: number; accountPts: number; trophyIds: string[] } {
     const ids: string[] = [];
     if (this.world) for (const id of this.world.itemTemplates.keys()) if (this.isTrophy(id)) ids.push(id);
-    return { bossPts: LB_BOSS_PTS, pvpPts: LB_PVP_PTS, trophyIds: ids };
+    return { bossPts: LB_BOSS_PTS, pvpPts: LB_PVP_PTS, accountPts: LB_ACCOUNT_PTS, trophyIds: ids };
   }
 
   public isTrophy(itemId: string): boolean {
@@ -3981,7 +3983,7 @@ export class ZoneDO implements DurableObject {
     const lockbox = await loadContainer(this.env.DB, session.pubkey, "lockbox");
     const vault = await loadContainer(this.env.DB, session.pubkey, "vault");
     const trophies = Math.round(trophyValue(session.items) + trophyValue(lockbox) + trophyValue(vault));
-    const legend = session.bossKills * LB_BOSS_PTS + session.pvpKills * LB_PVP_PTS + session.kills;
+    const legend = session.bossKills * LB_BOSS_PTS + session.pvpKills * LB_PVP_PTS + session.kills + (session.accounts ?? 0) * LB_ACCOUNT_PTS;
     if (trophies <= 0 && legend <= 0) {
       return this.send(session, "You've nothing to put on the boards yet — no trophies, no kills to your name. Go earn a place.");
     }
@@ -3993,7 +3995,7 @@ export class ZoneDO implements DurableObject {
       this.state.waitUntil(publishScore(this.env, ev));
     };
     emit("trophies", trophies, `${session.name} — ${trophies} in trophies, all told.`);
-    emit("legend", legend, `${session.name}: ${session.bossKills} bosses down, ${session.pvpKills} felled in blood, ${session.kills} slain in all.`);
+    emit("legend", legend, `${session.name}: ${session.bossKills} bosses down, ${session.pvpKills} felled in blood, ${session.kills} slain in all${session.accounts ? `, ${session.accounts} creature${session.accounts === 1 ? "" : "s"} known cold` : ""}.`);
     this.send(session, `The dungeon speaks your standing to the boards: ${trophies} in trophies, a legend of ${legend}. (the leaderboard hears you)`);
   }
 
@@ -5983,6 +5985,7 @@ export class ZoneDO implements DurableObject {
     ai.hearthDraws(this, now); // a den's fire after dark pulls on the hungry next door
     den.fillButts(this, now);  // the rain off a den roof fills its butt
     await body.sweep(this, now); // a stiffened body past its hold lets go (body.ts)
+    rising.tick(this, now);      // the dead that only seemed to fall get up (rising.ts)
     ratking.roll(this, now);     // about once a day, a rat king comes to the warrens (ratking.ts)
     cough.tick(this, now);       // the drowned's water, a chill, smoke: what sets you coughing (cough.ts)
     this.applyRot(now, false);
@@ -6765,6 +6768,30 @@ export class ZoneDO implements DurableObject {
     if (!creature.hurtBy.includes(pubkey)) creature.hurtBy.push(pubkey);
   }
 
+  // The line a fall reads as: the hollow come apart, the living fall and bleed,
+  // the deep things sink, and the boss earns its own weight. Shared with the
+  // dead that only seem to fall (rising.ts), which must read exactly the same.
+  public killVerbOf(tmpl: MobTemplate): string {
+    return tmpl.is_boss
+      ? pick([`You put ${tmpl.name} down. The stone itself seems to let out a breath.`,
+              `${cap(tmpl.name)} falls — and does not rise. It is over.`,
+              `You end ${tmpl.name}. The weight of the deep shifts, somewhere far below.`])
+      : HOLLOW.has(tmpl.id)
+      ? pick([`${cap(tmpl.name)} comes apart in a clatter of loose bone.`,
+              `You shatter ${tmpl.name}; the pieces go still.`,
+              `${cap(tmpl.name)} folds, and is only bones again.`,
+              `The light goes out of ${tmpl.name} and it drops in a heap.`])
+      : DROWNERS.has(tmpl.id)
+      ? pick([`${cap(tmpl.name)} sinks, and the black water closes over it.`,
+              `You finish ${tmpl.name}; it slides under and is gone.`,
+              `${cap(tmpl.name)} goes limp and the flood takes it down.`])
+      : pick([`You kill ${tmpl.name}.`,
+              `${cap(tmpl.name)} drops and does not move.`,
+              `You put ${tmpl.name} down for good.`,
+              `${cap(tmpl.name)} falls, and the fight goes out of it.`,
+              `You finish ${tmpl.name}.`]);
+  }
+
   private async onCreatureDeath(killer: Session, creature: Creature, tmpl: MobTemplate, killLine?: string, vital = false): Promise<void> {
     // KILL THE SINGER MID-SONG AND THE SONG DOES NOT END — it stops, and the
     // things standing to it are never told. They hold the pose they were in,
@@ -6776,22 +6803,13 @@ export class ZoneDO implements DurableObject {
       creature.singUntil = undefined;
       this.roomFeed(creature.roomId, pick(CANTOR_CUT_LINES), undefined, false, "evt");
     }
-    // A revenant doesn't die the first time: it rises weakened and comes again,
-    // up to its limit (most rise once; the cairn-wight twice). Only the final
-    // fall is real — so bail out of death entirely while it still has a rise.
+    // A revenant doesn't die the first time, but it LOOKS like it does (rome,
+    // 2026-10-24): it drops, the fight ends, the body lies there, and a little
+    // later it gets up and comes again (rising.ts), up to its limit (most rise
+    // once; the cairn-wight twice). Only the final fall is real: no kill, no
+    // loot, no page in the book until then.
     if (REVENANTS.has(creature.templateId) && (creature.rises ?? 0) < (RISE_LIMIT[creature.templateId] ?? 1)) {
-      creature.rises = (creature.rises ?? 0) + 1;
-      creature.hp = Math.max(1, Math.round(tmpl.max_hp * REVIVE_FRAC));
-      creature.stunned = false; creature.bleedTicks = 0;
-      this.send(killer, pick([
-        `${cap(tmpl.name)} falls still — and then, unhurried, it stands back up.`,
-        `${cap(tmpl.name)} drops — and gathers itself, and rises again.`,
-        `You put ${tmpl.name} down. It does not stay down.`,
-        `${cap(tmpl.name)} collapses, shudders, and hauls itself upright once more.`,
-      ]));
-      this.actorFeed(killer, creature.roomId, `${cap(tmpl.name)} rises again.`);
-      this.fxPose(creature.roomId, creature.templateId, "rise");
-      this.combatNoise(creature.roomId);
+      rising.fall(this, killer, creature, tmpl, killLine ?? this.killVerbOf(tmpl), vital);
       return;
     }
     // (`splits-on-death` stood here and was cut — a trait may change a creature,
@@ -6826,18 +6844,24 @@ export class ZoneDO implements DurableObject {
     // more of this kind, written to whichever journal is in your pack. A map
     // shares the journalId rail (097) but is NOT a book: skip it, or kills would
     // be misfiled to a map instead of your bestiary.
+    let completed = false; // this kill finished a journal account (said after the kill line)
     const jrn = killer.items.find((c) => c.journalId && !MAP_ITEMS.has(c.itemId));
     if (jrn?.journalId) {
-      await journalBumpKill(this.env.DB, jrn.journalId, tmpl.id);
+      await journalBumpKill(this.env.DB, jrn.journalId, tmpl.id, this.regionOf(creature.roomId));
+      const row = (await journalLoad(this.env.DB, jrn.journalId)).find((r) => r.templateId === tmpl.id);
+      const full = lore.accountFull(row, tmpl.id, tmpl.level);
+      // THIS kill finished the page (it was not full one kill ago): it goes to
+      // the legend board, once per kind (creditAccount, 2026-10-24).
+      if (full && row && !lore.accountFull({ ...row, kills: row.kills - 1 }, tmpl.id, tmpl.level)
+          && await creditAccount(this.env.DB, killer.pubkey, tmpl.id)) {
+        killer.accounts = (killer.accounts ?? 0) + 1;
+        completed = true;
+      }
       // Blood reveals the marks — but only once the creature's FULL ACCOUNT is
-      // written (study + enough kills). You cannot name a mark on a thing you do
-      // not yet know (mob trait lottery).
-      if (creature.traits?.length) {
-        const rows = await journalLoad(this.env.DB, jrn.journalId);
-        const row = rows.find((r) => r.templateId === tmpl.id);
-        if (row && row.studied && row.kills >= lore.killsForAccount(tmpl.level)) {
-          for (const t of creature.traits) await journalTraitAdd(this.env.DB, jrn.journalId, t);
-        }
+      // written (every behaviour it has, studied, and enough kills). You cannot
+      // name a mark on a thing you do not yet know (mob trait lottery).
+      if (creature.traits?.length && full) {
+        for (const t of creature.traits) await journalTraitAdd(this.env.DB, jrn.journalId, t);
       }
     }
     // An engraved weapon keeps its own count: the kill goes into the steel.
@@ -6845,25 +6869,9 @@ export class ZoneDO implements DurableObject {
     if (kw?.carried.loreId) await deedsBump(this.env.DB, kw.carried.loreId, "kills");
     // How a thing goes down depends on what it was: the hollow come apart, the
     // living fall and bleed, the deep things sink. The boss earns its own weight.
-    const killVerb = tmpl.is_boss
-      ? pick([`You put ${tmpl.name} down. The stone itself seems to let out a breath.`,
-              `${cap(tmpl.name)} falls — and does not rise. It is over.`,
-              `You end ${tmpl.name}. The weight of the deep shifts, somewhere far below.`])
-      : HOLLOW.has(tmpl.id)
-      ? pick([`${cap(tmpl.name)} comes apart in a clatter of loose bone.`,
-              `You shatter ${tmpl.name}; the pieces go still.`,
-              `${cap(tmpl.name)} folds, and is only bones again.`,
-              `The light goes out of ${tmpl.name} and it drops in a heap.`])
-      : DROWNERS.has(tmpl.id)
-      ? pick([`${cap(tmpl.name)} sinks, and the black water closes over it.`,
-              `You finish ${tmpl.name}; it slides under and is gone.`,
-              `${cap(tmpl.name)} goes limp and the flood takes it down.`])
-      : pick([`You kill ${tmpl.name}.`,
-              `${cap(tmpl.name)} drops and does not move.`,
-              `You put ${tmpl.name} down for good.`,
-              `${cap(tmpl.name)} falls, and the fight goes out of it.`,
-              `You finish ${tmpl.name}.`]);
+    const killVerb = this.killVerbOf(tmpl);
     this.send(killer, killLine ?? killVerb, vital ? "kill big vital" : "kill big");
+    if (completed) this.send(killer, `That one completes your account of ${tmpl.name}.`, "study");
     // The crowd's copy: the same fall retold in the third person, and marked big
     // (fx "vital") when a throat/heart/skull ended it — the colosseum sizes it.
     this.actorFeed(killer, creature.roomId, this.feedKill(killer.name, tmpl, vital), vital ? "vital" : "kill");

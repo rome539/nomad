@@ -6,15 +6,16 @@ import type { ZoneDO } from "./zone";
 import type { Region, World, Exit } from "./world";
 import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
-import { journalLoad, journalStudy, journalTraitsLoad, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
+import { journalLoad, journalStudy, creditAccount, journalTraitsLoad, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { pick, chance } from "./rng";
 import { uuid } from "./rng";
 import * as den from "./den";
 import * as ai from "./ai"; // the close read a `study` prints under its own line
+import * as study from "./study"; // what a study writes: the behaviour it caught the animal in
 import * as events from "./events"; // the keeper speaks of what is actually running on his ground
 import { WOOD_QUARTERS, MAP_QUARTERS, MOB_LORE } from "./detail";
-import { LAST_HAND, LAST_HAND_END, UNMADE } from "./zone-data";
+import { LAST_HAND, LAST_HAND_END, UNMADE, REGION_LABELS } from "./zone-data";
 import {
   MAP_ITEMS, DETAILED_MAP, CRUDE_MAP, FULL_MAP, CRUDE_FILL_MIN, CRUDE_FILL_MAX,
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM, MOB_TRAIT_DOES, MOB_TRAITS, MOB_FAMILY_NAME,
@@ -530,11 +531,18 @@ export function killsForAccount(level: number): number {
   return 9 - Math.max(1, Math.min(6, level || 1));
 }
 
-function journalTier(kills: number, studied: boolean, level: number): number {
-  if (studied && kills >= killsForAccount(level)) return 3; // the full account
-  if (kills >= 1) return 2;            // a rough read, from the killing
-  if (studied) return 1;              // habits only, from watching
+// The full account wants every behaviour the animal has (study.required) seen,
+// and its kills. One kill is still a rough read; any study at all, the habits.
+function journalTier(kills: number, seen: Set<string>, templateId: string, level: number): number {
+  if (!study.missing(templateId, seen as Set<study.Behaviour>).length && kills >= killsForAccount(level)) return 3;
+  if (kills >= 1) return 2;
+  if (seen.size) return 1;
   return 0;
+}
+
+// Is this page a full account? (The kill side asks before it names a mark.)
+export function accountFull(row: JournalRow | undefined, templateId: string, level: number): boolean {
+  return !!row && journalTier(row.kills, study.parseSeen(row.seen), templateId, level) === 3;
 }
 
 // A journal must be IN HAND to write in — its pages, not your memory, do the
@@ -579,10 +587,12 @@ async function carriedJournals(z: ZoneDO, session: Session): Promise<CarriedItem
 export async function refreshStudied(z: ZoneDO, session: Session): Promise<void> {
   try {
     const ids = (await carriedJournals(z, session)).map((b) => b.journalId!);
-    const seen = new Set<string>();
+    const seen = new Map<string, Set<string>>();
     for (const id of ids) {
       for (const r of await journalLoad(z.env.DB, id)) {
-        if (r.studied) seen.add(r.templateId);
+        const got = seen.get(r.templateId) ?? new Set<string>();
+        for (const b of study.parseSeen(r.seen)) got.add(b);
+        seen.set(r.templateId, got);
       }
     }
     session.studied = seen;
@@ -609,32 +619,66 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   if (z.inCombat(session)) {
     return z.send(session, "Not with it swinging at you. Watching a thing closely enough to set it down means taking your eyes off it — do that later, or not at all.");
   }
-  const creature = z.findCreatureIn(session.roomId, arg);
+  // THE DEAD ARE ASKED FOR BY NAME ("study dead wolf", "study body"), so a
+  // living wolf in the room is never mistaken for the one on the floor; and
+  // with nothing living by that name here, the body answers anyway.
+  const ask = study.asksForDead(arg);
+  const living = ask.dead ? null : z.findCreatureIn(session.roomId, arg);
   // You can't study what you can't see — a hidden lurker isn't there yet.
-  if (!creature || (creature.hidden && LURKERS.has(creature.templateId) && !creature.target) || z.mossUnseen(creature, session)) {
-    return z.send(session, "Nothing by that name is here to study.");
-  }
-  const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
-  await journalStudy(z.env.DB, journal.journalId, tmpl.id);
-  (session.studied ??= new Set<string>()).add(tmpl.id); // the chip for this one goes quiet from here on
+  const visible = living && !(living.hidden && LURKERS.has(living.templateId) && !living.target) && !z.mossUnseen(living, session) ? living : null;
+  const corpse = visible ? null : study.findCorpse(z, session.roomId, ask.dead ? ask.rest : arg);
+  if (!visible && !corpse) return z.send(session, "Nothing by that name is here to study.");
+  const tmpl = visible ? z.world!.mobTemplates.get(visible.templateId)! : corpse!.tmpl;
+  const doing: study.Behaviour = visible ? study.behaviourNow(z, visible) : "dead";
   const rows = await journalLoad(z.env.DB, journal.journalId);
   const row = rows.find((r) => r.templateId === tmpl.id);
-  const tier = journalTier(row?.kills ?? 0, true, tmpl.level);
-  const want = killsForAccount(tmpl.level) - (row?.kills ?? 0);
-  // AND SAY WHAT YOU SAW (rome, 2026-08-21). Writing a thing down without ever
-  // describing it told the player only that they had written something — you
-  // could study a bone-breaker, be told the account wants five more kills, and
-  // still not know what a bone-breaker is. The close read is the same one
-  // `look` gives, called from the one place both share (ai.creatureRead), so a
-  // clause added to a close look reaches the journal too.
-  z.send(session, `You watch ${tmpl.name} a while and set down what you see.` +
-    (tier < 3 ? ` (Its full account wants ${want} more kill${want === 1 ? "" : "s"}.)` : " Its account is complete.")
-    + "\n" + ai.creatureRead(z, creature, session.pubkey), "study");
-  z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
+  const seen = study.parseSeen(row?.seen);
+  // Across every book in hand: a behaviour already written in any of them is
+  // nothing new (the journal reads them all as one).
+  const known = new Set<string>([...seen, ...(session.studied?.get(tmpl.id) ?? [])]);
+  const adds = study.writes(tmpl.id, doing).filter((b) => !known.has(b));
+  if (!adds.length) {
+    return z.send(session, doing === "dead"
+      ? `You have already set down what a dead ${tmpl.name.replace(/^(a|an|the) /i, "")} has to teach. The body can lie.`
+      : `You have already set down ${tmpl.name} ${study.DOING[doing]}. Watching it now adds nothing.`, "study");
+  }
+  const wasFull = journalTier(row?.kills ?? 0, known, tmpl.id, tmpl.level) === 3;
+  for (const b of adds) seen.add(b);
+  await journalStudy(z.env.DB, journal.journalId, tmpl.id, study.packSeen(seen), z.regionOf(session.roomId));
+  const cache = (session.studied ??= new Map<string, Set<string>>());
+  const mine = cache.get(tmpl.id) ?? new Set<string>();
+  for (const b of seen) mine.add(b);
+  cache.set(tmpl.id, mine); // the chip for this behaviour goes quiet from here on
+  const kills = row?.kills ?? 0;
+  const tier = journalTier(kills, mine, tmpl.id, tmpl.level);
+  const want = killsForAccount(tmpl.level) - kills;
+  const still = study.stillLine(tmpl.id, mine as Set<study.Behaviour>);
+  const owed = [still, want > 0 ? `${want} more kill${want === 1 ? "" : "s"}` : ""].filter(Boolean).join("; ");
+  const tail = tier === 3 ? " Its account is complete." : owed ? ` (Its full account: ${owed}.)` : "";
+  // THIS study finished the page: it goes to the legend board (creditAccount,
+  // once per kind). A book picked up already full never counts for you.
+  if (tier === 3 && !wasFull && await creditAccount(z.env.DB, session.pubkey, tmpl.id)) session.accounts = (session.accounts ?? 0) + 1;
+  if (corpse) {
+    // THE READING USES THE BODY UP (rome, 2026-10-24): turned over, opened
+    // and gone through, there is nothing left of it for the crows or the next
+    // pair of hands.
+    study.useUp(z, session.roomId, corpse.tr);
+    z.send(session, `You kneel over the dead ${tmpl.name.replace(/^(a|an|the) /i, "")} and go through it, hide to bone, setting down what you find. When you stand there is nothing left of it worth the name.${tail}`
+      + "\n" + study.line(z, tmpl, "dead"), "study");
+    z.roomFeed(session.roomId, `${session.name} kneels over the dead ${tmpl.name.replace(/^(a|an|the) /i, "")} and takes it apart, taking notes.`, session.pubkey, false);
+  } else {
+    // AND SAY WHAT YOU SAW (rome, 2026-08-21): the close read is the same one
+    // `look` gives (ai.creatureRead), so a clause added to a close look reaches
+    // the journal too.
+    z.send(session, `You watch ${tmpl.name} ${study.DOING[doing]} a while and set down what you see.${tail}`
+      + "\n" + ai.creatureRead(z, visible!, session.pubkey)
+      + adds.map((b) => study.line(z, tmpl, b)).filter(Boolean).map((l) => "\n" + l).join(""), "study");
+    z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
+  }
   z.sendCtx(session); // drop the now-redundant `study` chip without waiting for the next refresh
 }
 
-export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
+export async function cmdJournal(z: ZoneDO, session: Session, arg = ""): Promise<void> {
   const ids = (await carriedJournals(z, session)).map((b) => b.journalId!);
   // At a gate the lockbox and vault are within reach (the gatehouse is where you
   // sit and READ), so pull the pages straight out of storage if it's not in the
@@ -654,30 +698,58 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
   }
   // Every book you hold opens at once — the best account of a creature wins,
   // whichever cover it's written in (someone else's hunting, now yours).
-  const byMob = new Map<string, JournalRow>();
-  const studied = new Set<string>();
+  // The books read as one: what any of them has seen, and the most kills any
+  // of them counts.
+  const byMob = new Map<string, { templateId: string; kills: number; seen: Set<string>; met: Set<string> }>();
   for (const id of ids) {
     for (const r of await journalLoad(z.env.DB, id)) {
-      if (r.studied) studied.add(r.templateId); // free refresh of the chip cache — the rows are already in hand
-      const cur = byMob.get(r.templateId);
-      const lvl = z.world!.mobTemplates.get(r.templateId)?.level ?? 1;
-      const tier = journalTier(r.kills, r.studied, lvl);
-      if (!cur || tier > journalTier(cur.kills, cur.studied, lvl)
-        || (tier === journalTier(cur.kills, cur.studied, lvl) && r.kills > cur.kills)) {
-        byMob.set(r.templateId, r);
-      }
+      const cur = byMob.get(r.templateId) ?? { templateId: r.templateId, kills: 0, seen: new Set<string>(), met: new Set<string>() };
+      cur.kills = Math.max(cur.kills, r.kills);
+      for (const b of study.parseSeen(r.seen)) cur.seen.add(b);
+      for (const m of r.met.split(",")) if (m) cur.met.add(m);
+      byMob.set(r.templateId, cur);
     }
   }
   const rows = [...byMob.values()];
-  session.studied = studied;
+  session.studied = new Map(rows.map((r) => [r.templateId, new Set(r.seen)])); // free refresh of the chip cache — the rows are already in hand
   const world = z.world!;
   const entries = rows
     .map((r) => {
       const tmpl = world.mobTemplates.get(r.templateId);
       if (!tmpl) return null;
-      const tier = journalTier(r.kills, r.studied, tmpl.level);
-      const e: any = { id: tmpl.id, name: tmpl.name, tier, kills: r.kills, studied: r.studied ? 1 : 0, want: killsForAccount(tmpl.level) };
+      const tier = journalTier(r.kills, r.seen, tmpl.id, tmpl.level);
+      const e: any = { id: tmpl.id, name: tmpl.name, tier, kills: r.kills, studied: r.seen.size ? 1 : 0, want: killsForAccount(tmpl.level) };
       if (tier >= 1) { e.nature = creatureNature(tmpl.id); e.note = tmpl.description; }
+      // ONE LINE PER BEHAVIOUR SEEN (study.ts), in the order the book keeps
+      // them, and nothing at all for the ones it has not, or the animal lacks.
+      e.seen = study.BEHAVIOURS.filter((b) => r.seen.has(b)).map((b) => ({ k: b, text: study.line(z, tmpl, b) })).filter((x) => x.text);
+      // WHAT IT SOUNDS LIKE AND WHAT IT LEAVES (rome, 2026-10-24), once you have
+      // watched it going about its business: after that, the noise through
+      // the wall and the prints in the muck mean something.
+      if (r.seen.has("about")) {
+        const sound = study.soundLine(z, tmpl.id);
+        const tracks = study.trackLine(z, tmpl.id);
+        if (sound) e.sound = sound;
+        if (tracks) e.tracks = tracks;
+      }
+      // Where this book has met it, in the order it did.
+      if (tier >= 1) {
+        const met = [...r.met].map((m) => REGION_LABELS[m]).filter(Boolean);
+        if (met.length) e.met = `Met in ${study.listOf(met)}.`;
+        // A rare blood is a form of something; the base names the forms met.
+        const base = z.variantBase.get(tmpl.id);
+        if (base && world.mobTemplates.get(base)) e.formOf = `A rare blood of ${world.mobTemplates.get(base)!.name}.`;
+        const forms = rows.filter((o) => z.variantBase.get(o.templateId) === tmpl.id)
+          .map((o) => world.mobTemplates.get(o.templateId)?.name).filter(Boolean) as string[];
+        if (forms.length) e.forms = `Its rarer forms you have met: ${study.listOf(forms)}.`;
+      }
+      // What the page still wants, said by the server so the client holds no rule.
+      if (tier < 3) {
+        const need = killsForAccount(tmpl.level) - r.kills;
+        const still = study.stillLine(tmpl.id, r.seen as Set<study.Behaviour>);
+        const parts = [still ? still.charAt(0).toUpperCase() + still.slice(1) : "", need > 0 ? `${need} more kill${need === 1 ? "" : "s"}` : ""].filter(Boolean);
+        e.lock = parts.length ? `${parts.join("; and ")} for the full account.` : "";
+      }
       if (tier >= 3) {
         // WHAT THE FULL ACCOUNT IS ACTUALLY FOR (2026-08-06). Tier 3 is the most
         // expensive text in the game — study, then three kills on a boss and
@@ -731,13 +803,45 @@ export async function cmdJournal(z: ZoneDO, session: Session): Promise<void> {
     const rows = [...seen(pool.good, false), ...seen(pool.bad, true)];
     if (rows.length) marks.push({ kind: MOB_FAMILY_NAME[fam] ?? fam, traits: rows });
   }
+  const many = ids.length > 1;
+  // THE TEXT JOURNAL (rome, 2026-10-24): the book reads in the log too, word
+  // for word what the modal shows. 'journal <creature>' turns to one page and
+  // reads it out; bare 'journal' opens the book and lists its pages.
+  if (arg) {
+    const e = entries.find((x: any) => nameMatches(x.name, arg.toLowerCase()));
+    return z.send(session, e ? journalPageText(e) : "Nothing by that name is written in your journal.", "study");
+  }
   try {
     session.ws.send(JSON.stringify({ v: 0, t: "journal", entries, marks }));
   } catch {}
-  const many = ids.length > 1;
-  z.send(session, entries.length
-    ? `You open the journal${many ? "s" : ""}.`
-    : `You open the journal${many ? "s" : ""}. ${many ? "Their" : "Its"} pages are blank — study a thing, and kill a few, and ${many ? "they" : "it"} will fill.`);
+  if (!entries.length) {
+    return z.send(session, `You open the journal${many ? "s" : ""}. ${many ? "Their" : "Its"} pages are blank — study a thing, and kill a few, and ${many ? "they" : "it"} will fill.`);
+  }
+  const list = entries.map((e: any) => `  ${e.name} — ${JOURNAL_TIER[e.tier] ?? "noted"}, ${e.kills} kill${e.kills === 1 ? "" : "s"}`);
+  const markLines = marks.flatMap((g) => [`  ${g.kind}:`, ...g.traits.map((t) => `    ${t.name}${t.flaw ? " (a flaw)" : ""} — ${t.does}`)]);
+  z.send(session, [`You open the journal${many ? "s" : ""}. ${entries.length} creature${entries.length === 1 ? "" : "s"} written down:`, ...list,
+    ...(markLines.length ? ["Marks you have met:", ...markLines] : []),
+    "('journal <creature>' to read its page)"].join("\n"), "study");
+}
+
+// The page names of the book's tiers (the modal's own JTIER says the same).
+const JOURNAL_TIER: Record<number, string> = { 1: "sighted", 2: "hunted", 3: "known cold" };
+const SEEN_WORD: Record<string, string> = { asleep: "Asleep", feeding: "Feeding", hungry: "Hungry", dead: "Dead" };
+
+// One page of the book as text: the same fields, in the same order, the modal
+// lays out (public.ts renderJournal).
+export function journalPageText(e: any): string {
+  const out: string[] = [`${e.name}${e.boss ? " (throne)" : ""} — ${JOURNAL_TIER[e.tier] ?? "noted"}, ${e.kills} kill${e.kills === 1 ? "" : "s"}`];
+  for (const k of ["formOf", "nature", "note"]) if (e[k]) out.push(e[k]);
+  for (const sn of e.seen ?? []) out.push(`${SEEN_WORD[sn.k] ?? sn.k}. ${sn.text}`);
+  if (e.sound) out.push(`Its sound. ${e.sound}`);
+  if (e.tracks) out.push(`Its prints. ${e.tracks}`);
+  if (e.met) out.push(e.met);
+  if (e.forms) out.push(e.forms);
+  if (e.lore) out.push(e.lore);
+  if (e.tier >= 3) out.push(`level ${e.level} · hp ${e.hp} · damage ${e.dmg} · armour ${e.armor}${e.loot ? ` · drops ${e.loot}` : ""}`);
+  else if (e.lock) out.push(e.lock);
+  return out.join("\n");
 }
 
 // ---- the engraving: what the steel remembers (077) ----

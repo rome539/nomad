@@ -977,6 +977,10 @@ export const CREATURE_HEAL_PER_MIN = 1;
 // starving-hunt go back to being occasional events rather than the default.
 // Spawn hunger is deliberately untouched: some things arriving hungry is good.
 export const HUNGER_PER_MIN = 0.5;
+// A MEAL TAKES TIME (rome, 2026-10-24, for the study by behaviour): every meal
+// holds the animal over it this long, reading as eating, so a wanderer can
+// walk in and see it feed. Before, every meal was an instant.
+export const EAT_SHOW_MS = 2 * 60_000;
 export const HUNGER_MAX = 100;
 export const HUNGRY_AT = 50;
 
@@ -988,6 +992,7 @@ export const HUNGRY_AT = 50;
 export const LB_GENRES = ["mud", "extraction", "roguelike", "pvp", "dungeon-crawler"];
 export const LB_BOSS_PTS = 100;
 export const LB_PVP_PTS = 25;
+export const LB_ACCOUNT_PTS = 10; // a full journal account, once per kind (rome, 2026-10-24)
 // WHAT A MEAL IS WORTH (rome, 2026-09-04: almost every mob is fed too often —
 // he could not remember the last hungry one he met).
 //
@@ -5392,6 +5397,10 @@ export const PROVISIONED = new Set([
 // comes again. The second death is the real one. A longer fight, not a lost one.
 export const REVENANTS = new Set(["twice-dead", "thrice-dead", "marrow-king"]);
 export const REVIVE_FRAC = 0.4;       // soft: it comes back weakened
+// THE DEAD GET UP LATER, NOT AT ONCE (rome, 2026-10-24): it lies as dead as
+// anything else for this long, long enough to think the job is done.
+export const RISE_MIN_MS = 20_000;
+export const RISE_MAX_MS = 45_000;
 // How many times a revenant gets back up before the fall is real. Default 1
 // (twice-dead, marrow-king); the cairn-wight rises twice.
 export const RISE_LIMIT: Record<string, number> = { "thrice-dead": 2 };

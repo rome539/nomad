@@ -12,6 +12,7 @@ import * as body from "./body";
 import * as works from "./works";
 import * as wanderer from "./wanderer";
 import * as ai from "./ai";
+import * as study from "./study";
 import * as paths from "./paths";
 import * as keys from "./keys";
 import { BUILD_ID } from "./public";
@@ -326,15 +327,21 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // written against.
   // A surveyor-map carries a journalId too (its ink rides the journal rail, 097),
   // so "a real journal" is journalId AND not a map — else a map offers `study`.
-  if (creatureHere && !z.inCombat(session) && session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) {
-    // Skip anything already written up (rome, 2026-07-26): studying twice adds
-    // NOTHING. session.studied is the cache the sync builder can read;
+  if ((creatureHere || z.traces.has(session.roomId)) && !z.inCombat(session) && session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) {
+    // Skip anything already written up in what it is doing NOW (rome,
+    // 2026-07-26, and by behaviour since 2026-10-24): the same behaviour twice
+    // adds NOTHING. session.studied is the cache the sync builder can read;
     // unhydrated (undefined) falls through and offers it, as it always did.
     const firstMob = [...z.creatures.values()].find(
       (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target) && !z.mossUnseen(c, session)
-        && !session.studied?.has(c.templateId),
+        && !studiedIn(session, c.templateId, study.behaviourNow(z, c)),
     );
     if (firstMob) suggest.push(`study ${chipName(world.mobTemplates.get(firstMob.templateId)!.name)}`);
+    // And a body on the floor whose dead the book has not read (study.ts).
+    else {
+      const body = (z.traces.get(session.roomId) ?? []).map((tr) => study.corpseKind(z, tr)).find((id) => id && !studiedIn(session, id, "dead"));
+      if (body) suggest.push(`study dead ${chipName(world.mobTemplates.get(body)!.name)}`);
+    }
   }
   const edible = session.items.find((c) => world.itemTemplates.get(c.itemId)?.edible);
   if (edible) suggest.push(`eat ${shortName(world.itemTemplates.get(edible.itemId)!.name)}`);
@@ -643,4 +650,10 @@ export function syncCombatCtx(z: ZoneDO): void {
     if (!s.away && z.inCombat(s) !== s.ctxCombat) rooms.add(s.roomId);
   }
   for (const r of rooms) refreshRoomCtx(z, r);
+}
+
+// Has a carried journal already written this kind down doing this? Unhydrated
+// cache (undefined) answers no, so the chip shows, as it always did.
+function studiedIn(session: Session, templateId: string, b: string): boolean {
+  return !!session.studied?.get(templateId)?.has(b);
 }
