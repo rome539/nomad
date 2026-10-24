@@ -31,7 +31,8 @@ try {
         "export {cmdGo} from './verbs';",
         "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade} from './gate';",
         "export {cmdLook} from './verbs';",
-        "export {WHETSTONE_ROOMS, WHET_CAP} from './zone-data';",
+        "export * as body from './body';",
+        "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon} from './zone-util';",
       ].join('\n'),
@@ -43,7 +44,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, WHETSTONE_ROOMS, WHET_CAP, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -356,6 +357,153 @@ try {
     me.roomId = blank; await cmdMap(z, me, '');
     me.roomId = 'r50'; await cmdMap(z, me, '');
     assert.ok(shownOf(frames.at(-1)).some((r) => r.id === blank), 'a walked room stays on the paper');
+  });
+
+  // ---------------------------------------------------------------- vitals
+  console.log('vital shots on you');
+  check('every creature can find your vitals but the small things and the rats (2026-10-23)', () => {
+    for (const [id, level] of [['hill-wolf', 3], ['footpad', 2], ['wild-boar', 3], ['the-drake', 7], ['cave-lion', 5]])
+      assert.equal(findsVitals({ id, level }), true, id + ' should be able to find the gap');
+    for (const [id, level] of [['rat', 1], ['brood-rat', 2], ['albino-rat', 3], ['mountain-hare', 1], ['roe-deer', 1]])
+      assert.equal(findsVitals({ id, level }), false, id + ' should never');
+  });
+  check('the creature round asks findsVitals, not a short list', () => {
+    const src = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(src, /victim\.hp > 0 && findsVitals\(tmpl\)\s*&& this\.vitalsLottery\(this\.equippedArmor\(victim\), VITALS_CREATURE\)/);
+  });
+  check("a creature's odds on you are four times the old list's, not the shared 1 in 3000 (2026-10-23)", () => {
+    assert.equal(VITALS_CREATURE, 1 / 4650);
+  });
+
+  await checkAsync('a boss falls to a vital only by its own weapon, and the Drowned God never (2026-10-23)', async () => {
+    const z = new ZoneDO({}, {});
+    const spear = { tmpl: { id: 'spear', stun: 0, bleed: 0, traitMap: new Map([['piercing', 1]]) } };
+    const blade = { tmpl: { id: 'blade', stun: 0, bleed: 0, traitMap: new Map() } };
+    const maul = { tmpl: { id: 'maul', stun: 0.1, bleed: 0, traitMap: new Map() } };
+    const rolls = (id, w, n) => { let k = 0; const c = { id: 'c', templateId: id, hp: 10, traits: [] };
+      for (let i = 0; i < n; i++) if (z.playerVitals(c, { id, is_boss: 1, armor: 0 }, w)) k++; return k; };
+    assert.equal(BIG_VITALS['drowned-god'], undefined);
+    assert.equal(rolls('drowned-god', spear, 20000) + rolls('drowned-god', blade, 20000) + rolls('drowned-god', maul, 20000), 0);
+    assert.equal(rolls('the-great-crab', blade, 50000) + rolls('the-great-crab', maul, 50000), 0, 'the wrong weapon found the crab');
+    assert.ok(rolls('the-great-crab', spear, 100000) > 0, 'a point never found the crab');
+    assert.ok(rolls('forgotten-king', maul, 100000) > 0, 'a maul never found the king');
+    assert.ok(rolls('the-woodward', blade, 200000) > 0, 'an edge never found the woodward');
+    for (const id of ['brown-bear', 'the-baited-bear', 'cave-lion']) assert.equal(BIG_VITALS[id]?.by, 'point', id);
+  });
+
+  // ---------------------------------------------------------------- the body
+  console.log('a body a vital shot stiffened');
+  // A real SQLite table behind a D1-shaped shim, so the rows really move.
+  const { DatabaseSync } = await import('node:sqlite');
+  function sqliteD1() {
+    const db = new DatabaseSync(':memory:');
+    db.exec(`CREATE TABLE player_items(id TEXT PRIMARY KEY, item_id TEXT, pubkey TEXT, signed_serial INTEGER, equipped INTEGER DEFAULT 0,
+      condition REAL DEFAULT 100, journal_id TEXT DEFAULT '', invite_code TEXT DEFAULT '', lore_id TEXT DEFAULT '', acquired_at INTEGER DEFAULT 1,
+      rolled_traits TEXT DEFAULT '', container TEXT DEFAULT '', container_at INTEGER, fuel REAL);
+      CREATE TABLE players(pubkey TEXT PRIMARY KEY, name TEXT, deaths INTEGER DEFAULT 0);`);
+    // Like D1: at most 100 bound values, and real errors surface. Only a table
+    // this test never made (mints, deeds...) is let through as a no-op.
+    const go = (fn, empty) => { try { return fn(); } catch (e) { if (/no such table/.test(e.message)) return empty; throw e; } };
+    const D1 = { prepare(q) { let args = []; const st = { bind: (...a) => { if (a.length > 100) throw new Error('D1: too many SQL variables (' + a.length + ')'); args = a; return st; },
+      run: async () => go(() => ({ meta: { changes: db.prepare(q).run(...args).changes } }), { meta: { changes: 0 } }),
+      all: async () => go(() => ({ results: db.prepare(q).all(...args) }), { results: [] }),
+      first: async () => go(() => db.prepare(q).get(...args) ?? null, null) }; return st; } };
+    return { db, D1 };
+  }
+  function bodyWorld() {
+    const z = new ZoneDO({}, {});
+    body.resetForTest(z);
+    const keep = new Set(['constructor', 'onPlayerDeath', 'onPlayerDeathInner', 'spillCarried', 'equippedItem']);
+    for (let p = Object.getPrototypeOf(z); p && p !== Object.prototype; p = Object.getPrototypeOf(p))
+      for (const k of Object.getOwnPropertyNames(p)) if (!keep.has(k) && typeof p[k] === 'function') z[k] = () => undefined;
+    z.foodCapped = z.torchCapped = z.dressingCapped = () => false; z.packRoom = () => true;
+    const said = []; z.send = (_s, t) => said.push(t);
+    const { db, D1 } = sqliteD1(); z.env = { DB: D1 };
+    z.world = new Proxy({ itemTemplates: new Map([['knife', { id: 'knife', name: 'a knife', slot: 'weapon' }], ['tin', { id: 'tin', name: 'a tin', slot: '' }]]),
+      rooms: new Map([['moor', { id: 'moor', name: 'The Moor' }]]) }, { get: (t, k) => k in t ? t[k] : (typeof k === 'string' ? (t[k] = new Map()) : undefined) });
+    for (const k of ['creatures', 'sessions', 'ground', 'groundCond', 'groundRolled', 'groundLore', 'groundHeart', 'groundTorch', 'groundInstances', 'altarHearts', 'dens', 'inDen']) z[k] = new Map();
+    z.tradeLocked = new Set(); z.rot = [];
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'moor', items: [], deaths: 0 };
+    z.sessions.set('me', me);
+    db.prepare("INSERT INTO players(pubkey, name) VALUES ('me', 'Rome')").run();
+    for (const [id, itemId, serial, worn] of [['r1', 'knife', 9, 1], ['r2', 'tin', null, 0]]) {
+      db.prepare("INSERT INTO player_items(id, item_id, pubkey, signed_serial, equipped) VALUES (?, ?, 'me', ?, ?)").run(id, itemId, serial, worn);
+      me.items.push({ rowId: id, itemId, serial, equipped: !!worn, condition: 100 });
+    }
+    const wolf = { id: 'hill-wolf', name: 'a hill wolf', level: 3 };
+    const where = () => db.prepare("SELECT container FROM player_items ORDER BY id").all().map((r) => r.container);
+    return { z, me, db, wolf, said, where };
+  }
+  await checkAsync("a creature's vital shot leaves the kit on a stiff body, the owner's alone (2026-10-23)", async () => {
+    const { z, me, wolf, said, where } = bodyWorld();
+    await z.onPlayerDeath(me, wolf, undefined, true);
+    assert.deepEqual(where(), ['body:moor', 'body:moor'], 'the rows go onto the body');
+    assert.equal((z.ground.get('moor') ?? []).length, 0, 'nothing on the floor for anyone');
+    assert.equal(me.items.length, 0);
+    assert.match(said.join(' '), /Your body stiffens where it fell in The Moor/);
+    assert.match(body.roomLines(z, 'moor', 'someone-else')[0], /Rome's body lies here/);
+    assert.match(body.roomLines(z, 'moor', 'me')[0], /Your own body lies here.*'fetch'/);
+    me.roomId = 'moor'; // the run back from the gate
+    assert.equal(await body.reclaim(z, { ...me, pubkey: 'someone-else', items: [] }), false, 'a stranger cannot fetch it');
+    assert.equal(await body.reclaim(z, me), true);
+    assert.deepEqual(where(), ['', ''], 'fetch puts it all back in hand');
+    assert.equal(me.items.length, 2);
+    assert.equal(me.items.find((c) => c.rowId === 'r1').serial, 9, 'the seal held');
+    assert.equal(body.roomLines(z, 'moor', 'me').length, 0, 'an empty body is gone');
+  });
+  await checkAsync('what you wore goes back on, even over a full pack (2026-10-23)', async () => {
+    const { z, me, wolf, db, where } = bodyWorld();
+    await z.onPlayerDeath(me, wolf, undefined, true);
+    me.roomId = 'moor';
+    z.packRoom = () => false; // a full pack on the way back
+    assert.equal(await body.reclaim(z, me), true);
+    const knife = me.items.find((c) => c.rowId === 'r1');
+    assert.ok(knife && knife.equipped, 'the worn knife is back in hand');
+    assert.equal(db.prepare("SELECT equipped FROM player_items WHERE id = 'r1'").get().equipped, 1, 'and stays worn after a reconnect');
+    assert.deepEqual(where(), ['', 'body:moor'], 'the tin waits on the body for room');
+    assert.match(body.roomLines(z, 'moor', 'me')[0], /Your own body/);
+  });
+  await checkAsync('a pack of 250 loose pieces goes onto the body and spills off it whole', async () => {
+    const { z, me, wolf, db } = bodyWorld();
+    for (let i = 0; i < 250; i++) {
+      db.prepare("INSERT INTO player_items(id, item_id, pubkey) VALUES (?, 'tin', 'me')").run('w' + i);
+      me.items.push({ rowId: 'w' + i, itemId: 'tin', serial: null, equipped: false, condition: 100 });
+    }
+    await z.onPlayerDeath(me, wolf, undefined, true);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM player_items WHERE container = 'body:moor'").get().n, 252);
+    const realNow = Date.now;
+    try { Date.now = () => realNow() + 61 * 60_000; await body.sweep(z, Date.now()); } finally { Date.now = realNow; }
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM player_items").get().n, 0);
+    assert.equal((z.ground.get('moor') ?? []).length, 252);
+  });
+  await checkAsync('the body lets go when the hold runs out, and everything spills', async () => {
+    const { z, me, wolf, where } = bodyWorld();
+    await z.onPlayerDeath(me, wolf, undefined, true);
+    const realNow = Date.now;
+    try {
+      Date.now = () => realNow() + 61 * 60_000;
+      await body.sweep(z, Date.now());
+    } finally { Date.now = realNow; }
+    assert.deepEqual(where(), [], 'the rows are gone');
+    assert.deepEqual([...(z.ground.get('moor') ?? [])].sort(), ['knife', 'tin'], 'and it lies on the floor');
+  });
+  await checkAsync('after a deploy the zone finds the bodies again from the database', async () => {
+    const { z, me, wolf } = bodyWorld();
+    await z.onPlayerDeath(me, wolf, undefined, true);
+    const z2 = Object.assign(Object.create(Object.getPrototypeOf(z)), z); // a fresh zone over the same rows
+    assert.equal(body.hasBody(z2, 'moor', 'me'), false, 'the new zone starts knowing nothing');
+    me.roomId = 'moor';
+    assert.equal(await body.reclaim(z2, me), true, 'fetch reads the database first');
+    const z3 = Object.assign(Object.create(Object.getPrototypeOf(z)), z);
+    await z.onPlayerDeath(me, wolf, undefined, true);
+    await body.sweep(z3, Date.now());
+    assert.match(body.roomLines(z3, 'moor', 'other')[0] ?? '', /Rome's body lies here/, 'the first sweep rebuilds the room lines');
+  });
+  await checkAsync('an ordinary death still scatters on the floor', async () => {
+    const { z, me, wolf, where } = bodyWorld();
+    await z.onPlayerDeath(me, wolf);
+    assert.deepEqual(where(), []);
+    assert.deepEqual([...(z.ground.get('moor') ?? [])].sort(), ['knife', 'tin']);
   });
 
   // ---------------------------------------------------------------- whetstone

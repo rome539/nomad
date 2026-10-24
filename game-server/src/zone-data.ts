@@ -8916,6 +8916,12 @@ export const HOBBLE_FLEE_MS = 4000; // ~1 combat round of limping before you bre
 // vitalsLottery (zone.ts). Deliberately random — overrides the old "never random"
 // line; the randomness IS the equalizer (see ROADMAP lethality entry).
 export const VITALS_PVE = 1 / 3000;   // per-hit base (armored floor); naked = 2x via armor scaling
+// A CREATURE ON YOU (rome, 2026-10-23): when every creature but the small
+// things got the lottery, the odds were set to four times what the old short
+// list gave (about 1 in 820 fights in a light epic kit, 1 in 470 fresh), not
+// the six times the shared 1 in 3000 would have made. Your blows on them keep
+// VITALS_PVE.
+export const VITALS_CREATURE = 1 / 4650;
 export const VITALS_PVP = 0.005;      // the day came (2026-07-11): 0.5% armored -> 1% naked, per landed blow
 // ---- PvP: steel between wanderers ----
 // The anti-grief is systemic or it is nothing: witnesses = the sound system,
@@ -8936,27 +8942,22 @@ export const BLOOD_FRESH_MS = 2 * 3_600_000;  // man-blood, and it looks fresh
 export const BLOOD_DRY_MS = 12 * 3_600_000;   // dried to brown; still not a beast's
 export const BLOOD_FADE_MS = 36 * 3_600_000;  // when the skin finally forgets (the ledger of the hands)
 export const VITALS_ARMOR_FULL = 11;  // total armor that counts as 'fully covered' (a max kit)
-export const VITALS_THREATS = new Set<string>([
-  // mig 247, the mountain's rare blood: the-dancer, the-pale-drake
-  "the-dancer", "the-pale-drake",
-
-  "three-hound", "two-hound", "pale-stalker", "pale-crawler", "the-drowned", "drowned-hulk",
-  "marrow-cantor", "warden-captain", "forgotten-king", "marrow-king", "drowned-god",
-  // THE SUMMIT (rome, 2026-08-19). I built it OFF this list and argued the
-  // distance: five tiers from a gate with everything you own on your back, an
-  // instant kill on beat forty reads as a slot machine rather than a fight. He
-  // ruled the other way and the ruling stands — every other boss in this world
-  // can find the gap, and the biggest animal in it does not get an exemption
-  // because the walk home is long. The walk home being long is the region.
-  SUMMIT_BOSS,
-  // THE HIGH GROUND (mig 245). The summit was ruled onto this list over my
-  // objection, and that ruling settles this one too: an animal whose entire
-  // killing method is closing a jaw on a windpipe cannot be gentler than the one
-  // that kills by dropping its weight on you. Pull this line if the high ground
-  // reads as a coin toss — it is one word, and nothing else about it changes.
-  "cave-lion",
-]);
-// The PLAYER side of the vitals lottery. Bosses are the designed wall — never.
+// WHO CAN FIND YOUR VITALS: EVERY CREATURE BUT THE SMALL THINGS (rome,
+// 2026-10-23). It used to be a short list of the deep's threats, the bosses and
+// the cave lion, so a wolf, a boar or a footpad never found the gap in a
+// hundred rounds. Now everything can, except what was always agreed could not:
+// the first-tier small things (level 1: the hares, the birds, the hedgehog, the
+// roe) and the rats at any size. A rat still can't lottery your kit away.
+// A creature's vital shot stiffens the body round its kit for this long; only
+// its owner can 'fetch' from it, and then it lets go and spills (body.ts).
+export const BODY_HOLD_MS = 60 * 60_000;
+export const BODY_SWEEP_MS = 30_000;
+export const VITALS_SPARED_LEVEL = 1;
+export const VITALS_SPARED = new Set<string>(["rat", "fleet-rat", "brood-rat", "albino-rat"]);
+export function findsVitals(t: { id: string; level: number }): boolean {
+  return t.level > VITALS_SPARED_LEVEL && !VITALS_SPARED.has(t.id);
+}
+// The PLAYER side of the vitals lottery. Bosses fall only by BIG_VITALS, below.
 // Every other mob can fall to a lucky killing blow (its own armor buys the odds
 // down, VITALS_PVE base). The three-hound is the exception between: it only falls
 // this way to a PIERCING weapon — you drive the point through its throat — and
@@ -8964,6 +8965,30 @@ export const VITALS_THREATS = new Set<string>([
 //   piercing  — the vitals CLASS (not the armor value): the three-hound falls
 //               only to these (VITALS_HOUND), and the flee-voice reads it.
 export const VITALS_HOUND = 1 / 5000; // the sentinel's tiny pierce-only vitals chance
+// THE BIG ONES HAVE THEIR OWN ODDS (rome, 2026-10-23). The bosses could never
+// fall to a lucky blow, and the bears and the cave lion took the flat per-hit
+// rate, which rewards a long fight: thirty hits on a drake were thirty chances.
+// So each is set by the WHOLE FIGHT, by design (comment), and the per-hit odds
+// are worked back from the hits it takes to kill with an ordinary weapon of
+// that kind. Only that kind of weapon can do it: a point between the plates or
+// through the throat, a blunt blow that shatters a hollow skull, an edge that
+// fells the wood or opens the drowned. Not every boss is equal. The Drowned
+// God is not here and never falls this way.
+export const BIG_VITALS: Record<string, { by: "point" | "edge" | "blunt"; oneIn: number }> = {
+  "the-great-crab":            { by: "point", oneIn: 1800 },  // 1 in 100 fights, ~18 hits
+  "the-great-devil-crab":      { by: "point", oneIn: 2500 },  // 1 in 120, ~21
+  "the-old-grey":              { by: "point", oneIn: 3000 },  // 1 in 120, ~25
+  "forgotten-king":            { by: "blunt", oneIn: 2700 },  // 1 in 150, ~18
+  "marrow-king":               { by: "blunt", oneIn: 2400 },  // 1 in 150, ~16 (and he still rises)
+  "the-drowned-ferryman":      { by: "edge",  oneIn: 4500 },  // 1 in 150, ~30
+  "the-keeper-of-the-holding": { by: "edge",  oneIn: 5900 },  // 1 in 175, ~34
+  "the-woodward":              { by: "edge",  oneIn: 6200 },  // 1 in 200, ~31
+  "the-drake":                 { by: "point", oneIn: 8000 },  // 1 in 250, ~32
+  "the-pale-drake":            { by: "point", oneIn: 8500 },  // 1 in 250, ~34
+  "brown-bear":                { by: "point", oneIn: 1600 },  // 1 in 120, ~13
+  "the-baited-bear":           { by: "point", oneIn: 1700 },  // 1 in 120, ~14
+  "cave-lion":                 { by: "point", oneIn: 2000 },  // 1 in 120, ~17
+};
 //   quiet     — LISTENER wake odds halved while worn (felt says nothing to the bones)
 export const QUIET_WAKE_MULT = 0.5;
 //   slick     — a drowned grip takes hold half as often, and breaks easier
@@ -11057,7 +11082,7 @@ export const GATE_TELLINGS: Partial<Record<Region, string[]>> = {
     "\"So the court orders the bounds walked notwithstanding, and orders that any man who can't say where he's standing be brought to the oak and set right.\" He lets that sit. \"There's no note of anybody ever being brought to the oak.\"",
     "\"Last entry on the last roll presents the wood. For taking the coppice, the rides, the pale, the holding, and the court.\" He almost smiles. \"The wood did not attend. The wood is fined nothing, being a wood.\"",
     "\"Now. A court like that has an officer. Woodward. Walks the bounds, knows every stand in it, takes the tools off anyone cutting without right.\" He stops wiping. \"Court's four hundred year gone. He isn't.\"",
-    "\"He's still walking it, and he's still taking tools off people, and he does not stop to hear which right you think you've got. Big man, oiled leather, felling axe carried like it weighs nothing.\"",
+    "\"He's still walking it, and he's still taking tools off people, and he does not stop to hear which right you think you've got. Big as a man, but it's bark under the oiled leather, and the felling axe carried like it weighs nothing.\"",
     "\"Past the first few stands in there the wood stops telling you the truth about which way you're facing, and that's where he does his rounds.\" He goes back to the counter. \"That wood had a court,\" he says. \"Proper one.\"",
   ],
 

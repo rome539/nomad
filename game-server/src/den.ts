@@ -45,6 +45,7 @@ import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow, insertLoot, itemAcquiredAt, savePlayer } from "./world";
 import * as events from "./events";
+import * as body from "./body";
 import { uuid } from "./rng";
 import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_IRON, DEN_BAR_SCRAP,
   DEN_RAISE_IRON, DEN_RAISE_SCRAP, DEN_RAISE_WOOD, DEN_RAISE_LEATHER, DEN_MIN_GATE_STEPS,
@@ -1081,6 +1082,8 @@ export async function cmdStow(z: ZoneDO, session: Session, arg: string): Promise
 }
 
 export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  // Your own stiffened body first: everything it holds, in one go (body.ts).
+  if (await body.reclaim(z, session)) return;
   // THE COLD STORES (2026-09-01): fetching out of the cold. What comes out
   // comes out as young as it went in — the cold kept it, and the spoiling
   // clock starts again only when it is in your hand. The shrine's law for

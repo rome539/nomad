@@ -8,6 +8,7 @@ import * as events from "./events";
 import * as pvp from "./pvp";
 import * as gate from "./gate";
 import * as den from "./den";
+import * as body from "./body";
 import * as works from "./works";
 import * as wanderer from "./wanderer";
 import * as ai from "./ai";
@@ -445,6 +446,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // The cold stores and the ossuary: a shelf is only worth naming when you
     // have something to put on it or something already on it. `fetch` with no
     // argument reads the shelf back, so it is safe to offer blind.
+    // Your own stiffened body, lying here (body.ts).
+    if (body.hasBody(z, session.roomId, session.pubkey)) suggest.push("fetch");
     if (COLD_STORE_ROOMS.has(session.roomId) || session.roomId === OSSUARY_ROOM) {
       if (session.items.some((c) => !c.equipped)) suggest.push("stow");
       suggest.push("fetch");

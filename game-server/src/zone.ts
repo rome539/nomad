@@ -77,6 +77,7 @@ import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
+import * as body from "./body";
 import * as dice from "./dice";
 import * as works from "./works";
 import * as wanderer from "./wanderer";
@@ -92,7 +93,7 @@ import { FORGE_STOCK,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON, LOOSE_IRON_KG, QUICK_LOAD, BALANCE_KG,
   STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   TRIP_ODDS, TRIP_HOLD_MS, POCKETED_BONUS,
-  HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, VITALS_THREATS,
+  HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, findsVitals, BIG_VITALS, BODY_HOLD_MS, VITALS_CREATURE,
   VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
   SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS, LATCH_GIVE_STEP, LATCH_GIVE_MAX, ROCK_LATCH_WEAR,
@@ -3921,8 +3922,9 @@ export class ZoneDO implements DurableObject {
   // thrown spear IS — and neither was a decision: the opener's comment rules
   // out the CRIT ("the surprise is the crit") and never mentions vitals at all.
   //
-  // The three exclusions below are the real ones and they are unchanged. A
-  // boss is the designed wall. The three-hound falls only to a point driven
+  // The exclusions below are the real ones. The bosses, the bears and the
+  // cave lion keep their own odds and weapon (BIG_VITALS); any boss not in it
+  // is the designed wall. The three-hound falls only to a point driven
   // through its throat, and rarely. A HOLLOW thing has no throat to open and
   // no heart to pierce, so only a blunt weapon that shatters the skull ends it
   // outright — except the wights, whose dry flesh is still a BODY (GRAVE_FLESH).
@@ -3932,7 +3934,15 @@ export class ZoneDO implements DurableObject {
   // in both directions. A hurled rock is blunt and can shatter a skeleton's
   // skull; a hurled knife is not and cannot.
   public playerVitals(creature: Creature, tmpl: MobTemplate, weapon: { tmpl: ItemTemplate } | null | undefined): boolean {
-    if (creature.hp <= 0 || tmpl.is_boss) return false;
+    if (creature.hp <= 0) return false;
+    // The big ones (BIG_VITALS): their own odds, and only the right kind of weapon.
+    const big = BIG_VITALS[creature.templateId];
+    if (big) {
+      const t = weapon?.tmpl;
+      const kind = !t ? "" : hasTrait(t, "piercing") ? "point" : t.stun > 0 ? "blunt" : "edge";
+      return kind === big.by && chance(1 / big.oneIn);
+    }
+    if (tmpl.is_boss) return false;
     if (creature.templateId === "three-hound") return hasTrait(weapon?.tmpl, "piercing") && chance(VITALS_HOUND);
     if (HOLLOW.has(creature.templateId) && !GRAVE_FLESH.has(creature.templateId)) {
       return (weapon?.tmpl.stun ?? 0) > 0 && this.vitalsLottery(ai.mobArmor(tmpl, creature), VITALS_PVE);
@@ -5033,13 +5043,13 @@ export class ZoneDO implements DurableObject {
         dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
         victim.hp -= dmg;
         this.noteFx(victim.pubkey, "swung", creature.templateId);   // and it swings
-        // The vitals lottery — the Tarkov headshot. A real threat (not shallow
-        // trash) may find the gap on any landed hit: instant, ignoring what hp
+        // The vitals lottery — the Tarkov headshot. Any creature but the small
+        // things (findsVitals) may find the gap on any landed hit: instant, ignoring what hp
         // you had left; armor over the vitals only bought the odds down. Drops to
         // 0 so the killing blow runs through the same death path below.
         let vitals = false;
-        if (victim.hp > 0 && VITALS_THREATS.has(creature.templateId)
-            && this.vitalsLottery(this.equippedArmor(victim), VITALS_PVE)) {
+        if (victim.hp > 0 && findsVitals(tmpl)
+            && this.vitalsLottery(this.equippedArmor(victim), VITALS_CREATURE)) {
           victim.hp = 0;
           vitals = true;
         }
@@ -5220,7 +5230,7 @@ export class ZoneDO implements DurableObject {
             this.send(victim, `${cap(tmpl.name)} ${this.creatureVitals(tmpl.id)} — ${pick(VITALS_DARK)}`, "dmgin big vital");
             this.roomFeed(victim.roomId, `${cap(tmpl.name)} drops ${victim.name} with one terrible strike.`, victim.pubkey, false);
           }
-          await this.onPlayerDeath(victim, tmpl);
+          await this.onPlayerDeath(victim, tmpl, undefined, vitals);
         }
       }
     }
@@ -5967,6 +5977,7 @@ export class ZoneDO implements DurableObject {
 
     ai.hearthDraws(this, now); // a den's fire after dark pulls on the hungry next door
     den.fillButts(this, now);  // the rain off a den roof fills its butt
+    await body.sweep(this, now); // a stiffened body past its hold lets go (body.ts)
     this.applyRot(now, false);
     this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches
     this.sweepSpoiledHearts(now, false);
@@ -7102,17 +7113,54 @@ export class ZoneDO implements DurableObject {
   // minted real duplicate rows (rome, 2026-07-20: a sealed set duped, death text
   // in BOTH rooms). The guard drops any co-fired second call; `finally` clears it
   // so a death that throws mid-way can't leave you permanently unkillable.
-  public async onPlayerDeath(victim: Session, tmpl: MobTemplate | null, slayerName?: string): Promise<void> {
+  // EVERYTHING carried, onto the floor where it fell: the ground copy, its
+  // wear, its roll, its scar, its rot, a cracked seal. A death does this, and so
+  // does a stiffened body when its hold runs out (body.ts).
+  public async spillCarried(fell: string, scattered: CarriedItem[]): Promise<void> {
+    // Journals fall instanced (their pages ride the book to whoever loots it);
+    // everything else spills as plain loot.
+    this.ground.set(fell, [...(this.ground.get(fell) ?? []), ...scattered.filter((c) => !c.journalId && !c.inviteCode).map((c) => c.itemId)]);
+    for (const c of scattered) if (!c.journalId && !c.inviteCode) this.stampFresh(fell, c.itemId);
+    for (const c of scattered) {
+      // The seal cracks first, for everything: a sealed map or journal falls
+      // as its own copy, and the continue below used to skip this line, so
+      // its seal stayed live on the ledger forever (found 2026-10-23).
+      if (c.serial !== null) await voidMint(this.env.DB, c.serial);
+      if (c.journalId || c.inviteCode) { this.dropInstance(fell, c.itemId, c.journalId, c.inviteCode); continue; }
+      if (this.world!.itemTemplates.get(c.itemId)?.edible && !FOOD_KEEPS.has(c.itemId)) {
+        this.rot.push({ itemId: c.itemId, roomId: fell, at: Date.now() + ROT_MS });
+      }
+      if (this.isGear(c.itemId)) this.groundCond.set(`${c.itemId}@${fell}`, c.condition); // the spill keeps its wear
+      if (c.itemId === LANTERN_ITEM) this.groundCond.set(light.fuelKey(fell), c.fuel ?? 0); // ...and a lantern its fat
+      if (c.rolledTraits) this.groundRolled.set(`${c.itemId}@${fell}`, c.rolledTraits); // and whatever it rolled — the looter inherits the roll (099)
+      // The scar: an engraved piece writes its owner's death into the ledger,
+      // and the mark rides the stones for whoever takes it up next. Your gear
+      // loses you — and carries you.
+      if (c.loreId) {
+        await deedsBump(this.env.DB, c.loreId, "deaths");
+        this.groundLore.set(`${c.itemId}@${fell}`, c.loreId);
+      }
+      // A heart that falls with you keeps the hour it was cut. Whoever pries
+      // it off your body inherits what's LEFT of it, not a fresh one — steal a
+      // heart off a corpse and you're already running out of time.
+      if (c.itemId === DEEP_HEART && c.acquiredAt !== undefined) {
+        this.groundHeart.set(`${c.itemId}@${fell}`, c.acquiredAt);
+      }
+    }
+    this.armStrayDecay(fell); // rock, torch, physic — anything renewable spilled where you fell spoils, unless this is its spawn floor
+  }
+
+  public async onPlayerDeath(victim: Session, tmpl: MobTemplate | null, slayerName?: string, vital = false): Promise<void> {
     if (victim.dying) return;
     victim.dying = true;
     try {
-      await this.onPlayerDeathInner(victim, tmpl, slayerName);
+      await this.onPlayerDeathInner(victim, tmpl, slayerName, vital);
     } finally {
       victim.dying = false;
     }
   }
 
-  private async onPlayerDeathInner(victim: Session, tmpl: MobTemplate | null, slayerName?: string): Promise<void> {
+  private async onPlayerDeathInner(victim: Session, tmpl: MobTemplate | null, slayerName?: string, vital = false): Promise<void> {
     const slayer = slayerName ?? (tmpl ? tmpl.name : "their own wounds"); // tmpl null = bled out (or a wanderer's steel), no beast on the blow
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
@@ -7170,40 +7218,16 @@ export class ZoneDO implements DurableObject {
         false,
       );
     }
-    const scattered = victim.items;
+    // A CREATURE'S VITAL SHOT STIFFENS THE BODY (body.ts): the kit stays in its
+    // hands where it fell, for its owner alone, until the hold runs out. Rows
+    // locked in a trade elsewhere fall the ordinary way.
+    const stiff = vital && !!tmpl && !slayerName;
+    const onBody = stiff ? victim.items.filter((c) => !this.tradeLocked.has(c.rowId)) : [];
+    if (onBody.length) await body.stiffen(this, victim, onBody, fell);
+    const scattered = victim.items.filter((c) => !onBody.includes(c));
     const hadSealed = scattered.some((c) => c.serial !== null);
     if (scattered.length > 0) {
-      // Journals fall instanced (their pages ride the book to whoever loots it);
-      // everything else spills as plain loot.
-      this.ground.set(fell, [...(this.ground.get(fell) ?? []), ...scattered.filter((c) => !c.journalId && !c.inviteCode).map((c) => c.itemId)]);
-      for (const c of scattered) if (!c.journalId && !c.inviteCode) this.stampFresh(fell, c.itemId);
-      for (const c of scattered) {
-        // The seal cracks first, for everything: a sealed map or journal falls
-        // as its own copy, and the continue below used to skip this line, so
-        // its seal stayed live on the ledger forever (found 2026-10-23).
-        if (c.serial !== null) await voidMint(this.env.DB, c.serial);
-        if (c.journalId || c.inviteCode) { this.dropInstance(fell, c.itemId, c.journalId, c.inviteCode); continue; }
-        if (this.world!.itemTemplates.get(c.itemId)?.edible && !FOOD_KEEPS.has(c.itemId)) {
-          this.rot.push({ itemId: c.itemId, roomId: fell, at: Date.now() + ROT_MS });
-        }
-        if (this.isGear(c.itemId)) this.groundCond.set(`${c.itemId}@${fell}`, c.condition); // the spill keeps its wear
-        if (c.itemId === LANTERN_ITEM) this.groundCond.set(light.fuelKey(fell), c.fuel ?? 0); // ...and a lantern its fat
-        if (c.rolledTraits) this.groundRolled.set(`${c.itemId}@${fell}`, c.rolledTraits); // and whatever it rolled — the looter inherits the roll (099)
-        // The scar: an engraved piece writes its owner's death into the ledger,
-        // and the mark rides the stones for whoever takes it up next. Your gear
-        // loses you — and carries you.
-        if (c.loreId) {
-          await deedsBump(this.env.DB, c.loreId, "deaths");
-          this.groundLore.set(`${c.itemId}@${fell}`, c.loreId);
-        }
-        // A heart that falls with you keeps the hour it was cut. Whoever pries
-        // it off your body inherits what's LEFT of it, not a fresh one — steal a
-        // heart off a corpse and you're already running out of time.
-        if (c.itemId === DEEP_HEART && c.acquiredAt !== undefined) {
-          this.groundHeart.set(`${c.itemId}@${fell}`, c.acquiredAt);
-        }
-      }
-      this.armStrayDecay(fell); // rock, torch, physic — anything renewable spilled where you fell spoils, unless this is its spawn floor
+      await this.spillCarried(fell, scattered);
       await clearCarriedInventory(this.env.DB, victim.pubkey, this.tradeLocked.size ? [...this.tradeLocked] : undefined);
     }
     victim.items = [];
@@ -7222,11 +7246,14 @@ export class ZoneDO implements DurableObject {
     if (!slayerName) this.actorFeed(
       victim,
       fell,
-      scattered.length > 0
+      onBody.length > 0
+        ? `${victim.name} is slain by ${slayer}. The body stiffens where it falls, the hands locked round everything it carried.`
+        : scattered.length > 0
         ? `${victim.name} is slain by ${slayer}. Their pack scatters across ${groundWord(this.regionOf(fell), fell)}${hadSealed ? " — cracked seals glitter among the spill" : ""}.`
         : `${victim.name} is slain by ${slayer}.`,
     );
     if (slayerName) this.roomFeed(fell, `${slayerName} stands over the body.`, victim.pubkey, false);
+    if (onBody.length) this.send(victim, `Your body stiffens where it fell in ${this.world!.rooms.get(fell)?.name ?? "the place you fell"}, the hands locked round your kit. Nobody can take it from you there. Get back to it within ${Math.round(BODY_HOLD_MS / 60_000)} minutes and 'fetch' it, before it lets go.`);
     this.roomSound(fell, "A scream, cut short, {dir}.");
     this.creatureNoise(fell);
     this.addTrace(fell, { kind: "blood", at: Date.now(), label: victim.name, id: "nomad" }); // the picture lays a nomad there
@@ -7788,6 +7815,8 @@ export class ZoneDO implements DurableObject {
         if (shownCure[itemId] <= (curing[itemId] ?? 0)) lines.push(`${shown} hangs in the smoke-racks, curing.`);
         else loose.push(`${shown} lies here.`);
       }
+      // A body a creature's vital shot stiffened, its owner's alone (body.ts).
+      lines.push(...body.roomLines(this, room.id, session.pubkey));
       // A dropped journal (or an unrolled map) lies here too — someone's spilled
       // hunting. A map isn't a book: it doesn't read "pages open to the dark".
       for (const inst of this.groundInstances.get(room.id) ?? []) {

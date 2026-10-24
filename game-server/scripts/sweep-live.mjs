@@ -68,14 +68,15 @@ for (const r of rows) {
 }
 
 // ---- every row on its own
-const KNOWN = /^(|lockbox|vault|den:.+)$/;
+const KNOWN = /^(|lockbox|vault|den:.+|body:.+)$/;
 for (const r of rows) {
   if (!T.has(r.item_id)) flag('item with no template', who(r.pubkey), `${r.item_id} (row ${r.id}, in ${r.container || 'pack'})`);
   if (!players.has(r.pubkey)) flag('item with no owner', r.pubkey.slice(0, 10) + '…', `${named(r.item_id)} in ${r.container || 'pack'}`);
   if (!KNOWN.test(r.container)) flag('item in an unknown place', who(r.pubkey), `${named(r.item_id)} in "${r.container}"`);
   if (r.condition < 0 || r.condition > 100) flag('condition out of range', who(r.pubkey), `${named(r.item_id)} at ${r.condition}`);
   if (r.fuel < 0) flag('negative fuel', who(r.pubkey), named(r.item_id));
-  if (r.equipped && r.container !== '') flag('equipped but not on the body', who(r.pubkey), `${named(r.item_id)} in ${r.container}`);
+  // A body a vital shot stiffened still wears what you wore (src/body.ts).
+  if (r.equipped && r.container !== '' && !r.container.startsWith('body:')) flag('equipped but not on the body', who(r.pubkey), `${named(r.item_id)} in ${r.container}`);
   if (r.equipped && !z.isGear(r.item_id)) flag('equipped thing that is not gear', who(r.pubkey), named(r.item_id));
   if (r.vaulted && r.container !== 'vault') flag('old vaulted flag on a row outside the vault', who(r.pubkey), `${named(r.item_id)} in ${r.container || 'pack'}`);
   if (r.rolled_traits) {

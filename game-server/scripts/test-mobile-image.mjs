@@ -11,7 +11,9 @@ const {default:puppeteer}=await import(requireCapture.resolve('puppeteer-core'))
 const root=fileURLToPath(new URL('..',import.meta.url));
 const {code}=await transform(fs.readFileSync(root+'/src/public.ts','utf8'),{loader:'ts',format:'esm'});
 const {PAGE}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
-const hook=`window.demo={fitMobRow,setTheme, palettes:THEMES, contrastRatio, renderBench, renderTrade, renderForge, renderMap,
+// The gatehouse dresses for the calendar (GATEHOUSE_FEASTS), so the plain room
+// this test paints would turn into a feast plate on those dates: pin it plain.
+const hook=`FEAST_FORCE="none";window.demo={fitMobRow,setTheme, palettes:THEMES, contrastRatio, renderBench, renderTrade, renderForge, renderMap,
  themeOptions:(design,ornate)=>{doorAtmosphere=design;ornateBorders=ornate;syncDoorAtmosphere();},
  grantArt,setView,setLogBig,fitPicture,paintScene,updateMobs,renderChips,skyDrift,weatherState:()=>({kind:weatherKind}),view:()=>viewMode,painted:()=>scenePainted,cacheSize:()=>readySceneImage.cache?.size||0,
  fxState:()=>({name:fxName,ready:fxReady,seq:fxSeq,mist:fxGl&&fxGl.getUniform(fxProg,fxU.mistOn),wet:fxGl&&fxGl.getUniform(fxProg,fxU.wetOn)}),
