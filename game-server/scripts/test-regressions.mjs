@@ -590,6 +590,19 @@ try {
     assert.ok(noise.every((r) => r === 'the-cells'), 'nobody on the moor or at the gate coughs');
     assert.equal((said.get('out') ?? []).length, 0, 'the surface hears nothing of it');
   });
+  check('the keeper speaks of the king now and then, not every ten minutes (2026-10-24)', () => {
+    const { z } = kingWorld();
+    ratking.crown(z, Date.now());
+    const said = [];
+    z.send = (s, t) => said.push(t);
+    z.creatureNoise = () => {}; z.roomSound = () => {};
+    z.inGatehouse = new Set(['hatch']);
+    z.outOfWorld = () => true;
+    z.regionOf = () => 'gate';
+    z.sessions = new Map([['hatch', { pubkey: 'hatch', name: 'Rome', roomId: 'gate-room' }]]);
+    for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.roll(z, Date.now()); } // five hours by the fire
+    assert.ok(said.length <= 1, 'once said, not again for half an hour: ' + said.length);
+  });
   check('with no king there is no cough', () => {
     const { z } = kingWorld();
     const noise = []; z.creatureNoise = (r) => noise.push(r); z.send = () => {};

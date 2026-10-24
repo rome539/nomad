@@ -6853,6 +6853,11 @@ export const COUGH_DUST_LINES = [
 // whoever is in the fortress, and now and then a sign.
 export const RAT_KING_COUGH_PER_MIN = 0.25;
 export const RAT_KING_OMEN_PER_MIN = 0.1;
+// THE KEEPER MENTIONS IT, HE DOES NOT GO ON ABOUT IT (rome, 2026-10-24: he
+// was saying it every ten minutes on the omen's own rate). His own odds, and
+// once said, not again to that wanderer for RAT_KING_KEEPER_GAP_MS.
+export const RAT_KING_KEEPER_PER_MIN = 0.05;
+export const RAT_KING_KEEPER_GAP_MS = 30 * 60_000;
 export const RAT_KING_COUGH_LINES = [
   "Something in the air down here catches in your chest, and you cough, hard, and it carries.",
   "You cough before you can stop it, a dry hacking that goes on and echoes off the stone.",
@@ -6866,7 +6871,7 @@ export const RAT_KING_OMEN_LINES = [
 ];
 export const RAT_KING_KEEPER_LINES = [
   "The keeper says, to nobody in particular: \"Rats up out of the warrens in the daylight. Last time they did that there was a king down there.\"",
-  "The keeper wipes the counter and doesn't look up. \"My grandmother used to say a rat king means the sickness is coming. She was usually right.\"",
+  "The keeper wipes the counter and doesn't look up. \"A rat king means the sickness is coming.\"",
   "Somebody at the table coughs, and the keeper looks over sharply. \"Been down below, have you,\" he says. It isn't a question.",
 ];
 // THE FOOD WEB'S FLOOR (rome, 2026-07-18): the dungeon feeds its own. A hungry

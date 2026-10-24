@@ -18,7 +18,7 @@ import * as coughing from "./cough";
 import {
   RAT_KING, RAT_KING_HOME, RAT_KING_RATS, RAT_KING_ROLL_PER_MIN, RAT_KING_LEADERLESS_MS,
   RAT_KING_LEADERLESS_FLEE_MULT, RAT_CROWN_TRAIT, WARRENS_ROOMS, WANDER_MIN_MS, WANDER_MAX_MS,
-  RAT_KING_COUGH_PER_MIN, RAT_KING_OMEN_PER_MIN, RAT_KING_COUGH_LINES, RAT_KING_OMEN_LINES, RAT_KING_KEEPER_LINES,
+  RAT_KING_COUGH_PER_MIN, RAT_KING_OMEN_PER_MIN, RAT_KING_KEEPER_PER_MIN, RAT_KING_KEEPER_GAP_MS, RAT_KING_COUGH_LINES, RAT_KING_OMEN_LINES, RAT_KING_KEEPER_LINES,
   FORTRESS_BANDS,
 } from "./zone-data";
 
@@ -72,10 +72,15 @@ export function roll(z: ZoneDO, now: number): void {
 // keeper at the hatch says what that used to mean. And whoever walks the
 // fortress catches something in the air down there and COUGHS: loud, heard
 // next door, and noise like any other, so it brings the curious.
+const keeperSaid = new Map<string, number>(); // pubkey -> when the keeper last spoke of the king to them
 function omens(z: ZoneDO): void {
   for (const s of z.sessions.values()) {
     if (z.inGatehouse.has(s.pubkey)) {
-      if (chance(RAT_KING_OMEN_PER_MIN)) z.send(s, pick(RAT_KING_KEEPER_LINES), "amb");
+      const said = keeperSaid.get(s.pubkey) ?? 0;
+      if (Date.now() - said >= RAT_KING_KEEPER_GAP_MS && chance(RAT_KING_KEEPER_PER_MIN)) {
+        keeperSaid.set(s.pubkey, Date.now());
+        z.send(s, pick(RAT_KING_KEEPER_LINES), "amb");
+      }
       continue;
     }
     if (z.outOfWorld(s) || !FORTRESS_INSIDE.has(z.regionOf(s.roomId))) continue;
