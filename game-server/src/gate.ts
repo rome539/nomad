@@ -1908,6 +1908,13 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     // successful moves are silent — the settled counts are the confirmation.
     const carriedState = () => JSON.stringify(session.items.map(c => [c.rowId, !!c.equipped]));
     const beforeSound = carriedState();
+    // AND THE KEEPINGS, for a move between them (rome, 2026-10-24: lockbox to
+    // vault was silent). That move never touches the pack, so the pack check
+    // alone gave it no voice while every other move into a box clunked.
+    const keepings = ["stash", "vault", "take"].includes(action);
+    const keptState = async () => !keepings ? "" : JSON.stringify(await Promise.all((["lockbox", "vault"] as const)
+      .map(async (k) => (await loadContainer(z.env.DB, session.pubkey, k)).map((c) => c.rowId).sort())));
+    const beforeKept = await keptState();
     const condBefore = new Map(session.items.map((c) => [c.rowId, c.condition]));
     let note: string | undefined;
     for (const row of rows) {
@@ -1918,7 +1925,7 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     // A mend moves nothing worth hearing, so the item check below never gave it
     // a voice: the forge sounds when the iron actually took (rome, 2026-10-18).
     const cue = action === "repair" ? (mended ? "forge" : "")
-      : beforeSound !== carriedState()
+      : beforeSound !== carriedState() || (keepings && beforeKept !== await keptState())
       ? (["stash", "vault", "take"].includes(action) ? "box" : ["equip", "remove", "drop", "stow", "fetch"].includes(action) ? "handle" : "") : "";
     return sendBench(z, session, note, cue);
   }

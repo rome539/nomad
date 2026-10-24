@@ -13,6 +13,7 @@ import * as works from "./works";
 import * as wanderer from "./wanderer";
 import * as ai from "./ai";
 import * as study from "./study";
+import * as lore from "./lore";
 import * as paths from "./paths";
 import * as keys from "./keys";
 import { BUILD_ID } from "./public";
@@ -178,7 +179,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // AND WHAT IS LYING ON THE GROUND. A body is not a two-second flourish: the
   // blood stays six hours and a scavenger comes to eat it, so the picture keeps
   // it until the world lets go of it. Three at most — a battlefield should read
-  // as a battlefield, not fill the row.
+  // as a battlefield, not fill the row. THE NEWEST THREE (rome, 2026-10-24: a
+  // fourth kill lay there undrawn while the study chip named it), so the body
+  // you just made is always one you can see.
   const dead: string[] = [];
   // THE ONES THAT COME BACK ARE NOT NORMAL BODIES (rome, 2026-09-29). The hound
   // and every boss are one of a kind, each in its own room, and when one is put
@@ -188,7 +191,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   const holds = (id: string) => SENTINELS.has(id) || !!world.mobTemplates.get(id)?.is_boss;
   const posted = z.creaturesInRoom(session.roomId).some((c) => holds(c.templateId));
   let heldBody = false;
-  for (const tr of z.traces.get(session.roomId) ?? []) {
+  for (const tr of [...(z.traces.get(session.roomId) ?? [])].reverse()) {
     if (dead.length >= 3 || !tr.id || !CORPSE_TRACES.has(tr.kind)) continue;
     if (holds(tr.id)) {
       if (posted || heldBody) continue;
@@ -328,19 +331,33 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // A surveyor-map carries a journalId too (its ink rides the journal rail, 097),
   // so "a real journal" is journalId AND not a map — else a map offers `study`.
   if ((creatureHere || z.traces.has(session.roomId)) && !z.inCombat(session) && session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) {
+    // The cache was read from other books than the ones in hand now (a journal
+    // taken out of the lockbox after connecting, picked up, stolen): re-read
+    // it, and offer nothing until it is back, rather than offer pages already
+    // written (rome, 2026-10-24).
+    const stale = session.studiedKey !== lore.journalKey(session);
+    if (stale && Date.now() - (session.studiedTriedAt ?? 0) > 10_000) {
+      void lore.refreshStudied(z, session).then(() => z.sendCtx(session));
+    }
     // Skip anything already written up in what it is doing NOW (rome,
     // 2026-07-26, and by behaviour since 2026-10-24): the same behaviour twice
     // adds NOTHING. session.studied is the cache the sync builder can read;
     // unhydrated (undefined) falls through and offers it, as it always did.
-    const firstMob = [...z.creatures.values()].find(
+    const firstMob = stale ? undefined : [...z.creatures.values()].find(
       (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target) && !z.mossUnseen(c, session)
         && !studiedIn(session, c.templateId, study.behaviourNow(z, c)),
     );
     if (firstMob) suggest.push(`study ${chipName(world.mobTemplates.get(firstMob.templateId)!.name)}`);
     // And a body on the floor whose dead the book has not read (study.ts).
-    else {
-      const body = (z.traces.get(session.roomId) ?? []).map((tr) => study.corpseKind(z, tr)).find((id) => id && !studiedIn(session, id, "dead"));
-      if (body) suggest.push(`study dead ${chipName(world.mobTemplates.get(body)!.name)}`);
+    else if (!stale) {
+      const body = [...(z.traces.get(session.roomId) ?? [])].reverse().map((tr) => study.corpseKind(z, tr)).find((id) => id && !studiedIn(session, id, "dead"));
+      if (body) {
+        suggest.push(`study dead ${chipName(world.mobTemplates.get(body)!.name)}`);
+        // The body the chip names is one the picture shows: in place of the
+        // oldest drawn, if the three are full. (Not a boss's or the hound's
+        // while its living self stands in the room: that rule is above.)
+        if (!dead.includes(body) && !(holds(body) && posted)) { if (dead.length >= 3) dead.pop(); dead.push(body); }
+      }
     }
   }
   const edible = session.items.find((c) => world.itemTemplates.get(c.itemId)?.edible);
@@ -386,6 +403,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // ...only a lantern that will actually catch: sound enough, and fat in its well.
     if (session.items.some((c) => c.itemId === LANTERN_ITEM && c.condition > 0 && light.wellOf(session, c) > 0)) suggest.push("light lantern");
   }
+  // AND THE WAY TO PUT IT OUT (rome, 2026-10-24: nothing said how). A lantern
+  // only: shuttering it keeps the fat, where a doused torch is a torch spent,
+  // and a chip must never be the thing that throws a light away.
+  if (!fighting && session.litSource === "lantern" && z.carriesLight(session)) suggest.push("douse");
   // FAT FOR THE WELL, when you have a lump and the well has room for it.
   if (!fighting && session.items.some((c) => c.itemId === FAT_ITEM)
     && session.items.some((c) => c.itemId === LANTERN_ITEM && light.wellOf(session, c) + LANTERN_FAT_MS <= LANTERN_WELL_MS)) suggest.push("fill lantern");

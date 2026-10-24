@@ -3077,7 +3077,9 @@ function scapeBreathe() {
   // 30% down out there. Through the walls it is already the moan it should be.
   if (!a.shut) windBase *= 0.7;
   // under a roof the gale is a moan through the walls, not air on your face
-  scapeTo(scape.wind.gain.gain, windBase * (0.3 + 0.9 * scape.gust) * SCAPE_VOL);
+  // The gust's top a quarter down (rome, 2026-10-24: the gusts ran a bit high);
+  // the lull underneath it is where it was.
+  scapeTo(scape.wind.gain.gain, windBase * (0.3 + 0.6 * scape.gust) * SCAPE_VOL);
   scapeTo(scape.wind.chain[0].frequency, 260 + (a.wind >= 3 ? 700 : 380) * scape.gust);
   scapeTo(scape.wind.chain[1].frequency, a.shut ? 600 : 2400);
   // the midges rise and thin as the cloud of them moves about
@@ -3092,7 +3094,8 @@ function scapeBreathe() {
   scapeTo(scape.leaves.gain.gain, a.leaves ? (0.008 + 0.025 * a.wind) * (0.25 + scape.gust) * SCAPE_VOL : 0);
   scapeTo(scape.falls.gain.gain, a.water === "falls" ? 0.34 * SCAPE_VOL * (0.94 + scape.gust * 0.06) : 0);
   scapeTo(scape.lap.gain.gain, a.water === "lap" ? 0.055 * SCAPE_VOL * (0.25 + Math.pow(Math.sin(scape.surfPhase * Math.PI * 7), 2) * 0.75) : 0);
-  scapeTo(scape.run.gain.gain, a.water === "run" ? (a.loud ? 0.20 : 0.11) * SCAPE_VOL * (0.85 + 0.3 * Math.random()) : 0, 0.3);
+  // RUNNING WATER, every room of it, a third down (rome, 2026-10-24: too loud).
+  scapeTo(scape.run.gain.gain, a.water === "run" ? (a.loud ? 0.13 : 0.07) * SCAPE_VOL * (0.85 + 0.3 * Math.random()) : 0, 0.3);
 }
 function scapeApply() {
   if (!scape || !scapeAmb) return;

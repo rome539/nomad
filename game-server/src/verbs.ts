@@ -2339,7 +2339,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
       session.torchWarned = false;
       z.sendStatus(session);
       const dark = !z.outOfWorld(session) && !z.litFor(session) ? ", and the dark closes back in" : "";
-      z.send(session, `You ${wasLantern ? "shutter the lantern" : "lower the torch"} and swing ${tmpl.name} off your back — your guard returns${dark}.`);
+      z.send(session, `You ${wasLantern ? "shutter the lantern" : "lower the torch"} and take up ${tmpl.name} again — your guard returns${dark}.`);
       z.send(session, z.describeRoom(session, false)); // the dark may close over the room again
       return;
     }

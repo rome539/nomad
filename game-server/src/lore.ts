@@ -584,7 +584,19 @@ async function carriedJournals(z: ZoneDO, session: Session): Promise<CarriedItem
 // NEVER throws: it runs on the connect/wake path, and a D1 hiccup (the
 // overload that used to abort whole ticks) must not cost anyone a login over a
 // chip hint. On failure the cache stays unhydrated and the chip just shows.
+// Which books the cache was read from: the rows of every journal in hand.
+// The chip builder compares it with what is in hand NOW, so a journal taken
+// out of the lockbox after connecting (rome, 2026-10-24: the drove dog's chip
+// kept offering a page already written) re-reads the cache instead of
+// trusting one read from an empty pack.
+export function journalKey(session: Session): string {
+  return session.items.filter((c) => (c.journalId && !MAP_ITEMS.has(c.itemId)) || c.itemId === JOURNAL_ITEM)
+    .map((c) => c.rowId).sort().join(",");
+}
+
 export async function refreshStudied(z: ZoneDO, session: Session): Promise<void> {
+  session.studiedTriedAt = Date.now();
+  const key = journalKey(session);
   try {
     const ids = (await carriedJournals(z, session)).map((b) => b.journalId!);
     const seen = new Map<string, Set<string>>();
@@ -596,6 +608,7 @@ export async function refreshStudied(z: ZoneDO, session: Session): Promise<void>
       }
     }
     session.studied = seen;
+    session.studiedKey = key;
   } catch (e) {
     console.error("refreshStudied threw", (e as Error)?.stack ?? String(e));
   }
@@ -638,6 +651,10 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   const known = new Set<string>([...seen, ...(session.studied?.get(tmpl.id) ?? [])]);
   const adds = study.writes(tmpl.id, doing).filter((b) => !known.has(b));
   if (!adds.length) {
+    // The book already has it, so the chip's cache should too.
+    const c = (session.studied ??= new Map<string, Set<string>>());
+    c.set(tmpl.id, new Set([...(c.get(tmpl.id) ?? []), ...seen]));
+    z.sendCtx(session);
     return z.send(session, doing === "dead"
       ? `You have already set down what a dead ${tmpl.name.replace(/^(a|an|the) /i, "")} has to teach. The body can lie.`
       : `You have already set down ${tmpl.name} ${study.DOING[doing]}. Watching it now adds nothing.`, "study");
@@ -712,6 +729,7 @@ export async function cmdJournal(z: ZoneDO, session: Session, arg = ""): Promise
   }
   const rows = [...byMob.values()];
   session.studied = new Map(rows.map((r) => [r.templateId, new Set(r.seen)])); // free refresh of the chip cache — the rows are already in hand
+  if (ids.length && (await carriedJournals(z, session)).length) session.studiedKey = journalKey(session); // read from the books in hand, not from storage
   const world = z.world!;
   const entries = rows
     .map((r) => {

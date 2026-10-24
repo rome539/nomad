@@ -36,9 +36,11 @@ try {
         "export * as coughing from './cough';",
         "export {reconcilePopulation, ate} from './ai';",
         "export * as study from './study';",
-        "export {cmdStudy, cmdJournal} from './lore';",
+        "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
         "export * as rising from './rising';",
         "export {loadLeaderboard} from './world';",
+        "export {handleBench} from './gate';",
+        "export {sendCtx} from './chips';",
         "export {PATROLS, WARRENS_ROOMS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
@@ -52,7 +54,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, rising, loadLeaderboard, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -783,12 +785,86 @@ try {
     assert.equal(accounts(), 1, 'a page found full is not yours');
   });
 
+  await checkAsync('a journal taken out after connecting re-reads the chip cache, so a written page offers no chip (2026-10-24)', async () => {
+    const { z, me, said, db } = studyWorld();
+    db.prepare("INSERT INTO journal_logs VALUES ('jrn-1', 'hill-wolf', 7, 1, 'about,asleep,feeding,hungry,dead', '')").run();
+    const book = me.items.pop(); // in the lockbox when they connected
+    await refreshStudied(z, me);
+    assert.equal(me.studiedKey, journalKey(me));
+    me.items.push(book); // taken out at the gate
+    assert.notEqual(me.studiedKey, journalKey(me), 'the cache knows it was read from other books');
+    await refreshStudied(z, me);
+    assert.equal(me.studiedKey, journalKey(me));
+    assert.ok(me.studied.get('hill-wolf').has('dead'));
+    const chips = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    assert.match(chips, /const firstMob = stale \? undefined :/);
+    assert.match(chips, /else if \(!stale\) \{\n\s*const body =/);
+    // And an "already" answer fixes the cache on its own.
+    me.studied = undefined;
+    await cmdStudy(z, me, 'wolf');
+    assert.match(said.at(-1), /already set down/);
+    assert.ok(me.studied.get('hill-wolf').has('asleep'));
+  });
   await checkAsync('the legend board counts a full account at 10 (2026-10-24)', async () => {
     const { db, D1 } = sqliteD1();
     db.exec("DROP TABLE players; CREATE TABLE players(pubkey TEXT PRIMARY KEY, name TEXT, kills INTEGER DEFAULT 0, boss_kills INTEGER DEFAULT 0, pvp_kills INTEGER DEFAULT 0, accounts INTEGER DEFAULT 0, lb_published_at INTEGER)");
     db.exec("INSERT INTO players VALUES ('a', 'A', 5, 0, 0, 3, 1), ('b', 'B', 30, 0, 0, 0, 1)");
     const top = await loadLeaderboard(D1, 'legend', 10, { bossPts: 100, pvpPts: 25, accountPts: 10, trophyIds: [] });
     assert.deepEqual(top.map((e) => [e.name, e.score]), [['A', 35], ['B', 30]]);
+  });
+
+  // ---------------------------------------------------------------- the bench
+  console.log('the bench');
+  await checkAsync('lockbox to vault clunks like every other move into a box (2026-10-24)', async () => {
+    const { db, D1 } = sqliteD1();
+    const z = new ZoneDO({}, {});
+    z.env = { DB: D1 };
+    z.world = new Proxy({ itemTemplates: new Map([['tin', { id: 'tin', name: 'a tin', slot: '', rarity: 'common', weight: 1 }]]), entryRooms: new Set(['gate']) },
+      { get: (t, k) => k in t ? t[k] : (typeof k === 'string' ? (t[k] = new Map()) : undefined) });
+    z.inGatehouse = new Set(['me']);
+    const frames = [];
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'gate', items: [], away: true, ws: { send: (m) => frames.push(JSON.parse(m)) } };
+    db.prepare("INSERT INTO player_items(id, item_id, pubkey, signed_serial, container) VALUES ('r2', 'tin', 'me', 5, 'lockbox')").run();
+    for (const k of ['hasRoom']) z[k] = () => true;
+    z.stackable = () => false; z.isGear = () => false; z.enterStep = () => {}; z.send = () => {}; z.savedLoadouts = () => [];
+    await handleBench(z, me, { action: 'vault', rows: ['r2'] });
+    assert.equal(db.prepare("SELECT container FROM player_items WHERE id = 'r2'").get().container, 'vault', 'it moved');
+    const bench = frames.filter((f) => f.t === 'bench').at(-1);
+    assert.equal(bench?.sfx, 'box');
+  });
+
+  check('a burning lantern offers douse, in the chips and in help (2026-10-24)', () => {
+    const chips = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    assert.match(chips, /if \(!fighting && session\.litSource === "lantern" && z\.carriesLight\(session\)\) suggest\.push\("douse"\);/);
+    const parser = readFileSync(new URL('../src/parser.ts', import.meta.url), 'utf8');
+    assert.match(parser, /"  douse             \(shutter, snuff\)/);
+    assert.deepEqual(parse('douse'), { verb: 'douse', arg: '' });
+  });
+
+  check('the picture draws the newest bodies, and always the one the study chip names (2026-10-24)', () => {
+    const { z, me } = studyWorld();
+    z.creatures.clear();
+    const T = (id, name) => z.world.mobTemplates.set(id, { id, name, level: 2, description: '', armor: 0 });
+    T('brood-rat', 'a swollen brood-rat'); T('the-miller', 'the miller');
+    z.world.rooms = new Map([['r', { id: 'r', name: 'The Ditch' }]]); z.world.entryRooms = new Set(); z.world.exits = new Map();
+    const at = Date.now();
+    z.traces.set('r', [{ kind: 'remains', at, label: 'the miller', id: 'the-miller' },
+      ...[1, 2, 3].map((i) => ({ kind: 'blood', at: at + i, label: 'a swollen brood-rat', id: 'brood-rat' }))]);
+    me.studied = new Map([['brood-rat', new Set(['dead'])]]); me.studiedKey = journalKey(me);
+    const frames = []; me.ws = { send: (m) => frames.push(JSON.parse(m)) };
+    let threw = null;
+    try { sendCtx(z, me); } catch (e) { threw = e; }
+    if (threw) { console.log('    (sendCtx needs more of the world here: ' + threw.message + ')'); throw threw; }
+    const ctx = frames.filter((f) => f.t === 'ctx').at(-1);
+    assert.ok(ctx.suggest.includes('study dead miller'), 'the chip names the miller');
+    assert.ok(ctx.dead.includes('the-miller'), 'and the picture shows it');
+    assert.equal(ctx.dead.length, 3);
+  });
+
+  check('running water a third down everywhere, and the gust top a quarter down (2026-10-24)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /a\.water === "run" \? \(a\.loud \? 0\.13 : 0\.07\) \* SCAPE_VOL/);
+    assert.match(pub, /windBase \* \(0\.3 \+ 0\.6 \* scape\.gust\) \* SCAPE_VOL/);
   });
 
   // ---------------------------------------------------------------- the rising dead

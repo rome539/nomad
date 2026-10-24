@@ -369,7 +369,9 @@ export const GUIDE_PAGE = `<!doctype html>
   </ul>
   <p>Both occupy a hand. A light in your shield hand means you are not really
   carrying a shield, and the game will tell you so rather than quietly halving
-  your guard.</p>
+  your guard. <b>douse</b> puts the light out: a lantern's shutter closes and
+  keeps what is left of its fat, a torch is ground out and spent. <b>equip
+  shield</b> does the same, and gives you your guard back.</p>
   <div class="law">A torch buys you passage and costs you the dark's one gift:
   <b>things cannot see you either</b>.</div>
 </section>
