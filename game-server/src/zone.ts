@@ -78,6 +78,8 @@ import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
 import * as body from "./body";
+import * as ratking from "./ratking";
+import * as cough from "./cough";
 import * as dice from "./dice";
 import * as works from "./works";
 import * as wanderer from "./wanderer";
@@ -93,7 +95,7 @@ import { FORGE_STOCK,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON, LOOSE_IRON_KG, QUICK_LOAD, BALANCE_KG,
   STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
   TRIP_ODDS, TRIP_HOLD_MS, POCKETED_BONUS,
-  HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, findsVitals, BIG_VITALS, BODY_HOLD_MS, VITALS_CREATURE,
+  HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, findsVitals, BIG_VITALS, BODY_HOLD_MS, VITALS_CREATURE, RAT_KING,
   VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
   SLICK_SEIZE_MULT, SLICK_BREAK_BONUS, CORRODERS, CORRODE_WEAR,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS, LATCH_GIVE_STEP, LATCH_GIVE_MAX, ROCK_LATCH_WEAR,
@@ -4884,7 +4886,7 @@ export class ZoneDO implements DurableObject {
         // lottery)
         const fleeAt = tmpl.max_hp * FLEE_BELOW * (creature.traits?.includes("bloodthirsty") ? MOB_BLOODTHIRSTY_FLEE_MULT
           : creature.traits?.includes("skittish") ? MOB_SKITTISH_FLEE_MULT
-          : creature.traits?.includes("marked") ? MOB_MARKED_FLEE_MULT : 1);
+          : creature.traits?.includes("marked") ? MOB_MARKED_FLEE_MULT : 1) * ratking.fleeMult(this, creature);
         const wantsFlee = !creature.traits?.includes("maneater") && !creature.traits?.includes("hind-mother") && (
           ai.dreadsFire(this, creature, victim)
           || RUNNERS.has(tmpl.id)
@@ -4894,7 +4896,7 @@ export class ZoneDO implements DurableObject {
         // it had in it (ai.creatureMoves), so the roll it just won is worth
         // nothing and it fights where it stands — which is the whole point of
         // chasing one down rather than following it forever.
-        if (wantsFlee && !tmpl.is_boss && !ai.scavengerBold(this, creature) && !ai.winded(creature, now)) {
+        if (wantsFlee && !tmpl.is_boss && !ratking.bold(this, creature) && !ai.scavengerBold(this, creature) && !ai.winded(creature, now)) {
           // MANCATCHER: the barbed collar in your shield hand holds what tries to
           // run — the bolt it just rolled becomes a wrench against the pole, and
           // the fight goes on. (PvP rule when that day comes: against PLAYERS the
@@ -5071,7 +5073,10 @@ export class ZoneDO implements DurableObject {
         }
         if (victim.hp > 0) {
           this.send(victim, `${cap(tmpl.name)} ${this.creatureHit(tmpl.id)} for ${dmg}${flourish} [${hpLabel(victim.hp, victim.maxHp)}]`, flourish === "." ? "dmgin" : "dmgin big");
-          if (drowned) this.send(victim, `${cap(tmpl.name)} drags you under — black water fills your lungs for ${drowned}. (break free, or drown)`, "dmgin big");
+          if (drowned) {
+            this.send(victim, `${cap(tmpl.name)} drags you under — black water fills your lungs for ${drowned}. (break free, or drown)`, "dmgin big");
+            cough.swallowedWater(victim); // and you will be coughing it up for a while (cough.ts)
+          }
           // light-snuffing: a landed blow puts your flame out (mob trait lottery).
           if (creature.traits?.includes("light-snuffing") && victim.litSource === "torch" && this.carriesLight(victim)) {
             victim.litUntil = undefined; victim.litSource = undefined; victim.litRow = undefined; victim.torchWarned = false;
@@ -5978,6 +5983,8 @@ export class ZoneDO implements DurableObject {
     ai.hearthDraws(this, now); // a den's fire after dark pulls on the hungry next door
     den.fillButts(this, now);  // the rain off a den roof fills its butt
     await body.sweep(this, now); // a stiffened body past its hold lets go (body.ts)
+    ratking.roll(this, now);     // about once a day, a rat king comes to the warrens (ratking.ts)
+    cough.tick(this, now);       // the drowned's water, a chill, smoke: what sets you coughing (cough.ts)
     this.applyRot(now, false);
     this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches
     this.sweepSpoiledHearts(now, false);
@@ -6791,6 +6798,7 @@ export class ZoneDO implements DurableObject {
     // it may not create one. See the note above reconcilePopulation in ai.ts.)
     this.fxDied(creature.roomId, creature.templateId);
     this.creatures.delete(creature.id);
+    if (creature.templateId === RAT_KING) ratking.fell(this); // its rats go leaderless (ratking.ts)
     this.noteCreaturesChanged(); // a throw can kill between beats
     for (const s of this.sessions.values()) {
       if (s.target === creature.id) s.target = null;
@@ -9032,7 +9040,7 @@ export class ZoneDO implements DurableObject {
   // the wall. Only lines that name a creature or a plain kind of noise carry it;
   // the rest stay words alone.
   public roomSound(sourceRoomId: string, template: string, excludeRoomId?: string, cls?: string, loud = false,
-    snd?: { mob?: string; act: "pipe" | "idle" | "footstep" | "rustle" | "wings" | "bigwings" | "metal" | "impact" | "murmur" | "scream" | "move" | "flee" | "feed" | "fight" | "call" | "keys" | "whistle" | "bell" | "wetbell" | "rubble" | "stoneshift" | "scurry" }): void {
+    snd?: { mob?: string; act: "pipe" | "idle" | "footstep" | "rustle" | "wings" | "bigwings" | "metal" | "impact" | "murmur" | "scream" | "move" | "flee" | "feed" | "fight" | "call" | "keys" | "whistle" | "bell" | "wetbell" | "rubble" | "stoneshift" | "scurry" | "cough" }): void {
     const world = this.world;
     if (!world) return;
     // A downpour eats sound made under it — half of what happens in the rain

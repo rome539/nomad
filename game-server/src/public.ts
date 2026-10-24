@@ -3454,7 +3454,7 @@ var VOICE_FAMILY = {
   coyote: "coyote",
   hyena: "grave-hyena",
   direhyena: "dire-hyena",
-  rat: "rat fleet-rat brood-rat albino-rat hedgehog",
+  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king",
   gull: "great-gull black-backed-gull",
   oystercatcher: "oystercatcher",
   chough: "mountain-chough",
@@ -3687,6 +3687,16 @@ var ACTION_SOUNDS = {
   rubble: function (t, o) { SND._burst(t, { freq: 450, sweep: 120, dur: 1.6, gain: 0.3 * SCAPE_VOL, atk: 0.08, out: o }); VOX.clicks(t + 0.15, { f: 850, k: 14, gap: 0.045, slow: 1.08, q: 1.2, d: 0.055, g: 0.13 }, o); },
   stoneshift: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 380, q: 1.4, d: 1.1, g: 0.4, a: 0.15 }, o); VOX.clicks(t + 0.25, { f: 550, k: 4, gap: 0.14, q: 1.1, d: 0.08, g: 0.1 }, o); },
   scurry: function (t, o) { MOVES.scurry(t, o, 6, 0.12); },
+  // A COUGH (rome, 2026-10-24): two or three hard barks of breath, each a short
+  // burst of rasp over a low catch in the throat, the last one weaker.
+  cough: function (t, o) {
+    var n = Math.random() < 0.5 ? 2 : 3;
+    for (var i = 0; i < n; i++) {
+      var at = t + i * (0.27 + Math.random() * 0.08), k = i === n - 1 ? 0.7 : 1;
+      VOX.hiss(at, { type: "bandpass", f: 600 + Math.random() * 200, q: 0.9, d: 0.15, g: 0.5 * k, a: 0.006 }, o);
+      VOX.voc(at, { w: "triangle", f: [[0, 170 + Math.random() * 30], [0.1, 120]], d: 0.13, n: 1.6, g: 0.2 * k, a: 0.005 }, o);
+    }
+  },
 
   keys: function (t, o) {
     // Two bunches of contacts as the ring swings, then loose keys settling.
@@ -9955,7 +9965,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "105";      // /mob/      strips and their eye layers
+var MOB_V  = "108";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "45";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
@@ -13427,7 +13437,7 @@ var MOB_SPRITE = {
   // measures 7.66vh against the crouched milker's 7.32 — the same build.
   "the-butter-wife": 28,      // 1.60  a woman standing. Sized like anything else.
   "the-dancer": 5,            // 0.25
-  "the-last-dog": 9,          // 0.70
+  "the-last-dog": 12,         // a lymer's size (rome, 2026-10-24: the dogs read small); its sheet draws it small in the cell
   "the-old-glutton": 6,       // 0.50
   // ---- THE ROAD'S TWENTY-TWO (2026-09-21) -----------------------------------
   // NOT IN THIS TABLE IS NOT IN THE GAME. Every one of these had a cut sheet, a
@@ -13443,10 +13453,10 @@ var MOB_SPRITE = {
   // Measured first rather than assumed: all twenty-two sheets fill 96-98% of
   // their cell, so there is none of the drawn-in air that made the crossing's
   // dead solve to 29 and the crabs to 10, and the plain rule applies directly.
-  "drove-dog": 9,             // 0.70  a lurcher; just over the marsh hound at 9
-  "the-drove-master": 10,     // 0.80  heavier, and still short of a hill wolf
+  "drove-dog": 11,            // a lymer's size (rome, 2026-10-24: the dogs read small)
+  "the-drove-master": 12,     // a size over its dogs, as it always was
   "masterless-dog": 9,        // 0.70
-  "lead-dog": 10,             // 0.80
+  "lead-dog": 12,             // a size over the pack it leads
   "footpad": 28,              // 1.75  a man
   // every other player. 32, not the 28 of the men beside it, because the raised
   // sword and the torch make the strip taller than the body: at 32 the standing
@@ -13465,6 +13475,7 @@ var MOB_SPRITE = {
   "brood-rat": 3,             // 0.20
   "fleet-rat": 3,             // 0.15
   "albino-rat": 3,            // 0.15
+  "rat-king": 24,             // a boss, sized with the old grey: a rat bigger than any rat should be (rome: 11 read too small)
   "grey-heron": 13,           // 1.00  standing; the same as the feral goat at 1.00
   "roe-deer": 16,             // 1.00  head up. Smaller than the red hind at 18
   "white-roe": 13,            // 1.00
@@ -13585,7 +13596,7 @@ var MOB_SPRITE = {
   // ---- the beasts, each against its own kind --------------------------------
   "bull-seal": 12,         // forty stone, against the grey seal at 23
   "a-lymer": 11,           // stands with a hill wolf, which is what the prose claims
-  "marsh-hound": 9,        // just over a fold dog, which is the same animal
+  "marsh-hound": 11,       // a lymer's size (rome, 2026-10-24: the dogs read small)
   "black-backed-gull": 10, // against a carrion vulture; it is the one that eats other birds
   "great-gull": 8,        // a goose, and a looser silhouette than the vulture
   "bittern": 9,           // tall but SLIGHT - all neck and no width, so it needs a big cell
@@ -13682,6 +13693,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "rat-king":   { n: 9, aspect: 0.894, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"call-the-rats":6,"feed":7,"death":8} },
   "coyote":   { n: 8, aspect: 1.172, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-old-grey":   { n: 8, aspect: 1.036, f: {"idle":0,"alert":1,"rest":2,"hold-ground":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "hedgehog":   { n: 9, aspect: 1.097, f: {"idle":0,"move-a":1,"move-b":2,"attack":3,"graze":4,"rest":5,"curl-up":6,"alert":7,"death":8} },
@@ -14016,7 +14028,8 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
 // never in the rooted cycle. The rag-and-bone's scoop is here though no beat
 // sends it: it scoops only in an empty room, so nobody is ever there to see it.
 var EVENT_POSES = ["hold-the-salute", "rise", "take-hold", "lift-you-clear", "take-it-up",
-                   "lay-on-the-hand", "guard-the-kill", "stand-from-the-throne", "call-the-dark"];
+                   "lay-on-the-hand", "guard-the-kill", "stand-from-the-throne", "call-the-dark",
+                   "call-the-rats"]; // the rat king rearing to scream its rats out of the walls (ai.bossPhase)
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...

@@ -11,6 +11,7 @@ import { hpLabel } from "./util";
 // and a player can learn them. Everything else is ROLLED: one die every few
 // hours picks ONE event from the pool — four to six a day, never a schedule.
 // An arc that isn't mid-run parks at NEVER; only the roll starts one.
+import * as cough from "./cough";
 import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
@@ -3790,6 +3791,7 @@ async function tickBreach(z: ZoneDO, now: number): Promise<void> {
       for (const [roomId, dir] of [[p.a, p.aDir], [p.b, p.bDir]] as const) {
         z.roomFeed(roomId, `The wall GIVES — stone comes down in a roar, and when the dust thins a ragged passage stands open ${dir}, where no passage was.`, undefined, false, "evt sfx-rubble");
         z.roomSound(roomId, "Somewhere {dir}, a wall comes down in a long roar of stone.", undefined, undefined, false, { act: "rubble" });
+        cough.dust(z, roomId); // whoever was standing under it coughs on the dust (cough.ts)
         z.refreshRoomCtx(roomId);
       }
       break;

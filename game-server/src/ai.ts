@@ -14,6 +14,7 @@ import * as paths from "./paths";
 import * as clues from "./clues";
 import * as keys from "./keys";
 import { randInt, chance, uuid, pick } from "./rng";
+import * as ratking from "./ratking";
 import { cap, isNight, isFullMoon, isBloodMoon, morphOf } from "./zone-util";
 import * as events from "./events";
 import * as styles from "./styles";
@@ -58,6 +59,7 @@ import {
   PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, OWN_FORAGE_MEAL_LEFT,
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
+  RAT_KING,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -355,7 +357,9 @@ export function reconcilePopulation(z: ZoneDO, world: World): number {
         }
         continue;
       }
-      const cap = caps.get(line) ?? 0;
+      // THE RAT KING has no spawn row: it comes by a roll (ratking.ts). Without
+      // this every deploy would cull it as an overstock of nothing. One, never more.
+      const cap = line === RAT_KING ? 1 : caps.get(line) ?? 0;
       if (list.length <= cap) continue;
       const homes = dens.get(line) ?? [];
       const distToDen = (c: Creature) => homes.length
@@ -918,7 +922,10 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       // need no grudge either — they attack any living person on sight. The
       // working dead stay at work; the soldiers do not.
       const bloodWake = isBloodMoon() && BLOOD_MOON_WAKERS.has(creature.templateId);
-      const hostile = AGGRESSIVE.has(creature.templateId) || bloodWake;
+      // THE RAT KING'S RATS go for anyone on sight while it lives (ratking.ts),
+      // and no rat comes for the one who wears its crown, whatever it remembers.
+      if (ratking.spares(z, creature, session)) continue;
+      const hostile = AGGRESSIVE.has(creature.templateId) || bloodWake || ratking.bold(z, creature);
       if (!holdsGrudge && !guards && !hostile) continue;
       const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
       // A dire-hyena guarding its kill no longer jumps you the instant you walk
@@ -1725,7 +1732,8 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // only thing that strikes on arrival here.
       for (const s of z.sessions.values()) {
         if (s.roomId === creature.roomId && z.reachable(s) && !creature.target
-            && remembers(z, creature, s.pubkey, now)
+            && (remembers(z, creature, s.pubkey, now) || ratking.bold(z, creature))
+            && !ratking.spares(z, creature, s)
             && !styles.stalking(creature)) { // a stalking cat waits for you to stand still (styles.ts)
           creature.target = s.pubkey;
           z.send(s, `${cap(tmpl.name)} remembers you — and comes for you.`);
@@ -2755,6 +2763,7 @@ export function naps(z: ZoneDO, creature: Creature, now: number): void {
     // says so in advance: you simply keep finding it awake.
     if (creature.traits?.includes("sleepless")) return;
     if (!NAPPERS.has(creature.templateId) || creature.asleep || creature.target || creature.cuddling) return;
+    if (ratking.bold(z, creature)) return; // the king's rats keep awake while it walks
     // The cutpurse only ever dozes in his own crack, and so does the cutthroat
     // he sometimes turns out to be — read through the variant so the rare blood
     // inherits the habit instead of catnapping in the open like nothing else
@@ -4513,6 +4522,26 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
         z.roomSound(creature.roomId, "Something very large is being hurt {dir}, and is angry about it.", undefined, undefined, false, { mob: creature.templateId, act: "call" });
         z.creatureNoise(creature.roomId);
       }
+      return;
+    }
+    if (creature.templateId === RAT_KING) {
+      // Hurt, it screams for its subjects, and they come out of the walls.
+      const n = newPhase === 1 ? 1 : 2;
+      z.roomFeed(creature.roomId, newPhase === 1
+        ? `${cap(tmpl.name)} rears up and screams, and something answers it from inside the walls.`
+        : `${cap(tmpl.name)} screams again, ragged, and the walls empty: rats pour out of every crack.`);
+      z.fxPose(creature.roomId, creature.templateId, "call-the-rats");
+      for (let i = 0; i < n; i++) {
+        const id = uuid();
+        z.creatures.set(id, {
+          id, templateId: "rat", roomId: creature.roomId, hp: z.world!.mobTemplates.get("rat")?.max_hp ?? 11,
+          hunger: HUNGRY_AT, grudges: [{ pk: foe.pubkey, at: Date.now() }],
+          nextWanderAt: Date.now() + randInt(WANDER_MIN_MS, WANDER_MAX_MS), target: null,
+        });
+      }
+      z.noteCreaturesChanged();
+      z.refreshRoomCtx(creature.roomId);
+      z.creatureNoise(creature.roomId);
       return;
     }
     if (creature.templateId !== "forgotten-king") return; // phase climbs; the words stay in the throne room

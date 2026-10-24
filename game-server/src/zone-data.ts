@@ -1592,6 +1592,7 @@ export const ROT_MS = 4 * 3_600_000; // food on the floor keeps this long, then 
 // gets its own voice through the walls — the deep ones especially, so the dark
 // below is never just "something moves."
 export const MOVE_SOUNDS: Record<string, string> = {
+  "rat-king": "Something heavy drags itself {dir}, and a great many small claws hurry along with it.",
   rat: "Claws skitter {dir}.",
   "fleet-rat": "Tiny claws scrabble away {dir}, fast.",
   "brood-rat": "Something heavy drags itself {dir}.",
@@ -1701,6 +1702,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
 // a careful boot, beasts = breathing). Hidden lurkers make no sound at all —
 // silence is what an ambush sounds like.
 export const STILL_SOUNDS: Record<string, string> = {
+  "rat-king": "a wet, rattling breath, and the squeak of rats answering it",
   "three-hound": "slow, enormous breathing — three sets of lungs working as one",
   "two-hound": "slow, heavy breathing, doubled — big lungs working in step",
   "last-watchman": "the creak of old leather and iron, holding perfectly still — something standing at attention",
@@ -2023,6 +2025,14 @@ export const MOUTHS = [
 // threshold rule bars that) and never resting on any one wanderer's path in.
 // Each step is to an adjacent room, so the rounds actually close.
 export const PATROLS: Record<string, string[]> = {
+  // THE RAT KING walks the warrens (ratking.ts): the rat-warren down the run to
+  // the midden and the sewer-slip, back up, and round by the crawl and the
+  // gnaw-hollow. Never the hyena den. Every step a real exit.
+  "rat-king": [
+    "the-rat-warren", "the-root-gnawed-run", "the-dripping-gallery", "the-bone-midden",
+    "the-sewer-slip", "the-bone-midden", "the-dripping-gallery", "the-root-gnawed-run",
+    "the-rat-warren", "the-crawl-of-teeth", "the-gnaw-hollow", "the-crawl-of-teeth",
+  ],
   // THE LONG WARDEN (mig 188) is the first patrol that is not a circuit. The
   // watchman walks a ring round the walls; this one walks a LINE — out along
   // the paving and back down it, every leg adjacent, so the route never leaves
@@ -2408,6 +2418,7 @@ export const SCAVENGERS = new Set([
 // or gorge itself bold into a threat (all of that stays gated on SCAVENGERS).
 // The bone rooms clean their own dead; the rat just doesn't starve in them.
 export const VERMIN = new Set([
+  "rat-king", // their king eats as they do: the warrens' dead, and the muck of the rooms when there is nothing dead
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer
   "the-old-raven", "the-raiding-fox", "the-dancer",
 "rat", "fleet-rat", "brood-rat",
@@ -4755,6 +4766,7 @@ export const BEAST_PATH_GROUND: Record<string, { through: string; outOf: string 
 // would read them - the shape of the foot and the gait - never the name; telling
 // a fox's line from a cat's round pads is the skill.
 export const TRACK_PRINTS: Record<string, string> = {
+  "rat-king": "a rat's print the size of a hand, a tail dragged heavy through the muck, and a hundred small ones all around it",
   "mountain-hare": "long hind feet set ahead of the small front ones, in bounds",
   "snow-hare": "long hind feet set ahead of the small front ones, in bounds",
   "snow-fox": "small, neat prints set one in front of the other, in a straight line",
@@ -6149,6 +6161,7 @@ export const SUMMIT_BOSS = "the-drake";
 // without the mechanics coming with it.
 export const SUMMIT_BOSSES = new Set<string>([SUMMIT_BOSS, "the-pale-drake"]);
 export const AGGRESSIVE = new Set([
+  "rat-king", // the warrens are its, and so is whoever walks in
   // mig 247, the mountain's rare blood: the-one-who-stayed, the-tom, the-pale-drake
   "the-one-who-stayed", "the-tom", "the-pale-drake",
 "last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding", "the-miller",
@@ -6794,6 +6807,59 @@ export const WARRENS_ROOMS = new Set([
   "the-undermine", "the-earth-throat", "the-sewer-slip", "the-buried-chapel",
   "bone-nook", // A Gap in the Bones — moved off the midden (079); safe rooms in this set are display/flavor only, every event actor filters safeRooms
 ]);
+// THE RAT KING (ratking.ts, rome 2026-10-24): rolled into the warrens about
+// once a day while there is none, never more than one.
+export const RAT_KING = "rat-king";
+export const RAT_KING_HOME = "the-rat-warren";
+export const RAT_KING_RATS = new Set(["rat", "fleet-rat", "brood-rat", "albino-rat"]);
+export const RAT_KING_ROLL_PER_MIN = 1 / 1440;          // a roll a minute: about once a day
+export const RAT_KING_LEADERLESS_MS = 2 * 3_600_000;    // how long its rats stay rattled after it falls
+export const RAT_KING_LEADERLESS_FLEE_MULT = 2;         // ...bolting at twice the usual wound
+export const RAT_KING_SWARM_BONUS = 0.1;                // added to SWARM_STEP while it lives
+export const RAT_CROWN_TRAIT = "rat-crowned";           // the crown's own; on nothing else in the world
+// THE COUGH'S OTHER CAUSES (cough.ts, rome 2026-10-24). Each a chance a minute
+// while it holds; one cough a minute at most, whatever the cause.
+export const COUGH_WATER_MS = 2 * 60_000;          // bringing the drowned's water up, after a dunk
+export const COUGH_WATER_PER_MIN = 0.7;
+export const COUGH_CHILL_AFTER_MS = 10 * 60_000;   // cold and wet with nothing to warm you, this long
+export const COUGH_CHILL_PER_MIN = 0.3;
+export const COUGH_SMOKE_PER_MIN = 0.35;
+export const COUGH_WATER_LINES = [
+  "You cough up black water, and more of it, and it will not stop coming.",
+  "Your chest heaves and brings up a mouthful of the drowned's cold water, loud.",
+];
+export const COUGH_CHILL_LINES = [
+  "The chill in your chest gets you coughing, a wet, rattling cough you cannot keep quiet.",
+  "You cough, and cough again. The cold has settled in your lungs.",
+];
+export const COUGH_SMOKE_LINES = [
+  "The smoke catches in your throat and you cough, eyes streaming.",
+  "You breathe in a lungful of smoke and double over coughing.",
+];
+export const COUGH_DUST_LINES = [
+  "The dust comes down over you and you cough and cough in it, half blind.",
+  "You get a mouthful of stone dust and cough it out, loud in the settling quiet.",
+];
+// The omen while it lives (ratking.ts): a cough about every four minutes for
+// whoever is in the fortress, and now and then a sign.
+export const RAT_KING_COUGH_PER_MIN = 0.25;
+export const RAT_KING_OMEN_PER_MIN = 0.1;
+export const RAT_KING_COUGH_LINES = [
+  "Something in the air down here catches in your chest, and you cough, hard, and it carries.",
+  "You cough before you can stop it, a dry hacking that goes on and echoes off the stone.",
+  "Your chest tightens and you cough, loud, and the dark around you gives it back.",
+];
+export const RAT_KING_OMEN_LINES = [
+  "A rat runs past your feet in plain view, not hiding at all, going somewhere in a hurry.",
+  "There is a dead rat here on its back, swollen, with the blood dried black at its mouth.",
+  "The rats in the walls are loud, all of them at once, the way they are not on an ordinary day.",
+  "Three rats cross the floor ahead of you together, unafraid, and do not look at you.",
+];
+export const RAT_KING_KEEPER_LINES = [
+  "The keeper says, to nobody in particular: \"Rats up out of the warrens in the daylight. Last time they did that there was a king down there.\"",
+  "The keeper wipes the counter and doesn't look up. \"My grandmother used to say a rat king means the sickness is coming. She was usually right.\"",
+  "Somebody at the table coughs, and the keeper looks over sharply. \"Been down below, have you,\" he says. It isn't a question.",
+];
 // THE FOOD WEB'S FLOOR (rome, 2026-07-18): the dungeon feeds its own. A hungry
 // rat or thief standing in this muck-country — the warrens' fungus, carrion's
 // scraps, the gate thresholds' regrowing forage — gnaws the ROOM itself to
@@ -8769,6 +8835,7 @@ export const WARDHIDE_WOUND_ODDS = 0.5;
 // entry here falls back to every-hit (openWound), so a future one is never
 // silently declawed — but every current bleeder is listed.
 export const BLEED_ODDS = new Map<string, number>([
+  ["rat-king", 0.15],            // a rat's filthy teeth, a king's size
   ["rat", 0.10],           // scabby rat — filthy teeth, a wound now and then
   // The east road (mig 188). The adder is the outlier in the whole table and is
   // meant to be: a 14hp animal that will not chase you and cannot take a hit,
@@ -8975,6 +9042,7 @@ export const VITALS_HOUND = 1 / 5000; // the sentinel's tiny pierce-only vitals 
 // fells the wood or opens the drowned. Not every boss is equal. The Drowned
 // God is not here and never falls this way.
 export const BIG_VITALS: Record<string, { by: "point" | "edge" | "blunt"; oneIn: number }> = {
+  "rat-king":                  { by: "point", oneIn: 1500 },  // 1 in 100, ~15 hits: the first boss, the easiest throat
   "the-great-crab":            { by: "point", oneIn: 1800 },  // 1 in 100 fights, ~18 hits
   "the-great-devil-crab":      { by: "point", oneIn: 2500 },  // 1 in 120, ~21
   "the-old-grey":              { by: "point", oneIn: 3000 },  // 1 in 120, ~25

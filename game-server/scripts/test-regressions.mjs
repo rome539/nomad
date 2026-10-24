@@ -32,6 +32,10 @@ try {
         "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade} from './gate';",
         "export {cmdLook} from './verbs';",
         "export * as body from './body';",
+        "export * as ratking from './ratking';",
+        "export * as coughing from './cough';",
+        "export {reconcilePopulation} from './ai';",
+        "export {PATROLS, WARRENS_ROOMS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon} from './zone-util';",
@@ -44,7 +48,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ZoneDO, parse, den, cmdMap, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -504,6 +508,144 @@ try {
     await z.onPlayerDeath(me, wolf);
     assert.deepEqual(where(), []);
     assert.deepEqual([...(z.ground.get('moor') ?? [])].sort(), ['knife', 'tin']);
+  });
+
+  // ---------------------------------------------------------------- the rat king
+  console.log('the rat king');
+  function kingWorld() {
+    const z = new ZoneDO({}, {});
+    ratking.resetForTest(z);
+    z.world = { mobTemplates: new Map([['rat-king', { id: 'rat-king', name: 'the rat king', max_hp: 60, is_boss: 1 }], ['rat', { id: 'rat', max_hp: 11 }]]),
+      mobSpawns: [{ template_id: 'rat', room_id: 'the-rat-warren' }], itemTemplates: new Map() };
+    z.creatures = new Map(); z.variantBase = new Map();
+    for (const k of ['noteCreaturesChanged', 'refreshRoomCtx', 'roomSound', 'roomFeedBands', 'roomFeed']) z[k] = () => {};
+    z.roomDist = () => 0;
+    const rat = { id: 'r1', templateId: 'rat', roomId: 'the-gnaw-hollow', hp: 11 };
+    z.creatures.set('r1', rat);
+    return { z, rat };
+  }
+  check('its rats are bold only in the warrens and only while it lives (2026-10-24)', () => {
+    const { z, rat } = kingWorld();
+    assert.equal(ratking.bold(z, rat), false, 'no king, an ordinary rat');
+    ratking.crown(z, Date.now());
+    assert.equal(ratking.bold(z, rat), true);
+    assert.equal(ratking.fleeMult(z, rat), 0, 'it does not run');
+    rat.roomId = 'the-moor';
+    assert.equal(ratking.bold(z, rat), false, 'out of the warrens it is a rat again');
+  });
+  check('there is only ever one, and a deploy does not cull it', () => {
+    const { z } = kingWorld();
+    assert.ok(ratking.crown(z, Date.now()));
+    assert.equal(ratking.crown(z, Date.now()), null, 'a second never comes while one lives');
+    reconcilePopulation(z, z.world);
+    assert.equal([...z.creatures.values()].filter((c) => c.templateId === 'rat-king').length, 1, 'the cull kept it');
+    z.creatures.set('k2', { id: 'k2', templateId: 'rat-king', roomId: 'the-rat-warren', hp: 60 });
+    reconcilePopulation(z, z.world);
+    assert.equal([...z.creatures.values()].filter((c) => c.templateId === 'rat-king').length, 1, 'and trims a double back to one');
+  });
+  check('the crown keeps every rat off its wearer; its rats rattled after it falls', () => {
+    const { z, rat } = kingWorld();
+    const crowned = { pubkey: 'me' }, bare = { pubkey: 'you' };
+    z.wearsTrait = (s, t) => s === crowned && t === 'rat-crowned';
+    assert.equal(ratking.spares(z, rat, crowned), true);
+    assert.equal(ratking.spares(z, rat, bare), false);
+    assert.equal(ratking.spares(z, { templateId: 'grave-hyena' }, crowned), false, 'only rats');
+    ratking.fell(z);
+    assert.equal(ratking.fleeMult(z, rat), 2, 'leaderless rats bolt sooner');
+  });
+  check('its rounds stay in the warrens and close on themselves', () => {
+    const route = PATROLS['rat-king'];
+    assert.ok(route.every((r) => WARRENS_ROOMS.has(r)));
+    assert.ok(!route.includes('the-hyena-den'));
+    for (let i = 0; i < route.length; i++) assert.notEqual(route[i], route[(i + 1) % route.length], 'a step that goes nowhere');
+  });
+  check('while it lives the fortress coughs, and a cough is a noise (2026-10-24)', () => {
+    const { z } = kingWorld();
+    ratking.crown(z, Date.now());
+    const noise = [], heard = [], said = new Map();
+    z.creatureNoise = (r) => noise.push(r);
+    const voiced = [];
+    z.roomSound = (r, t, _x, _c, _l, snd) => { heard.push(t); voiced.push(snd?.act); };
+    z.send = (s, t, _c, _sp, snds) => { said.set(s.pubkey, [...(said.get(s.pubkey) ?? []), t]); if (snds) voiced.push(...snds.map((x) => x.act)); };
+    z.inGatehouse = new Set(['hatch']);
+    z.outOfWorld = () => false;
+    z.regionOf = (r) => ({ 'the-cells': 'upper', 'the-moor': 'out', 'gate-room': 'gate' })[r];
+    const inside = { pubkey: 'in', name: 'Rome', roomId: 'the-cells' };
+    const outside = { pubkey: 'out', name: 'Astra', roomId: 'the-moor' };
+    const atGate = { pubkey: 'gate', name: 'Wren', roomId: 'gate-room' };
+    z.sessions = new Map([['in', inside], ['out', outside], ['gate', atGate]]);
+    ratking.cough(z, inside);
+    assert.deepEqual(noise, ['the-cells'], 'a cough draws the curious like any noise');
+    assert.match(heard[0], /coughing \{dir\}/, 'and the next rooms hear it');
+    assert.ok(voiced.length >= 2 && voiced.every((a) => a === 'cough'), 'the cougher and the wall both carry the cough sound: ' + voiced);
+    noise.length = 0; said.clear();
+    for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.roll(z, Date.now()); }
+    assert.ok(noise.length > 20, 'in the fortress, about one cough in four minutes: ' + noise.length);
+    assert.ok(noise.every((r) => r === 'the-cells'), 'nobody on the moor or at the gate coughs');
+    assert.equal((said.get('out') ?? []).length, 0, 'the surface hears nothing of it');
+  });
+  check('with no king there is no cough', () => {
+    const { z } = kingWorld();
+    const noise = []; z.creatureNoise = (r) => noise.push(r); z.send = () => {};
+    z.inGatehouse = new Set(); z.outOfWorld = () => false; z.regionOf = () => 'upper';
+    z.sessions = new Map([['in', { pubkey: 'in', name: 'Rome', roomId: 'the-cells' }]]);
+    for (let i = 0; i < 300; i++) { ratking.resetForTest(z); for (const c of [...z.creatures.values()]) if (c.templateId === 'rat-king') z.creatures.delete(c.id); ratking.roll(z, Date.now()); for (const c of [...z.creatures.values()]) if (c.templateId === 'rat-king') z.creatures.delete(c.id); }
+    assert.equal(noise.length, 0);
+  });
+  check('the creature hooks ask the rat king', () => {
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /if \(ratking\.spares\(z, creature, session\)\) continue;\s*const hostile = AGGRESSIVE\.has\(creature\.templateId\) \|\| bloodWake \|\| ratking\.bold\(z, creature\);/);
+    assert.match(ai, /remembers\(z, creature, s\.pubkey, now\) \|\| ratking\.bold\(z, creature\)\)\s*&& !ratking\.spares\(z, creature, s\)/);
+  });
+
+  // ---------------------------------------------------------------- the cough
+  console.log('the cough');
+  function coughWorld() {
+    const z = new ZoneDO({}, {});
+    coughing.resetForTest(z);
+    const noise = [], said = [];
+    z.creatureNoise = (r) => noise.push(r);
+    z.roomSound = () => {}; z.send = (s, t) => said.push(t);
+    z.inGatehouse = new Set(); z.outOfWorld = () => false; z.wearsTrait = () => false;
+    z.roomHasFirekeeper = () => false; z.dens = new Map(); z.curingCount = () => ({});
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'r', hp: 100, resting: false };
+    z.sessions = new Map([['me', me]]);
+    const minutes = (n) => { for (let i = 0; i < n; i++) { coughing.resetForTest(z); coughing.tick(z, Date.now()); } };
+    return { z, me, noise, said, minutes };
+  }
+  check('the drowned leave you coughing up water for a while, and it is noise (2026-10-24)', () => {
+    const { me, noise, minutes } = coughWorld();
+    coughing.weather.coldBites = () => false; coughing.weather.raining = () => false;
+    minutes(30); assert.equal(noise.length, 0, 'nothing to cough about');
+    coughing.swallowedWater(me);
+    minutes(20); assert.ok(noise.length > 5, 'coughing after the dunk: ' + noise.length);
+  });
+  check('cold and wet ten minutes with nothing warm sets in a chill; warmth lifts it', () => {
+    const { z, me, said, minutes } = coughWorld();
+    coughing.weather.coldBites = () => true; coughing.weather.raining = () => true;
+    minutes(9); assert.ok(!me.chilled, 'not yet');
+    minutes(1); assert.ok(me.chilled, 'ten minutes in');
+    z.inGatehouse.add('me'); minutes(1);
+    assert.ok(!me.chilled); assert.match(said.at(-1), /cough lets go/);
+    coughing.weather.coldBites = () => true; coughing.weather.raining = () => false;
+    z.inGatehouse.clear(); me.chillMs = 0; minutes(30); assert.ok(!me.chilled, 'cold but dry is no chill');
+  });
+  check('smoke and a falling wall set you coughing', () => {
+    const { z, noise, minutes } = coughWorld();
+    coughing.weather.coldBites = () => false;
+    z.roomHasFirekeeper = (r) => r === 'r';
+    minutes(20); assert.ok(noise.length > 2, 'the clamp smoke');
+    noise.length = 0; z.roomHasFirekeeper = () => false;
+    coughing.dust(z, 'r'); assert.deepEqual(noise, ['r'], 'the dust, at once');
+    coughing.dust(z, 'elsewhere'); assert.deepEqual(noise, ['r'], 'only the room it fell in');
+  });
+
+  check('the drowned dunk and the falling wall both call the cough', () => {
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    assert.match(zone, /black water fills your lungs[^\n]*\n\s*cough\.swallowedWater\(victim\)/);
+    assert.match(ev, /a wall comes down in a long roar of stone[^\n]*\n\s*cough\.dust\(z, roomId\)/);
+    assert.match(zone, /cough\.tick\(this, now\)/);
   });
 
   // ---------------------------------------------------------------- whetstone

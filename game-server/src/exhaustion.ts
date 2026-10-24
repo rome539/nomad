@@ -142,6 +142,7 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "ptarmigan": [0, 0, 0, 0],
   "rag-and-bone": [16, 2, 40, 0],
   "rat": [16, 2, 20, 0],
+  "rat-king": [24, 3, 30, 0], // a fat old rat: more wind than its subjects, not much more
   "red-hind": [0, 0, 0, 0],
   "red-stag": [12, 3, 28, 0],
   "wood-stag": [12, 3, 28, 0],

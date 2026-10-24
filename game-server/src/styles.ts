@@ -7,6 +7,7 @@ import * as exhaustion from "./exhaustion";
 // from counting rounds. The sets and dials are in zone-data (CHARGERS, HEAVIES,
 // PACKS).
 import type { ZoneDO } from "./zone";
+import * as ratking from "./ratking";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate } from "./world";
 import { hasTrait } from "./world";
@@ -15,7 +16,7 @@ import { cap } from "./zone-util";
 import { airborne, remembers, addGrudge } from "./ai";
 import type { CarriedItem, ItemTemplate } from "./world";
 import {
-  SWARMS, SWARM_STEP, SWARM_MAX_OTHERS, STRIKERS, STRIKER_DODGE, STRIKER_DODGE_BARE,
+  SWARMS, SWARM_STEP, SWARM_MAX_OTHERS, RAT_KING_SWARM_BONUS, STRIKERS, STRIKER_DODGE, STRIKER_DODGE_BARE,
   FLIERS, FLIER_KIND, FLIER_DIVE_ODDS, FLIER_DIVE_OPEN, MOBBER_WHEEL_ODDS, GROUND_LIFT_ODDS, GROUND_DROP_ODDS, HUNTER_CLIMB_ODDS, FLIER_DOWN_HITS, FLIER_GROUNDED_MS, PINCHERS, PIN_ODDS, PINNED_DMG_MULT,
   HOLLOW, GRAVE_FLESH, HOLLOW_EDGE_MULT, HOLLOW_BLUNT_MULT, LURKERS, LURKER_FADE_ODDS, LURKER_DROP_MULT,
   CUTTHROATS, FEINT_ODDS, FOLK, FOLK_GUARD_AT, FOLK_RECKLESS_AT, STANCE, COMBAT_ROUND_MS,
@@ -64,7 +65,8 @@ export function creatureBlow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
   if (SWARMS.has(id)) {
     swarmThins(z, creature.roomId, victim.pubkey);
     const others = swarmOn(z, creature.roomId, victim.pubkey) - 1;
-    out.mult *= 1 + Math.min(SWARM_MAX_OTHERS, Math.max(0, others)) * SWARM_STEP;
+    // The king's rats bite harder together while it lives (ratking.ts).
+    out.mult *= 1 + Math.min(SWARM_MAX_OTHERS, Math.max(0, others)) * (SWARM_STEP + (ratking.bold(z, creature) ? RAT_KING_SWARM_BONUS : 0));
   }
 
   // A bite commits it: for a round it is where your blade is.
