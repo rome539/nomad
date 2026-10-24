@@ -10000,7 +10000,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "108";      // /mob/      strips and their eye layers
+var MOB_V  = "109";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "45";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
@@ -11545,7 +11545,7 @@ var MOB_LINE = {
   "waiting-hall": 55,
   "sunken-throne": 55,
   "kings-hoard": 55,
-  "gods-pool": 55,
+  "gods-pool": 58,   // the Drowned God a little forward (rome, 2026-10-24): his back foot went into the pool when he struck
   "marrow-seat": 55,
   "tideway-throat": 55,
   "tideway-works": 55,
@@ -13758,7 +13758,7 @@ var MOB_ANIM = {
   "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "grave-hyena":   { n: 8, aspect: 1.128, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
-  "forgotten-king":   { n: 8, aspect: 1.03, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"sweep":6,"death":7} },
+  "forgotten-king":   { n: 8, aspect: 1.027, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "two-hound":   { n: 6, aspect: 1.287, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "pale-stalker":   { n: 8, aspect: 1.638, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"lurk":6,"death":7} },

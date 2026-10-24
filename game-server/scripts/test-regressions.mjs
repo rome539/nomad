@@ -867,6 +867,11 @@ try {
     assert.match(pub, /windBase \* \(0\.3 \+ 0\.6 \* scape\.gust\) \* SCAPE_VOL/);
   });
 
+  check('the Drowned God stands forward of his pool (2026-10-24)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /"gods-pool": 58,/);
+  });
+
   // ---------------------------------------------------------------- the rising dead
   console.log('the dead that get up');
   await checkAsync('a revenant falls like the dead, and only gets up a while later (2026-10-24)', async () => {
