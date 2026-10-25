@@ -36,6 +36,7 @@ try {
         "export * as coughing from './cough';",
         "export {reconcilePopulation, ate, scheduleArrivals} from './ai';",
         "export * as herds from './herds';",
+        "export * as conditions from './conditions';",
         "export * as study from './study';",
         "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
         "export * as rising from './rising';",
@@ -55,7 +56,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1049,7 +1050,7 @@ try {
         ['roe-deer', { id: 'roe-deer', name: 'a roe-deer', max_hp: 16, respawn_secs: 300, is_boss: 0 }],
         ['grey-wolf', { id: 'grey-wolf', name: 'a grey wolf', max_hp: 26, respawn_secs: 600, is_boss: 0 }],
       ]) };
-    const z = { world, creatures: new Map(), sessions: new Map(), herds: new Map(), variantBase: new Map(), arrivals: new Map(),
+    const z = { world, creatures: new Map(), sessions: new Map(), herds: new Map(), variantBase: new Map(), arrivals: new Map(), conditions: new Map(),
       regionOf: () => 'wood', outOfWorld: () => false, roomDist: () => 1, rollCarry: () => undefined,
       noteCreaturesChanged() {}, roomFeed() {}, roomSound() {}, refreshRoomCtx() {} };
     const add = (t, room) => { const id = 'c' + Math.random(); z.creatures.set(id, { id, templateId: t, roomId: room, home: room, hp: 1 }); };
@@ -1130,7 +1131,7 @@ try {
     ]) };
     // cover 'w-home' -- 'the-holly-dark' -- 'the-deer-lawn' (feeding), in a line
     const dist = { 'the-holly-dark': 1, 'the-deer-lawn': 2, 'w-home': 0 };
-    const z = { world, variantBase: new Map(), regionOf: () => 'wood',
+    const z = { world, variantBase: new Map(), conditions: new Map(), regionOf: () => 'wood',
       nearby: (_from, r) => new Map(Object.entries(dist).filter(([, d]) => d <= r)) };
     const deer = { id: 'd', templateId: 'roe-deer', roomId: 'w-home', home: 'w-home', hp: 10 };
     return { z, deer };
@@ -1196,6 +1197,103 @@ try {
     const forage = zd.slice(zd.indexOf('export const SURFACE_FORAGE'), zd.indexOf('export const FORAGE_ROOMS'));
     for (const r of ['the-deer-lawn', 'the-white-ride', 'the-cockle-beds', 'the-long-glade']) assert.ok(forage.includes(`"${r}"`), r);
     for (const r of ['the-pale-grass', 'the-moon-glade']) assert.ok(!forage.includes(`"${r}"`), r + ' feeds nothing, by its own words');
+  });
+  console.log('what is going on in a region');
+  const H = 3_600_000;
+  function condWorld(line = 'mountain-hare', rows = 10) {
+    const mobSpawns = [];
+    for (let i = 0; i < rows; i++) mobSpawns.push({ template_id: line, room_id: 'm' + i });
+    const world = { mobSpawns, mobTemplates: new Map([[line, { id: line, name: line === 'roe-deer' ? 'a roe-deer' : 'a mountain hare', max_hp: 10, respawn_secs: 240, is_boss: 0 }]]) };
+    const traces = [];
+    const z = { world, creatures: new Map(), sessions: new Map(), conditions: new Map(), condTrack: new Map(), variantBase: new Map(),
+      regionOf: () => 'mountain', noteCreaturesChanged() {}, addTrace: (room, t) => traces.push({ room, ...t }) };
+    for (let i = 0; i < rows; i++) z.creatures.set('h' + i, { id: 'h' + i, templateId: line, roomId: 'm' + i, home: 'm' + i, hp: 10 });
+    return { z, traces };
+  }
+  check('a region killed over hard is hunted, and stops being once the killing stops (2026-10-25)', () => {
+    const { z } = condWorld();
+    for (let i = 0; i < 16; i++) conditions.noteKill(z, 'mountain', 0);
+    conditions.tick(z, 0, true);
+    assert.equal(conditions.of(z, 'mountain')?.kind, 'hunted');
+    conditions.tick(z, 2 * H, true); // two half-lives: 16 -> 4
+    assert.equal(conditions.of(z, 'mountain'), undefined);
+    assert.ok(z.condTrack.get('rest:mountain') > 2 * H, 'and the ground rests after');
+  });
+  check('a prey herd left full half a day booms, and stays out in the open (2026-10-25)', () => {
+    const { z } = condWorld('roe-deer');
+    let first;
+    for (let h = 0; h <= 40 && first === undefined; h++) { conditions.tick(z, h * H, true); if (conditions.of(z, 'mountain')) first = h; }
+    assert.ok(first >= 12 && first <= 37, 'half a day full at the least, and the clocks staggered by up to a day: ' + first);
+    assert.deepEqual([conditions.of(z, 'mountain')?.kind, conditions.of(z, 'mountain')?.line], ['boom', 'roe-deer']);
+    assert.ok(conditions.booming(z, z.creatures.get('h0')));
+    assert.equal(conditions.drawFor(z, 'grey-wolf', 'mountain'), 2, 'the wolves come after them');
+    assert.equal(conditions.drawFor(z, 'stone-adder', 'mountain'), 1, 'what does not eat deer does not');
+  });
+  check('what nothing eats never booms (2026-10-25)', () => {
+    const { z } = condWorld('bone-breaker');
+    z.world.mobTemplates.set('bone-breaker', { id: 'bone-breaker', name: 'a bone-breaker', max_hp: 10, respawn_secs: 900, is_boss: 0 });
+    for (let h = 0; h <= 60; h++) { conditions.tick(z, h * H, true); assert.equal(conditions.of(z, 'mountain'), undefined, 'hour ' + h); }
+  });
+  check('three deer are not a boom (2026-10-25)', () => {
+    const { z } = condWorld('roe-deer', 3);
+    for (let h = 0; h <= 60; h++) { conditions.tick(z, h * H, true); assert.equal(conditions.of(z, 'mountain'), undefined, 'hour ' + h); }
+  });
+  check('the sick do not breed (2026-10-25)', () => {
+    const { z, add, count } = herdWorld(10, 0);
+    for (let i = 0; i < 5; i++) add('roe-deer', 'w' + i); // half-full: the fastest breeding there is
+    z.conditions.set('wood', { kind: 'murrain', line: 'roe-deer', since: 0 });
+    herds.tick(z, 0, true);
+    for (let m = 1; m <= 240; m++) herds.tick(z, m * 60_000, true);
+    assert.ok(count('roe-deer') <= 7, 'strays only, no births: ' + count('roe-deer'));
+  });
+  check('a boom of hares turns to a murrain: thin, and dying out of sight (2026-10-25)', () => {
+    const { z, traces } = condWorld();
+    z.sessions.set('me', { roomId: 'm0' });
+    let murrain;
+    for (let t = 0; t <= 80 * H; t += H / 6) {
+      conditions.tick(z, t, true);
+      if (conditions.of(z, 'mountain')?.kind === 'murrain' && murrain === undefined) murrain = t;
+      if (murrain !== undefined && !conditions.of(z, 'mountain')) break;
+    }
+    assert.ok(murrain !== undefined, 'the boom turned');
+    assert.ok([...z.creatures.values()].every((c) => c.hp <= 6), 'the sick are thin');
+    assert.ok(traces.length > 0 && traces.every((t) => t.room !== 'm0'), 'they die where nobody is standing');
+    assert.ok(z.creatures.has('h0'), 'not the one you are watching');
+    assert.equal(conditions.of(z, 'mountain'), undefined, 'it ends once the herd has thinned');
+  });
+  check('in a murrain the sick die only where nobody is standing (2026-10-25)', () => {
+    const { z, traces } = condWorld();
+    for (let i = 0; i < 9; i++) z.sessions.set('p' + i, { roomId: 'm' + i });
+    z.conditions.set('mountain', { kind: 'murrain', line: 'mountain-hare', since: 0 });
+    for (let t = 0; t <= 200 * H; t += H / 6) conditions.tick(z, t, true); // long enough that the one exposed is sure to go
+    assert.ok(traces.length === 1 && traces[0].room === 'm9', 'only the one in the empty room went');
+    for (let i = 0; i < 9; i++) assert.ok(z.creatures.has('h' + i));
+  });
+  check('a booming herd is out on the feeding ground even at noon (2026-10-25)', () => {
+    const { z } = condWorld('roe-deer');
+    z.nearby = (_f, r) => new Map([['m0', 0], ['the-deer-lawn', 2]].filter(([, d]) => d <= r));
+    const deer = z.creatures.get('h0');
+    assert.equal(herds.roundGround(z, deer, NOON), undefined, 'an ordinary noon: in cover');
+    z.conditions.set('mountain', { kind: 'boom', line: 'roe-deer', since: 0 });
+    deer.roundAt = 0;
+    assert.equal(herds.roundGround(z, deer, NOON), 'the-deer-lawn', 'too many of them to keep to cover');
+  });
+  check('the ground says it, and nothing else does (2026-10-25)', () => {
+    const { z } = condWorld();
+    z.conditions.set('mountain', { kind: 'murrain', line: 'mountain-hare', since: 0 });
+    const lines = new Set();
+    for (let i = 0; i < 400; i++) { const l = conditions.ambient(z, 'm1'); if (l) lines.add(l); }
+    assert.ok(lines.size >= 2 && [...lines].some((l) => /hare/.test(l)));
+    z.conditions.clear();
+    assert.equal(conditions.ambient(z, 'm1'), null);
+    const src = readFileSync(new URL('../src/conditions.ts', import.meta.url), 'utf8');
+    assert.ok(!/keeper|gatehouseFeed|roomFeedBands/.test(src.replace(/\/\/.*$/gm, '')), 'the keeper stays quiet');
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zsrc, /conditions\.tick\(this, t, true\)/);
+    assert.match(zsrc, /conditions\.tick\(this, now, false\)/);
+    assert.match(zsrc, /killer\.kills \+= 1;\n\s*conditions\.noteKill/);
+    assert.match(zsrc, /const going = conditions\.ambient\(this, roomId\);/);
+    assert.match(zsrc, /conditions: Object\.fromEntries\(this\.conditions\)/);
   });
   check('the herds run through the offline catch-up and are saved with the world (2026-10-25)', () => {
     const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');

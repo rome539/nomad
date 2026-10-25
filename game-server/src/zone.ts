@@ -3,6 +3,7 @@ import { BUILD_ID } from "./public";
 const BUILD_RESTART_EVERY_MS = 120_000;
 import * as exhaustion from "./exhaustion";
 import * as herds from "./herds";
+import * as conditions from "./conditions";
 // One Durable Object per zone: the authoritative simulation — who's where,
 // creature state, what lies on which floor.
 //
@@ -274,6 +275,8 @@ export class ZoneDO implements DurableObject {
   private combatFx = new Map<string, { swung: string[]; struck: string[] }>();
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
+  public conditions = new Map<string, conditions.Condition>(); // what is going on in each region (conditions.ts)
+  public condTrack = new Map<string, number>(); // its clocks
   public herds = new Map<string, number>(); // what each region's herd is owed, and the herds' clock (herds.ts)
   public openDoors = new Set<string>();
   public wanderer: wanderer.Wanderer | null = null; // the one other nomad (wanderer.ts)
@@ -703,6 +706,8 @@ export class ZoneDO implements DurableObject {
       this.gibbetCut = saved.gibbetCut ?? false;
       this.arrivals = new Map(Object.entries(saved.arrivals));
       this.herds = new Map(Object.entries(saved.herds ?? {}));
+      this.conditions = new Map(Object.entries(saved.conditions ?? {}));
+      this.condTrack = new Map(Object.entries(saved.condTrack ?? {}));
       this.openDoors = new Set(saved.openDoors);
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
@@ -998,6 +1003,7 @@ export class ZoneDO implements DurableObject {
       ai.applyArrivals(this, t, true);
       ai.scheduleArrivals(this, t);
       herds.tick(this, t, true); // the herds breed and drift in through the gap too
+      conditions.tick(this, t, true); // and the ground goes on doing whatever it was doing
       ai.rangePack(this, t); // the coyotes keep choosing ground while the world sleeps, and the wander above walks them to it
       verbs.noteCensus(this, t); // the census's hourly reading, through the gap too (saved by the next live tick)
     }
@@ -1091,6 +1097,8 @@ export class ZoneDO implements DurableObject {
       gibbetCut: this.gibbetCut,
       arrivals: Object.fromEntries(this.arrivals),
       herds: Object.fromEntries(this.herds),
+      conditions: Object.fromEntries(this.conditions),
+      condTrack: Object.fromEntries(this.condTrack),
       openDoors: [...this.openDoors],
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
       fenceOut: Object.fromEntries(this.fenceOut),
@@ -1188,6 +1196,8 @@ export class ZoneDO implements DurableObject {
     this.gibbetCut = false;
     this.arrivals.clear();
     this.herds.clear();
+    this.conditions.clear();
+    this.condTrack.clear();
     this.openDoors.clear();
     this.doorCloseAt.clear();
     this.fenceOut.clear();
@@ -6032,6 +6042,7 @@ export class ZoneDO implements DurableObject {
     ai.applyArrivals(this, now, false);
     ai.scheduleArrivals(this, now);
     herds.tick(this, now, false); // the land holds the animals (herds.ts)
+    conditions.tick(this, now, false); // and what is going on in each region (conditions.ts)
     // THE PASSAGE: the summit's animal leaves its mountain on the shadow and
     // hunts the world. Once a tick and world-level, not per creature — it is
     // one animal doing one thing to every band at once (ai.drakePassage).
@@ -6102,6 +6113,9 @@ export class ZoneDO implements DurableObject {
     // A sky doing something outranks the standing pools (rain drums, mud pulls).
     const sky = events.eventAmbient(this, roomId);
     if (sky) return sky === avoid ? null : sky; // weather repeating itself just holds its tongue a beat
+    // ...and then whatever the ground is going through (conditions.ts).
+    const going = conditions.ambient(this, roomId);
+    if (going && going !== avoid) return going;
     const own = ROOM_AMBIENCE[roomId];
     if (own?.length) return draw(own);
     // No voice of its own — the band speaks. But if YOU carried light into a
@@ -6849,6 +6863,7 @@ export class ZoneDO implements DurableObject {
       if (s.seizedBy === creature.id) s.seizedBy = undefined; // its grip dies with it
     }
     killer.kills += 1;
+    conditions.noteKill(this, this.regionOf(creature.roomId), Date.now()); // hunted ground (conditions.ts)
     if (tmpl.is_boss) killer.bossKills += 1;
     await recordKill(this.env.DB, killer.pubkey, !!tmpl.is_boss);
     // BOSS ASSISTS: a king goes down under many hands — everyone whose blow drew

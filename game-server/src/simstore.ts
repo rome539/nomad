@@ -56,7 +56,7 @@ const FULL_FLUSH_MS = 20 * 60_000; // all four blobs land at least this often â€
 const VOLATILE = new Set(["hunger", "nextWanderAt", "thirstAt", "forageFrom", "huntRestUntil", "refusedWater", "sleepUntil", "repositionAt", "murmuredAt", "danceUntil", "lastBlowAt", "blownUntil", "fatigue", "openUntil", "turnHp", "groundedUntil", "roundFor", "roundAt"]);
 // The meta churn fields: same idea at the singleton level. savedAt moves
 // every save by definition; arrivals shifts every beat.
-const CHURN_META = new Set(["savedAt", "arrivals", "herds"]);
+const CHURN_META = new Set(["savedAt", "arrivals", "herds", "condTrack"]);
 
 // The blob keys. Everything else found in sim_kv is a stale row from an
 // older shape, swept on the first save.
@@ -144,7 +144,7 @@ type PerBlobField = "creatures" | "ground" | "groundInstances" | "groundCond"
   | "walked" | "wallMarks";
 type MetaField = Exclude<keyof SimState, PerBlobField>;
 const META_FIELDS = [
-  "savedAt", "regrow", "roamRocks", "roamedGround", "altarHearts", "gibbetCut", "arrivals", "herds", "openDoors", "doorCloseAt", "fenceOut", "fenceMats", "glut", "nextGlutAt",
+  "savedAt", "regrow", "roamRocks", "roamedGround", "altarHearts", "gibbetCut", "arrivals", "herds", "conditions", "condTrack", "openDoors", "doorCloseAt", "fenceOut", "fenceMats", "glut", "nextGlutAt",
   "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "nextCarrionAt", "rot", "placedSpawns", "seededDens", "inGatehouse", "inDen", "board", "stoneNames",
   "cacheSpent", "cacheRoom", "nextSurfaceAt", "events", "fishStock", "works", "nextWorksAt", "nextChainmanAt", "snowUntil",
   "nests", "bounties", "nextBountyChurnAt", "nextFenceChurnAt", "bountyTaken", "keeperBowl",

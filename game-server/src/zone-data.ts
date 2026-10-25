@@ -7082,6 +7082,25 @@ export const SURFACE_FORAGE = new Set([
 // rest: the day's animals at dawn and dusk, the night's through the dark.
 // herds.ts roundGround / roundExits.
 export const ROUND_REGIONS = new Set<string>(["wood", "crossing", "mountain"]);
+// WHAT IS GOING ON IN A REGION (conditions.ts, rome 2026-10-25). Earned from the
+// ground, read every CONDITION_STEP_MS, one to a region, told only by the ground.
+export const CONDITION_STEP_MS = 10 * 60_000;
+export const CONDITION_BOOM_AFTER_MS = 12 * 3_600_000;   // a prey herd full this long booms
+export const CONDITION_BOOM_MAX_MS = 12 * 3_600_000;     // and a boom lasts at most this
+export const CONDITION_BOOM_MIN_HERD = 8;                // three deer are not a boom: a herd this big at the least
+export const CONDITION_BOOM_JITTER_MS = 24 * 3_600_000;  // each herd's full-clock starts up to this late, so booms do not come together
+export const CONDITION_BOOM_ENDS = 0.8;                  // or until the herd is thinned below this share of its limit
+export const CONDITION_BOOM_DRAW = 2;                    // predators of the booming line drift in this much faster
+export const CONDITION_REST_MS = 36 * 3_600_000;         // after any condition, the region rests this long
+export const CONDITION_MURRAIN_LINES = new Set<string>(["mountain-hare", "snow-hare", "rat", "fleet-rat"]);
+export const CONDITION_MURRAIN_AFTER_MS = 8 * 3_600_000; // a boom of these this long turns to a murrain
+export const CONDITION_MURRAIN_ENDS = 0.6;               // and the murrain ends once the herd is below this share
+export const CONDITION_MURRAIN_HP = 0.6;                 // the sick are held to this share of their health
+export const CONDITION_MURRAIN_DEATH_PER_H = 0.08;       // of the unwatched sick, this share die each hour
+export const CONDITION_HUNTED_AT = 15;                   // recent player kills in a region that make it hunted
+export const CONDITION_HUNTED_CLEARS = 6;                // and below which it is not any more
+export const CONDITION_KILL_HALF_MS = 60 * 60_000;       // recent kills halve this often
+export const CONDITION_AMBIENT_ODDS = 0.35;              // of a region's passing lines, this share speak of it
 export const ROUND_RANGE = 5; // how far from home an animal will go to feed
 // Not everything feeds on grass. A carrion eater's waking hours are spent on
 // the carrion ground (CARRION_ROOMS — the mountain's bone fan) as well as the

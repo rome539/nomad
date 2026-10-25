@@ -28,6 +28,7 @@ import type { Creature } from "./zone-types";
 import { isNight, skyBand } from "./zone-util";
 import { randInt } from "./rng";
 import { mintCreature } from "./ai";
+import * as conditions from "./conditions";
 import {
   ECO_LINES, HOLLOW, BROODERS, DROWNERS, SENTINELS, PREYS_ON, ROAMING_DENS,
   HERD_PACE_SECS, HERD_BIRTH_PER_H, HERD_BIRTH_MIN, HERD_BIRTH_MAX, HERD_STRAY_FRAC,
@@ -60,7 +61,7 @@ function pace(respawnSecs: number): number {
 
 /** What one region owes one line, per hour, as [births, strays + floor]. */
 export function ratesFor(
-  herd: boolean, respawnSecs: number, n: number, k: number, hunters: number, preyShare: number,
+  herd: boolean, respawnSecs: number, n: number, k: number, hunters: number, preyShare: number, draw = 1,
 ): [number, number] {
   if (k <= 0 || n >= k) return [0, 0];
   const room = 1 - n / k;
@@ -68,7 +69,7 @@ export function ratesFor(
   if (herd) {
     const r = Math.min(HERD_BIRTH_MAX, Math.max(HERD_BIRTH_MIN, HERD_BIRTH_PER_H * pace(respawnSecs)));
     births = r * n * room * preyShare;
-    strays = HERD_STRAY_FRAC * k * room * preyShare;
+    strays = HERD_STRAY_FRAC * k * room * preyShare * draw;
   }
   const floor = n < k * HERD_FLOOR_FRAC
     ? Math.max(1, hunters) * HERD_FLOOR_PER_HUNTER_PER_H * Math.min(1, pace(respawnSecs))
@@ -146,8 +147,10 @@ export function tick(z: ZoneDO, now: number, silent: boolean): void {
       const key = `${line}@${band}`;
       const n = aliveBand.get(line)?.get(band) ?? 0;
       if (n >= k || (alive.get(line) ?? 0) >= (capOf.get(line) ?? 0)) { z.herds.delete(key); continue; }
-      const [births, rest] = ratesFor(herd, tmpl.respawn_secs, n, k, hunters.get(band) ?? 0, herd ? preyShare(z, line, band, capsBand, aliveBand) : 1);
-      const total = births + rest;
+      const [births, rest] = ratesFor(herd, tmpl.respawn_secs, n, k, hunters.get(band) ?? 0, herd ? preyShare(z, line, band, capsBand, aliveBand) : 1, conditions.drawFor(z, line, band));
+      const sick = conditions.sickIn(z, line, band);
+      const bornHere = sick ? 0 : births; // the sick do not breed
+      const total = bornHere + rest;
       if (total <= 0) { z.herds.delete(key); continue; }
       let owed = (z.herds.get(key) ?? 0) + total * hours;
       let standing = n;
@@ -173,7 +176,7 @@ export function tick(z: ZoneDO, now: number, silent: boolean): void {
         // herd-mate out of sight of every player: nothing appears in a room
         // with someone watching it.
         const hidden = (mates.get(key) ?? []).filter((r) => !watched.has(r));
-        const born = births > 0 && hidden.length > 0 && Math.random() < births / total;
+        const born = bornHere > 0 && hidden.length > 0 && Math.random() < bornHere / total;
         const c = mintCreature(z, tmpl, home, now, born ? hidden[randInt(0, hidden.length - 1)] : undefined, true);
         owed -= 1;
         standing++;
@@ -250,9 +253,14 @@ export function roundPhase(templateId: string, now: number): "feed" | "rest" {
   return band === 0 || band === 4 ? "feed" : "rest";
 }
 
+/** A booming herd is out at every waking hour: too many of them to keep to cover (conditions.ts). */
+function outInBoom(z: ZoneDO, c: Creature, now: number): boolean {
+  return (!isNight(now) || NOCTURNAL.has(c.templateId)) && conditions.booming(z, c);
+}
+
 /** The feeding ground to walk to this hour, or undefined to stay on home ground. */
 export function roundGround(z: ZoneDO, c: Creature, now: number): string | undefined {
-  if (!keepsRound(z, c) || roundPhase(c.templateId, now) !== "feed" || !c.home) {
+  if (!keepsRound(z, c) || (roundPhase(c.templateId, now) !== "feed" && !outInBoom(z, c, now)) || !c.home) {
     c.roundFor = undefined;
     return undefined;
   }
@@ -270,7 +278,7 @@ export function roundGround(z: ZoneDO, c: Creature, now: number): string | undef
 /** Of the steps it may take inside its range, the ones onto the ground this hour wants. */
 export function roundExits<E extends { to_room: string }>(z: ZoneDO, c: Creature, exits: E[], now: number): E[] {
   if (!keepsRound(z, c)) return exits;
-  const feeding = roundPhase(c.templateId, now) === "feed";
+  const feeding = roundPhase(c.templateId, now) === "feed" || outInBoom(z, c, now);
   // Feeding: onto feeding ground — but only once it has one to be out on, or
   // an animal with none in reach would be pushed about for nothing.
   if (feeding && !c.roundFor) return exits;

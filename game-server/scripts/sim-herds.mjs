@@ -40,7 +40,7 @@ function wood() {
     ]),
   };
   const z = {
-    world, creatures: new Map(), sessions: new Map(), herds: new Map(), variantBase: new Map(),
+    world, creatures: new Map(), sessions: new Map(), herds: new Map(), variantBase: new Map(), conditions: new Map(),
     regionOf: () => 'wood', outOfWorld: () => false, roomDist: () => 1, rollCarry: () => undefined,
     noteCreaturesChanged() {}, roomFeed() {}, roomSound() {}, refreshRoomCtx() {},
   };
