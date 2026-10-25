@@ -68,10 +68,15 @@ try {
       }
       console.log(`PASS: ${gap / 3_600_000}h offline, ${steps} sweeps, ${Math.round(performance.now() - started)}ms; clock and creatures valid.`);
     }
+    z.seededDens.add('00000000-dead-creature-id-not-a-den'); // what an old world carried
     await z.persist();
     const restored = new ZoneDO(state, env);
     await restored.init('door');
     assert.equal(restored.savedAt, now);
+    // THE DEN LIST HOLDS DENS (2026-10-25): what is not a den is dropped on load.
+    assert.ok(!restored.seededDens.has('00000000-dead-creature-id-not-a-den'), 'a dead entry does not survive a load');
+    assert.equal(restored.seededDens.size, restored.world.mobSpawns.length, 'one entry per den, no more');
+    console.log('PASS: the den list carries dens and nothing else.');
     assert.ok(restored.creatures.size > 0);
     restored.applyRot = () => assert.fail('A saved catch-up must not replay after restart');
     restored.catchUp();

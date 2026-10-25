@@ -851,7 +851,13 @@ export class ZoneDO implements DurableObject {
           traits: traits.length ? traits : undefined,
         });
       }
-      for (const s of world.mobSpawns) this.seededDens.add(s.id);
+      // ...AND ONLY DENS (2026-10-25). A world saved before this list existed
+      // seeded it with every CREATURE id standing at the time, about seven
+      // hundred uuids that were never den ids and meant nothing to it, and
+      // nothing ever took them out: 56KB of b:meta, more than half of it dead.
+      // Rebuilt from the dens that exist, every one of which has just been
+      // filled above if it was not already standing.
+      this.seededDens = new Set(world.mobSpawns.map((s) => s.id));
       // THE TRAIT BACKFILL LIVED HERE AND IS GONE ON PURPOSE (2026-08-25).
       //
       // The mob trait lottery rolls at SPAWN, so every animal already standing
