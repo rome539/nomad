@@ -1968,12 +1968,18 @@ export class ZoneDO implements DurableObject {
       session = this.sessions.get(pubkey);
       if (!session || (session.ws !== ws && this.wsAttachment(session.ws)?.cid !== this.wsAttachment(ws)?.cid)) return;
       session.ws = ws; // a woken socket is a fresh object — keep the session on it
-      for (const s of this.sessions.values()) this.syncExhaustion(s);
+      let admitted = false;
       try {
-        await this.onMessage(session, typeof message === "string" ? message : "");
+        await this.onMessage(session, typeof message === "string" ? message : "", () => {
+          admitted = true;
+          for (const s of this.sessions.values()) this.syncExhaustion(s);
+        });
       } finally {
-        await this.checkpointPlayers();
+        // Even a partially completed command must be durable. Rejected input
+        // must never trigger world-wide player writes or creature work.
+        if (admitted) await this.checkpointPlayers();
       }
+      if (!admitted) return;
       // A command can open a fight while a quiet-length alarm is still
       // pending — pull the beat in (ensureAlarm re-arms early when hot).
       await this.ensureAlarm();
@@ -2029,7 +2035,7 @@ export class ZoneDO implements DurableObject {
 
   // ---- messages in ----
 
-  private async onMessage(session: Session, raw: string): Promise<void> {
+  private async onMessage(session: Session, raw: string, onAdmitted?: () => void): Promise<void> {
     let frame: any;
     try {
       frame = JSON.parse(raw);
@@ -2052,10 +2058,23 @@ export class ZoneDO implements DurableObject {
     const isForge = frame?.t === "forge";
     const isBounty = frame?.t === "bounty";
     const isSwap = frame?.t === "swap";
-    if (!isTell && !isBench && !isTrade && !isForge && !isBounty && !isSwap && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
+    const isJournal = frame?.t === "journal"; // the journal chip: the book opens as its modal
+    if (!isTell && !isBench && !isTrade && !isForge && !isBounty && !isSwap && !isJournal && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
 
     // Token bucket per pubkey — castr's daily-cast pattern, compressed.
     const now = Date.now();
+    session.tokens = Math.min(
+      RATE_CAPACITY,
+      session.tokens + ((now - session.tokensAt) / 1000) * RATE_REFILL_PER_SEC,
+    );
+    session.tokensAt = now;
+    const cost = isBench && Array.isArray(frame.rows) ? Math.max(1, Math.ceil(frame.rows.length / 4)) : 1;
+    if (session.tokens < cost) {
+      if (!isBench && !isTrade && !isForge && !isBounty && !isSwap) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
+      return;
+    }
+    session.tokens -= cost;
+    onAdmitted?.();
     // Presence: any real frame re-stamps the player and heats the world. The
     // stamp rides the socket too, so a hibernation rebuild keeps it.
     session.lastActiveAt = now;
@@ -2068,17 +2087,6 @@ export class ZoneDO implements DurableObject {
       const a = this.wsAttachment(session.ws);
       session.ws.serializeAttachment({ pubkey: session.pubkey, la: now, pid: a?.pid ?? null, att: a?.att ?? null, cid: a?.cid, sealedTell: a?.sealedTell });
     } catch {}
-    session.tokens = Math.min(
-      RATE_CAPACITY,
-      session.tokens + ((now - session.tokensAt) / 1000) * RATE_REFILL_PER_SEC,
-    );
-    session.tokensAt = now;
-    const cost = isBench && Array.isArray(frame.rows) ? Math.max(1, Math.ceil(frame.rows.length / 4)) : 1;
-    if (session.tokens < cost) {
-      if (!isBench && !isTrade && !isForge && !isBounty && !isSwap) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
-      return;
-    }
-    session.tokens -= cost;
 
     // The gatehouse bench (storage modal) and the keeper's hatch (trade
     // modal): each its own little protocol.
@@ -2092,6 +2100,9 @@ export class ZoneDO implements DurableObject {
     // standing in the dark, so it's routed here rather than behind the
     // outOfWorld() gate below.
     if (isSwap) return trade.handleSwap(this, session, frame);
+    // The journal chip opens the book as a modal; typed 'journal' reads it in
+    // the log. Reading works anywhere, the gatehouse included.
+    if (isJournal) return lore.cmdJournal(this, session, "", true);
 
     // IN THE GATEHOUSE (away, at a gate): the sanctuary is a ROOM now, not a
     // switch. The dungeon can't reach you and you can still be heard — known

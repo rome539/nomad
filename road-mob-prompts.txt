@@ -1,0 +1,811 @@
+==============================================================================
+# drove-dog — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> drove-dog idle alert work-the-line feed move-a move-b attack death
+#   node scripts/build-mob-strips.mjs drove-dog --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a drove dog. Exact game description: Long-legged, rough-coated and low to the grass, working a line across the hillside with its head down and its shoulder turned. It is not stalking you. It is putting you somewhere, and it has already decided where, and there will be another one on your other side by the time you have understood that.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Working a line across the ground with its head down and one shoulder turned, not looking at the viewer at all - putting something somewhere, and already certain where
+4. Feeding from a carcass on the ground, head down at the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# the-drove-master — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-drove-master idle alert work-the-line feed move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-drove-master --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the drove master. Exact game description: Bigger than the rest and grey to the muzzle, and it does not run the line at all — it sits on the high ground above the work and watches it happen. When it comes down, the others give it the room, and the shape of what they were doing changes.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Working a line across the ground with its head down and one shoulder turned, not looking at the viewer at all - putting something somewhere, and already certain where
+4. Feeding from a carcass on the ground, head down at the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# masterless-dog — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> masterless-dog idle alert cast-about feed move-a move-b attack death
+#   node scripts/build-mob-strips.mjs masterless-dog --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a masterless dog. Exact game description: Rangy, deep-chested, and carrying its head low. It still has a collar — a broad one, studded, made for a working animal that somebody valued — and the collar has long since stopped meaning anybody is coming for it. It watches you the way a dog watches a thing it has not yet decided about.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Nose down and quartering, the head swinging low across its own track, one forefoot lifted mid-cast
+4. Feeding from a carcass on the ground, head down at the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# lead-dog — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> lead-dog idle alert cast-about feed move-a move-b attack death
+#   node scripts/build-mob-strips.mjs lead-dog --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the lead dog. Exact game description: Bigger than the others and older, with a grey muzzle and a set of scars that run all one way, as though everything that ever went at it came from the same side and did not get to try twice. It does not circle. It stands square in the road and waits to see what you are going to do about it.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Nose down and quartering, the head swinging low across its own track, one forefoot lifted mid-cast
+4. Feeding from a carcass on the ground, head down at the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# footpad — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> footpad idle alert graze snatch-escape move-a move-b attack death
+#   node scripts/build-mob-strips.mjs footpad --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a footpad. Exact game description: Someone waiting off the verge in clothes chosen to be nothing in particular, who stands up as you come level and is already closer than they were. No stance, no challenge, no interest in a fight — the whole trade is in the half-second where you work out what is happening.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Head down cropping the ground, feeding
+4. Going away fast with something taken, clutched to the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# wayman — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> wayman idle alert graze snatch-escape move-a move-b attack death
+#   node scripts/build-mob-strips.mjs wayman --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a wayman. Exact game description: A lean man standing off the verge in a coat that fits him, which on this road is worth noticing — somebody else was measured for it. He has a blade already out and held low and easy, and he does not open with a demand. He has learned that the demand goes better after.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Head down cropping the ground, feeding
+4. Going away fast with something taken, clutched to the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# otter — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> otter idle alert rest feed move-a move-b attack death
+#   node scripts/build-mob-strips.mjs otter --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: an otter. Exact game description: It comes out of the water onto a stone with a fish across its jaws, sees you, and does not hurry. Everything about it is built for a medium you are not in. On land it looks like a mistake; the moment it is back in the beck it stops looking like anything at all.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Sleeping or lying up, low on the ground, eyes closed
+4. Feeding from a carcass on the ground, head down at the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# dog-otter — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> dog-otter idle alert rest feed move-a move-b attack death
+#   node scripts/build-mob-strips.mjs dog-otter --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a dog otter. Exact game description: The big male, and there is no mistaking him for the others once you have seen the head — broad, scarred across the muzzle, the whiskers gone white on one side. He works this length of the beck and he has driven everything else off it. He is not afraid of you. He has simply not decided yet whether you are worth getting wet for.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Sleeping or lying up, low on the ground, eyes closed
+4. Feeding from a carcass on the ground, head down at the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# albino-rat — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> albino-rat idle alert rest feed move-a move-b attack death
+#   node scripts/build-mob-strips.mjs albino-rat --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD world mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: an albino rat. Exact game description: A rat grown to the colour of something kept from the light its whole life — pale to the point of translucence, its eyes two beads of wet pink, whiskers ghosting the dark. It is bigger than it has any right to be, and it regards you without fear, and there is something in its stillness that makes the hair stand on your arms.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+3. Sleeping or lying up, low on the ground, eyes closed
+4. Feeding from a carcass on the ground, head down at the body
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# rat — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> rat idle rest feed graze move-a move-b attack death
+#   node scripts/build-mob-strips.mjs rat --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD world mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a scabby rat. Exact game description: Big as a boot and mean as two. Its eyes catch light that isn't there.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Sleeping or lying up, low on the ground, eyes closed
+3. Feeding from a carcass on the ground, head down at the body
+4. Head down cropping the ground, feeding
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# brood-rat — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> brood-rat idle rest feed graze move-a move-b attack death
+#   node scripts/build-mob-strips.mjs brood-rat --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD world mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a swollen brood-rat. Exact game description: Bloated near to bursting and slung low with young, she does not run and she does not chase. She holds her patch of dark and makes more of herself in it, patiently, for as long as she is left to.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Sleeping or lying up, low on the ground, eyes closed
+3. Feeding from a carcass on the ground, head down at the body
+4. Head down cropping the ground, feeding
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# fleet-rat — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> fleet-rat idle rest feed graze move-a move-b attack death
+#   node scripts/build-mob-strips.mjs fleet-rat --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD out mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a scary rat. Exact game description: Lean and wire-quick, all nerves and no nerve. It never once looks like it means to fight you — only to be elsewhere, immediately, and it is very good at elsewhere.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Sleeping or lying up, low on the ground, eyes closed
+3. Feeding from a carcass on the ground, head down at the body
+4. Head down cropping the ground, feeding
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# the-baited-bear — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-baited-bear idle rest feed graze move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-baited-bear --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a baited bear. Exact game description: It is standing in the road on all fours and it is still taller than you are. The coat is a filthy brown gone grey at the muzzle, worn down to the skin in a broad band around the neck and in two patches at the shoulders where a harness sat for years. A length of chain goes back from a swivel under its jaw and trails off into the grass behind it, and the far end of that chain is not attached to anything anymore. It has been baited. You can see it in the ears, which are mostly gone, and in the way it does not startle at you — it has had dogs set on it in a ring with a crowd shouting, and there is nothing you can do that it has not already had done.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Sleeping or lying up, low on the ground, eyes closed
+3. Feeding from a carcass on the ground, head down at the body
+4. Head down cropping the ground, feeding
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# the-chain-breaker — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-chain-breaker idle rest feed graze move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-chain-breaker --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the chain-breaker. Exact game description: This is the one that got the other end loose. There is no length of chain trailing behind it, only the swivel and four links still locked under the jaw, and the fifth link is opened out and bright at the break where old iron finally gave. It is a third again the size of the other and there is nothing worn about it but the scars — it did not spend its years being led. Somewhere between here and the fair-ground there is a man who held the far end of that chain on the day it went, and he did not walk away from the moment it did.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Sleeping or lying up, low on the ground, eyes closed
+3. Feeding from a carcass on the ground, head down at the body
+4. Head down cropping the ground, feeding
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# grey-heron — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> grey-heron idle alert-alarm rest graze move-a move-b attack death
+#   node scripts/build-mob-strips.mjs grey-heron --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a grey heron. Exact game description: Standing in the shallows on one leg with its neck folded down into its shoulders, entirely grey, entirely still. It has been in that exact position since before you came round the bank. When it goes up it goes up slowly, enormously, and it makes a noise like something being torn.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. alert alarm
+3. Sleeping or lying up, low on the ground, eyes closed
+4. Head down cropping the ground, feeding
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# roe-deer — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> roe-deer idle alert-alarm rest graze move-a move-b attack death
+#   node scripts/build-mob-strips.mjs roe-deer --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD wood mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a roe deer. Exact game description: Small, red-brown, and already looking at you — it heard you a long time before you arrived and has been deciding since. It will not fight. Everything it has is in the first two seconds after it moves.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. alert alarm
+3. Sleeping or lying up, low on the ground, eyes closed
+4. Head down cropping the ground, feeding
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# white-roe — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> white-roe idle alert-alarm rest graze move-a move-b attack death
+#   node scripts/build-mob-strips.mjs white-roe --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD wood mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: a white roe. Exact game description: A roe deer the colour of bone, standing in the open where nothing stands in the open, looking directly at you. It does not startle. It does not lower its head to feed. Every other living thing in this wood has somewhere it would rather be, and it is very hard to keep looking at the one thing that does not.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. alert alarm
+3. Sleeping or lying up, low on the ground, eyes closed
+4. Head down cropping the ground, feeding
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# the-miller — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-miller idle work-the-water alert haul-it-up move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-miller --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the miller. Exact game description: Waist-deep in his own ground floor, turned away, working at something under the water with both hands. The wheel behind him is not going round. He has the swollen look of a man the water has had a long time and the patience of one who has stopped noticing, and when he turns round he keeps hold of whatever it was.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
+
+WHAT IS LEFT OF THIS ONE:
+- THE HEAD READS AS A SKULL FIRST: jaw and one cheekbone bare to the bone, teeth showing where the lip is gone, eye sockets deep and hollowed, hair down to a few plastered strands.
+- THE TORSO HAS THE WRONG MASS: collapsed and narrow where a living man is thick, the clothing hanging off a frame with no bulk in it, ribs plain at the opening.
+- [NO DECAY SIGNATURE FOR THIS ONE - write one before generating, or it comes back as the same grey man as the others]
+- The clothing is sodden black through to the hem, salt-crusted, weed caught in it.
+THE SKIN THAT REMAINS IS SALT-CURED, NOT ROTTEN: waxy, translucent, bleached bone-white, drawn tight over what is underneath. Something preserved, not something decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.
+
+No gore, no blood, no red wounds, no exposed organs, no bandages. No mist, no aura, no glow, no supernatural effect of any kind. Not menacing the viewer and not looking at the viewer: finishing a shift that ended two hundred years ago, and the viewer is not part of it.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Standing turned away from the viewer and bent forward from the waist, both arms straight down in front of him and sunk in to the forearm, hands out of sight below, shoulders working slightly. Swollen, heavy and patient. NOTHING he is reaching into is drawn - no water, no floor, no surface, no wheel
+2. Bent lower still and further forward, both arms in past the elbow now, the whole back curved over the work and the head down between the shoulders. His hands and what they are on are below the cell's empty space and are NOT drawn
+3. Come round to face the viewer for the first time, still bent, and BOTH HANDS ARE UP OUT OF IT AND CLOSED - he has kept hold of whatever it was. What is in his fists is NOT drawn; only the grip and the forearms streaming
+4. Straightening hard up out of the stoop, both arms coming up and back with the elbows bent and the fists closed on what he has hold of. What is in them is NOT drawn
+5. Wading contact pose A: one leg driven forward and down against a resistance that is not drawn, the body swung heavily after it, both arms out wide for balance
+6. Wading passing pose B: the other leg through, the body swung the other way, same direction and body size
+7. Both closed fists driven down and forward together in one heavy swing from above the shoulder, the whole swollen weight behind it
+8. Dead, collapsed face down and spread, both hands finally open and empty
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# the-toll-clerk — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-toll-clerk idle shift-the-weight alert count-it-out move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-toll-clerk --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the toll clerk. Exact game description: It stands at the verge with a satchel on a strap and one hand out, palm up, and it has been standing like that long enough for the strap to wear a groove into the bone of the shoulder. The satchel still has weight in it. The hand does not move, and it does not lower, and it will not lower while you are in front of it.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+THIS IS NOT A LIVING PERSON. There is nothing inside it. Draw old dry remains held together and still moving: bone and hardened leather-dry tissue, no wet flesh and no blood anywhere. No aura, no mist, no supernatural effect of any kind.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Standing very straight and still, a satchel hanging at the hip on a broad strap that crosses the chest, ONE HAND HELD OUT AT CHEST HEIGHT, PALM UP AND OPEN, held long enough that it has stopped being a gesture. The other arm hangs. Nothing is in the open palm
+2. The free hand come across to take the weight of the satchel from underneath and lift it an inch, the head down toward it, the strap slack for a moment - and THE OUT-HELD HAND HAS NOT MOVED. It stays exactly where it was, palm up
+3. The head come up off the satchel and levelled straight at the viewer, the satchel dropped back onto the strap, and the open palm still out, still waiting, now unmistakably meant for you
+4. The free hand come over the open palm, finger and thumb together as though telling something into it, the head down to the count - and the out-held hand still exactly where it was
+5. Locomotion contact pose A, a slow even walk, the satchel swinging - and the open palm STILL HELD OUT in front, carried along unchanged
+6. Locomotion passing pose B, opposite leg phase, same direction and body size, the palm still out
+7. The out-held hand finally closes and is driven straight forward in a grab at full reach, the other arm back
+8. Dead, lying limp on its side, the strap still across the chest, the hand open and empty at last
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# the-long-warden — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-long-warden idle turn-the-distance alert square-the-plates move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-long-warden --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the long warden. Exact game description: A hollow thing in a coat of plates gone the colour of the road, walking east at a pace it has clearly held for a very long time. It does not patrol a place. It patrols a DISTANCE, out and back, and whatever it was posted against has had two centuries to stop being a problem and has not been told.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+THIS IS NOT A LIVING PERSON. There is nothing inside it. Draw old dry remains held together and still moving: bone and hardened leather-dry tissue, no wet flesh and no blood anywhere. No aura, no mist, no supernatural effect of any kind.
+
+THE EYES ARE A MARKER COLOUR, NOT A DESIGN CHOICE. Draw the visible interior of both eye sockets as flat solid #00D0D0 CYAN, filling the opening edge to edge, with no highlight, no pupil, no iris detail and no dark line drawn across them. NOTHING ELSE anywhere on this sheet may be cyan or near cyan. This is not the colour they end up: it is a key the pipeline replaces, exactly the way the magenta background is. Keep them the same shape, the same size and the same set in the skull across all poses.
+
+NOTHING IS IN THE CELL BUT THE CREATURE. Draw ONLY the body, what it is wearing, and what it is holding in its hands or carrying on its person. Do NOT draw the thing it is working on, standing on, leaning against, hanging from, reaching into or looking at. Specifically: no ground, no floor, no wall, no stone, no stonework, no water, no waterline, no surface, no boat, no scaffold, no flue, no pan, no fire, no fuel, no firewood, no reed bed, no bank, no furniture, no object resting on the ground, and no rope, chain or line crossing the frame.
+
+Every pose is the BODY making the shape of the work, alone in empty magenta, with the work itself implied by the posture. Where a pose reads as reaching toward, leaning over, bracing against or working at something, THAT SOMETHING IS NOT DRAWN - only the reach, the lean, the brace, and the hands.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Standing at rest in a long coat of overlapping plates worn the colour of dust, facing along the way it is going, weight even, entirely unhurried. It is not guarding this spot and does not look like it is
+2. Stopped and turning on the spot, the body coming round through three-quarters to face back the way it came, one boot pivoting, the head already level and looking down the new direction. The end of a beat, done ten thousand times
+3. Stopped square to the viewer and settled, the head come round and levelled, weight dropping back onto the rear foot - the first time it has been interested in a thing rather than a distance
+4. Halted and settling the long coat of plates with one hand at the hem, the shoulders squaring, the head still level down the way - the pause at the end of a beat, before it turns
+5. Locomotion contact pose A, a long even marching stride, the coat of plates swinging heavily with it
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. A hard straight-armed drive forward from the shoulder with the leading arm, the body stepping into it, the other arm braced back
+8. Dead, collapsed sideways, the plated coat splayed open, one arm folded under
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# road-carrier — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> road-carrier idle check-the-satchel alert set-down-the-load move-a move-b attack death
+#   node scripts/build-mob-strips.mjs road-carrier --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD road mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the carrier. Exact game description: A tall figure walking at a steady pace that never varies, in a coat gone the colour of the road, with a flat leather satchel worn crosswise and both hands free. The satchel is buckled and the buckles are bright with use. Whatever it is carrying, it has been carrying a long way, and it has some distance yet to go.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. One hand come across to the buckles of the satchel at the hip, thumb on them, the head barely turned down to it and the stride not broken
+3. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+4. The strap lifted off the shoulder and the satchel swung down to knee height, both hands on it, the body straightening - the one moment it is not carrying
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.
+
+
+==============================================================================
+# the-mire-walker — 8 poses, 4x2 sheet at 2048x1024
+# after generating:
+#   node scripts/cut-mob-sheet.mjs <sheet.png> the-mire-walker idle stand-in-it alert let-it-settle move-a move-b attack death
+#   node scripts/build-mob-strips.mjs the-mire-walker --patch && node scripts/audit-mob-strips.mjs
+------------------------------------------------------------------------
+Use case: stylized-concept. Asset: NOMAD wood mob animation sprite sheet.
+
+The attached sheet is STYLE REFERENCE ONLY: match its handmade dark ink contours, etched crosshatching, dry muted mineral browns/greys, bone highlights, subdued colour, old dungeon-crawler bestiary remastered as crisp illustrated cutout art. Not photographic, not smooth painted/3D, not cartoon, not voxel. Species anatomy must remain authentic.
+
+Subject: the mire-walker. Exact game description: It stands in water up to the knee and has been standing there. When it comes for you it does not lift its feet clear, it drags them through, and the water goes on moving after it has stopped.
+
+ONE ANIMAL PER CELL, AND THE SAME ONE IN EVERY CELL. The description above is the creature's entry in the game, not a brief for the picture: it may say how the thing is met, how it behaves, or how many of them there usually are. None of that is an instruction to draw more than one. Draw a SINGLE individual, alone, in every cell - never a pair, never a group, never a second one behind or beside it, however the description phrases it.
+
+
+NOTHING IS IN THE CELL BUT THE ANIMAL. Draw ONLY the animal itself, and anything it has in its mouth or under a foot. Do NOT draw the ground it stands on, the thing it eats, the thing it hunts, the thing it climbs or the thing it looks at - no ground, no floor, no rock, no water, no waterline, no surface, no vegetation, no nest, no carcass, no prey, and no object resting on the ground.
+
+Every pose is the BODY making the shape of what it is doing, alone in empty magenta, with the rest implied by the posture. Where a pose reads as reaching down to the ground, standing over a kill or pulling at something, THAT SOMETHING IS NOT DRAWN - only the reach, the crouch, the braced shoulder and the turn of the head.
+Create 8 full-body poses of this SAME individual in a strict 4 COLUMNS by 2 ROWS sheet, landscape 2048x1024. Each equal cell 512x512. Pure solid #FF00FF MAGENTA everywhere outside the creature. 
+EVERY CELL IS A BOX AND THE ANIMAL STAYS INSIDE IT. In every single cell there must be CLEAR EMPTY MAGENTA between the animal and all four edges of that cell - no part of it touching an edge, and nothing crossing into a neighbouring cell. Not a claw, not a flipper, not a wingtip, not a tail, not a bill, not a foot, not a limb thrown out in a lunge, and not the spread of a body lying dead.
+
+This matters more than filling the cell. A pose drawn small with empty space around it is CORRECT and costs nothing. A pose that reaches its cell edge is broken twice over: the part past the line is lost, and it lands in the next cell where it corrupts that frame too. If a pose will not fit - a lunge at full reach, a body stretched out, a wing fully open - then the animal is being DRAWN TOO BIG, and the answer is to draw the whole animal smaller in every cell, never to let the pose run over. Consistent eye-level three-quarter camera, facing slightly toward the viewer's right. Consistent physical body scale across poses; size ALL poses to fit the widest pose on the sheet. Stable body proportions and markings. Feet aligned near the lower edge in ground poses.
+
+Reading order left to right, top row then bottom row:
+1. Natural resting alert stance
+2. Standing dead still, sunk to the knee in something that is NOT DRAWN, weight even, arms hanging, as though it has been there a long time
+3. Has seen you and decided about it - the species' own threat or fixing posture, body committed
+4. Come to a stop mid-stride with the leading leg still forward and the body not caught up with it, head down, everything about it arrested - the stillness just after moving
+5. Locomotion contact pose A, natural species-specific gait
+6. Locomotion passing pose B, opposite leg phase, same direction and body size
+7. Natural physical attack for the species, full body in frame
+8. Dead, lying limp on its side, no gore and no effects
+
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human. Do not make the animal a dragon hybrid.

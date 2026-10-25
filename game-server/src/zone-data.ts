@@ -10946,7 +10946,9 @@ export const GATEHOUSE_BARRED = new Set([
 // (rome, 2026-07-15). Their bare forms still work; only the arg cases were broken.
 export const GATEHOUSE_NOARG = new Set([
   "who", "inventory", "rest", "enter", "exit", "barter",
-  "map", "study", "carve", "journal", "sheet", "help", "smoke",
+  "map", "study", "carve", "sheet", "help", "smoke",
+  // `journal` is NOT here: it takes a creature ("journal red stag") to read one
+  // page, so with words after it it is still a command, not something said.
   // The bones. `roll` and `stand` are bare-only, so "stand up" and "roll with
   // it" stay things a person says at a fire. `dice` is NOT here — it carries a
   // stake or a name ("dice rustpilgrim wolf pelt") and has to command.

@@ -17,7 +17,7 @@ const fixture=PAGE.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'')+`<script>
 var log=document.getElementById('log'),cmd=document.getElementById('cmd'),chipsEl=document.getElementById('chips');
 document.getElementById('threshold').remove();
 var sent=[],lastSuggest=[],lastCombat=false,chipsOn=true,prevChipCmds=[],chipsExpanded=false,chipScrollRoom='',lastRoomName='Woods',CHIP_FOLD=12,CHIP_ARM_MS=400;
-var BENCH_CHIP='inventory',DEN_CHIP='shelf',TRADE_CHIP='trade',FORGE_CHIP='forge',BOUNTY_CHIP='bounty',doorIsDen=false;
+var BENCH_CHIP='inventory',DEN_CHIP='shelf',TRADE_CHIP='trade',FORGE_CHIP='forge',BOUNTY_CHIP='bounty',JOURNAL_CHIP='journal',doorIsDen=false;
 var hist=[],histAt=-1,viewMode='text',MODAL_SURFACES='#bench, #trade, #mapm, #jrnl, #idpanel, #setpanel';
 var soundOn=false,actx=null;
 function sendCmd(s){sent.push(s)} function benchSend(s){sent.push('bench:'+s)} function tradeSend(){} function forgeSend(){} function bountySend(){}

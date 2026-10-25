@@ -21,6 +21,9 @@ const GOOGLE_PICKER_KEY = "AIzaSyDPS4uIAQyDfCOfUY9xyTTy9HeQnp1ZMGY";
 export { ZoneDO } from "./zone";
 
 const ZONES = new Set(["door"]); // v1 ships one zone
+// When this Worker instance last told the zones its build (see /build).
+const BUILD_PING_EVERY_MS = 30_000;
+let lastBuildPing = 0;
 
 // The dungeon's public identity, as every Nostr client will show it.
 const PROFILE = {
@@ -45,6 +48,11 @@ export default {
       if ((m === "POST" && ["/auth/challenge", "/auth/verify", "/auth/ticket"].includes(pathname))
           || (m === "GET" && pathname === "/ws")) {
         const limited = await admitAuthentication(req, env);
+        if (limited) return limited;
+      }
+      // Public polling has a separate counter so it cannot consume login capacity.
+      if (m === "GET" && ["/build", "/world.json", "/mints", "/sheet"].includes(pathname)) {
+        const limited = await admitAuthentication(req, env, "public");
         if (limited) return limited;
       }
       if (m === "GET" && (pathname === "/" || pathname === "/index.html")) {
@@ -73,12 +81,20 @@ export default {
       if (m === "GET" && pathname === "/build") {
         // ...and every open page asks once a minute, so this is also where a
         // world still on the last build hears that a new one is live and
-        // restarts onto it (ZoneDO.fetch, x-build). Fire and forget: the page's
-        // answer never waits on the world.
-        for (const zone of ZONES) {
-          const headers = new Headers({ "x-build": BUILD_ID, "x-build-check": "1", "x-zone": zone });
-          const ping = env.ZONE.get(env.ZONE.idFromName(zone)).fetch(new Request(req.url, { headers })).catch(() => undefined);
-          ctx?.waitUntil(ping);
+        // restarts onto it (ZoneDO.fetch, x-build) — without it, players already
+        // connected never get the reweave line until someone happens to
+        // reconnect. Fire and forget: the page's answer never waits on the world.
+        // AT MOST ONCE PER BUILD_PING_EVERY_MS PER WORKER INSTANCE (2026-10-25
+        // security review): anonymous polling can no longer wake a zone per
+        // request, and the restart still lands within a minute of a deploy.
+        const now = Date.now();
+        if (now - lastBuildPing >= BUILD_PING_EVERY_MS) {
+          lastBuildPing = now;
+          for (const zone of ZONES) {
+            const headers = new Headers({ "x-build": BUILD_ID, "x-build-check": "1", "x-zone": zone });
+            const ping = env.ZONE.get(env.ZONE.idFromName(zone)).fetch(new Request(req.url, { headers })).catch(() => undefined);
+            ctx?.waitUntil(ping);
+          }
         }
         return new Response(BUILD_ID, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
       }
@@ -344,19 +360,28 @@ export default {
       if (m === "GET" && pathname === "/world.json") {
         const zone = url.searchParams.get("zone") ?? "door";
         if (!ZONES.has(zone)) return json({ error: "no_such_zone" }, 404);
+        // Ignore arbitrary query parameters in the cache key. A build change
+        // cannot reuse a snapshot from the previous release.
+        const cacheKey = new Request(url.origin + "/world.json?zone=" + zone + "&build=" + BUILD_ID);
+        const cache = typeof caches !== "undefined" ? caches.default : undefined;
+        const cached = await cache?.match(cacheKey);
+        if (cached) return cached;
         const headers = new Headers();
         headers.set("x-world", "1");
         headers.set("x-zone", zone);
         const stub = env.ZONE.get(env.ZONE.idFromName(zone));
         const res = await stub.fetch(new Request(req.url, { headers }));
         const body = await res.text();
-        return new Response(body, {
+        const response = new Response(body, {
+          status: res.status,
           headers: {
             "content-type": "application/json",
             "cache-control": "public, max-age=45",
             "access-control-allow-origin": "*", // the colosseum is on its own origin
           },
         });
+        if (res.ok && cache) await cache.put(cacheKey, response.clone());
+        return response;
       }
 
       return json({ error: "not_found" }, 404);

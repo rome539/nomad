@@ -302,3 +302,10 @@ character in the shared world.
   security headers, bundle matching, and protected-route checks passed.
 
 Provider administrative settings review was deferred at the user's request.
+
+### October 25 follow-up
+
+See [the October findings and remediation record](SECURITY-FINDINGS-2026-10-25.md)
+for rejected-message checkpoint costs, public polling admission/cache controls,
+and development-tool advisory fixes. The local fixes and updated dependencies
+passed validation; this follow-up has not been committed or deployed.

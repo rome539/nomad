@@ -695,7 +695,7 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   z.sendCtx(session); // drop the now-redundant `study` chip without waiting for the next refresh
 }
 
-export async function cmdJournal(z: ZoneDO, session: Session, arg = ""): Promise<void> {
+export async function cmdJournal(z: ZoneDO, session: Session, arg = "", modal = false): Promise<void> {
   const ids = (await carriedJournals(z, session)).map((b) => b.journalId!);
   // At a gate the lockbox and vault are within reach (the gatehouse is where you
   // sit and READ), so pull the pages straight out of storage if it's not in the
@@ -829,9 +829,14 @@ export async function cmdJournal(z: ZoneDO, session: Session, arg = ""): Promise
     const e = entries.find((x: any) => nameMatches(x.name, arg.toLowerCase()));
     return z.send(session, e ? journalPageText(e) : "Nothing by that name is written in your journal.", "study");
   }
-  try {
-    session.ws.send(JSON.stringify({ v: 0, t: "journal", entries, marks }));
-  } catch {}
+  // THE CHIP OPENS THE BOOK, THE WORD READS IT (rome, 2026-10-24), the same as
+  // the inventory: the chip pops the modal, typed 'journal' prints the text.
+  if (modal) {
+    try {
+      session.ws.send(JSON.stringify({ v: 0, t: "journal", entries, marks }));
+    } catch {}
+    return;
+  }
   if (!entries.length) {
     return z.send(session, `You open the journal${many ? "s" : ""}. ${many ? "Their" : "Its"} pages are blank — study a thing, and kill a few, and ${many ? "they" : "it"} will fill.`);
   }

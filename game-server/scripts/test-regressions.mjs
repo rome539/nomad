@@ -41,7 +41,7 @@ try {
         "export {loadLeaderboard} from './world';",
         "export {handleBench} from './gate';",
         "export {sendCtx} from './chips';",
-        "export {PATROLS, WARRENS_ROOMS} from './zone-data';",
+        "export {PATROLS, WARRENS_ROOMS, GATEHOUSE_NOARG} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon} from './zone-util';",
@@ -54,7 +54,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -776,6 +776,21 @@ try {
     assert.match(said.at(-1), /A rare blood of a hill wolf\./);
   });
 
+  await checkAsync('the journal chip opens the modal; typed journal reads as text only (2026-10-24)', async () => {
+    const { z, me, db } = studyWorld();
+    const frames = [];
+    me.ws = { send: (x) => frames.push(JSON.parse(x)) };
+    db.prepare("INSERT INTO journal_logs VALUES ('jrn-1', 'hill-wolf', 1, 0, '', 'wood')").run();
+    await cmdJournal(z, me, '');
+    assert.ok(!frames.some((f) => f.t === 'journal'), 'typed journal must not pop the modal');
+    await cmdJournal(z, me, '', true);
+    assert.ok(frames.some((f) => f.t === 'journal' && f.entries.length === 1), 'the chip opens the modal');
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zsrc, /if \(isJournal\) return lore\.cmdJournal\(this, session, "", true\)/);
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /s === JOURNAL_CHIP\) \{\s*if \(ws && ws\.readyState === 1\) ws\.send\(JSON\.stringify\(\{ v: 0, t: "journal" \}\)\)/);
+  });
+
   await checkAsync('finishing a page puts it on the legend board once; a book found full gives nothing (2026-10-24)', async () => {
     const { z, me, wolf, db } = studyWorld();
     const accounts = () => db.prepare("SELECT accounts FROM players WHERE pubkey = 'me'").get().accounts;
@@ -883,6 +898,17 @@ try {
   check('the Drowned God stands forward of his pool (2026-10-24)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /"gods-pool": 58,/);
+  });
+  check('journal <creature> reads a page inside a gate, not spoken aloud (2026-10-24)', () => {
+    // Inside a gate a no-argument verb with words after it is speech, so
+    // "journal red stag" was said out loud. Journal takes a creature now.
+    const c = parse('journal red stag');
+    assert.equal(c.verb, 'journal');
+    assert.ok(/red stag/.test(c.arg));
+    assert.ok(!GATEHOUSE_NOARG.has('journal'), 'the server must not treat it as speech');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const m = pub.match(/var GATEHOUSE_NOARG_CMDS = \{([\s\S]*?)\n\};/);
+    assert.ok(m && !/\bjournal:/.test(m[1].replace(/\/\/.*$/gm, '')), 'the client must not echo it as speech');
   });
   check('the Forgotten King sits and rises in his chair at the live king size, then stands on the floor below (2026-10-24)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');

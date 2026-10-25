@@ -5855,7 +5855,7 @@ var GATEHOUSE_NOARG_CMDS = {
   who: 1, players: 1, help: 1, "?": 1, commands: 1, h: 1,
   inventory: 1, inv: 1, i: 1, bag: 1, items: 1, kit: 1,
   barter: 1, trade: 1, shop: 1, browse: 1, fence: 1,
-  map: 1, study: 1, carve: 1, journal: 1, sheet: 1,
+  map: 1, study: 1, carve: 1, sheet: 1, // not journal: it takes a creature
   rest: 1, sleep: 1, sit: 1, camp: 1, smoke: 1, puff: 1,
   board: 1, noticeboard: 1, notices: 1,
   // The bones, matching the server's GATEHOUSE_NOARG (2026-08-20): bare they
@@ -6341,6 +6341,8 @@ var prevChipCmds = [];
 // text — typing 'inventory' still prints the plain list. Must match BENCH_CHIP
 // / TRADE_CHIP in zone.ts.
 var BENCH_CHIP = "inventory";
+// The journal chip opens the book as its modal; typed 'journal' reads it as text.
+var JOURNAL_CHIP = "journal";
 var SLOT_WORD = { weapon: "weapon", shield: "shield", helm: "helm", armor: "armor", cloak: "cloak", feet: "boots" };
 // THE SHELF CHIP OPENS THE MODAL (rome, 2026-08-04: "keep the command you write
 // text, but the chip opens a panel like the gatehouse does). Same bargain as
@@ -6433,6 +6435,8 @@ function chipButton(s, fresh) {
       forgeSend("open");
     } else if (s === BOUNTY_CHIP) {
       bountySend("open");
+    } else if (s === JOURNAL_CHIP) {
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "journal" }));
     } else if (s.slice(-1) === "\\u2026") {
       cmd.value = s.slice(0, -1).trim() + " ";
       cmd.focus();

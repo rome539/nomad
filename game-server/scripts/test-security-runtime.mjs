@@ -132,6 +132,10 @@ print(json.dumps(out))
      console.log('PASS: actual browser boot, guest login, extension signing, logout, and uppercase/tab key import; no key in socket frames or rendered history.');
    } finally {await browser.close();}
  }
+ const publicBurst=await Promise.all(Array.from({length:185},()=>request('/build')));
+ assert.ok(publicBurst.some(r=>r.status===429));assert.ok(publicBurst.every(r=>r.status===200||r.status===429));
+ assert.equal((await request('/auth/challenge',{method:'POST'})).status,200,'public polling cannot consume authentication capacity');
+ console.log('PASS: real public-read rate limiting uses a separate budget from authentication.');
  const burst=await Promise.all(Array.from({length:185},()=>request('/auth/challenge',{method:'POST'})));
  assert.ok(burst.some(r=>r.status===429));assert.ok(burst.every(r=>r.status===200||r.status===429));
  console.log('PASS: the real rate-limit binding throttles an authentication burst.');
