@@ -1545,7 +1545,8 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     creature.roomId = exit.to_room;
     z.noteCreaturesChanged(); // the room index must not remember where it stood
     if (!creature.hidden) rattle(z, creature.roomId); // a bone rattle on a den door here hears it come
-    clues.leaveTracks(z, creature, from, exit.dir, now); // under snow, it leaves prints going this way
+    clues.leaveTracks(z, creature, from, exit.dir, now); // under snow or in mud, it leaves prints going this way
+    herds.leaveSign(z, creature, from, now); // and the round leaves its sign: where it fed, where it lay
     // A wounded thing on the move drips where it walks — a fled survivor bleeds
     // a line straight to wherever it holes up, and anyone (or anything) can
     // read the stones and follow. Same law as the player's trail (verbs.cmdGo).

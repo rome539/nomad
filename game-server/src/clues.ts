@@ -18,7 +18,7 @@ import type { ZoneDO } from "./zone";
 import type { Creature, Trace } from "./zone-types";
 import {
   FLIER_KIND, TRACK_PRINTS, TRACK_PRINT_DEFAULT, FOUL_WATERS, FOUL_ROTATE_MS, FOUL_LOOT,
-  CROWS_DEAD_RANGE, CROWS_DEAD_FRESH_MS, CROWS_DEAD_MIN_HP, CROWS_EATEN_MS, OUTDOOR_ROOMS,
+  CROWS_DEAD_RANGE, CROWS_DEAD_FRESH_MS, CROWS_DEAD_MIN_HP, CROWS_EATEN_MS, OUTDOOR_ROOMS, SOFT_GROUND,
 } from "./zone-data";
 import * as events from "./events";
 import { isNight } from "./zone-util";
@@ -27,16 +27,24 @@ import { isNight } from "./zone-util";
 
 /** A creature has walked out of `from` going `dir`: under snow, it leaves prints. */
 export function leaveTracks(z: ZoneDO, creature: Creature, from: string, dir: string, now: number): void {
-  if (!events.snowed(z, from)) return;
+  // Snow takes a print; so does mud — the ground that is always soft, and any
+  // ground the rain has turned (2026-10-25).
+  const snow = events.snowed(z, from);
+  if (!snow && !SOFT_GROUND.has(from) && !events.muddy(z, from)) return;
   const kind = FLIER_KIND[creature.templateId];
   if (kind && kind !== "ground") return; // the hunters and the gulls cross it in the air
-  z.addTrace(from, { kind: "track", at: now, id: creature.templateId, dir, label: creature.carries?.length ? "drag" : undefined });
+  z.addTrace(from, { kind: "track", at: now, id: creature.templateId, dir, label: creature.carries?.length ? "drag" : undefined, on: snow ? undefined : "mud" });
 }
 
 /** How a set of prints reads, by age. */
 export function trackLine(t: Trace, age: number): string {
   const prints = TRACK_PRINTS[t.id ?? ""] ?? TRACK_PRINT_DEFAULT;
   const drag = t.label === "drag" ? ", and something dragged alongside them" : "";
+  if (t.on === "mud") {
+    return age < 10 * 60_000
+      ? `Fresh tracks in the mud go ${t.dir}: ${prints}${drag}.`
+      : `Tracks go ${t.dir}, blurring as the mud slumps into them: ${prints}${drag}.`;
+  }
   return age < 10 * 60_000
     ? `Fresh tracks in the snow go ${t.dir}: ${prints}${drag}.`
     : `Tracks go ${t.dir}, softening as the snow fills them: ${prints}${drag}.`;

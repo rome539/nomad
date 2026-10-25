@@ -285,3 +285,20 @@ export function roundExits<E extends { to_room: string }>(z: ZoneDO, c: Creature
   const keep = exits.filter((e) => feedsAt(c.templateId, e.to_room) === feeding);
   return keep.length ? keep : exits;
 }
+
+// THE ROUND'S SIGN (rome, 2026-10-25: the ground shows what happened). A herd
+// animal leaving feeding ground has grazed it; one getting up out of cover to
+// go and feed has lain there. Neither says what it was — cropped turf and a
+// pressed-down bed are read, not named.
+const SIGN_EVERY_MS = 30 * 60_000;
+export function leaveSign(z: ZoneDO, c: Creature, from: string, now: number): void {
+  if (!keepsRound(z, c)) return;
+  const kind = feedsAt(c.templateId, from) ? "graze"
+    : roundPhase(c.templateId, now) === "feed" ? "lie" : undefined;
+  if (!kind) return;
+  // ONE of each to a room, freshened in place: a herd that grazes a lawn all
+  // day must not crowd the room's twelve traces and push a kill's blood out.
+  const had = (z.traces.get(from) ?? []).find((t) => t.kind === kind);
+  if (had) { if (now - had.at >= SIGN_EVERY_MS) had.at = now; return; }
+  z.addTrace(from, { kind, at: now });
+}

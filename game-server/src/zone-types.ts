@@ -255,7 +255,12 @@ export interface Trace {
   // "blood" is a death's pooled stain; "drip" is the walking kind — a thing
   // (player or creature) that crossed this room with an open wound. The drip
   // is the huntable trail: scavengers drift toward it, and so can you.
-  kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve" | "track" | "den";
+  kind: "blood" | "drip" | "remains" | "scraps" | "rest" | "passage" | "carve" | "track" | "den" | "graze" | "lie";
+  // A death that nothing caused: the murrain's (conditions.ts). It reads as a
+  // body with no mark on it rather than a kill.
+  sick?: boolean;
+  // Prints left in mud rather than snow (clues.leaveTracks).
+  on?: "mud";
   prey?: string;    // a predator's kill: what it was (the crows read its size, and that it was eaten where it fell)
   // A track's heading: which way the thing that made it went (clues.ts).
   dir?: string;

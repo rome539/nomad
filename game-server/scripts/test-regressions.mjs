@@ -37,6 +37,7 @@ try {
         "export {reconcilePopulation, ate, scheduleArrivals} from './ai';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
+        "export * as clues from './clues';",
         "export * as study from './study';",
         "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
         "export * as rising from './rising';",
@@ -56,7 +57,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1267,6 +1268,7 @@ try {
     z.conditions.set('mountain', { kind: 'murrain', line: 'mountain-hare', since: 0 });
     for (let t = 0; t <= 200 * H; t += H / 6) conditions.tick(z, t, true); // long enough that the one exposed is sure to go
     assert.ok(traces.length === 1 && traces[0].room === 'm9', 'only the one in the empty room went');
+    assert.equal(traces[0].sick, true, 'and it reads as a body nothing touched');
     for (let i = 0; i < 9; i++) assert.ok(z.creatures.has('h' + i));
   });
   check('a booming herd is out on the feeding ground even at noon (2026-10-25)', () => {
@@ -1294,6 +1296,63 @@ try {
     assert.match(zsrc, /killer\.kills \+= 1;\n\s*conditions\.noteKill/);
     assert.match(zsrc, /const going = conditions\.ambient\(this, roomId\);/);
     assert.match(zsrc, /conditions: Object\.fromEntries\(this\.conditions\)/);
+  });
+  console.log('the ground shows what happened');
+  function groundWorld() {
+    const z = new ZoneDO({}, {});
+    z.world = { rooms: new Map([['w1', { id: 'w1', region: 'wood' }]]), entryRooms: new Set(), mobTemplates: new Map() };
+    z.traces = new Map();
+    z.regionOf = () => 'wood';
+    return z;
+  }
+  check('a death reads as what kind of death, never as what died (2026-10-25)', () => {
+    const z = groundWorld(), now = 10 * H;
+    const read = (t) => { z.traces.set('w1', [t]); return z.traceLines('w1', now).join(' '); };
+    const sick = read({ kind: 'blood', at: now - 60_000, label: 'a mountain hare', prey: 'mountain-hare', sick: true });
+    assert.match(sick, /nothing has been at it/);
+    const eaten = read({ kind: 'blood', at: now - 60_000, label: 'a roe-deer', prey: 'roe-deer' });
+    assert.match(eaten, /killed here and eaten where it fell/);
+    const plain = read({ kind: 'blood', at: now - 60_000, label: 'a roe-deer', id: 'roe-deer' });
+    assert.match(plain, /something died here moments ago/);
+    for (const l of [sick, eaten, plain]) assert.ok(!/hare|deer|wolf/.test(l), 'it does not say what: ' + l);
+  });
+  check('grazing and bedding sign never pushes a kill out of view (2026-10-25)', () => {
+    const z = groundWorld(), now = 10 * H;
+    z.traces.set('w1', [
+      { kind: 'blood', at: now - 30 * 60_000, prey: 'roe-deer' },
+      { kind: 'graze', at: now - 60_000 }, { kind: 'lie', at: now - 50_000 }, { kind: 'graze', at: now - 40_000 },
+    ]);
+    const lines = z.traceLines('w1', now);
+    assert.equal(lines.length, 3);
+    assert.match(lines[0], /killed here/);
+    assert.ok(lines.some((l) => /grazed/.test(l)) && lines.some((l) => /lie/.test(l)));
+  });
+  check('mud takes a print, any weather; ordinary ground does not without rain or snow (2026-10-25)', () => {
+    const traces = [];
+    const z = { addTrace: (room, t) => traces.push({ room, ...t }), snowUntil: 0, events: new Map(), rain: new Map(),
+      world: { rooms: new Map() }, regionOf: () => 'wood', bandOf: () => 'wood' };
+    z.wx = undefined;
+    const deer = { templateId: 'roe-deer' };
+    clues.leaveTracks(z, deer, 'the-black-mud', 'north', 0);
+    assert.equal(traces.length, 1);
+    assert.equal(traces[0].on, 'mud');
+    assert.match(clues.trackLine(traces[0], 60_000), /Fresh tracks in the mud go north/);
+    clues.leaveTracks(z, deer, 'the-holly-dark', 'north', 0);
+    assert.equal(traces.length, 1, 'dry leaf-litter takes no print');
+  });
+  check('the round leaves its sign where a herd fed and where it lay (2026-10-25)', () => {
+    const { z, deer } = roundWorld();
+    z.traces = new Map();
+    z.addTrace = (room, t) => { const l = z.traces.get(room) ?? []; l.push(t); z.traces.set(room, l); };
+    herds.leaveSign(z, deer, 'the-deer-lawn', NOON);
+    assert.equal(z.traces.get('the-deer-lawn')?.[0].kind, 'graze', 'it fed on the lawn');
+    for (let m = 1; m <= 8 * 60; m += 10) herds.leaveSign(z, deer, 'the-deer-lawn', NOON + m * 60_000);
+    assert.equal(z.traces.get('the-deer-lawn').length, 1, 'a day of grazing is one sign, not a pile that pushes the blood out');
+    assert.ok(z.traces.get('the-deer-lawn')[0].at > NOON + 7 * H, 'kept fresh');
+    herds.leaveSign(z, deer, 'the-holly-dark', DAWN);
+    assert.equal(z.traces.get('the-holly-dark')?.[0].kind, 'lie', 'up out of cover at dawn: it lay there');
+    herds.leaveSign(z, deer, 'w-home', NOON);
+    assert.equal(z.traces.get('w-home'), undefined, 'drifting about in cover at noon leaves nothing');
   });
   check('the herds run through the offline catch-up and are saved with the world (2026-10-25)', () => {
     const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');

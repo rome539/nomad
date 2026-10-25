@@ -1596,7 +1596,19 @@ export const TRACE_LIFE_MS: Record<string, number> = {
   track: 60 * 60_000,
   // A bear's bed in a cave it has left (mig 319): three days, read by its age.
   den: 72 * 3_600_000,
+  // THE ROUND'S SIGN (2026-10-25): where a herd fed, and where it lay up. Long
+  // enough that noon still shows where the deer were at dawn.
+  graze: 4 * 3_600_000,
+  lie: 4 * 3_600_000,
 };
+// GROUND THAT TAKES A PRINT IN ANY WEATHER (2026-10-25): the rooms whose own
+// words are mud or wet clay. Everywhere else takes one only under snow, or in
+// mud after rain (events.muddy).
+export const SOFT_GROUND = new Set<string>([
+  "the-black-mud", "the-clay-shelf", "the-silted-pond", "the-black-loam", "the-sodden-ground", "the-slip",
+  "the-cold-seep", "the-drinking-pool", "the-wet-hollow",
+  "the-mud-shore", "the-drained-creek", "the-mud-causey", "the-creek-mouth", "the-gull-flats",
+]);
 export const TRACE_CAP = 12; // per room; oldest non-carving forgotten first
 export const CARVE_CAP = 5; // wall space is finite
 export const CARVE_MAX_LEN = 40;

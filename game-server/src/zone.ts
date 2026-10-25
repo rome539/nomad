@@ -6271,13 +6271,32 @@ export class ZoneDO implements DurableObject {
     const region = this.regionOf(roomId);
     const ground = groundWord(region, roomId);
     const carvings = list.filter((t) => t.kind === "carve" && now - t.at < TRACE_LIFE_MS.carve);
+    // The round's sign (graze, lie) is common and quiet: it is read after
+    // everything else, so a herd's comings and goings never push a kill out
+    // of the three things the ground has to say.
+    const quiet = (t: Trace) => (t.kind === "graze" || t.kind === "lie" ? 1 : 0);
     const rest = list
       .filter((t) => t.kind !== "carve" && now - t.at < (TRACE_LIFE_MS[t.kind] ?? 0))
-      .sort((a, b) => b.at - a.at)
+      .sort((a, b) => quiet(a) - quiet(b) || b.at - a.at)
       .slice(0, 3);
     for (const t of rest) {
       const age = now - t.at;
-      if (t.kind === "blood") {
+      // WHAT KIND OF DEATH, NOT WHOSE (rome, 2026-10-25: don't get too specific).
+      // A body nothing touched reads as one; a predator's kill, eaten where it
+      // fell, reads as one. Neither says what it was or what did it.
+      if (t.kind === "blood" && t.sick) {
+        if (age < 3 * 3_600_000) lines.push(`Something lay down on ${ground} here and died, and nothing has been at it. There is no wound, and hardly any blood.`);
+        else lines.push("Something died here without a mark on it, a while ago.");
+      } else if (t.kind === "blood" && t.prey) {
+        if (age < 3_600_000) lines.push(`Something was killed here and eaten where it fell: hair, ${ground} torn up, and not much left.`);
+        else lines.push("A kill, a while back: tufts of hair and a dark patch where something was eaten.");
+      } else if (t.kind === "graze") {
+        if (age < 3_600_000) lines.push("The ground here has been grazed, and not long since: cropped short, trodden, and dunged.");
+        else lines.push("Old grazing sign: the turf cropped and the droppings gone dry.");
+      } else if (t.kind === "lie") {
+        if (age < 3_600_000) lines.push("A flattened lie in the cover, the stems still pressed down, where something bedded and got up again.");
+        else lines.push("A flattened lie where something bedded down, a while back.");
+      } else if (t.kind === "blood") {
         if (age < 10 * 60_000) lines.push(`Fresh blood pools on ${ground} — something died here moments ago.`);
         else if (age < 3_600_000) lines.push(`Blood on ${ground}, still wet.`);
         else lines.push(`A drying bloodstain darkens ${ground}.`);

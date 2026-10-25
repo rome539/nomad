@@ -208,7 +208,7 @@ function sicken(z: ZoneDO, herd: Creature[], hours: number, now: number, silent:
     owed -= 1;
     const [c] = dies.splice(randInt(0, dies.length - 1), 1);
     const t = world.mobTemplates.get(c.templateId);
-    z.addTrace(c.roomId, { kind: "blood", at: now, label: t?.name ?? "something", prey: c.templateId });
+    z.addTrace(c.roomId, { kind: "blood", at: now, label: t?.name ?? "something", prey: c.templateId, sick: true });
     z.creatures.delete(c.id);
     z.noteCreaturesChanged();
     void silent; // nobody saw it go: that is the point
