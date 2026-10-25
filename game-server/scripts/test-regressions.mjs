@@ -39,6 +39,7 @@ try {
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
         "export {biggestFields} from './simstore';",
+        "export {wxCovers} from './events';",
         "export * as study from './study';",
         "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
         "export * as rising from './rising';",
@@ -58,7 +59,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1302,6 +1303,14 @@ try {
     const blob = JSON.stringify({ small: 1, bloodOn: 'x'.repeat(40_000), board: 'y'.repeat(20_000), events: 'z'.repeat(5_000), tiny: [] });
     assert.equal(biggestFields(blob), 'bloodOn 39KB, board 20KB, events 5KB');
     assert.equal(biggestFields('not json'), 'unreadable');
+  });
+  check('fog over the open ground reaches the fortress gates (2026-10-25)', () => {
+    const z = { events: new Map([['fog', { phase: 'active', bands: ['out'] }]]),
+      bandOf: (r) => (r === 'gate' || r === 'sally-port' ? 'gate' : r === 'the-mass-grave' ? 'out' : 'wood') };
+    assert.ok(wxCovers(z, 'fog', 'the-mass-grave'));
+    assert.ok(wxCovers(z, 'fog', 'gate'), 'the gate stands on the open ground');
+    assert.ok(wxCovers(z, 'fog', 'sally-port'));
+    assert.ok(!wxCovers(z, 'fog', 'the-deer-lawn'), 'the wood is not under it');
   });
   console.log('the ground shows what happened');
   function groundWorld() {

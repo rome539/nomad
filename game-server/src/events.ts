@@ -173,10 +173,21 @@ export function phaseOf(z: ZoneDO, id: string): EventState["phase"] {
 // weathers can be on at once on different grounds; never two on the same one.
 // Everything that asks "is it raining" asks it of a room, and the answer is the
 // weather's phase only if that room's ground is under it.
+// THE GROUND A ROOM'S WEATHER FALLS ON (rome, 2026-10-25: the fog never came
+// to the gates). The fortress's three gates have no region of their own, so
+// bandOf calls them "gate" — and no weather is ever over "gate", so fog and
+// rain on the open ground stopped dead at the fortress doors, while every
+// other gate, standing in a region, took its weather. A fortress gate stands
+// on the open ground, the way the map already draws it. Weather only: who
+// hears a band's news is still bandOf's.
+export function wxGround(z: ZoneDO, roomId: string): string {
+  const band = z.bandOf(roomId);
+  return band === "gate" ? "out" : band;
+}
 export function wxCovers(z: ZoneDO, id: string, roomId: string): boolean {
   const st = z.events.get(id);
   if (!st || st.phase === "idle") return false;
-  return !st.bands || st.bands.includes(z.bandOf(roomId)); // no list: begun before weather had a place
+  return !st.bands || st.bands.includes(wxGround(z, roomId)); // no list: begun before weather had a place
 }
 export function wxPhase(z: ZoneDO, id: string, roomId: string): EventState["phase"] {
   // THE RAIN'S AFTER BELONGS TO EACH GROUND, not to the storm: every ground it
@@ -191,18 +202,18 @@ export function wxPhase(z: ZoneDO, id: string, roomId: string): EventState["phas
 const AFTER_PREFIX = "after:";
 // Has this ground's sky cleared while it is still wet underfoot?
 export function afterRainCleared(z: ZoneDO, roomId: string): boolean {
-  const e = z.events.get(AFTER_PREFIX + z.bandOf(roomId));
+  const e = z.events.get(AFTER_PREFIX + wxGround(z, roomId));
   return !!e && e.until > Date.now() && !!e.data && e.data.startsWith("clear");
 }
 // ...and is a rainbow standing over it?
 export function rainbowOver(z: ZoneDO, roomId: string): boolean {
-  const e = z.events.get(AFTER_PREFIX + z.bandOf(roomId)), now = Date.now();
+  const e = z.events.get(AFTER_PREFIX + wxGround(z, roomId)), now = Date.now();
   if (!e || e.until <= now || !e.data || !e.data.startsWith("clear:")) return false;
   return now < Number(e.data.slice(6));
 }
 // Is this ground still wet from a rain that has moved off or stopped?
 export function afterRain(z: ZoneDO, roomId: string): boolean {
-  const e = z.events.get(AFTER_PREFIX + z.bandOf(roomId));
+  const e = z.events.get(AFTER_PREFIX + wxGround(z, roomId));
   return !!e && e.until > Date.now();
 }
 // The rain leaves a ground: it stays wet for a share of the time it was rained on.
@@ -257,7 +268,7 @@ export function rainNearby(z: ZoneDO, roomId: string): string {
   if (!OUTDOOR_ROOMS.has(roomId) || phaseOf(z, "rain") !== "active" || wxCovers(z, "rain", roomId)) return "";
   const st = z.events.get("rain");
   if (!st?.bands) return "";
-  for (const b of weatherGrounds(z).next.get(z.bandOf(roomId)) ?? []) if (st.bands.includes(b)) return b;
+  for (const b of weatherGrounds(z).next.get(wxGround(z, roomId)) ?? []) if (st.bands.includes(b)) return b;
   return "";
 }
 // Is the sky over this room the rain's grey - falling, just gone, or over the

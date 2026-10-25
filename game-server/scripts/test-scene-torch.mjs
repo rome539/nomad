@@ -637,6 +637,18 @@ for (const room of ["the-white-ride", "the-gnawed-stand", "the-picked-bones", "t
   t(room + " paints the Moon Glade", strip(sceneEl.style.backgroundImage) === "/room-bg/the-moon-glade-night.webp", strip(sceneEl.style.backgroundImage));
 }
 
+// FOG AFTER DARK (rome, 2026-10-25): the fog plate is a daylit photograph and
+// "fog" comes down at any hour, so night fog was a bright noon. It takes the
+// night grade at night, and so does what stands in it; by day it is untouched.
+ctx.scenes.gully = "day night fog rain snow";
+ctx.paint("mountain", "fog", "gully", "fog-night", 0, 0, "", 0, 0, false, 1);
+t("night fog is the fog plate", strip(sceneEl.style.backgroundImage) === "/room-bg/gully-fog.webp", strip(sceneEl.style.backgroundImage));
+t("...graded for night", /night/.test(sceneEl.className), sceneEl.className);
+t("...and what stands in it lit for night", mobsEl.className === "t-night", mobsEl.className);
+ctx.paint("mountain", "fog", "gully", "fog-day", 0, 0, "", 0, 0, false, 0);
+t("day fog takes no night grade", !/night/.test(sceneEl.className), sceneEl.className);
+t("...and its creatures stand in fog", mobsEl.className === "t-fog", mobsEl.className);
+
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");
 process.exit(fail ? 1 : 0);

@@ -12792,7 +12792,13 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // still falls (precipitation above reads the weather, not the hour), and a
   // torch plate keeps its own light, as it does at every hour.
   var rainNight = lastSky === "rain" && !!lastNight;
-  if (rainNight && !lit && !singleLayer && scene) tint = "night";
+  // ...AND FOG AFTER DARK (rome, 2026-10-25): the same hole, the fog's turn.
+  // "fog" comes down at any hour and the fog plate is a daylit photograph, so
+  // night fog was drawn as a bright grey noon. It takes the night grade, and
+  // so does whatever is standing in it. Fog plates carry their own sky, so
+  // there is no sky layer to regrade.
+  var fogNight = lastSky === "fog" && !!lastNight;
+  if ((rainNight || fogNight) && !lit && !singleLayer && scene) tint = "night";
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
     var fade = scene !== scenePainted ? fadeScene() : null;
@@ -12837,7 +12843,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // on ground the plate has lit to orange. It follows the PLATE, so an unpainted
     // ground keeps its dark and nothing is lit by a torch the picture cannot see.
     if (mobsEl) {
-      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + (rainNight && mobHour === "rain" ? "night" : mobHour) : "";
+      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + ((rainNight && mobHour === "rain") || (fogNight && mobHour === "fog") ? "night" : mobHour) : "";
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.
