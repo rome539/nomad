@@ -24,12 +24,16 @@
 // their nests, the drowned and the posted sentinels are none of this.
 import type { ZoneDO } from "./zone";
 import type { World } from "./world";
+import type { Creature } from "./zone-types";
+import { isNight, skyBand } from "./zone-util";
 import { randInt } from "./rng";
 import { mintCreature } from "./ai";
 import {
   ECO_LINES, HOLLOW, BROODERS, DROWNERS, SENTINELS, PREYS_ON, ROAMING_DENS,
   HERD_PACE_SECS, HERD_BIRTH_PER_H, HERD_BIRTH_MIN, HERD_BIRTH_MAX, HERD_STRAY_FRAC,
   HERD_FLOOR_FRAC, HERD_FLOOR_PER_HUNTER_PER_H, HERD_NO_PREY_SHARE,
+  ROOTED, NOCTURNAL, SURFACE_FORAGE, ROUND_REGIONS, ROUND_RANGE, HUNT_RECHECK_MS,
+  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS,
 } from "./zone-data";
 
 const AT = "_at"; // the clock, kept in the same saved map as what each herd is owed
@@ -206,4 +210,70 @@ function preyShare(
     held += Math.min(k, aliveBand.get(p)?.get(band) ?? 0);
   }
   return room > 0 ? Math.max(HERD_NO_PREY_SHARE, held / room) : HERD_NO_PREY_SHARE;
+}
+
+// ---- THE DAILY ROUND (rome, 2026-10-25) ----
+//
+// The same ten rooms should not hold the same animals at noon, at dusk and at
+// midnight. A herd animal in the wood, the crossing or the mountain keeps two
+// kinds of ground: the FEEDING ground (SURFACE_FORAGE — the lawns and rides,
+// the beds and the tideline, the mountain's grass) and everything else, which
+// is cover. In its waking hours it goes out to the nearest feeding ground
+// within ROUND_RANGE of home and keeps to it; the rest of the time it keeps to
+// cover around home. The day's animals wake at dawn and dusk (they are asleep
+// at night already, NAPPERS); the night's (NOCTURNAL) wake through the dark.
+// It is an errand like the others in creatureMoves' anchor — water, a bear's
+// forage, a hunt all come first.
+
+/** Whether this animal keeps the daily round at all. */
+export function keepsRound(z: ZoneDO, c: Creature): boolean {
+  const world = z.world!;
+  if (ROOTED.has(c.templateId) || DROWNERS.has(c.templateId) || c.drift !== undefined || c.target) return false;
+  const base = z.variantBase.get(c.templateId);
+  if (!isHerd(world, c.templateId) && !(base && isHerd(world, base))) return false;
+  return ROUND_REGIONS.has(z.regionOf(c.home ?? c.roomId));
+}
+
+/** Whether this room is where this kind of animal feeds. */
+export function feedsAt(templateId: string, room: string): boolean {
+  if (ROUND_BASKERS.has(templateId)) return WARM_GROUND.has(room);
+  if (SCAVENGERS.has(templateId) && CARRION_ROOMS.has(room)) return true;
+  return SURFACE_FORAGE.has(room);
+}
+
+/** Out feeding, or lying up, at this hour. */
+export function roundPhase(templateId: string, now: number): "feed" | "rest" {
+  const night = isNight(now);
+  if (NOCTURNAL.has(templateId)) return night ? "feed" : "rest";
+  if (night) return "rest";
+  const band = skyBand(now);
+  return band === 0 || band === 4 ? "feed" : "rest";
+}
+
+/** The feeding ground to walk to this hour, or undefined to stay on home ground. */
+export function roundGround(z: ZoneDO, c: Creature, now: number): string | undefined {
+  if (!keepsRound(z, c) || roundPhase(c.templateId, now) !== "feed" || !c.home) {
+    c.roundFor = undefined;
+    return undefined;
+  }
+  if ((c.roundAt ?? 0) > now && c.roundFor) return c.roundFor;
+  c.roundAt = now + HUNT_RECHECK_MS;
+  const band = z.regionOf(c.home);
+  const out = z.nearby(c.home, ROUND_RANGE);
+  let best: string | undefined, bestD = Infinity;
+  for (const [room, d] of out) {
+    if (d < bestD && feedsAt(c.templateId, room) && z.regionOf(room) === band) { bestD = d; best = room; }
+  }
+  return (c.roundFor = best);
+}
+
+/** Of the steps it may take inside its range, the ones onto the ground this hour wants. */
+export function roundExits<E extends { to_room: string }>(z: ZoneDO, c: Creature, exits: E[], now: number): E[] {
+  if (!keepsRound(z, c)) return exits;
+  const feeding = roundPhase(c.templateId, now) === "feed";
+  // Feeding: onto feeding ground — but only once it has one to be out on, or
+  // an animal with none in reach would be pushed about for nothing.
+  if (feeding && !c.roundFor) return exits;
+  const keep = exits.filter((e) => feedsAt(c.templateId, e.to_room) === feeding);
+  return keep.length ? keep : exits;
 }

@@ -1309,7 +1309,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // which is the precedent this follows.
       // A BEAR GOES OUT TO FEED (forageErrand) before it goes after prey: its
       // food is ground it knows, not an animal that might not be there.
-      const anchor = creature.wateringTo ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? creature.home;
+      const anchor = creature.wateringTo ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
       // ONE capped walk out from the den answers both halves — am I inside my
       // range, and which of these exits are. This is the hottest distance query
       // in the game (every wandering creature, every beat); routing it through
@@ -1341,6 +1341,9 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       } else {
         const within = exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
         if (within.length) exits = within;
+        // ...and inside its range, the hour decides which ground it keeps to:
+        // out on the feeding ground in its waking hours, back in cover after.
+        exits = herds.roundExits(z, creature, exits, now);
       }
     }
     // A patroller's route IS its territory. It leaves the circuit sometimes — it

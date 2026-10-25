@@ -215,6 +215,8 @@ export interface Creature {
   huntFor?: string;     // the room it is walking to because its own ground has nothing left to eat (ai.huntGround)
   forageFor?: string; // a bear's walk to its own feeding ground (ai.forageErrand)
   forageAt?: number;  // when that answer is worth asking again
+  roundFor?: string;  // the feeding ground a herd animal is out on this hour (herds.roundGround)
+  roundAt?: number;   // when that answer is worth asking again
   huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)
   drift?: number;       // rooms walked on a WALKABOUT — set = unmoored, no territory (ai.beginDrift)
   driftFrom?: string;   // the ground it set out from: what it walks away from, and what it returns to if it finds nothing

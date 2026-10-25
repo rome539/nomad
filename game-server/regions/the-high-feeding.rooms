@@ -1,0 +1,37 @@
+# THE HIGH FEEDING (rome, 2026-10-25). Three small places above the cloud where
+# something grows, so the grazers up there have somewhere to come out to in
+# their waking hours (the daily round, herds.ts). Before these, ten ptarmigan
+# and six hares on the snowfield, the red ground and the ridge had nothing
+# within reach that their round could walk them to.
+#
+# THE TIER'S RULE STANDS. Mountain-4: above the cloud nothing is produced worth
+# a mouthful, everything is delivered. Mountain-5: the rock is warm where it
+# should not be. So none of these is a meadow. Each is barely food, and each is
+# given by something the tier already has: the melt off the snowfield, the
+# water that stains the red run, the warmth coming up through the ridge.
+# Feeding ground in SURFACE_FORAGE; pictures from the moss and ledge rules.
+!region mountain
+
+## the-moss-flush | The Moss Flush
+Under the west lip of the snowfield the melt comes out in a sheet a finger deep and runs over a shelf of black rock before it goes over the edge, and where it runs the rock has grown a skin of moss, green enough to hurt after an hour of white. It is the only colour on the snowfield. It is cropped close all over, and the snow round its edge is trodden into a ring of small prints.
+> east the-upper-brim
+
+## the-upper-brim | the snowfield's one green place, off its west lip
+!existing
+> west the-moss-flush
+
+## the-red-moss | The Red Moss
+The rust slope runs out at the bottom into a hollow where the water off the stained run comes to rest, and the stones in it have grown a crust of moss and lichen the same red as everything else, so that you only see it is alive when you kneel. It is barely food. Something has been kneeling to it anyway: the crust is nibbled back in patches all over, and the patches are fresh.
+> north the-rust-slope
+
+## the-rust-slope | down to where the water off the red run comes to rest
+!existing
+> south the-red-moss
+
+## the-cushion-ledge | The Cushion Ledge
+A ledge off the north side of the step, out of the wind, and the rock under it is warm on its own account the way the ground behind you was. Cushion plants have taken the whole of it, tight green domes the size of a fist, packed edge to edge in the cracks where the warmth comes up. Nothing else on the ridge grows. These are grazed down to the rock on the outside of every cushion and nowhere else.
+> south the-first-step
+
+## the-first-step | the warm ledge off its north side
+!existing
+> north the-cushion-ledge

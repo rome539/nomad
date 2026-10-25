@@ -45,7 +45,7 @@ try {
         "export {PATROLS, WARRENS_ROOMS, GATEHOUSE_NOARG, MOUTHS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
-        "export {isNight, isFullMoon} from './zone-util';",
+        "export {isNight, isFullMoon, terrainOf} from './zone-util';",
       ].join('\n'),
       resolveDir: root, loader: 'ts',
     },
@@ -55,7 +55,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1057,6 +1057,82 @@ try {
     scheduleArrivals(z, 0);
     assert.ok(!z.arrivals.has('roe-deer') && !z.arrivals.has('grey-wolf'), 'the herds run on births, not a clock');
     assert.ok(z.arrivals.has('twice-dead'), 'the hollow still run on theirs');
+  });
+  // The day: dawn is the first 18 minutes of the light, dusk its last, then two hours of night.
+  const DAWN = 5 * 60_000, NOON = 60 * 60_000, DUSK = 110 * 60_000, NIGHT = 3 * 3_600_000;
+  function roundWorld() {
+    const world = { mobTemplates: new Map([
+      ['roe-deer', { id: 'roe-deer', name: 'a roe-deer', respawn_secs: 300, is_boss: 0 }],
+      ['tawny-owl', { id: 'tawny-owl', name: 'a tawny owl', respawn_secs: 660, is_boss: 0 }],
+    ]) };
+    // cover 'w-home' -- 'the-holly-dark' -- 'the-deer-lawn' (feeding), in a line
+    const dist = { 'the-holly-dark': 1, 'the-deer-lawn': 2, 'w-home': 0 };
+    const z = { world, variantBase: new Map(), regionOf: () => 'wood',
+      nearby: (_from, r) => new Map(Object.entries(dist).filter(([, d]) => d <= r)) };
+    const deer = { id: 'd', templateId: 'roe-deer', roomId: 'w-home', home: 'w-home', hp: 10 };
+    return { z, deer };
+  }
+  check('the day\'s animals feed at dawn and dusk; the night\'s through the dark (2026-10-25)', () => {
+    assert.equal(herds.roundPhase('roe-deer', DAWN), 'feed');
+    assert.equal(herds.roundPhase('roe-deer', DUSK), 'feed');
+    assert.equal(herds.roundPhase('roe-deer', NOON), 'rest');
+    assert.equal(herds.roundPhase('roe-deer', NIGHT), 'rest');
+    assert.equal(herds.roundPhase('tawny-owl', NIGHT), 'feed');
+    assert.equal(herds.roundPhase('tawny-owl', NOON), 'rest');
+  });
+  check('at dawn a deer walks out to the nearest lawn; at noon it stays home (2026-10-25)', () => {
+    const { z, deer } = roundWorld();
+    assert.equal(herds.roundGround(z, deer, DAWN), 'the-deer-lawn');
+    deer.roundAt = 0;
+    assert.equal(herds.roundGround(z, deer, NOON), undefined);
+    z.regionOf = () => 'road';
+    deer.roundAt = 0;
+    assert.equal(herds.roundGround(z, deer, DAWN), undefined, 'the road keeps no round');
+  });
+  check('out on the lawn at feeding time it keeps to the open; at noon it steps into cover (2026-10-25)', () => {
+    const { z, deer } = roundWorld();
+    deer.roomId = 'the-deer-lawn';
+    const exits = [{ to_room: 'the-holly-dark' }, { to_room: 'the-long-glade' }];
+    deer.roundFor = 'the-deer-lawn';
+    assert.deepEqual(herds.roundExits(z, deer, exits, DAWN).map((e) => e.to_room), ['the-long-glade']);
+    deer.roundFor = undefined;
+    assert.deepEqual(herds.roundExits(z, deer, exits, NOON).map((e) => e.to_room), ['the-holly-dark']);
+    deer.target = 'someone';
+    assert.equal(herds.roundExits(z, deer, exits, NOON).length, 2, 'a fight is not a round');
+  });
+  check('a carrion eater feeds on the bone ground, an adder on the warm rock (2026-10-25)', () => {
+    assert.ok(herds.feedsAt('carrion-vulture', 'the-bone-ground'), 'a vulture is out on the carrion ground');
+    assert.ok(herds.feedsAt('carrion-vulture', 'the-deer-lawn'), 'and where the grazers die');
+    assert.ok(herds.feedsAt('stone-adder', 'the-ramp-head'), 'an adder lies on the warm rock');
+    assert.ok(!herds.feedsAt('stone-adder', 'the-deer-lawn'), 'not on the grass');
+    assert.ok(!herds.feedsAt('roe-deer', 'the-bone-ground'), 'a deer does not graze the bone fan');
+    assert.ok(herds.feedsAt('ptarmigan', 'the-south-shelf'), 'the high mountain\'s one green strip');
+  });
+  check('at dawn a vulture walks out to the bone ground, not a lawn it cannot reach (2026-10-25)', () => {
+    const { z } = roundWorld();
+    z.world.mobTemplates.set('carrion-vulture', { id: 'carrion-vulture', name: 'a carrion vulture', respawn_secs: 780, is_boss: 0 });
+    z.regionOf = () => 'mountain';
+    z.nearby = (_f, r) => new Map([['m-home', 0], ['the-bone-ground', 3]].filter(([, d]) => d <= r));
+    const v = { id: 'v', templateId: 'carrion-vulture', roomId: 'm-home', home: 'm-home', hp: 10 };
+    assert.equal(herds.roundGround(z, v, DAWN), 'the-bone-ground');
+  });
+  check('the high feeding is feeding ground, joined both ways, and drawn as rock with green in it (2026-10-25)', () => {
+    const sql = readFileSync(new URL('../migrations/340_the_high_feeding.sql', import.meta.url), 'utf8');
+    for (const [room, from, there, back] of [['the-moss-flush', 'the-upper-brim', 'east', 'west'], ['the-red-moss', 'the-rust-slope', 'north', 'south'], ['the-cushion-ledge', 'the-first-step', 'south', 'north']]) {
+      assert.ok(herds.feedsAt('ptarmigan', room), room + ' feeds the high grazers');
+      assert.equal(terrainOf(room, '', 'mountain'), 'slab', room + ' is not an alder wood or a cairn field');
+      assert.ok(sql.includes(`('${room}', '${there}', '${from}', NULL)`), room + ' leads back');
+      assert.ok(sql.includes(`('${from}', '${back}', '${room}', NULL)`), from + ' leads to it');
+    }
+  });
+  check('the round is wired into wandering, and the feeding ground is the one read from the rooms (2026-10-25)', () => {
+    const src = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(src, /huntGround\(z, creature, now\) \?\? herds\.roundGround\(z, creature, now\) \?\? creature\.home/);
+    assert.match(src, /exits = herds\.roundExits\(z, creature, exits, now\);/);
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const forage = zd.slice(zd.indexOf('export const SURFACE_FORAGE'), zd.indexOf('export const FORAGE_ROOMS'));
+    for (const r of ['the-deer-lawn', 'the-white-ride', 'the-cockle-beds', 'the-long-glade']) assert.ok(forage.includes(`"${r}"`), r);
+    for (const r of ['the-pale-grass', 'the-moon-glade']) assert.ok(!forage.includes(`"${r}"`), r + ' feeds nothing, by its own words');
   });
   check('the herds run through the offline catch-up and are saved with the world (2026-10-25)', () => {
     const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');

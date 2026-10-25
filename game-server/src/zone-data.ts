@@ -7040,7 +7040,44 @@ export const SURFACE_FORAGE = new Set([
   "the-warm-gully", "the-long-shelf",
   "the-hanging-floor", "the-braided-flats", "the-till", "the-moraine-loop",
   "the-cold-plateau", "the-stripe-field", "the-frost-pavement",
+  // THE DAILY ROUND'S GROUND (rome, 2026-10-25), read from every wood and
+  // crossing description: where the light reaches grass, or the tide leaves
+  // food. The wood: lawns, rides, clearings and fells, the rooted ground and
+  // the mast, the old gatehouse grass. Not the Pale Grass or the Moon Glade,
+  // whose own words say nothing feeds there.
+  "the-deer-lawn", "the-deer-browse", "the-grass-island", "the-sunken-lawn", "the-north-marches",
+  "the-north-ride", "the-white-ride", "the-west-ride", "the-empty-ride",
+  "the-open-canopy", "the-oak-fall-gap", "the-felling-edge", "the-stump-field", "the-basket-ground", "the-cut-osiers",
+  "the-boar-ground", "the-turned-ground", "the-beech-mast", "the-mast-fall",
+  "the-tilt-yard", "the-killing-ground", "the-outer-bailey", "the-rampart-walk", "the-moat-bank",
+  "the-rabbit-warren", "the-stunted-oaks",
+  // The crossing: the beds and pools, the samphire, the saltmarsh, the mud, the
+  // tidelines, the turf and the drove road's verge.
+  "the-cockle-beds", "the-cockle-scars", "the-crab-pools", "the-limpet-rocks", "the-eel-grass",
+  "the-samphire-flats", "the-samphire-flat", "the-samphire-island",
+  "the-saltmarsh-pools", "the-sea-lavender", "the-redshank-ground", "the-gull-flats", "the-mud-shore",
+  "the-high-water-mark", "the-storm-line", "the-dune-slack", "the-grey-dunes", "the-old-sea-bank", "the-drove-road",
+  // The high mountain's one green thing: "dwarf plants growing along the back
+  // of it in a strip". Everything else up there is snow, ice and swept stone.
+  "the-south-shelf",
+  // ...and the three the high grazers were given (mig 340, regions/the-high-feeding.rooms):
+  // the melt's moss off the snowfield, the red moss where the stained run comes
+  // to rest, the cushion plants on the warm ledge off the ridge.
+  "the-moss-flush", "the-red-moss", "the-cushion-ledge",
 ]);
+// THE DAILY ROUND (rome, 2026-10-25: the world should be different every time
+// you step onto the ground). A herd animal in these regions comes out onto the
+// feeding ground above in its waking hours and goes back into cover for the
+// rest: the day's animals at dawn and dusk, the night's through the dark.
+// herds.ts roundGround / roundExits.
+export const ROUND_REGIONS = new Set<string>(["wood", "crossing", "mountain"]);
+export const ROUND_RANGE = 5; // how far from home an animal will go to feed
+// Not everything feeds on grass. A carrion eater's waking hours are spent on
+// the carrion ground (CARRION_ROOMS — the mountain's bone fan) as well as the
+// open ground the grazers die on; an adder's on the warm rock, where what it
+// eats comes to lie in the heat.
+export const ROUND_BASKERS = new Set<string>(["stone-adder", "the-gravid-adder"]);
+export const WARM_GROUND = new Set<string>(["the-ramp-head", "the-warm-gutter", "the-lower-warm", "the-lower-flags"]);
 export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS, ...SURFACE_FORAGE]);
 // WHO EATS THE GROUND. Was the bare union VERMIN + THIEVES, written inline at
 // two call sites — which quietly left the boar out, and a boar is a rooting
@@ -7605,6 +7642,11 @@ export const DEN_RULES: [string, RegExp][] = [
   ["the-dens", /^/],
 ];
 export const TERRAIN_RULES: [string, RegExp][] = [
+  // THE HIGH FEEDING (mig 340): bare rock with the green in its cracks, which is
+  // what all three of them are. By name, ahead of everything, or "moss" would
+  // stand them in an alder wood above the cloud and "ledge" among cairns on a
+  // mountain nobody has marked.
+  ["slab",         /^the-(moss-flush|red-moss|cushion-ledge)$/],
   // WORD BOUNDARIES ARE NOT OPTIONAL HERE. Without them "race" caught every
   // TERRACE on the hill and called twenty-five flat rock shelves a mountain
   // stream; "ash" caught the outwash, "col" caught the cold, "pen" caught the
