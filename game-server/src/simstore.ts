@@ -576,8 +576,29 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
     // grown too big to be one blob" — which is a real and much later problem
     // than the one it used to warn about, and the answer to it is a finer
     // shard (a wood by quarter, a mountain by tier), not a new mechanism.
-    if (v.length > 64 * 1024) console.warn(`simstore: ${k} at ${Math.round(v.length / 1024)}KB — shard this one finer`);
+    if (v.length > 64 * 1024) {
+      console.warn(`simstore: ${k} at ${Math.round(v.length / 1024)}KB — shard this one finer`);
+      // ...AND SAY WHAT IS IN IT (2026-10-25: b:meta reached 80KB on prod and
+      // nothing local could say why). Once per blob per isolate — a parse of
+      // an 80KB blob on every save would be its own cost.
+      if (!sizedBlobs.has(k)) { sizedBlobs.add(k); console.warn(`simstore: ${k} biggest — ${biggestFields(v)}`); }
+    }
   }
+}
+
+const sizedBlobs = new Set<string>();
+/** The three largest top-level fields of a JSON blob, by serialized size. */
+export function biggestFields(json: string): string {
+  try {
+    const o = JSON.parse(json) as Record<string, unknown>;
+    if (!o || typeof o !== "object") return "not an object";
+    return Object.entries(o)
+      .map(([f, x]) => [f, JSON.stringify(x ?? null).length] as const)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([f, n]) => `${f} ${Math.round(n / 1024)}KB`)
+      .join(", ");
+  } catch { return "unreadable"; }
 }
 
 // Blow it all away (reseed's half of the job — the caller drops the ancient
