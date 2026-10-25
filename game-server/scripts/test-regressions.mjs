@@ -34,14 +34,15 @@ try {
         "export * as body from './body';",
         "export * as ratking from './ratking';",
         "export * as coughing from './cough';",
-        "export {reconcilePopulation, ate} from './ai';",
+        "export {reconcilePopulation, ate, scheduleArrivals} from './ai';",
+        "export * as herds from './herds';",
         "export * as study from './study';",
         "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
         "export * as rising from './rising';",
         "export {loadLeaderboard} from './world';",
         "export {handleBench} from './gate';",
         "export {sendCtx} from './chips';",
-        "export {PATROLS, WARRENS_ROOMS, GATEHOUSE_NOARG} from './zone-data';",
+        "export {PATROLS, WARRENS_ROOMS, GATEHOUSE_NOARG, MOUTHS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon} from './zone-util';",
@@ -54,7 +55,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -971,6 +972,98 @@ try {
     glaive.condition = 44.6;
     await cmdRepair(z, me, 'axe');
     assert.equal(glaive.condition, 60, 'the stone takes it up in whole numbers');
+  });
+
+  console.log('the herds');
+  // The wood in small: deer and wolves with rows across 10 rooms, nobody home.
+  function herdWorld(deerRows = 10, wolfRows = 5) {
+    const rooms = new Map(), mobSpawns = [];
+    for (let i = 0; i < 10; i++) rooms.set('w' + i, { id: 'w' + i });
+    for (let i = 0; i < deerRows; i++) mobSpawns.push({ template_id: 'roe-deer', room_id: 'w' + (i % 10) });
+    for (let i = 0; i < wolfRows; i++) mobSpawns.push({ template_id: 'grey-wolf', room_id: 'w' + (i % 10) });
+    const world = { rooms, mobSpawns, mobVariants: [], safeRooms: new Set(), entryRooms: new Set(), exits: new Map(),
+      mobTemplates: new Map([
+        ['roe-deer', { id: 'roe-deer', name: 'a roe-deer', max_hp: 16, respawn_secs: 300, is_boss: 0 }],
+        ['grey-wolf', { id: 'grey-wolf', name: 'a grey wolf', max_hp: 26, respawn_secs: 600, is_boss: 0 }],
+      ]) };
+    const z = { world, creatures: new Map(), sessions: new Map(), herds: new Map(), variantBase: new Map(), arrivals: new Map(),
+      regionOf: () => 'wood', outOfWorld: () => false, roomDist: () => 1, rollCarry: () => undefined,
+      noteCreaturesChanged() {}, roomFeed() {}, roomSound() {}, refreshRoomCtx() {} };
+    const add = (t, room) => { const id = 'c' + Math.random(); z.creatures.set(id, { id, templateId: t, roomId: room, home: room, hp: 1 }); };
+    const count = (t) => [...z.creatures.values()].filter((c) => c.templateId === t).length;
+    return { z, add, count };
+  }
+  check('an emptied region never stays at zero: the floor walks one in (2026-10-25)', () => {
+    const { z, count } = herdWorld();
+    herds.tick(z, 0, true);
+    herds.tick(z, 15 * 60_000, true); // a quarter of an hour, not a deer standing
+    assert.ok(count('roe-deer') >= 1, 'a wiped herd comes back inside the quarter hour');
+  });
+  check('the floor grows with the hunters standing on the ground (2026-10-25)', () => {
+    const one = herds.ratesFor(true, 300, 0, 30, 1, 1)[1];
+    const five = herds.ratesFor(true, 300, 0, 30, 5, 1)[1];
+    assert.ok(five > one * 3, 'five hunters pull in more than one does');
+    const nobody = herds.ratesFor(true, 300, 0, 30, 0, 1)[1];
+    assert.equal(nobody, one, 'nobody out still means one hunter\'s floor, so the empty world refills');
+    assert.equal(herds.ratesFor(true, 300, 20, 30, 5, 1)[1], herds.ratesFor(true, 300, 20, 30, 0, 1)[1], 'above the floor, hunters change nothing');
+  });
+  check('a herd never passes what its region carries, however long it sleeps (2026-10-25)', () => {
+    const { z, add, count } = herdWorld();
+    add('roe-deer', 'w1'); add('grey-wolf', 'w2');
+    herds.tick(z, 0, true);
+    herds.tick(z, 48 * 3_600_000, true); // two days in one step
+    assert.equal(count('roe-deer'), 10);
+    assert.equal(count('grey-wolf'), 5);
+    herds.tick(z, 72 * 3_600_000, true);
+    assert.equal(count('roe-deer'), 10, 'a full region owes nothing');
+  });
+  check('one region refilling never takes another region\'s share (2026-10-25)', () => {
+    const { z, add } = herdWorld(10, 0);
+    z.regionOf = (r) => (Number(r.slice(1)) < 5 ? 'wood' : 'road'); // five rows each
+    add('roe-deer', 'w1'); add('roe-deer', 'w2'); // the wood holds 2, the road none
+    herds.tick(z, 0, true);
+    herds.tick(z, 48 * 3_600_000, true);
+    const inBand = (b) => [...z.creatures.values()].filter((c) => z.regionOf(c.roomId) === b).length;
+    assert.equal(inBand('wood'), 5);
+    assert.equal(inBand('road'), 5);
+  });
+  check('a stray still walking home counts for the region it lives in (2026-10-25)', () => {
+    const { z, add } = herdWorld(10, 0);
+    for (let i = 0; i < 10; i++) { z.world.rooms.set('r' + i, { id: 'r' + i }); z.world.mobSpawns.push({ template_id: 'roe-deer', room_id: 'r' + i }); }
+    z.regionOf = (r) => (r.startsWith('w') ? 'wood' : 'road');
+    for (let i = 0; i < 10; i++) add('roe-deer', 'w' + i);
+    for (const c of z.creatures.values()) c.roomId = 'r0'; // the wood's whole herd still on the road, walking in
+    herds.tick(z, 0, true);
+    herds.tick(z, 6 * 3_600_000, true);
+    const woodHomed = [...z.creatures.values()].filter((c) => c.home.startsWith('w')).length;
+    assert.equal(woodHomed, 10, 'the wood is full; nothing more is owed it');
+  });
+  check('a birth never appears in front of a player (2026-10-25)', () => {
+    const { z, add, count } = herdWorld(10, 0);
+    for (let i = 0; i < 4; i++) add('roe-deer', 'w3'); // the whole herd stands where you stand
+    z.sessions.set('me', { roomId: 'w3' });
+    z.world.rooms.set(MOUTHS[0], { id: MOUTHS[0] }); // strays walk in from a mouth, as in the world
+    herds.tick(z, 0, true);
+    for (let m = 1; m <= 600; m++) herds.tick(z, m * 60_000, true);
+    assert.ok(count('roe-deer') > 4, 'the herd grew');
+    const born = [...z.creatures.values()].filter((c) => c.templateId === 'roe-deer' && !/^c/.test(c.id));
+    assert.ok(born.every((c) => c.roomId !== 'w3'), 'none of them began in the watched room');
+  });
+  check('a herd has no refill timer; a line that is not a herd keeps its own (2026-10-25)', () => {
+    const { z } = herdWorld();
+    z.world.mobSpawns.push({ template_id: 'twice-dead', room_id: 'w1' });
+    z.world.mobTemplates.set('twice-dead', { id: 'twice-dead', name: 'a twice-dead', max_hp: 20, respawn_secs: 90, is_boss: 0 });
+    z.arrivals.set('roe-deer', 5); // banked before the herds came
+    scheduleArrivals(z, 0);
+    assert.ok(!z.arrivals.has('roe-deer') && !z.arrivals.has('grey-wolf'), 'the herds run on births, not a clock');
+    assert.ok(z.arrivals.has('twice-dead'), 'the hollow still run on theirs');
+  });
+  check('the herds run through the offline catch-up and are saved with the world (2026-10-25)', () => {
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zsrc, /ai\.scheduleArrivals\(this, t\);\n\s*herds\.tick\(this, t, true\)/);
+    assert.match(zsrc, /ai\.scheduleArrivals\(this, now\);\n\s*herds\.tick\(this, now, false\)/);
+    assert.match(zsrc, /herds: Object\.fromEntries\(this\.herds\)/);
+    assert.match(zsrc, /this\.herds = new Map\(Object\.entries\(saved\.herds/);
   });
 
   console.log(`\n${passed} regression checks pass`);

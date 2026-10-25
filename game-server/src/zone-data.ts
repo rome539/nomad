@@ -1273,6 +1273,25 @@ export const MIGRATION_MIN_FACTOR = 5;
 // slow refill, never a stopped one — there is always something wandering in
 // off the map eventually. That cap is the safety rail on a system that runs
 // unattended for days in the offline sim.
+// ---- THE HERDS (rome, 2026-10-25: players were clearing the ground faster
+// than it filled, down to nothing on screen; "I'm fine with the world thinning,
+// I just don't want zero"). herds.ts. The living lines above stop running on a
+// refill timer and become a herd per region: the ones still standing breed,
+// strays drift in off the edge of the map, and below a fifth of what the land
+// carries a FLOOR walks one in for every hunter standing in that region, so a
+// crowd gets a thin world and never an empty one. Everything else (the hollow,
+// the road's walkers) keeps its timer and gets the floor on top of it.
+// All rates are per hour, at the pace of a 300s line, and scale with the line's
+// own respawn_secs: a rat breeds at the top of the range, a bear near the
+// bottom. Tuned on scripts/sim-herds.mjs.
+export const HERD_PACE_SECS = 300;            // the line these rates are written for (roe-deer)
+export const HERD_BIRTH_PER_H = 0.4;          // births per head per hour at half-full, before the logistic
+export const HERD_BIRTH_MIN = 0.03;           // the slowest breeder (a bear) still breeds
+export const HERD_BIRTH_MAX = 1.0;            // the fastest (rats) is capped here
+export const HERD_STRAY_FRAC = 0.1;           // strays per hour, as a share of the region's limit, when it is empty
+export const HERD_FLOOR_FRAC = 0.2;           // below this share of the limit, the floor is on
+export const HERD_FLOOR_PER_HUNTER_PER_H = 6; // one in every 10 minutes for each hunter standing in the region
+export const HERD_NO_PREY_SHARE = 0.25;       // a predator on ground with nothing it eats breeds and drifts in at a quarter
 export const ECO_SLOWEST = 4;      // hardest case: an empty den takes 4x as long to fill. Never never.
 // Only the living eat. The hollow do not hunger and are not food, so the deep's
 // bone-things keep the flat clock they always had.

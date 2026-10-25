@@ -6,6 +6,7 @@ import * as exhaustion from "./exhaustion";
 // ZoneDO (its tick and combat live in zone.ts and call in here).
 import type { ZoneDO } from "./zone";
 import * as den from "./den";
+import * as herds from "./herds";
 import { shelteredInDen, rattle, hearthWarm } from "./den";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
@@ -3759,6 +3760,8 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
       m.set(band, (m.get(band) ?? 0) + 1);
     }
     for (const [templateId, cap_] of caps) {
+      // A herd breeds and drifts in on its own (herds.ts); it has no timer.
+      if (herds.isHerd(world, templateId)) { z.arrivals.delete(templateId); continue; }
       // How many dens of this line are standing empty. A pending arrival has not
       // landed yet, so its den is still one of them — it is the one with a clock
       // on it, and the others are what that clock is racing.
@@ -3905,6 +3908,68 @@ function ecologyDrag(
   return 1 + (1 - share(templateId)) * (ECO_SLOWEST - 1);
 }
 
+/**
+ * Makes one body of a line and puts it in the world: a roaming line takes fresh
+ * ground, the rare blood is rolled, and a walker surfaces at the mouth nearest
+ * its den and walks home. `startRoom` is for a body that begins somewhere it
+ * was not born to — a herd's young, beside a living herd-mate (herds.ts).
+ * `homeFixed` keeps the home the caller chose (a herd places its own, inside
+ * its region) instead of letting a roaming line re-roll it across them all.
+ * The caller owns every cap check and every announcement.
+ */
+export function mintCreature(z: ZoneDO, baseTmpl: MobTemplate, home: string, now: number, startRoom?: string, homeFixed = false): Creature {
+  const world = z.world!;
+  // A roaming line ignores its den rows entirely and takes fresh ground.
+  if (!homeFixed) home = rollDen(z, baseTmpl.id, home);
+  // Rare blood, rolled with the den known: what refills the ground is
+  // usually the ordinary version, once in a while the mean cousin — and a
+  // brood promotion only lands on a vacant nest of her line.
+  const tmpl = rollBloodline(z, baseTmpl, home);
+  home = bloodlineHome(z, tmpl, home);
+  // Migration is a walk, not a materialization: a walker surfaces at the
+  // dark mouth nearest its den and makes its way in (territory homing does
+  // the walking). The sessile — mothers, the drowned — and the boss simply
+  // are where they live. A DEEP den only ever refills through a DEEP mouth:
+  // roomDist ignores the sealed descent, so a surface mouth could read
+  // "nearest" to a deep home — and the migrant would strand above the
+  // locked door forever, milling around the hall wing (rome's wight flood,
+  // 2026-07-10). The deep is below the mouths; its things crawl up from
+  // further down, never in through the front door.
+  let roomId = home;
+  if (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !ROOTED.has(tmpl.id)) {
+    const deepHome = DEEP_ROOMS.has(home);
+    let bestD = Number.POSITIVE_INFINITY;
+    for (const m of MOUTHS) {
+      if (!world.rooms.has(m) || DEEP_ROOMS.has(m) !== deepHome) continue;
+      const d = z.roomDist(m, home);
+      if (d < bestD) { bestD = d; roomId = m; }
+    }
+  }
+  const traits = rollMobTraits(tmpl);
+  const creature: Creature = {
+    id: uuid(),
+    templateId: tmpl.id,
+    roomId,
+    hp: Math.max(1, Math.round(tmpl.max_hp * mobHpMult(traits))),
+    hunger: randInt(HUNGRY_AT - 20, HUNGRY_AT + 20), // travel works up an appetite
+    grudges: [],
+    // A fresh migrant starts its walk in promptly; the settled keep their idle clock.
+    nextWanderAt: now + (roomId === home ? randInt(WANDER_MIN_MS, WANDER_MAX_MS) : randInt(4000, 15_000)),
+    target: null,
+    carries: z.rollCarry(tmpl),
+    hidden: LURKERS.has(tmpl.id) || undefined,
+    home,
+    traits: traits.length ? traits : undefined,
+  };
+  z.creatures.set(creature.id, creature);
+  z.noteCreaturesChanged();
+  if (startRoom && world.rooms.has(startRoom)) {
+    creature.roomId = startRoom;
+    creature.nextWanderAt = now + randInt(4000, 15_000);
+  }
+  return creature;
+}
+
 export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
     const world = z.world!;
     // The ceiling, and what is standing under it — see the guard in the loop.
@@ -3944,7 +4009,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
       if (at > now) continue;
       z.arrivals.delete(templateId);
       const baseTmpl = world.mobTemplates.get(templateId);
-      if (!baseTmpl) continue;
+      if (!baseTmpl || herds.isHerd(world, templateId)) continue; // a timer banked before the herds came is void
       // THE CEILING IS CHECKED WHERE THE BODY IS MADE (rome, 2026-08-17, eleven
       // "something heavy settles back onto ground it has always kept" in a row).
       // This is the only place in the game that mints a creature, and it trusted
@@ -4009,50 +4074,10 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         if (open.length) homes = open;
       }
       let home = homes[randInt(0, Math.max(0, homes.length - 1))] ?? world.entryRoom;
-      // A roaming line ignores its den rows entirely and takes fresh ground.
-      home = rollDen(z, baseTmpl.id, home);
-      // Rare blood, rolled with the den known: what refills the ground is
-      // usually the ordinary version, once in a while the mean cousin — and a
-      // brood promotion only lands on a vacant nest of her line.
-      const tmpl = rollBloodline(z, baseTmpl, home);
-      home = bloodlineHome(z, tmpl, home);
-      // Migration is a walk, not a materialization: a walker surfaces at the
-      // dark mouth nearest its den and makes its way in (territory homing does
-      // the walking). The sessile — mothers, the drowned — and the boss simply
-      // are where they live. A DEEP den only ever refills through a DEEP mouth:
-      // roomDist ignores the sealed descent, so a surface mouth could read
-      // "nearest" to a deep home — and the migrant would strand above the
-      // locked door forever, milling around the hall wing (rome's wight flood,
-      // 2026-07-10). The deep is below the mouths; its things crawl up from
-      // further down, never in through the front door.
-      let roomId = home;
-      if (!tmpl.is_boss && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !ROOTED.has(tmpl.id)) {
-        const deepHome = DEEP_ROOMS.has(home);
-        let bestD = Number.POSITIVE_INFINITY;
-        for (const m of MOUTHS) {
-          if (!world.rooms.has(m) || DEEP_ROOMS.has(m) !== deepHome) continue;
-          const d = z.roomDist(m, home);
-          if (d < bestD) { bestD = d; roomId = m; }
-        }
-      }
-      const traits = rollMobTraits(tmpl);
-      const creature: Creature = {
-        id: uuid(),
-        templateId: tmpl.id,
-        roomId,
-        hp: Math.max(1, Math.round(tmpl.max_hp * mobHpMult(traits))),
-        hunger: randInt(HUNGRY_AT - 20, HUNGRY_AT + 20), // travel works up an appetite
-        grudges: [],
-        // A fresh migrant starts its walk in promptly; the settled keep their idle clock.
-        nextWanderAt: now + (roomId === home ? randInt(WANDER_MIN_MS, WANDER_MAX_MS) : randInt(4000, 15_000)),
-        target: null,
-        carries: z.rollCarry(tmpl),
-        hidden: LURKERS.has(tmpl.id) || undefined,
-        home,
-        traits: traits.length ? traits : undefined,
-      };
-      z.creatures.set(creature.id, creature);
-      z.noteCreaturesChanged();
+      const creature = mintCreature(z, baseTmpl, home, now);
+      const tmpl = world.mobTemplates.get(creature.templateId)!;
+      const roomId = creature.roomId;
+      home = creature.home!;
       standing!.set(templateId, (standing!.get(templateId) ?? 0) + 1); // this call's own tally stays true
       // ...and so does the per-room one, or two arrivals in one tick would both
       // read the same room as open and both land in it.

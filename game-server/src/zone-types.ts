@@ -321,6 +321,7 @@ export interface SimState {
   altarHearts?: string[]; // pubkeys whose still-cold heart the shrine is keeping — one promise per wanderer, cold until they come for it
   gibbetCut?: boolean; // the hanged man is down and stays down — see ZoneDO.gibbetCut for why this is persisted and not per-wake
   arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
+  herds?: Record<string, number>; // "line@region" -> part of a body owed, and "_at" -> the herds' clock (herds.ts)
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
   doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)
   fenceOut?: Record<string, number>;

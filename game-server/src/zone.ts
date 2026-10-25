@@ -2,6 +2,7 @@ import { hpLabel, wholeHp } from "./util";
 import { BUILD_ID } from "./public";
 const BUILD_RESTART_EVERY_MS = 120_000;
 import * as exhaustion from "./exhaustion";
+import * as herds from "./herds";
 // One Durable Object per zone: the authoritative simulation — who's where,
 // creature state, what lies on which floor.
 //
@@ -273,6 +274,7 @@ export class ZoneDO implements DurableObject {
   private combatFx = new Map<string, { swung: string[]; struck: string[] }>();
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
+  public herds = new Map<string, number>(); // what each region's herd is owed, and the herds' clock (herds.ts)
   public openDoors = new Set<string>();
   public wanderer: wanderer.Wanderer | null = null; // the one other nomad (wanderer.ts)
   public doorCloseAt = new Map<string, number>(); // "roomId:dir" -> ms epoch the iron remembers its shape (the deep door's timer)
@@ -698,6 +700,7 @@ export class ZoneDO implements DurableObject {
       this.altarHearts = new Set(saved.altarHearts ?? []);
       this.gibbetCut = saved.gibbetCut ?? false;
       this.arrivals = new Map(Object.entries(saved.arrivals));
+      this.herds = new Map(Object.entries(saved.herds ?? {}));
       this.openDoors = new Set(saved.openDoors);
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
@@ -990,6 +993,7 @@ export class ZoneDO implements DurableObject {
       this.applyRegrow(t, true);
       ai.applyArrivals(this, t, true);
       ai.scheduleArrivals(this, t);
+      herds.tick(this, t, true); // the herds breed and drift in through the gap too
       ai.rangePack(this, t); // the coyotes keep choosing ground while the world sleeps, and the wander above walks them to it
       verbs.noteCensus(this, t); // the census's hourly reading, through the gap too (saved by the next live tick)
     }
@@ -1082,6 +1086,7 @@ export class ZoneDO implements DurableObject {
       altarHearts: [...this.altarHearts],
       gibbetCut: this.gibbetCut,
       arrivals: Object.fromEntries(this.arrivals),
+      herds: Object.fromEntries(this.herds),
       openDoors: [...this.openDoors],
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
       fenceOut: Object.fromEntries(this.fenceOut),
@@ -1176,6 +1181,7 @@ export class ZoneDO implements DurableObject {
     this.altarHearts.clear();
     this.gibbetCut = false;
     this.arrivals.clear();
+    this.herds.clear();
     this.openDoors.clear();
     this.doorCloseAt.clear();
     this.fenceOut.clear();
@@ -6017,6 +6023,7 @@ export class ZoneDO implements DurableObject {
     this.applyRegrow(now, false);
     ai.applyArrivals(this, now, false);
     ai.scheduleArrivals(this, now);
+    herds.tick(this, now, false); // the land holds the animals (herds.ts)
     // THE PASSAGE: the summit's animal leaves its mountain on the shadow and
     // hunts the world. Once a tick and world-level, not per creature — it is
     // one animal doing one thing to every band at once (ai.drakePassage).
