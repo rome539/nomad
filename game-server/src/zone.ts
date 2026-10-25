@@ -286,6 +286,8 @@ export class ZoneDO implements DurableObject {
   // itemId -> ms the keeper restocks it. A bare shelf is a bare shelf for
   // everyone (gate.ts owns the churn); survives hibernation.
   public fenceOut = new Map<string, number>();
+  public glut = new Map<string, number>(); // the keeper's stack of each kind he has bought (gate.glutMult)
+  public nextGlutAt = 0;
   public fenceMats = new Map<string, { n: number; at: number }>(); // the keeper's materials (gate.matLeft)
   // The keeper's bounty board: [trophyId, foodId, count?] currently posted.
   // Rotates like the fence; survives hibernation (gate.ts owns the churn).
@@ -705,6 +707,8 @@ export class ZoneDO implements DurableObject {
       this.doorCloseAt = new Map(Object.entries(saved.doorCloseAt ?? {}));
       this.fenceOut = new Map(Object.entries(saved.fenceOut ?? {}));
       this.fenceMats = new Map(Object.entries(saved.fenceMats ?? {}));
+      this.glut = new Map(Object.entries(saved.glut ?? {}));
+      this.nextGlutAt = saved.nextGlutAt ?? 0;
       this.bounties = saved.bounties ?? [];
       this.nextBountyChurnAt = saved.nextBountyChurnAt ?? 0;
       this.nextFenceChurnAt = saved.nextFenceChurnAt ?? 0;
@@ -1091,6 +1095,8 @@ export class ZoneDO implements DurableObject {
       doorCloseAt: Object.fromEntries(this.doorCloseAt),
       fenceOut: Object.fromEntries(this.fenceOut),
       fenceMats: Object.fromEntries(this.fenceMats),
+      glut: Object.fromEntries(this.glut),
+      nextGlutAt: this.nextGlutAt,
       bounties: this.bounties,
       nextBountyChurnAt: this.nextBountyChurnAt,
       nextFenceChurnAt: this.nextFenceChurnAt,
@@ -1186,6 +1192,8 @@ export class ZoneDO implements DurableObject {
     this.doorCloseAt.clear();
     this.fenceOut.clear();
     this.fenceMats.clear();
+    this.glut.clear();
+    this.nextGlutAt = 0;
     this.bounties = [];
     this.nextBountyChurnAt = 0;
     this.nextFenceChurnAt = 0;

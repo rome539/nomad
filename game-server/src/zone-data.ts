@@ -1489,6 +1489,17 @@ export const FENCE_MATS: Record<string, { cap: number; everyMs: number }> = {
   "bone-offcuts":    { cap: 10, everyMs: 12 * 60_000 },
   "linen-strips":    { cap: 10, everyMs: 12 * 60_000 },
 };
+// THE MARKET ANSWERS (rome, 2026-10-25). The keeper pays less for what he is
+// already drowning in: every copy of a kind sold over the hatch, by anyone,
+// goes on his stack, and past GLUT_FREE of them his price falls in proportion
+// (GLUT_FREE / stack), never below GLUT_FLOOR of it. He moves the stack on as
+// time passes — a twelfth of it, and at least one, every GLUT_EASE_MS — so a
+// pelt that was worth nothing at noon is worth something again by evening.
+// What strips a region bare stops paying for it. Cigarettes never glut.
+export const GLUT_FREE = 6;
+export const GLUT_FLOOR = 0.25;
+export const GLUT_EASE_MS = 30 * 60_000;
+export const GLUT_EASE_SHARE = 1 / 12;
 export const FENCE_ABSENT_FRACTION = 0.33; // share of the ROTATING catalog gone at any time
 export const FENCE_OUT_MIN_MS = 60 * 60_000;  // an absent item stays gone this long...
 export const FENCE_OUT_MAX_MS = 180 * 60_000; // ...to this — "for some time", then it's back

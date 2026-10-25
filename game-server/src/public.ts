@@ -7263,7 +7263,7 @@ function statTokenClass(tok) {
 // One goods row's worth, as both layouts show it.
 function goodsWorthText(it) {
   if (!it.mark) return "no use";
-  if (typeof it.price === "number") return String(it.price);
+  if (typeof it.price === "number") return typeof it.usual === "number" && it.usual > it.price ? it.price + " (usually " + it.usual + ")" : String(it.price);
   return "\u25cf\u25cf\u25cf\u25cf".slice(0, it.mark) + "\u25cb\u25cb\u25cb\u25cb".slice(0, 4 - it.mark);
 }
 function tradeItemNode(it, place) {

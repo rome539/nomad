@@ -29,7 +29,7 @@ try {
         "export * as den from './den';",
         "export {cmdMap} from './lore';",
         "export {cmdGo} from './verbs';",
-        "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade} from './gate';",
+        "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, glutMult, tickGlut, offerCore, cmdOffer} from './gate';",
         "export {cmdLook} from './verbs';",
         "export * as body from './body';",
         "export * as ratking from './ratking';",
@@ -55,7 +55,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -281,6 +281,42 @@ try {
     assert.equal(at(12), 0, 'at the failing mark he will not take it');
     assert.equal(goodsWorth(z, { itemId: 'tail', condition: 5, serial: null }), 0.1, 'non-gear is not scaled by condition');
   });
+  check('the keeper pays less for what he is drowning in, and never for cigarettes (2026-10-25)', () => {
+    const z = worthZone();
+    z.glut = new Map();
+    const tin = () => goodsWorth(z, { itemId: 'tin', condition: 100, serial: null });
+    assert.equal(tin(), 20);
+    z.glut.set('tin', 6);
+    assert.equal(tin(), 20, 'a few on his stack cost nothing');
+    z.glut.set('tin', 12);
+    assert.equal(tin(), 10, 'twice the free stack, half the price');
+    z.glut.set('tin', 500);
+    assert.equal(tin(), 5, 'never below a quarter');
+    z.glut.set('dry-cigarettes', 500);
+    assert.equal(glutMult(z, 'dry-cigarettes'), 1, 'tender never gluts');
+  });
+  check('he moves the stack on over time, and a long sleep is caught up (2026-10-25)', () => {
+    const z = worthZone();
+    z.glut = new Map([['tin', 24], ['tail', 1]]); z.nextGlutAt = 0;
+    tickGlut(z, 0); // starts the clock
+    tickGlut(z, 30 * 60_000);
+    assert.equal(z.glut.get('tin'), 22);
+    assert.ok(!z.glut.has('tail'), 'the last one goes');
+    tickGlut(z, 24 * 3_600_000);
+    assert.ok(!z.glut.has('tin'), 'a day clears it');
+  });
+  await checkAsync('he says so across the counter, and every sale goes on his stack (2026-10-25)', async () => {
+    const z = worthZone();
+    z.glut = new Map([['tin', 100]]);
+    z.world.itemTemplates.get('tin').slot = '';
+    z.isGear = () => false;
+    const session = { buying: { escrow: [], paid: 0, wants: [{ cost: 999 }] } };
+    const line = await offerCore(z, session, { rowId: 'r1', itemId: 'tin', condition: 100, serial: null, equipped: false }, '');
+    assert.match(line, /more of these than I can move/);
+    const src = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(src, /for \(const \[itemId, n\] of soldKinds\) if \(!CIGARETTES\.has\(itemId\)\) z\.glut\.set/);
+    assert.match(src, /export function tickFence\(z: ZoneDO, now: number\): void \{\n  tickGlut\(z, now\);/);
+  });
   check('the rough mark is one to four pips by band', () => {
     assert.deepEqual([0.1, 1.9, 2, 4.9, 5, 14.9, 15, 20].map(worthMark), [1, 1, 2, 2, 3, 3, 4, 4]);
     assert.equal(worthPips(3), '\u25cf\u25cf\u25cf\u25cb');
@@ -308,6 +344,33 @@ try {
     await sendTrade(z, me);
     const f = frames.find((x) => x.t === 'trade');
     assert.equal(f.stock[0].description, 'A plain sword, nicked at the edge.');
+  });
+  await checkAsync('a price you know reads with what it usually fetches, window and text alike (2026-10-25)', async () => {
+    const { z, me, said, frames } = shelfWorld();
+    z.glut = new Map([['tin', 12]]);
+    z.isGear = () => false;
+    z.world.itemTemplates.set('tin', { ...z.world.itemTemplates.get('tin'), rarity: 'common', description: 'A tin.' });
+    const knows = { prepare(q) { const st = { bind: () => st, run: async () => ({ meta: { changes: 1 } }), first: async () => null,
+      all: async () => ({ results: /keeper_known/.test(q) ? [{ item_id: 'tin' }] : [] }) }; return st; } };
+    z.env = { DB: knows };
+    me.items.push({ rowId: 't1', itemId: 'tin', condition: 100, serial: null, equipped: false });
+    z.fenceGuard = undefined;
+    me.buying = { escrow: [], paid: 0, wants: [{ cost: 7 }] };
+    await sendTrade(z, me);
+    const row = frames.find((x) => x.t === 'trade').goods.pack.find((g) => g.id === 'tin');
+    assert.equal(row.price, 10);
+    assert.equal(row.usual, 20, 'the window carries what it usually fetches');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const fn = pub.match(/function goodsWorthText\(it\) \{[\s\S]*?\n\}/)[0].replace(/\\\\u/g, '\\u');
+    const goodsWorthText = new Function(fn + '; return goodsWorthText;')();
+    assert.equal(goodsWorthText(row), '10 (usually 20)', 'and the window draws it');
+    assert.equal(goodsWorthText({ mark: 3, price: 20 }), '20');
+    await cmdOffer(z, me, '');
+    assert.match(said.join('\n'), /a tin \u2014 10 \(usually 20\)/);
+    z.glut.clear();
+    said.length = 0;
+    await cmdOffer(z, me, '');
+    assert.match(said.join('\n'), /a tin \u2014 20(?! \(usually)/, 'nothing extra when he is not full');
   });
   await checkAsync('typed look at the hatch reads the shelf', async () => {
     const { z, me, said } = shelfWorld();

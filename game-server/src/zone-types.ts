@@ -327,6 +327,8 @@ export interface SimState {
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
   doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)
   fenceOut?: Record<string, number>;
+  glut?: Record<string, number>; // itemId -> the keeper's stack of it (gate.glutMult)
+  nextGlutAt?: number; // when he next moves some of it on
   fenceMats?: Record<string, { n: number; at: number }>; // the keeper's materials as last counted (mig 328)
   bloodOn?: Record<string, number[]>; // pubkey -> kill timestamps; the evidence walks around on the murderer // itemId -> ms the keeper restocks it (bare shelves — the market has other customers)
   nextStoneAt?: number; // ms the world next mints a hammerstone into a random haunt (no farmable spot)
