@@ -12930,7 +12930,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
 // day for the last - and only grades it lighter, darker or greyer; nothing is
 // borrowed, the flames are where they were painted, and a lantern that goes
 // out every full moon is a lantern that looks broken.
-var FX_UNDER_TINT = { moon: 1, eclipse: 1, "after-rain": 1 };
+// ...AND FOG GRADED FOR THE HOUR (rome, 2026-10-25: the gates' torches went
+// out in the night and dawn fog). Same argument: the fog plate is painted for
+// fog, lanterns and all, and the night, dawn and dusk grades only darken it.
+var FX_UNDER_TINT = { moon: 1, eclipse: 1, "after-rain": 1, "fog-night": 1, "fog-dawn": 1, "fog-dusk": 1 };
 var fxCanvas = document.getElementById("scene-fx");
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");

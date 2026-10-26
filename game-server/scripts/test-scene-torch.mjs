@@ -682,6 +682,12 @@ t("the Lodging at dawn is the dawn ground under a sky", strip(sceneEl.style.back
 ctx.paint("out", "fog", "", "ml-fogdawn", 0, 0, "the-marshals-lodging", 0, 0, true, 0, 1);
 t("...and in fog at dawn the fog, graded for dawn", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-fog.webp" && /t-fog-dawn/.test(sceneEl.className), sceneEl.className);
 
+// THE TORCHES BURN IN GRADED FOG (rome, 2026-10-25): every fog grade lets the
+// room's flame effects run, or the gates' lanterns go out in night fog.
+const underTint = src.match(/var FX_UNDER_TINT = \{([^}]*)\}/)[1];
+for (const g of ["fog-night", "fog-dawn", "fog-dusk"]) t("the torches burn under " + g, underTint.includes('"' + g + '"'), underTint);
+for (const g of (src.match(/#scene\.t-(fog-[a-z]+) \{/g) || []).map((m) => m.slice(9, -2))) t("every fog grade the page draws keeps its torches: " + g, underTint.includes('"' + g + '"'));
+
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");
 process.exit(fail ? 1 : 0);
