@@ -321,10 +321,10 @@ try{
  await page.evaluate(()=>decodeStops.get('/room-bg/gatehouse.webp').release());
  await page.waitForFunction(()=>demo.painted()==='/room-bg/gatehouse.webp');
  assert.equal(await page.$eval('#weather-particles',e=>e.style.display),'none');
- await page.evaluate(()=>{holdDecode('/room-bg/gully-rain.webp');demo.paintScene('mountain','rain','gully','stale-rain',false,1,'',0,0,false);});
- await page.waitForFunction(()=>decodeStops.get('/room-bg/gully-rain.webp').reached);
+ await page.evaluate(()=>{holdDecode('/room-bg/gully-day.webp');demo.paintScene('mountain','rain','gully','stale-rain',false,1,'',0,0,false);});
+ await page.waitForFunction(()=>decodeStops.get('/room-bg/gully-day.webp').reached);
  await page.evaluate(()=>demo.paintScene('mountain','day','gatehouse','still-inside',false,1,'',0,0,true));
- await page.evaluate(()=>decodeStops.get('/room-bg/gully-rain.webp').release());
+ await page.evaluate(()=>decodeStops.get('/room-bg/gully-day.webp').release());
  await page.waitForNetworkIdle({idleTime:300,timeout:4000}).catch(()=>{}); // the page polls on timers now, so the wire is never wholly quiet
  assert.equal(await page.evaluate(()=>demo.painted()),'/room-bg/gatehouse.webp');
  assert.equal(await page.$eval('#weather-particles',e=>e.style.display),'none');

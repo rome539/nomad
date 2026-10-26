@@ -63,11 +63,11 @@ function skyFor(id, { night = false, raining = false, inside = false } = {}) {
 t("a roofed road room takes the NIGHT at night", skyFor("the-carters-rest", { night: true }) === "night",
   skyFor("the-carters-rest", { night: true }));
 t("...and the day by day", skyFor("the-carters-rest") === "day", skyFor("the-carters-rest"));
-// ...and the roof still does its job.
-t("...but the rain never reaches it", skyFor("the-carters-rest", { raining: true }) === "day",
+// ...AND THE WEATHER OUTSIDE (rome, 2026-10-26: the Lodge Loft's window showed
+// no dawn, dusk or rain). The roof's job - keeping it off the floor - is the
+// client's now; the server says what the sky is doing.
+t("...and the rain outside it", skyFor("the-carters-rest", { raining: true }) === "rain",
   skyFor("the-carters-rest", { raining: true }));
-t("...not even on a wet night", skyFor("the-carters-rest", { night: true, raining: true }) === "night",
-  skyFor("the-carters-rest", { night: true, raining: true }));
 // The open road beside it is unchanged in every respect.
 t("the open road still takes the night", skyFor("the-east-paving", { night: true }) === "night",
   skyFor("the-east-paving", { night: true }));
@@ -81,13 +81,11 @@ t("...and the night", skyFor("the-marshals-lodging", { night: true }) === "night
 // And the genuinely sunless places keep their answer.
 t("a sealed fortress room still has no sky", skyFor("the-deep-cell", { night: true }) === "in",
   skyFor("the-deep-cell", { night: true }));
-// AND THE OTHER ROOFS IN THE WORLD ARE LEFT ALONE. Twenty rooms across the
-// dens, the open ground and the wood have the same roof and the same argument,
-// and their bands have no ground plates - so widening this would repaint
-// interiors nobody asked about for no gain. They keep "in" until their own
-// bands are painted.
-t("a roof in an unpainted band is untouched", skyFor("the-black-hut", { night: true }) === "in",
+// AND EVERY OTHER ROOF IN OPEN COUNTRY TOO: the dens, the open ground, the wood.
+t("a roof in the dens takes the night", skyFor("the-black-hut", { night: true }) === "night",
   skyFor("the-black-hut", { night: true }));
+t("...and the rain outside", skyFor("the-black-hut", { raining: true }) === "rain",
+  skyFor("the-black-hut", { raining: true }));
 // Gates are exterior approaches; the gatehouse is the separate interior.
 t("an exterior gate keeps its sky and rain", skyFor("the-relay-house", { raining: true }) === "rain",
   skyFor("the-relay-house", { raining: true }));

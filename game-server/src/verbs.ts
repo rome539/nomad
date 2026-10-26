@@ -1494,6 +1494,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   z.refreshRoomCtx(from);
   z.refreshRoomCtx(session.roomId);
   await ai.provokeGrudges(z, session, true); // you walked in — a grudge-holder gets the jump
+  await ai.waryBolt(z, session, stealthMult); // on hunted ground the prey are gone before you are in
   // …and a dormant listener might just catch the sound of your arrival — but a
   // light tread scales that roll DOWN (rome, 2026-07-19: the plate ninja is
   // dead). Cloth tiptoes past the sleeper; plate wakes the thing in the room.

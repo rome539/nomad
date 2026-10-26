@@ -9054,26 +9054,25 @@ export class ZoneDO implements DurableObject {
     // takes the hour like everything around it. Only the genuinely sunless
     // places, the keep and the warrens and the deep, still answer "in".
     //
-    // THE ROAD ONLY, AND ON PURPOSE. Twenty-nine rooms in the world have a roof
-    // in open country - nine on the road, and twenty more across the dens, the
-    // open ground and the wood - and the same argument is true of all of them.
-    // But "in" is a wash the client already knows how to draw, so widening this
-    // to every region would repaint twenty interiors nobody asked about, in
-    // three bands that have no ground plates at all yet and so gain nothing by
-    // it. The road is the band with pictures and the one that showed the fault.
-    //
-    // The other three want exactly this treatment the day their bands are
-    // painted, and then this is one word.
+    // EVERY ROOF IN OPEN COUNTRY, AND THE WEATHER TOO (rome, 2026-10-26: the
+    // Lodge Loft's window showed no dawn, no dusk, no rain). This was the road
+    // only, and the hour only, while the other bands had no pictures; they all
+    // have them now, and a window is a window. So a roofed room anywhere under
+    // the open sky is sent the sky as it is outside - the hour, the moon, the
+    // rain, the fog - beside the covered flag, and the CLIENT keeps the weather
+    // off the floor (paintScene: a roof shows the weather in its sky and keeps
+    // its ground dry). Only the genuinely sunless places still answer "in".
     const roofed = !OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt
-      && this.world!.rooms.get(session.roomId)?.region === "road";
+      && OUTDOOR_REGIONS.has(this.world!.rooms.get(session.roomId)?.region ?? "");
+    const seesOut = openSkyForArt || roofed;
     // grey while the ground is wet, unless its sky cleared off the rain (AFTER_RAIN_CLEARS);
     // rain next door is grey whatever, its cloud is overhead
     const wet = (events.wxPhase(this, "rain", session.roomId) === "aftermath" && !events.afterRainCleared(this, session.roomId))
       || !!events.rainNearby(this, session.roomId);
-    return (!OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt && !roofed) ? "in"
-    : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId))) ? "snow"
-    : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId))) ? "fog"
-    : (!roofed && (openSkyForArt ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId))) ? "rain"
+    return (!OUTDOOR_ROOMS.has(session.roomId) && !seesOut) ? "in"
+    : (seesOut ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId)) ? "snow"
+    : (seesOut ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId)) ? "fog"
+    : (seesOut ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId)) ? "rain"
     // A BLOOD MOON IS ITS OWN NIGHT. It was collapsing into plain dark,
     // so the one night in the calendar the whole world changes colour —
     // red eyes in the hollow ones, the moon door lit red — looked
@@ -9285,9 +9284,10 @@ export class ZoneDO implements DurableObject {
   // tells them in the second person ("...toward you") and the room in the third,
   // and without it the target got both (rome, 2026-08-30). Optional and last, so
   // every existing caller is untouched.
-  public roomFeed(roomId: string, text: string, exceptPubkey?: string, toRelay = true, cls?: string, speaker?: { name: string; pk: string }, except2?: string): void {
+  public roomFeed(roomId: string, text: string, exceptPubkey?: string, toRelay = true, cls?: string, speaker?: { name: string; pk: string }, except2?: string, far?: string): void {
     const base: Record<string, unknown> = { v: 0, kind: 24913, room: roomId, text };
     if (cls) base.cls = cls;
+    if (far) base.far = far; // a sound the client plays with the line (FAR in public.ts)
     // Speech carries its speaker so the client can key-colour the name; only the
     // local socket copy gets it — the relay text (below) never does.
     if (speaker) { base.who = speaker.name; base.sp = speaker.pk; }

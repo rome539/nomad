@@ -15,7 +15,7 @@ try {
  const method=zone.match(/  public artSkyFor\(session: Session\): string \| undefined \{[\s\S]*?^  \}/m)[0];
  const {code}=await transform(method.replace('public artSkyFor','function artSkyFor'),{loader:'ts'});
  let now=0,weather='';
- const c={seesArt:(pk)=>pk==='synthetic',OUTDOOR_ROOMS:new Set(['outside']),ROOF_SHOWS_OUTSIDE:new Set(),events:{weatherNow:()=>weather,snowed:()=>weather==='snow',foggy:()=>weather==='fog',raining:()=>weather==='rain',phaseOf:()=>'',wxPhase:()=>'',afterRainCleared:()=>true,rainNearby:()=>false}};
+ const c={seesArt:(pk)=>pk==='synthetic',OUTDOOR_ROOMS:new Set(['outside']),OUTDOOR_REGIONS:new Set(['out','road','wood','mountain','den','crossing']),ROOF_SHOWS_OUTSIDE:new Set(),events:{weatherNow:()=>weather,snowed:()=>weather==='snow',foggy:()=>weather==='fog',raining:()=>weather==='rain',phaseOf:()=>'',wxPhase:()=>'',afterRainCleared:()=>true,rainNearby:()=>false}};
  for(const name of ['isNight','isFullMoon','isBloodMoon','isDawn','isDusk','eclipsePhase'])c[name]=()=>clock[name](now);
  vm.createContext(c);vm.runInContext(code,c);
  const z={outOfWorld:()=>false,inGatehouse:new Set(),world:{entryRooms:new Set(),rooms:new Map()}},session={pubkey:'synthetic',roomId:'outside'};

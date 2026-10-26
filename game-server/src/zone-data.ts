@@ -7113,6 +7113,11 @@ export const CONDITION_HUNTED_AT = 15;                   // recent player kills 
 export const CONDITION_HUNTED_CLEARS = 6;                // and below which it is not any more
 export const CONDITION_KILL_HALF_MS = 60 * 60_000;       // recent kills halve this often
 export const CONDITION_AMBIENT_ODDS = 0.35;              // of a region's passing lines, this share speak of it
+// WARY (rome, 2026-10-25). On hunted ground the prey change: they bolt when
+// someone walks in, the day's animals give up the dawn and come out only in the
+// last light, and some of them stay in cover through the feeding hours.
+export const WARY_BOLT_ODDS = 0.6;   // a wary animal bolts as you walk in, at full load; a light tread halves it at the most
+export const WARY_STAYS_IN = 0.5;    // of the wary, this share keep to cover through a feeding hour
 export const ROUND_RANGE = 5; // how far from home an animal will go to feed
 // Not everything feeds on grass. A carrion eater's waking hours are spent on
 // the carrion ground (CARRION_ROOMS — the mountain's bone fan) as well as the

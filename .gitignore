@@ -40,6 +40,7 @@ game-server/public/mob/
 # plates in a few minutes (the torch positions it reads ARE committed, in
 # scripts/plate-fx-torches.json). Uploads from the working tree like the rest.
 game-server/public/room-fx/
+game-server/public/room-fog/
 # ...and the nine skies. These are the ones it would hurt most to lose, because
 # unlike a plate they are not per-room: every layered scene in the world is
 # painted with its sky cut out and one of these drawn behind it, so without them

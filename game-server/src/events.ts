@@ -1537,12 +1537,12 @@ function feedSky(z: ZoneDO, inRoom: (roomId: string) => boolean, line: string): 
 // A line to everyone standing in rooms the event can reach. Every line through
 // here is the WORLD speaking — the "evt" tag colors it apart from creatures
 // and scenery (the omen voice, rome 2026-07-13).
-function feedWhere(z: ZoneDO, inRoom: (roomId: string) => boolean, line: string): void {
+function feedWhere(z: ZoneDO, inRoom: (roomId: string) => boolean, line: string, far?: string): void {
   const seen = new Set<string>();
   for (const s of z.sessions.values()) {
     if (seen.has(s.roomId) || !inRoom(s.roomId)) continue;
     seen.add(s.roomId);
-    z.roomFeed(s.roomId, line, undefined, false, "evt"); // events are local news
+    z.roomFeed(s.roomId, line, undefined, false, "evt", undefined, undefined, far); // events are local news
   }
 }
 
@@ -2902,22 +2902,26 @@ async function tickBell(z: ZoneDO, now: number): Promise<void> {
       st.until = now + BELL_TELEGRAPH_MS;
       // Standing at the source gets its own line — "somewhere above" is a lie
       // if you're the one under the bell (rome, 2026-07-24).
-      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "Somewhere above, a single bell-note rolls through the halls — then silence.");
+      // AND HEARD INSIDE THE KEEP TOO (rome, 2026-10-25: no bell in the halls).
+      // The keep only ever got the line; the sound went to the bands outside
+      // its walls, so the one place the bell is law was the one place it was
+      // silent.
+      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "Somewhere above, a single bell-note rolls through the halls — then silence.", "bell");
       // A fortress bell is heard from the road, and through the floor. It is the
       // one SCHEDULED thing in this world — a player can learn its hours — and
       // until now you could only know that by standing inside the keep for it.
       z.roomFeedBands(KEEP_HEARD_BANDS, "One bell-note comes off the fortress and rolls out over everything, and then nothing.", "evt", true, "bell");
-      z.roomFeed("the-bell-cote", "The bell shudders under your hand before it even sounds — one note, so close it isn't sound anymore, just impact.", undefined, false, "evt");
+      z.roomFeed("the-bell-cote", "The bell shudders under your hand before it even sounds — one note, so close it isn't sound anymore, just impact.", undefined, false, "evt", undefined, undefined, "bell");
       z.roomFeed("the-issue-room", "The note comes down through the stone and every racked blade in the room answers it at once, one thin hum out of two hundred edges. The dust stands up off them.", undefined, false, "evt");
       break;
     }
     case "telegraph": {
       st.phase = "active";
       st.until = now + BELL_ACTIVE_MS;
-      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.");
+      feedWhere(z, (roomId) => inKeep(roomId) && roomId !== "the-bell-cote" && roomId !== "the-issue-room", "The bell begins to RING — over and over, iron on iron, and the keep is waking around you.", "bells");
       z.roomFeedBands(KEEP_HEARD_BANDS, "The fortress bell is RINGING — on and on, iron on iron, and whatever is inside those walls is waking to it.", "evt", true, "bells");
-      z.roomFeed("the-bell-cote", "The bell is RINGING inches from you — iron on iron, filling your skull, drowning every other sense you have.", undefined, false, "evt");
-      z.roomFeed("the-issue-room", "The bell is RINGING, a long way up and coming down through every stone of the fortress into this room. The racks sing with it. This is the sound they were stacked here for, and it is two centuries late.", undefined, false, "evt");
+      z.roomFeed("the-bell-cote", "The bell is RINGING inches from you — iron on iron, filling your skull, drowning every other sense you have.", undefined, false, "evt", undefined, undefined, "bells");
+      z.roomFeed("the-issue-room", "The bell is RINGING, a long way up and coming down through every stone of the fortress into this room. The racks sing with it. This is the sound they were stacked here for, and it is two centuries late.", undefined, false, "evt", undefined, undefined, "bells");
       // Everything under the keep's roof stirs at once; the rats are already
       // running for the earth (see bellDrivesRats) — and a warren full of
       // bolted rats is a warren nearer to boiling over. The bell loads the

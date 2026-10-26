@@ -1137,6 +1137,10 @@ export const PAGE = `<!doctype html>
      the same cold grey, with no warmth in it (rome, 2026-10-15). The drifting copy inside #sky takes the same grade with it. */
   /* sepia then a turn to blue: the grey takes the night sky's own deep blue, so
      the cloud reads as night cloud and not a dimmed noon. */
+  /* Rain and fog by day stand under the after-rain cloud (layered weather). */
+  body[data-view="image"] #sky[data-sky="rain"] { filter: brightness(.75) saturate(.6); }
+  body[data-view="image"] #sky[data-sky="fog"]  { filter: brightness(1.25) saturate(.25) contrast(.7); }
+  body[data-view="image"] #sky[data-sky="rain-night"] { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.15) contrast(1.12); }
   body[data-view="image"] #sky[data-sky="wet-night"] { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.25) contrast(1.08); }
   body[data-view="image"] #sky[data-sky="wet-dusk"]  { filter: brightness(.40) saturate(.60) contrast(1.04); }
   body[data-view="image"] #sky[data-sky="wet-dawn"]  { filter: brightness(.44) saturate(.60) contrast(1.04); }
@@ -1157,6 +1161,14 @@ export const PAGE = `<!doctype html>
      stone. The sky behind carries the evening; the ground is simply dark.
      The three below stay because each is a real change to what falls on the
      ground rather than a repair to a borrowed picture. */
+  /* ...EXCEPT DAWN (rome, 2026-10-25: the night floor is not the right match,
+     under either dawn sky). Dawn's sky is nearly as bright as day's at the
+     horizon (measured: ~145 against day's ~155, the night sky's ~45), and the
+     night plate under it read ~30, cold with moonlight. The light is coming,
+     and it is not the moon's: the night ground is lifted and the blue taken
+     out of it. It stays the night plate, so the shadows are not noon's and the
+     lamps are still burning. */
+  body[data-view="image"] #scene.t-dawn { filter: brightness(1.55) sepia(.38) saturate(.85) hue-rotate(-8deg); }
   body[data-view="image"] #scene.t-eclipse { filter: brightness(.70) saturate(.55) contrast(1.06); }
   body[data-view="image"] #scene.t-moon    { filter: brightness(1.10) saturate(.92); }
   /* THE BLOOD MOON IS THE ONE TINT A FILTER CANNOT DO. Every CSS filter treats
@@ -1181,27 +1193,26 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #scene.t-night { filter: brightness(.42) saturate(.85); }
   body[data-view="image"] #scene.t-after-rain { filter: brightness(.94) saturate(.80) contrast(.96); }
   body[data-view="image"] #scene.t-fog   { filter: brightness(.92) saturate(.45) contrast(.86); }
-  /* FOG AFTER DARK takes the game's own night grade (rome, 2026-10-25: not dark
-     enough, and not the night we use) — the wet night's, word for word. The fog
-     plate is a daylit photograph; this brings it to the night plates' dark
-     cold blue (measured: fog ~27 against the night plates' ~20, where a plain
-     .42 dimming left it at ~50 and grey). */
-  body[data-view="image"] #scene.t-fog-night { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.25) contrast(1.08); }
-  /* ...and at dawn and dusk the wet sky's low-light grades, word for word. */
-  body[data-view="image"] #scene.t-fog-dawn { filter: brightness(.44) saturate(.60) contrast(1.04); }
-  body[data-view="image"] #scene.t-fog-dusk { filter: brightness(.40) saturate(.60) contrast(1.04); }
-  /* Snow takes the same three, word for word (measured: night ~25-35 against
-     the night plates' ~18-28, the snow still pale). */
+  /* Snow is the one ground weather still painted, and after dark and in the
+     low light it takes the wet sky's grades, word for word (measured: night
+     ~25-35 against the night plates' ~18-28, the snow still pale). Rain and fog
+     stand on the hour's own plate (paintScene) and need none. */
   body[data-view="image"] #scene.t-snow-night { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.25) contrast(1.08); }
   body[data-view="image"] #scene.t-snow-dawn { filter: brightness(.44) saturate(.60) contrast(1.04); }
   body[data-view="image"] #scene.t-snow-dusk { filter: brightness(.40) saturate(.60) contrast(1.04); }
-  /* Rain is painted dark already: the night's colour at the night plates'
-     darkness (~20-26 measured; the full grade made it ~8), and the wet dawn
-     and dusk as they are. */
-  body[data-view="image"] #scene.t-rain-night { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.40) contrast(1.08); }
-  body[data-view="image"] #scene.t-rain-dawn { filter: brightness(.44) saturate(.60) contrast(1.04); }
-  body[data-view="image"] #scene.t-rain-dusk { filter: brightness(.40) saturate(.60) contrast(1.04); }
-  body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
+  /* Rain after dark on the night plate (measured: the glade's night ground ~40
+     raw, ~25 here - snow at night reads ~25-35). */
+  /* Rain at dawn: the dawn ground (t-dawn, word for word), then the cloud's
+     shadow over it as daytime rain darkens the day. */
+  body[data-view="image"] #scene.t-rain-dawn { filter: brightness(1.55) sepia(.38) saturate(.85) hue-rotate(-8deg) brightness(.58) saturate(.85); }
+  /* Rain at dusk: dusk's ground (the night plate, raw) under the same shadow. */
+  body[data-view="image"] #scene.t-rain-dusk { filter: brightness(.58) saturate(.85); }
+  body[data-view="image"] #scene.t-rain-dark { filter: brightness(.62) saturate(.85) contrast(1.05); }
+  /* RAIN BY DAY DARKENS THE WHOLE PICTURE ALIKE (rome, 2026-10-26). It was a
+     wet-floor gradient over the bottom two-thirds of the frame, and the tops of
+     the trees and buildings above it stayed light; the grade itself carries the
+     dark now, on the plate only, so the sky behind keeps its own. */
+  body[data-view="image"] #scene.t-rain  { filter: brightness(.55) saturate(.80) contrast(1.05); }
   body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
   /* LIGHTNING LIGHTS THE PLATE ITSELF (rome, 2026-10-13): the picture, its sky
      and every creature in it blaze and fall back, twice, the way a real flash
@@ -1284,6 +1295,39 @@ export const PAGE = `<!doctype html>
      hand. Placed over the scene box by script, like the weather, and under the
      creatures so nothing burns in front of them. See fxScene. */
   #scene-fx, #scene-sparks { display: none; position: fixed; z-index: 0; pointer-events: none; }
+  /* THE FOG IS LAID OVER THE GROUND, NOT PAINTED INTO IT (rome, 2026-10-25).
+     The scene's own box, so the thick band sits on the horizon line (55%) where
+     the far ground is, thinning to almost nothing at your feet. One veil per
+     hour, coloured to the light it is lit by. */
+  /* THE TORCH ON THE SNOW (rome, 2026-10-26). Snow has no torch picture, so the
+     snow picture itself, coloured like the flame (#torchwarm), is added over the
+     darkened scene where the torch's light falls - the light map taken from the
+     ground's own night and torch pictures (scripts/plate-fog.py). It breathes a
+     little, as the torch plates' own light does. */
+  #snowlight { display: none; position: fixed; left: 0; right: 0; top: 0; bottom: var(--botth); z-index: 0; pointer-events: none;
+    background-size: 100% 100%; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; filter: url(#torchwarm); mix-blend-mode: plus-lighter; }
+  body[data-view="image"] #snowlight.on { display: block; animation: snowflick 2.6s ease-in-out infinite alternate; }
+  @keyframes snowflick { 0% { opacity: .9; } 40% { opacity: 1; } 70% { opacity: .86; } 100% { opacity: .97; } }
+  @media (prefers-reduced-motion: reduce) { body[data-view="image"] #snowlight.on { animation: none; } }
+  #fogveil { display: none; position: fixed; left: 0; right: 0; top: 0; bottom: var(--botth); z-index: 0; pointer-events: none; }
+  /* ...LAID THROUGH THE PLATE'S OWN FOG MASK (scripts/plate-fog.py): the colour
+     is solid and the mask, worked out from the picture's depth, says how much
+     of it stands in front of each part of the picture. */
+  #fogveil.masked { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+  body[data-view="image"] #fogveil.masked.f-day { background: rgb(196,200,204); }
+  /* Dawn's fog is the light coming, cool and pale; dusk's is the night's blue
+     with a little light still in it (rome, 2026-10-26: one flat grey for both
+     sat wrong on the ground under each). */
+  body[data-view="image"] #fogveil.masked.f-dawn { background: rgb(104,108,116); }
+  body[data-view="image"] #fogveil.masked.f-dusk { background: rgb(52,64,82); }
+  /* Night fog is the night plates' own moonlit blue, a shade lighter than the
+     ground it hangs over (rome, 2026-10-26: the slate grey read as a smear on a
+     blue night, not fog in it). */
+  body[data-view="image"] #fogveil.masked.f-night { background: rgb(40,56,74); }
+  body[data-view="image"] #fogveil.f-day { display: block; background: linear-gradient(to bottom, rgba(196,200,204,.92) 0%, rgba(196,200,204,.92) 50%, rgba(196,200,204,.76) 62%, rgba(196,200,204,.38) 85%, rgba(196,200,204,.20) 100%); }
+  body[data-view="image"] #fogveil.f-dawn { display: block; background: linear-gradient(to bottom, rgba(104,108,116,.90) 0%, rgba(104,108,116,.88) 50%, rgba(104,108,116,.72) 62%, rgba(104,108,116,.34) 85%, rgba(104,108,116,.16) 100%); }
+  body[data-view="image"] #fogveil.f-dusk { display: block; background: linear-gradient(to bottom, rgba(52,64,82,.90) 0%, rgba(52,64,82,.88) 50%, rgba(52,64,82,.72) 62%, rgba(52,64,82,.34) 85%, rgba(52,64,82,.16) 100%); }
+  body[data-view="image"] #fogveil.f-night { display: block; background: linear-gradient(to bottom, rgba(40,56,74,.90) 0%, rgba(40,56,74,.88) 50%, rgba(40,56,74,.70) 62%, rgba(40,56,74,.32) 85%, rgba(40,56,74,.14) 100%); }
   #scene-sparks { mix-blend-mode: screen; }
   #mobs { display: none; }
   body[data-view="image"] #mobs {
@@ -2571,6 +2615,9 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   <div id="scene" aria-hidden="true"></div>
   <canvas id="scene-fx" aria-hidden="true"></canvas>
   <canvas id="scene-sparks" aria-hidden="true"></canvas>
+  <div id="snowlight" aria-hidden="true"></div>
+  <div id="fogveil" aria-hidden="true"></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fogmix" color-interpolation-filters="sRGB"><feColorMatrix id="fogmixm" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><filter id="torchwarm" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1.3 0 0 0 0 0 .62 0 0 0 0 0 .22 0 0 0 0 0 1 0"/></filter></svg>
   <div id="mobs" aria-hidden="true"></div>
   <canvas id="weather-particles" aria-hidden="true"></canvas>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
@@ -10029,7 +10076,8 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "45";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FX_V   = "17";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "4";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "21";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11210,7 +11258,7 @@ var TORCH_HOURS = { night: 1, moon: 1, blood: 1, eclipse: 1, dusk: 1, dawn: 1, "
 // doing the work — same argument that moved dusk and dawn.
 // The wet low hours and the wet night stand on the night plate, which is the
 // right ground for them as it is; the grey is all in the sky.
-var NO_GROUND_TINT = { dawn: 1, dusk: 1, blood: 1, "wet-night": 1, "wet-dusk": 1, "wet-dawn": 1 };
+var NO_GROUND_TINT = { dusk: 1, blood: 1, "wet-night": 1, "wet-dusk": 1, "wet-dawn": 1 };
 // MORE THAN ONE SKY FOR AN HOUR. An hour listed here owns a POOL, and which one
 // is up is decided by the world-day count the server sends — so the sky changes
 // from one day to the next and never from one room to the next. A sky picked per
@@ -11357,6 +11405,13 @@ var SKY_TURN = { x: "scaleX(-1)", y: "scaleY(-1)", xy: "scale(-1, -1)" };
 // height — 21% for the largest thing in the game, which is what caps this at 72
 // rather than 80: at 80 a stag's feet go off the bottom of the frame.
 var MOB_LINE_DEFAULT = 55;
+// EVERY GATE STANDS ITS NOMADS ON THE PAVING (rome, 2026-10-25: a nomad at the
+// Weeper's Arch was walking into the wall). A gate plate is a building or a wall
+// with its door, and its base sits on about 70% of the frame with the yard below
+// it - so on the default line a standing nomad's feet landed at 72%, right at
+// the foot of the wall. Nothing but people stands in a gate, and this puts them
+// out on the yard in front of the door, feet near 80%.
+var MOB_LINE_GATE = 63;
 // Horizontal floor limits at the standing line, measured on the shared plate.
 // Its alcove walls intrude into the outer edges of every room using this image.
 var MOB_FLOOR = { "keep-passage": [14, 86] };
@@ -11520,12 +11575,6 @@ var MOB_LINE = {
                  // with worn earth in front of and behind them.
                  works: 56,
                  "sea-cave": 54,
-                 // THE TWO CROSSING GATES. Both are a yard in front of a
-                 // building with the water behind it, and both yards run from
-                 // about 60% down, so they take the same line: the adder at 72%,
-                 // a man at 83%, everything on the ground in front of the door
-                 // rather than up against the wall of it.
-                 "gate-the-ferry-house": 56, "gate-the-crossing-house": 56,
                  // AND THE SALT POOL, where the standing ground is the last of
                  // the dry cave floor and the pool lies across everything behind
                  // it. The floor starts about 58%, so 64 keeps all three on wet
@@ -11632,6 +11681,17 @@ function skyPick(hour) {
 var SKY_KNOWN = { day:1, dawn:1, dusk:1, night:1, moon:1, blood:1, eclipse:1, fog:1, rain:1, snow:1, "in":1, "after-rain":1, "wet-night":1, "wet-dusk":1, "wet-dawn":1 };
 var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
+var fogVeilEl = document.getElementById("fogveil");
+var snowLightEl = document.getElementById("snowlight");
+// WHICH PLATES HAVE A FOG MASK (scripts/plate-fog.py). Until it arrives, and for
+// a plate without one, the fog falls back to the veil by height.
+var fogMasks = null;
+// The fog's colour at each hour - the veil's, and what a creature in it is mixed toward.
+var FOG_RGB = { day: [196, 200, 204], dawn: [104, 108, 116], dusk: [52, 64, 82], night: [40, 56, 74] };
+try {
+  fetch("/room-fog/fog.json?v=" + FOG_V).then(function (r) { return r.ok ? r.json() : []; })
+    .then(function (list) { var m = {}; (list || []).forEach(function (n) { m[n] = 1; }); fogMasks = m; }).catch(function () {});
+} catch (e) {}
 // EVERY SKY AT THE SAME SIZE (rome, 2026-09-28). One scale for all of them:
 // the one a 1584 x 993 picture needs to cover the box. A sky painted shorter
 // than 993 is NOT stretched further to fill the height - it was, and its clouds
@@ -12411,6 +12471,42 @@ function setWeather(kind) {
   }
   runWeather();
 }
+// RAIN IN DEPTH (rome, 2026-10-25: the old rain looked childish). It was one
+// sheet of identical strokes on a regular lattice - the same length, the same
+// grey, the same angle, marching in rows - which reads as a pattern laid over
+// the picture rather than water falling through it. Now there are three
+// depths: far rain, fine and faint and dense, that is mostly a texture; the
+// middle; and a few near drops, long, soft and quick past your face. Each drop
+// has its own place and pace (hashed, so nothing lines up), every streak
+// fades from its tail to its head, and the whole fall leans with the gust.
+var RAIN_LAYERS = [
+  // per 100k px, length, width, alpha, speed px/s
+  { n: 34, len: [10, 16], wid: .8,  a: .20, v: [820, 980] },
+  { n: 14, len: [22, 34], wid: 1.1, a: .28, v: [1150, 1350] },
+  { n: 4,  len: [48, 76], wid: 1.7, a: .34, v: [1650, 1950] },
+];
+function rainHash(i, k) { var x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); }
+function drawRain(ctx, w, h, t, gust) {
+  var lean = .10 + .16 * gust; // the fall slants with the wind
+  ctx.lineCap = "round";
+  for (var L = 0; L < RAIN_LAYERS.length; L++) {
+    var ly = RAIN_LAYERS[L], count = Math.min(ly.n * 12, Math.round(w * h / 100000 * ly.n));
+    var span = w + h * lean + 40;
+    for (var i = 0; i < count; i++) {
+      var r1 = rainHash(i, L), r2 = rainHash(i, L + 7), r3 = rainHash(i, L + 13);
+      var len = ly.len[0] + (ly.len[1] - ly.len[0]) * r3;
+      var v = ly.v[0] + (ly.v[1] - ly.v[0]) * r2;
+      var y = (r2 * (h + len) + t * v) % (h + len) - len;
+      var x = ((r1 * span - y * lean) % span + span) % span - 20;
+      var dx = -len * lean, g = ctx.createLinearGradient(x - dx, y - len, x, y);
+      var a = ly.a * (.6 + .4 * r1);
+      g.addColorStop(0, "rgba(214,222,228,0)");
+      g.addColorStop(1, "rgba(214,222,228," + a.toFixed(3) + ")");
+      ctx.strokeStyle = g; ctx.lineWidth = ly.wid;
+      ctx.beginPath(); ctx.moveTo(x - dx, y - len); ctx.lineTo(x, y); ctx.stroke();
+    }
+  }
+}
 function drawWeather(now) {
   weatherFrame = null;
   if (!weatherKind || viewMode !== "image" || document.hidden || weatherMotion.matches) { runWeather(); return; }
@@ -12430,33 +12526,19 @@ function drawWeather(now) {
   // A GUST: long lulls and swells, never a steady blow. Snow leans with it.
   var gust = Math.max(0, Math.sin(t * .45) * Math.sin(t * .17 + 1));
   weatherWind += (24 + 150 * gust) * dt;
-  var count = Math.min(rain ? 170 : 115, Math.max(24, Math.round(w * h / (rain ? 6500 : 9500))));
-  ctx.strokeStyle = "rgba(195,205,203,.33)"; ctx.lineWidth = 1.1;
+  if (rain) { drawRain(ctx, w, h, t, gust); weatherCanvas.style.display = "block"; weatherFrame = requestAnimationFrame(drawWeather); return; }
+  var count = Math.min(115, Math.max(24, Math.round(w * h / 9500)));
   ctx.fillStyle = "rgba(235,231,210,.72)";
   for (var i = 0; i < count; i++) {
     var x, y;
-    if (rain) {
-      x = ((i * 173.7 - t * 185) % (w + 100) + w + 100) % (w + 100) - 50;
-      y = (i * 79.1 + t * (650 + i % 7 * 35)) % (h + 70) - 35;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 8, y + 27); ctx.stroke();
-    } else {
+    {
       x = ((i * 131.3 + weatherWind + Math.sin(t + i) * 15) % (w + 80) + w + 80) % (w + 80) - 40;
       y = (i * 89.1 + t * (24 + i % 35)) % (h + 60) - 30;
       ctx.beginPath(); ctx.arc(x, y, .8 + i % 3 * .65, 0, Math.PI * 2); ctx.fill();
     }
   }
-  // GRIT on the gust: short streaks blown low across the ground in snow, only
-  // there while the wind is up.
-  if (!rain && gust > .05) {
-    ctx.strokeStyle = "rgba(225,228,235," + (.08 + .3 * gust).toFixed(3) + ")"; ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (var g = 0; g < 40; g++) {
-      var gx = ((g * 97.3 + weatherWind * 3.2) % (w + 40) + w + 40) % (w + 40) - 20;
-      var gy = h * (.72 + (g * 37 % 26) / 100);
-      ctx.moveTo(gx, gy); ctx.lineTo(gx + 4 + 6 * gust, gy);
-    }
-    ctx.stroke();
-  }
+  // (The grit blown low across the ground on the gust is gone - rome,
+  // 2026-10-26: it read as a fast streak along the bottom of the screen.)
   weatherCanvas.style.display = "block";
   weatherFrame = requestAnimationFrame(drawWeather);
 }
@@ -12466,6 +12548,31 @@ if (weatherMotion.addEventListener) weatherMotion.addEventListener("change", run
 
 // Keep a small decoded working set, sharing pending loads across status frames.
 // Failed requests are evicted so the next room/status update can retry them.
+// HOW THICK THE FOG IS WHERE THE CREATURES STAND (rome, 2026-10-26: the
+// creatures should be in the fog, not pasted over it). Read off the plate's own
+// fog mask along the standing line, once per mask and line. A creature laid
+// under the fog layer itself would be fogged by whatever stands BEHIND it - its
+// back by the far wood, its legs by the near grass - so instead the whole
+// animal takes the fog of the ground it is standing on. -1 when the mask is not
+// in hand (the caller falls back to a fixed haze).
+function fogAtLine(url, line) {
+  var memo = fogAtLine.memo || (fogAtLine.memo = {}), key = url + "@" + line;
+  if (memo[key] !== undefined) return memo[key];
+  var f = -1;
+  try {
+    var e = readySceneImage.cache && readySceneImage.cache.get(url);
+    if (e && e.ready && e.image.naturalWidth) {
+      var c = document.createElement("canvas"); c.width = 40; c.height = 100;
+      var g = c.getContext("2d"); g.drawImage(e.image, 0, 0, 40, 100);
+      // under the line, at the feet: the ground the animal is standing on
+      var d = g.getImageData(4, Math.min(99, Math.round(line + 12)), 32, 1).data, sum = 0;
+      for (var i = 3; i < d.length; i += 4) sum += d[i];
+      f = sum / (d.length / 4) / 255;
+    }
+  } catch (err) {}
+  if (f >= 0) memo[key] = f;
+  return f;
+}
 function readySceneImage(url, done) {
   if (!url) { done(true); return; }
   var cache = readySceneImage.cache || (readySceneImage.cache = new Map());
@@ -12599,28 +12706,56 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // WHAT HOUR THE CREATURES ARE STANDING IN, which is the sky outside everywhere
   // except under a roof, where it is whatever the plate was lit for.
   var mobHour = lastSky;
+  // RAIN AND FOG ARE LAID OVER THE GROUND, NOT PAINTED INTO IT (rome, 2026-10-25).
+  // They used to be photographs of their own, three more plates for every room
+  // after day, night and the torch. Now the ground is the hour's own keyed plate
+  // (day by day, night at dusk, dawn and after dark), the sky behind it is the
+  // after-rain cloud graded for the hour, and the weather itself is drawn over
+  // it: the falling rain (setWeather), or the fog's veil, thick on the horizon
+  // where the far ground is and thin at your feet. So the picture reads the
+  // weather as the wet hours do, and "hour" is the sky the ground is chosen for.
+  // Snow still has its own plate: snow lying on the ground cannot be laid over.
+  // UNDER A ROOF THE WEATHER IS IN THE SKY AND NOT ON THE FLOOR (rome,
+  // 2026-10-26: the Lodge Loft's window showed no dawn, dusk or rain). The
+  // server sends a roofed room in open country the sky as it is outside, with
+  // the covered flag. Rain, fog and snow then show only where the roof lets you
+  // see out - the window, the open side - as the grey cloud graded for the
+  // hour; the ground stays as dry as the hour's own, and nothing falls or hangs
+  // in the room. A roof whose picture IS the ground outside (PLATE_OF) is not
+  // this: it shows the weather as the open ground does.
+  var roofedWx = lastCovered && !(place && PLATE_OF[place] && !SHELTERED[place]) && (lastSky === "rain" || lastSky === "fog" || lastSky === "snow");
+  var wxLayer = !roofedWx && (lastSky === "rain" || lastSky === "fog") ? lastSky : "";
+  var hour = (wxLayer || roofedWx) ? (lastNight ? "wet-night" : lastLow === 2 ? "wet-dusk" : lastLow === 1 ? "wet-dawn" : "after-rain") : lastSky;
+  // RAIN AT DAWN STANDS ON THE DAWN GROUND (rome, 2026-10-26: every rainy dawn
+  // looked off). The ground is dawn's own with the cloud's shadow over it
+  // (t-rain-dawn); the sky stays the rain's cloud, graded for dawn - never the
+  // clear dawn sky.
+  var rainDawn = wxLayer === "rain" && hour === "wet-dawn";
+  // ...and dusk the same: dusk's own ground with the same cloud shadow over it.
+  var rainDusk = wxLayer === "rain" && hour === "wet-dusk";
+  if (roofedWx) mobHour = hour;
   if (place) {
     // Identical to the gate branch below, and deliberately so: a plate is a
     // plate, and the only thing that differs is which table named it.
     var phave = " " + ROOM_PLATE[place] + " ";
     var shut = !!SHELTERED[place];
-    var pbase = SKY_BASE[lastSky] || "day";
+    var pbase = SKY_BASE[hour] || "day";
     // What the slot shows, which is only ever different from the hour under a
     // roof in bad weather — there is no rain sky in the game, and a dark room
     // under a bright noon sky would be the wrong half of the picture.
-    var slot = lastSky;
+    var slot = hour;
     // A SEALED ROOM'S SKY NAME IS "in" AT EVERY HOUR (rome, 2026-10-23: the
     // Lodge Loft showed its day picture, and blue sky in its slit, on a wet
     // night). The server sends no sky for a room under a roof, only the night
     // flag beside it, and "in" maps to day - so every window room was noon
     // around the clock. Under a roof the hour comes from the flag.
     if (lastSky === "in") { pbase = lastNight ? "night" : "day"; slot = pbase; }
-    if (shut && WEATHER_FROM_INSIDE[lastSky]) { pbase = "night"; slot = "after-rain"; }
+    if (shut && WEATHER_FROM_INSIDE[hour]) { pbase = "night"; slot = SKY_PAINTED[hour] ? hour : "after-rain"; }
     // A ROOF WITH AN OVERCAST PICTURE (the den, rome 2026-10-19). Its daylight
     // comes in through gaps, so a wet or grey day is not the night plate - it is
     // the same room in duller light - and night is night whatever the weather.
     if (phave.indexOf(" overcast ") >= 0) {
-      pbase = lastNight ? "night" : OVERCAST_SKIES[lastSky] ? "overcast" : (SKY_BASE[lastSky] || "day");
+      pbase = lastNight ? "night" : OVERCAST_SKIES[lastSky] ? "overcast" : (SKY_BASE[hour] || "day");
     }
     // AND WHEN THE PLATE HAS NOT GOT THAT CONDITION, THE FIRST ONE IT LISTS.
     // This was hardcoded to "day" on the assumption every plate owns one, which
@@ -12638,7 +12773,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // dark enough to be drawn at night is a room a flame belongs in. Outdoors
     // this clause changes nothing: every hour whose ground is the night plate is
     // already in TORCH_HOURS.
-    var darkEnough = TORCH_HOURS[lastSky] || pbase === "night";
+    var darkEnough = TORCH_HOURS[hour] || pbase === "night";
     var pwant = (lastTorch && darkEnough && phave.indexOf(" night-torch ") >= 0) ? "night-torch" : pbase;
     // The picture, which may belong to another room (PLATE_OF).
     var stem = PLATE_OF[place] || place;
@@ -12649,7 +12784,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       sky = "/sky/" + pp.file + ".webp"; turn = pp.turn;
     }
     lit = pwant === "night-torch";
-    tint = (lit || shut || NO_GROUND_TINT[lastSky] || pbase === lastSky) ? "" : lastSky;
+    tint = (lit || shut || NO_GROUND_TINT[hour] || pbase === hour) ? "" : hour;
     // A ROOF IS OVER THEM TOO — AND SO IS A HILL. SHELTERED names the rooms with
     // a slot in them; it does not name the ones with no opening at all, because
     // until the coast there were none. The salt pool is at the back of a sea
@@ -12686,13 +12821,13 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // The scene this sky wants, or the day scene if it has not been shot yet —
     // so a gate can land with one photograph and gain the other four later
     // without anything breaking in between.
-    var base = SKY_BASE[lastSky] || "day";
+    var base = SKY_BASE[hour] || "day";
     if (have.indexOf(" " + base + " ") < 0) base = "day";
     // AND A FLAME OF YOUR OWN IS A SIXTH. Only over the night ground, because
     // that is the only condition it was shot under — and the check is against
     // this door's own list, so one gate can have the torch plate and its
     // neighbour go without.
-    var want = (lastTorch && TORCH_HOURS[lastSky] && have.indexOf(" night-torch ") >= 0) ? "night-torch" : base;
+    var want = (lastTorch && TORCH_HOURS[hour] && have.indexOf(" night-torch ") >= 0) ? "night-torch" : base;
     scene = "/room-bg/gate-" + gate + "-" + want + ".webp";
     // AND A KEYED SCENE MUST ALWAYS GET A SKY. This said so and then did not do
     // it: it asked for the sky of the CONDITION, so a gate with no rain scene
@@ -12705,7 +12840,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // night-torch.webp in the sky folder and there never will be: a torch is on
     // the ground and the sky over it is the ordinary night.
     if (KEYED[want]) {
-      var gp = skyPick(SKY_PAINTED[lastSky] ? lastSky : base);
+      var gp = skyPick(SKY_PAINTED[hour] ? hour : base);
       sky = "/sky/" + gp.file + ".webp"; turn = gp.turn;
     }
     // BORROWED GROUND NEEDS BRINGING INTO LINE. The tint used to switch off the
@@ -12714,7 +12849,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // whenever it was borrowed. Day stone under a dusk sky is still lit for
     // noon, and the eye catches that before it catches anything else.
     lit = want === "night-torch";
-    line = MOB_LINE["gate-" + gate] || MOB_LINE_DEFAULT;
+    line = MOB_LINE["gate-" + gate] || MOB_LINE_GATE;
     // A TORCH PLATE TAKES NO HOUR CORRECTION, EVER. The correction exists to
     // relight a ground that was shot under the wrong sky — and a torch plate's
     // light does not come from the sky. It comes from the flame, and it is the
@@ -12722,7 +12857,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // to put right. Dusk is the case that makes it obvious: t-dusk was written
     // to take a NOON ground down to evening, and laid over an already-dark
     // picture it dims the one thing the picture is of.
-    tint = (lit || NO_GROUND_TINT[lastSky] || base === lastSky) ? "" : lastSky;
+    tint = (lit || NO_GROUND_TINT[hour] || base === hour) ? "" : hour;
   }
   if (!scene) {
     var kind = lastTerrain === "gatehouse" ? "gatehouse"
@@ -12744,7 +12879,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // Painted for layering: same law as a gate, and it falls through to the
       // shared code below rather than repeating it.
       var thave = " " + TERRAIN_SCENES[terr] + " ";
-      var tbase = SKY_BASE[lastSky] || "day";
+      var tbase = SKY_BASE[hour] || "day";
       // A CONDITION THIS GROUND HAS NOT GOT FALLS BACK TO ITS FIRST, not to
       // "day". Every terrain until now was outdoors and had a day plate, so a
       // hardcoded day was indistinguishable from "the one it always has" - and
@@ -12764,15 +12899,15 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // test for one needs no new table - a ground with no DAY in its list is a
       // ground daylight never reaches, which is the same sentence.
       var indoors = thave.indexOf(" day ") < 0;
-      var twant = (lastTorch && (indoors || TORCH_HOURS[lastSky]) && thave.indexOf(" night-torch ") >= 0) ? "night-torch" : tbase;
+      var twant = (lastTorch && (indoors || TORCH_HOURS[hour]) && thave.indexOf(" night-torch ") >= 0) ? "night-torch" : tbase;
       scene = "/room-bg/" + terr + "-" + twant + floodSuffix(terr, twant) + ".webp";
       if (KEYED[twant]) {
-        var tp = skyPick(SKY_PAINTED[lastSky] ? lastSky : tbase);
+        var tp = skyPick(SKY_PAINTED[hour] ? hour : tbase);
         sky = "/sky/" + tp.file + ".webp"; turn = tp.turn;
       }
       lit = twant === "night-torch";
       line = MOB_LINE[terr] || MOB_LINE_DEFAULT;
-      tint = (lit || NO_GROUND_TINT[lastSky] || tbase === lastSky) ? "" : lastSky;
+      tint = (lit || NO_GROUND_TINT[hour] || tbase === hour) ? "" : hour;
       // AND THE SAME FOR WHAT IS STANDING IN IT. The ground already knows it is
       // indoors two lines up and takes its night plate at noon; the creature on
       // that ground did not, and kept the hour from the sky outside. At any
@@ -12832,7 +12967,34 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // grade put them near black), and the wet dawn and dusk as they are.
   var wxKind = lastSky === "fog" || lastSky === "rain" || lastSky === "snow" ? lastSky : "";
   var wxHour = wxKind ? (lastNight ? "night" : lastLow === 2 ? "dusk" : lastLow === 1 ? "dawn" : "") : "";
-  if (wxHour && !lit && !singleLayer && scene) tint = wxKind + "-" + wxHour;
+  // Snow's own daylit plate takes the hour's grade. Rain and fog by day take
+  // their own on the day ground; after dark they stand on the night plate,
+  // which needs none.
+  if (wxKind === "snow" && !roofedWx && wxHour && !lit && !singleLayer && scene) tint = "snow-" + wxHour;
+  if (wxLayer && tint === "after-rain") tint = wxLayer;
+  if (rainDawn && !lit && !singleLayer && scene) tint = "rain-dawn";
+  if (rainDusk && !lit && !singleLayer && scene) tint = "rain-dusk";
+  // A FOGGY DAWN IS STILL A DAWN (rome, 2026-10-26): its ground takes the dawn
+  // lift, as a clear dawn's does, under the fog.
+  if (wxLayer === "fog" && lastLow === 1 && !lastNight && !lit && !singleLayer && scene && !(place && SHELTERED[place])) tint = "dawn";
+  // The veil hangs wherever the rain would fall: open ground with a picture.
+  // A roof whose picture is the open ground outside (PLATE_OF) shows the fog in it.
+  var outside = wxLayer && !singleLayer && scene && (!lastCovered || (place && PLATE_OF[place])) && !SHELTERED[place];
+  var veil = outside && wxLayer === "fog" ? (wxHour || "day") : "";
+  // RAIN AFTER DARK IS DARKER THAN A DRY NIGHT (rome, 2026-10-26: the floor was
+  // too bright; about where snow at night sits). The night plate takes a wet
+  // grade; a torch plate keeps its own light.
+  if (wxLayer === "rain" && wxHour === "night" && !lit && !singleLayer && scene && outside) tint = "rain-dark";
+  // THE FOG BY DISTANCE (rome, 2026-10-26: the veil by height looked wrong - the
+  // tree beside you washed out at its crown as hard as the far wood). Each plate
+  // has a mask worked out from its own depth; the fog's colour is laid through
+  // it, so near things stand clear and far things go. A torch plate stands on
+  // its night plate's ground and takes that mask.
+  var fogName = veil && scene ? scene.slice(9, -5).replace("-night-torch", "-night") : "";
+  var fogMask = fogName && typeof fogMasks !== "undefined" && fogMasks && fogMasks[fogName] ? "/room-fog/" + fogName + ".webp?v=" + FOG_V : "";
+  // A TORCH IN THE SNOW after dark, out under the sky: the snow plate's light map.
+  var snowName = lastTorch && wxKind === "snow" && wxHour && !roofedWx && !lastCovered && scene && scene.slice(-10) === "-snow.webp" ? scene.slice(9, -10) + "-snowlight" : "";
+  var snowLight = snowName && typeof fogMasks !== "undefined" && fogMasks && fogMasks[snowName] ? "/room-fog/" + snowName + ".webp?v=" + FOG_V : "";
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
     var fade = scene !== scenePainted ? fadeScene() : null;
@@ -12847,7 +13009,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     sceneEl.style.setProperty("--sceneimg", url);
     if (skyEl) {
       skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + SKY_V + ")" : "";
-      skyEl.setAttribute("data-sky", rainNight ? "wet-night" : (lastSky || "")); // the wet hours grade the same grey picture
+      // RAIN AFTER DARK HAS ITS OWN, DARKER NIGHT SKY (rome, 2026-10-26), apart
+      // from the after-rain and fog nights, which keep the wet night's.
+      skyEl.setAttribute("data-sky", lastSky === "rain" && hour === "wet-night" ? "rain-night"
+        : wxLayer || roofedWx ? (hour !== "after-rain" ? hour : lastSky === "snow" ? "after-rain" : lastSky) : rainNight ? "wet-night" : (lastSky || "")); // the wet hours grade the same grey picture
       skyEl.style.backgroundPosition = "center 55%";
       // Set every time, cleared when there is no turn: a transform left behind
       // from the last room would mirror a sky that was never asked to be.
@@ -12877,7 +13042,18 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // on ground the plate has lit to orange. It follows the PLATE, so an unpainted
     // ground keeps its dark and nothing is lit by a torch the picture cannot see.
     if (mobsEl) {
-      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + (wxHour && mobHour === wxKind ? (wxHour === "night" ? "night" : "wet-" + wxHour) : mobHour) : "";
+      // IN THE FOG, NOT OVER IT: each creature is mixed toward the fog's own
+      // colour as far as the ground under it is fogged (#fogmix, an exact
+      // colour mix; fading it out instead let the paving show through the
+      // body like a ghost).
+      var fogF = fogMask ? fogAtLine(fogMask, line) : -1;
+      if (veil) {
+        var fc = FOG_RGB[veil] || FOG_RGB.day, k = Math.min(.8, fogF >= 0 ? fogF * .9 : .35), m = (1 - k).toFixed(3);
+        var mx = typeof document !== "undefined" && document.getElementById ? document.getElementById("fogmixm") : null;
+        if (mx) mx.setAttribute("values", m + " 0 0 0 " + (k * fc[0] / 255).toFixed(3) + " 0 " + m + " 0 0 " + (k * fc[1] / 255).toFixed(3) + " 0 0 " + m + " 0 " + (k * fc[2] / 255).toFixed(3) + " 0 0 0 1 0");
+        if (mobsEl.style) mobsEl.style.filter = mx ? "url(#fogmix)" : "";
+      } else if (mobsEl.style) mobsEl.style.filter = "";
+      mobsEl.className = lit || snowLight ? "t-night-torch" : mobHour ? "t-" + (wxHour && mobHour === wxKind ? (wxHour === "night" ? "night" : "wet-" + wxHour) : mobHour) : "";
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.
@@ -12897,17 +13073,30 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // same box and the plate now occupies all of it.
     sceneEl.style.backgroundPosition = "center center";
     scenePainted = scene;
+    if (typeof snowLightEl !== "undefined" && snowLightEl) {
+      snowLightEl.className = snowLight ? "on" : "";
+      if (snowLightEl.style) {
+        snowLightEl.style.backgroundImage = snowLight ? url : "";
+        snowLightEl.style.webkitMaskImage = snowLightEl.style.maskImage = snowLight ? "url(" + snowLight + ")" : "";
+      }
+    }
+    if (typeof fogVeilEl !== "undefined" && fogVeilEl) {
+      fogVeilEl.className = veil ? "f-" + veil + (fogMask ? " masked" : "") : "";
+      if (fogVeilEl.style) fogVeilEl.style.webkitMaskImage = fogVeilEl.style.maskImage = fogMask ? "url(" + fogMask + ")" : "";
+    }
     setWeather(precipitation);
     if (typeof sceneFx !== "undefined") sceneFx.paint(scene, tint, preparedFx);
     if (fade) fade();
   };
-  var waiting = 3, ready = true, preparedFx = null;
+  var waiting = 5, ready = true, preparedFx = null;
   function loaded(ok) {
     ready = ready && ok;
     if (--waiting === 0 && ready) put();
   }
   readySceneImage(scene ? scene + "?v=" + BG_V : "", loaded);
   readySceneImage(sky ? sky + "?v=" + SKY_V : "", loaded);
+  readySceneImage(fogMask, loaded);
+  readySceneImage(snowLight, loaded);
   // The mist, reflections, shadows and flames belong to the same picture.
   // Prepare their maps alongside the ground and sky, before any layer swaps.
   if (typeof sceneFx !== "undefined" && sceneFx.prepare) {
@@ -12942,11 +13131,11 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
 // day for the last - and only grades it lighter, darker or greyer; nothing is
 // borrowed, the flames are where they were painted, and a lantern that goes
 // out every full moon is a lantern that looks broken.
-// ...AND FOG GRADED FOR THE HOUR (rome, 2026-10-25: the gates' torches went
-// out in the night and dawn fog). Same argument: the fog plate is painted for
-// fog, lanterns and all, and the night, dawn and dusk grades only darken it.
-var FX_UNDER_TINT = { moon: 1, eclipse: 1, "after-rain": 1, "fog-night": 1, "fog-dawn": 1, "fog-dusk": 1,
-  "rain-night": 1, "rain-dawn": 1, "rain-dusk": 1, "snow-night": 1, "snow-dawn": 1, "snow-dusk": 1 };
+// ...AND THE GROUND WEATHER (rome, 2026-10-25: the gates' torches went out in
+// the night and dawn fog). Rain and fog by day grade the day plate greyer, and
+// snow's plate is painted for snow, lanterns and all; the night, dawn and dusk
+// grades on it only darken it.
+var FX_UNDER_TINT = { moon: 1, eclipse: 1, dawn: 1, "after-rain": 1, rain: 1, "rain-dark": 1, "rain-dawn": 1, "rain-dusk": 1, fog: 1, "snow-night": 1, "snow-dawn": 1, "snow-dusk": 1 };
 var fxCanvas = document.getElementById("scene-fx");
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");

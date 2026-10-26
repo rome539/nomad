@@ -188,6 +188,32 @@ this (all fifteen installed plates agree with their night sibling to within
 0.14%) and the light lands where it should: the near ground lifts 1.5x to 2.7x
 while the far country stays dark.
 
+## What a new room needs now (2026-10-26)
+
+**Paint four plates, not six: `day`, `night`, `night-torch`, and `snow` where it
+snows.** Rain and fog are no longer painted (rome, 2026-10-25): the client lays
+them over the room's own keyed `day` or `night` plate - the after-rain cloud
+graded for the hour behind it, a wet grade and a darkened floor, the falling
+rain, or the fog drawn by distance through the plate's own fog mask. Existing
+`fog` and `rain` plates are no longer asked for.
+
+**After the plates are installed, from `game-server/`:**
+
+```sh
+# fog masks for the new day/night plates, and the torch light on its snow plate
+PLATE_FX_MODEL=~/.plate-fx/depth.onnx ~/.plate-fx/bin/python scripts/plate-fog.py
+# only if the night or torch plate has flames painted in it (see room-fx.md)
+PLATE_FX_MODEL=~/.plate-fx/depth.onnx ~/.plate-fx/bin/python scripts/plate-fx.py
+```
+
+Then bump `FOG_V` (and `FX_V` if `plate-fx.py` ran) in `public.ts`. The setup and
+the details are in `room-fx.md` under "Fog masks". A room with no fog mask yet
+still works: its fog falls back to a plain veil, and its snow just has no torch
+light.
+
+The rest of this section is how the `snow` plate is made. The same three moves
+also made the old `fog` and `rain` plates.
+
 ## The three weather plates are EDITS, not new scenes
 
 `fog`, `rain` and `snow` are the plates most likely to come back as a different

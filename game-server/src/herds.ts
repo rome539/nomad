@@ -34,7 +34,7 @@ import {
   HERD_PACE_SECS, HERD_BIRTH_PER_H, HERD_BIRTH_MIN, HERD_BIRTH_MAX, HERD_STRAY_FRAC,
   HERD_FLOOR_FRAC, HERD_FLOOR_PER_HUNTER_PER_H, HERD_NO_PREY_SHARE,
   ROOTED, NOCTURNAL, SURFACE_FORAGE, ROUND_REGIONS, ROUND_RANGE, HUNT_RECHECK_MS,
-  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS,
+  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS, WARY_STAYS_IN,
 } from "./zone-data";
 
 const AT = "_at"; // the clock, kept in the same saved map as what each herd is owed
@@ -253,6 +253,35 @@ export function roundPhase(templateId: string, now: number): "feed" | "rest" {
   return band === 0 || band === 4 ? "feed" : "rest";
 }
 
+// WARY (rome, 2026-10-25). Ground that is being hunted hard (conditions.ts,
+// HUNTED) changes its prey: the day's animals give up the dawn and come out
+// only in the last light, half of them do not come out at all, and any of them
+// bolts when someone walks in on it (ai.waryBolt). The hunters are not wary;
+// they are what the prey is wary of. It lasts as long as the condition does.
+
+/** Prey on hunted ground. */
+export function wary(z: ZoneDO, c: Creature): boolean {
+  const line = z.variantBase.get(c.templateId) ?? c.templateId;
+  if (!isHerd(z.world!, line) || PREYS_ON.get(line)?.size || SCAVENGERS.has(line)) return false;
+  return conditions.of(z, z.regionOf(c.home ?? c.roomId))?.kind === "hunted";
+}
+
+/** Whether this wary animal keeps to cover today: the same answer all day, a new one tomorrow. */
+function staysIn(c: Creature, now: number): boolean {
+  const key = `${c.id}:${Math.floor(now / 86_400_000)}`;
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  return (h >>> 0) / 4294967296 < WARY_STAYS_IN;
+}
+
+/** This animal's hour: its round, as the hunting has bent it. */
+export function phaseFor(z: ZoneDO, c: Creature, now: number): "feed" | "rest" {
+  const p = roundPhase(c.templateId, now);
+  if (p !== "feed" || !wary(z, c)) return p;
+  if (!NOCTURNAL.has(c.templateId) && skyBand(now) === 0) return "rest"; // the dawn is given up
+  return staysIn(c, now) ? "rest" : "feed";
+}
+
 /** A booming herd is out at every waking hour: too many of them to keep to cover (conditions.ts). */
 function outInBoom(z: ZoneDO, c: Creature, now: number): boolean {
   return (!isNight(now) || NOCTURNAL.has(c.templateId)) && conditions.booming(z, c);
@@ -260,7 +289,7 @@ function outInBoom(z: ZoneDO, c: Creature, now: number): boolean {
 
 /** The feeding ground to walk to this hour, or undefined to stay on home ground. */
 export function roundGround(z: ZoneDO, c: Creature, now: number): string | undefined {
-  if (!keepsRound(z, c) || (roundPhase(c.templateId, now) !== "feed" && !outInBoom(z, c, now)) || !c.home) {
+  if (!keepsRound(z, c) || (phaseFor(z, c, now) !== "feed" && !outInBoom(z, c, now)) || !c.home) {
     c.roundFor = undefined;
     return undefined;
   }
@@ -278,7 +307,7 @@ export function roundGround(z: ZoneDO, c: Creature, now: number): string | undef
 /** Of the steps it may take inside its range, the ones onto the ground this hour wants. */
 export function roundExits<E extends { to_room: string }>(z: ZoneDO, c: Creature, exits: E[], now: number): E[] {
   if (!keepsRound(z, c)) return exits;
-  const feeding = roundPhase(c.templateId, now) === "feed" || outInBoom(z, c, now);
+  const feeding = phaseFor(z, c, now) === "feed" || outInBoom(z, c, now);
   // Feeding: onto feeding ground — but only once it has one to be out on, or
   // an animal with none in reach would be pushed about for nothing.
   if (feeding && !c.roundFor) return exits;
@@ -294,7 +323,7 @@ const SIGN_EVERY_MS = 30 * 60_000;
 export function leaveSign(z: ZoneDO, c: Creature, from: string, now: number): void {
   if (!keepsRound(z, c)) return;
   const kind = feedsAt(c.templateId, from) ? "graze"
-    : roundPhase(c.templateId, now) === "feed" ? "lie" : undefined;
+    : phaseFor(z, c, now) === "feed" ? "lie" : undefined;
   if (!kind) return;
   // ONE of each to a room, freshened in place: a herd that grazes a lawn all
   // day must not crowd the room's twelve traces and push a kill's blood out.

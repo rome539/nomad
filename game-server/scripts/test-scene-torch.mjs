@@ -78,13 +78,15 @@ const depsFor = (body, self) => {
 const style = () => ({ setProperty() {} });
 const sceneEl = { style: style(), className: "", setProperty() {} };
 sceneEl.style.setProperty = () => {};
-const skyEl = { style: style(), setAttribute() {}, removeAttribute() {}, getAttribute() { return null; } };
-const mobsEl = { className: "", style: {} };
+const skyEl = { style: style(), dataSky: "", setAttribute(k, v) { if (k === "data-sky") this.dataSky = v; }, removeAttribute() {}, getAttribute() { return null; } };
+const veilEl = { className: "", style: {} };
+const fogMix = { values: "", setAttribute(k, v) { if (k === "values") this.values = v; } };
+const mobsEl = { className: "", style: {}, dataset: {} };
 // THE TIDE SHEET. A stub with no style bag throws the moment paintFlood sets the
 // mask, and paintScene calls it on every layered paint — so leaving it out
 // stopped the whole file rather than failing one check.
 const floodEl = { className: "", style: style() };
-const ctx = {};
+const ctx = { snowEl: { className: "", style: {} } };
 const code = [
   depsFor(fn("paintScene"), "paintScene"),
   'var viewMode = "image";',
@@ -98,15 +100,18 @@ const code = [
   // holds the old room up until the new plate has decoded. Here it lands at once,
   // which is the same path a cached picture takes.
   'function Image(){ this.complete = true; Object.defineProperty(this, "src", { set: function(){ this.onload && this.onload(); } }); }',
-  'var BG_V = "0", SKY_V = "0";',
+  'var BG_V = "0", SKY_V = "0", FOG_V = "0";',
   fn("paintScene"),
   // The lifted block declares its own elements from getElementById; the stubs win.
-  "sceneEl = _scene; skyEl = _sky; mobsEl = _mobs; floodEl = _flood;",
+  "var fogVeilEl, snowLightEl; sceneEl = _scene; skyEl = _sky; mobsEl = _mobs; floodEl = _flood; fogVeilEl = _veil; snowLightEl = ctx.snowEl;",
   "ctx.paint = paintScene; ctx.pools = SKY_POOL; ctx.scenes = TERRAIN_SCENES; ctx.rooms = ROOM_PLATE;",
   "ctx.setSea = function(v){ lastSea = v; };",
+  "ctx.weather = function(){ return weatherKind; };",
+  "ctx.shelter = SHELTERED;",
+  "var fogMasks = null; ctx.setMasks = function(m){ fogMasks = m; };",
 ].join("\n");
-new Function("ctx", "_scene", "_sky", "_mobs", "_flood", "document", code)(
-  ctx, sceneEl, skyEl, mobsEl, floodEl, { getElementById: () => null });
+new Function("ctx", "_scene", "_sky", "_mobs", "_flood", "_veil", "document", code)(
+  ctx, sceneEl, skyEl, mobsEl, floodEl, veilEl, { getElementById: (id) => (id === "fogmixm" ? fogMix : null) });
 
 const strip = (v) => (v || "").replace(/^url\(|\?v=\d+\)$/g, "");
 // A fresh room every time: paintScene remembers, and a test that leaned on the
@@ -179,14 +184,17 @@ for (const hour of ["dusk", "dawn"]) {
   // on a noon photograph turned down.
   r = paint(hour, "snow", 0);
   t("...and the night ground when unlit", r.scene === "/room-bg/snow-night.webp", r.scene);
-  // NO CORRECTION ON THE GROUND. The night plate is the right dark ground for a
-  // dark hour; the sky behind it is what carries the evening.
-  t("...and takes the plate raw", r.tint === "", "class=" + r.tint);
+  // NO CORRECTION ON THE GROUND AT DUSK. The night plate is the right dark
+  // ground for a dark hour; the sky behind it is what carries the evening.
+  // DAWN IS LIFTED (rome, 2026-10-25): under either dawn sky the night floor
+  // read too dark and too moonlit, so dawn grades it up and warms it.
+  if (hour === "dusk") t("...and takes the plate raw", r.tint === "", "class=" + r.tint);
+  else t("...and takes the dawn's lift", r.tint === "t-dawn", "class=" + r.tint);
   t("...under its own sky still", skyIs(r.sky, hour), r.sky);
 }
 
 console.log("a torch is not a weather");
-for (const [sky, want] of [["day", "day"], ["rain", "rain"], ["fog", "fog"], ["snow", "snow"], ["after-rain", "day"]]) {
+for (const [sky, want] of [["day", "day"], ["rain", "day"], ["fog", "day"], ["snow", "snow"], ["after-rain", "day"]]) {
   r = paint(sky, "snow", 1);
   t("burning at " + sky + " changes nothing", r.scene === "/room-bg/snow-" + want + ".webp", r.scene);
 }
@@ -364,7 +372,7 @@ console.log("a room with a roof on it");
   // and none of this leaks outdoors: a torch in the rain on open ground does nothing
   ctx.paint("mountain", "rain", "scree", "wet", 1, 0, "");
   t("a torch in the rain outdoors still changes nothing",
-    strip(sceneEl.style.backgroundImage) === "/room-bg/scree-rain.webp", strip(sceneEl.style.backgroundImage));
+    strip(sceneEl.style.backgroundImage) === "/room-bg/scree-day.webp", strip(sceneEl.style.backgroundImage));
   r = at("blood", 0);
   t("a blood moon does not redden the inside", r.tint === "" && r.mobs === "t-night", "tint=" + r.tint + " mobs=" + r.mobs);
   t("...on the night plate", r.scene === "/room-bg/the-last-shelter-night.webp", r.scene);
@@ -436,9 +444,10 @@ t("...at night too", at2(2, "night", 0) === "/room-bg/causeway-night-flood.webp"
 t("...and with a torch in your hand", at2(2, "night", 1) === "/room-bg/causeway-night-torch-flood.webp", at2(2, "night", 1));
 t("walking out of the water goes back to the dry plate", at2(0, "night", 0) === "/room-bg/causeway-night.webp", at2(0, "night", 0));
 // A CONDITION WITH NO FLOOD TWIN FALLS BACK TO DRY rather than asking for a file
-// that is not there. Rain and snow have not been shot flooded; a hole in the
-// world at that hour would be worse than a picture one state behind the prose.
-t("an unshot condition keeps the dry plate", at2(2, "rain", 0) === "/room-bg/causeway-rain.webp", at2(2, "rain", 0));
+// that is not there. Snow has not been shot flooded; a hole in the world at
+// that hour would be worse than a picture one state behind the prose.
+t("an unshot condition keeps the dry plate", at2(2, "snow", 0) === "/room-bg/causeway-snow.webp", at2(2, "snow", 0));
+t("...and rain over the flood is the flooded day ground (layered weather)", at2(2, "rain", 0) === "/room-bg/causeway-day-flood.webp", at2(2, "rain", 0));
 // And a ground with no flood plates at all never looks for one.
 ctx.setSea(3); ctx.paint("mountain", "day", "scree", "sc", 0, 0, "", 3);
 t("a ground that was never shot flooded ignores the tide",
@@ -472,9 +481,9 @@ t("and the staithe was shot for every condition, so snow is its own plate", stri
 ctx.setSea(3); ctx.paint("mountain", "day", "bridge", "br", 0, 0, "", 3);
 t("the bridge is forty feet up and never floods", strip(sceneEl.style.backgroundImage) === "/room-bg/bridge-day.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(2); ctx.paint("mountain", "rain", "marsh", "ma", 0, 0, "", 2);
-t("nor does the marsh, whatever the sea is doing", strip(sceneEl.style.backgroundImage) === "/room-bg/marsh-rain.webp", strip(sceneEl.style.backgroundImage));
+t("nor does the marsh, whatever the sea is doing", strip(sceneEl.style.backgroundImage) === "/room-bg/marsh-day.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(0); ctx.paint("mountain", "fog", "shell", "sh", 0, 0, "", 0);
-t("and the shell was shot for every condition too", strip(sceneEl.style.backgroundImage) === "/room-bg/shell-fog.webp", strip(sceneEl.style.backgroundImage));
+t("and fog on the shell is its day ground under the veil", strip(sceneEl.style.backgroundImage) === "/room-bg/shell-day.webp" && veilEl.className === "f-day", strip(sceneEl.style.backgroundImage) + " " + veilEl.className);
 
 // THE GROUND WITH NO DAYLIGHT, which is the case the terrain fallback was
 // written for and had never met. Every terrain before this one was outdoors and
@@ -491,7 +500,7 @@ t("...and a torch still lights it at any hour", strip(sceneEl.style.backgroundIm
 ctx.setSea(0); ctx.paint("mountain", "snow", "sea-cave", "sc3", 0, 0, "", 0);
 t("...and weather does not reach inside it either", strip(sceneEl.style.backgroundImage) === "/room-bg/sea-cave-night.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(0); ctx.paint("mountain", "rain", "shore-road", "sr", 0, 0, "", 0);
-t("the shore road has all six, so rain is its own plate", strip(sceneEl.style.backgroundImage) === "/room-bg/shore-road-rain.webp", strip(sceneEl.style.backgroundImage));
+t("rain on the shore road is its day ground, though it has a rain plate", strip(sceneEl.style.backgroundImage) === "/room-bg/shore-road-day.webp", strip(sceneEl.style.backgroundImage));
 
 // THE CROSSING'S TWO DOORS, which are the first gates painted outside the hill.
 // A gate does not arrive as a place - it comes in the TERRAIN slot with a
@@ -647,63 +656,138 @@ for (const room of ["the-marshals-lodging", "the-mine-mouth", "the-village-smith
 ctx.paint("den", "in", "", "loft-own", 0, 0, "the-lodge-loft", 0, 0, true, 1);
 t("...a room with its own window plate still takes its sky through the window", /\/sky\//.test(skyEl.style.backgroundImage));
 
-// FOG AFTER DARK (rome, 2026-10-25): the fog plate is a daylit photograph and
-// "fog" comes down at any hour, so night fog was a bright noon. It takes the
-// night grade at night, and so does what stands in it; by day it is untouched.
-ctx.scenes.gully = "day night fog rain snow";
-ctx.paint("mountain", "fog", "gully", "fog-night", 0, 0, "", 0, 0, false, 1);
-t("night fog is the fog plate", strip(sceneEl.style.backgroundImage) === "/room-bg/gully-fog.webp", strip(sceneEl.style.backgroundImage));
-t("...graded with the game's night grade", /\bt-fog-night\b/.test(sceneEl.className), sceneEl.className);
-const fogNightRule = src.match(/#scene\.t-fog-night \{ filter: ([^}]*); \}/);
-const wetNightRule = src.match(/#sky\[data-sky="wet-night"\] \{ filter: ([^}]*); \}/);
-t("...which is the wet night's own grade, word for word", fogNightRule && wetNightRule && fogNightRule[1] === wetNightRule[1], fogNightRule && fogNightRule[1]);
-t("...and what stands in it lit for night", mobsEl.className === "t-night", mobsEl.className);
-ctx.paint("mountain", "fog", "gully", "fog-day", 0, 0, "", 0, 0, false, 0);
-t("day fog takes no night grade", !/night/.test(sceneEl.className), sceneEl.className);
-t("...and its creatures stand in fog", mobsEl.className === "t-fog", mobsEl.className);
-
-// FOG IN THE LOW LIGHT (rome, 2026-10-25): a foggy dawn was drawn as noon.
-ctx.paint("mountain", "fog", "gully", "fog-dawn", 0, 0, "", 0, 0, false, 0, 1);
-t("dawn fog takes the wet dawn's grade", /\bt-fog-dawn\b/.test(sceneEl.className), sceneEl.className);
-t("...and its creatures the wet dawn's", mobsEl.className === "t-wet-dawn", mobsEl.className);
-ctx.paint("mountain", "fog", "gully", "fog-dusk", 0, 0, "", 0, 0, false, 0, 2);
-t("dusk fog takes the wet dusk's grade", /\bt-fog-dusk\b/.test(sceneEl.className), sceneEl.className);
-ctx.paint("mountain", "fog", "gully", "fog-noon", 0, 0, "", 0, 0, false, 0, 0);
-t("noon fog is untouched", !/t-fog-/.test(sceneEl.className), sceneEl.className);
-for (const [hour, sk] of [["dawn", "wet-dawn"], ["dusk", "wet-dusk"]]) {
-  const a = src.match(new RegExp("#scene\\.t-fog-" + hour + " \\{ filter: ([^}]*); \\}"));
-  const b = src.match(new RegExp('#sky\\[data-sky="' + sk + '"\\]  ?\\{ filter: ([^}]*); \\}'));
-  t("the " + hour + " fog grade is the " + sk + " sky's, word for word", a && b && a[1] === b[1], a && a[1]);
+// RAIN AND FOG ARE LAID OVER THE GROUND (rome, 2026-10-25). Every room, even
+// one with rain and fog plates of its own, stands on the hour's keyed ground
+// under the after-rain cloud, graded for the hour, with the rain falling or the
+// fog's veil over it. Snow keeps its own plate.
+ctx.scenes.gully = "day night night-torch fog rain snow";
+for (const [w, n, low, ground, tint, sky, mobs, veil] of [
+  ["fog", 0, 0, "day", "t-fog", "fog", "t-fog", "f-day"],
+  ["fog", 1, 0, "night", "", "wet-night", "t-night", "f-night"],
+  // a foggy dawn's ground takes the dawn lift (rome, 2026-10-26)
+  ["fog", 0, 1, "night", "t-dawn", "wet-dawn", "t-wet-dawn", "f-dawn"],
+  ["fog", 0, 2, "night", "", "wet-dusk", "t-wet-dusk", "f-dusk"],
+  ["rain", 0, 0, "day", "t-rain", "rain", "t-rain", ""],
+  // rain after dark takes a wet grade on the night plate (rome, 2026-10-26: too bright)
+  ["rain", 1, 0, "night", "t-rain-dark", "rain-night", "t-night", ""],
+  // rain at dawn: dawn's ground under the cloud's shadow, and the rain's own sky - never the clear dawn sky (rome, 2026-10-26)
+  ["rain", 0, 1, "night", "t-rain-dawn", "wet-dawn", "t-wet-dawn", ""],
+  // rain at dusk: dusk's ground under the same cloud shadow (rome, 2026-10-26)
+  ["rain", 0, 2, "night", "t-rain-dusk", "wet-dusk", "t-wet-dusk", ""],
+]) {
+  ctx.paint("mountain", w, "gully", w + n + low, 0, 0, "", 0, 0, false, n, low);
+  const hr = n ? "night" : low === 1 ? "dawn" : low === 2 ? "dusk" : "day";
+  const got = [strip(sceneEl.style.backgroundImage), sceneEl.className, strip(skyEl.style.backgroundImage), skyEl.dataSky, mobsEl.className, veilEl.className].join(" | ");
+  t(w + " by " + hr + ": the " + ground + " ground, under the after-rain cloud graded " + sky,
+    strip(sceneEl.style.backgroundImage) === "/room-bg/gully-" + ground + ".webp" && sceneEl.className === tint
+    && strip(skyEl.style.backgroundImage) === "/sky/after-rain.webp" && skyEl.dataSky === sky
+    && mobsEl.className === mobs && veilEl.className === veil, got);
 }
+ctx.paint("mountain", "rain", "gully", "rain-falls", 0, 0, "", 0, 0, false, 1, 0);
+t("the rain still falls after dark", ctx.weather() === "rain", ctx.weather());
+ctx.paint("mountain", "fog", "gully", "fog-torch", 1, 0, "", 0, 0, false, 1, 0);
+t("a torch in night fog lights the ground, under the veil", strip(sceneEl.style.backgroundImage) === "/room-bg/gully-night-torch.webp" && veilEl.className === "f-night", strip(sceneEl.style.backgroundImage) + " " + veilEl.className);
+ctx.paint("mountain", "day", "gully", "clear", 0, 0, "", 0, 0, false, 0, 0);
+t("and when it clears the veil goes", veilEl.className === "", veilEl.className);
 // A ROOF WHOSE PICTURE IS THE OUTSIDE SHOWS THE OUTSIDE: at dawn the night
-// ground with its sky, in fog the fog plate graded for the hour.
+// ground with its sky, and in fog the same ground under the veil.
 ctx.paint("out", "dawn", "", "ml-dawn", 0, 0, "the-marshals-lodging", 0, 0, true, 0, 1);
 t("the Lodging at dawn is the dawn ground under a sky", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-night.webp" && !!skyEl.style.backgroundImage, strip(sceneEl.style.backgroundImage));
 ctx.paint("out", "fog", "", "ml-fogdawn", 0, 0, "the-marshals-lodging", 0, 0, true, 0, 1);
-t("...and in fog at dawn the fog, graded for dawn", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-fog.webp" && /t-fog-dawn/.test(sceneEl.className), sceneEl.className);
+t("...and in fog at dawn the same ground, under the dawn veil", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-night.webp" && veilEl.className === "f-dawn", strip(sceneEl.style.backgroundImage) + " " + veilEl.className);
+ctx.paint("den", "fog", "", "loft-fog", 0, 0, "the-lodge-loft", 0, 0, true, 0, 0);
+t("...but a room with its own window plate has no fog inside it", veilEl.className === "", veilEl.className);
 
-// THE TORCHES BURN IN GRADED FOG (rome, 2026-10-25): every fog grade lets the
-// room's flame effects run, or the gates' lanterns go out in night fog.
+// THE DAWN GROUND (rome, 2026-10-25): lifted on the night plate under every dawn sky, lamps still lit.
+t("the dawn ground has its grade", /#scene\.t-dawn \{ filter: brightness\(1\.\d+\)/.test(src));
+ctx.paint("mountain", "dawn", "gate:weeper-arch", "dawn-gate", 0, 0, "", 0);
+t("...at a gate too, on its night plate", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-weeper-arch-night.webp" && sceneEl.className === "t-dawn", strip(sceneEl.style.backgroundImage) + " " + sceneEl.className);
+t("...and its lanterns keep burning", /\bdawn: 1/.test(src.match(/var FX_UNDER_TINT = \{([^}]*)\}/)[1]));
+
+// RAIN BY DAY DARKENS THE WHOLE PICTURE ALIKE (rome, 2026-10-26: the tops of the
+// trees and buildings stayed light over a floor-only gradient).
+const rainDay = src.match(/#scene\.t-rain  \{ filter: brightness\(([\d.]+)\)/);
+t("daytime rain's grade carries the dark itself", rainDay && Number(rainDay[1]) <= .6, rainDay && rainDay[1]);
+t("...with no gradient laid over part of the frame", !/#fogveil\.f-wet/.test(src));
+
+// THE TORCHES BURN IN GRADED WEATHER (rome, 2026-10-25).
 const underTint = src.match(/var FX_UNDER_TINT = \{([^}]*)\}/)[1];
-for (const g of ["fog-night", "fog-dawn", "fog-dusk"]) t("the torches burn under " + g, underTint.includes('"' + g + '"'), underTint);
+for (const g of ["fog", "rain"]) t("the torches burn under " + g, new RegExp("\\b" + g + ": 1").test(underTint), underTint);
 for (const g of (src.match(/#scene\.t-((?:fog|rain|snow)-[a-z]+) \{/g) || []).map((m) => m.slice(9, -2))) t("every weather grade the page draws keeps its torches: " + g, underTint.includes('"' + g + '"'));
 
-// RAIN AND SNOW BY THE HOUR (rome, 2026-10-25).
-ctx.scenes.gully = "day night fog rain snow";
-for (const [w, n, low, want, mobs] of [
-  ["snow", 1, 0, "t-snow-night", "t-night"], ["snow", 0, 1, "t-snow-dawn", "t-wet-dawn"], ["snow", 0, 2, "t-snow-dusk", "t-wet-dusk"],
-  ["rain", 1, 0, "t-rain-night", "t-night"], ["rain", 0, 1, "t-rain-dawn", "t-wet-dawn"], ["rain", 0, 2, "t-rain-dusk", "t-wet-dusk"],
-]) {
-  ctx.paint("mountain", w, "gully", w + n + low, 0, 0, "", 0, 0, false, n, low);
-  t(w + " " + (n ? "night" : low === 1 ? "dawn" : "dusk") + " is graded " + want, new RegExp("\\b" + want + "\\b").test(sceneEl.className) && mobsEl.className === mobs, sceneEl.className + " / " + mobsEl.className);
+// SNOW BY THE HOUR (rome, 2026-10-25): its own plate, graded.
+for (const [n, low, want, mobs] of [[1, 0, "t-snow-night", "t-night"], [0, 1, "t-snow-dawn", "t-wet-dawn"], [0, 2, "t-snow-dusk", "t-wet-dusk"]]) {
+  ctx.paint("mountain", "snow", "gully", "snow" + n + low, 0, 0, "", 0, 0, false, n, low);
+  t("snow " + (n ? "night" : low === 1 ? "dawn" : "dusk") + " is its own plate, graded " + want, strip(sceneEl.style.backgroundImage) === "/room-bg/gully-snow.webp" && sceneEl.className === want && mobsEl.className === mobs, sceneEl.className + " / " + mobsEl.className);
 }
 ctx.paint("mountain", "snow", "gully", "snow-noon", 0, 0, "", 0, 0, false, 0, 0);
 t("noon snow is untouched", !/t-snow-/.test(sceneEl.className), sceneEl.className);
-for (const [g, sk] of [["snow-night", "wet-night"], ["snow-dawn", "wet-dawn"], ["snow-dusk", "wet-dusk"], ["rain-dawn", "wet-dawn"], ["rain-dusk", "wet-dusk"]]) {
+for (const [g, sk] of [["snow-night", "wet-night"], ["snow-dawn", "wet-dawn"], ["snow-dusk", "wet-dusk"]]) {
   const a = src.match(new RegExp("#scene\\." + "t-" + g + " \\{ filter: ([^}]*); \\}"));
   const b = src.match(new RegExp('#sky\\[data-sky="' + sk + '"\\]  ?\\{ filter: ([^}]*); \\}'));
   t(g + " is the " + sk + " sky's grade, word for word", a && b && a[1] === b[1], a && a[1]);
 }
+
+// THE GATES STAND THEIR NOMADS ON THE PAVING (rome, 2026-10-25): at the
+// Weeper's Arch a nomad stood into the wall on the default line.
+for (const g of ["weeper-arch", "gate", "sally-port", "the-ferry-house", "the-crossing-house"]) {
+  ctx.paint("out", "day", "gate:" + g, "gl-" + g, 0, 0, "", 0);
+  t("the nomads at " + g + " stand out on the yard", Number(mobsEl.dataset.floorLine) >= 62, mobsEl.dataset.floorLine);
+}
+
+// THE FOG BY DISTANCE (rome, 2026-10-26: the veil by height looked wrong). A
+// plate with a fog mask (scripts/plate-fog.py) has the fog laid through it; a
+// torch plate takes its night plate's; a plate without one keeps the veil.
+ctx.setMasks({ "gully-day": 1, "gully-night": 1 });
+ctx.paint("mountain", "fog", "gully", "fm-day", 0, 0, "", 0, 0, false, 0, 0);
+t("fog by day is laid through the plate's own mask", veilEl.className === "f-day masked" && /^url\(\/room-fog\/gully-day\.webp\?v=\d+\)$/.test(veilEl.style.maskImage), veilEl.className + " " + veilEl.style.maskImage);
+ctx.paint("mountain", "fog", "gully", "fm-torch", 1, 0, "", 0, 0, false, 1, 0);
+t("...a torch at night takes the night plate's mask", veilEl.className === "f-night masked" && /gully-night\.webp/.test(veilEl.style.maskImage), veilEl.className + " " + veilEl.style.maskImage);
+ctx.paint("mountain", "fog", "scree", "fm-none", 0, 0, "", 0, 0, false, 0, 0);
+t("...a plate without a mask keeps the veil", veilEl.className === "f-day" && veilEl.style.maskImage === "", veilEl.className + " " + veilEl.style.maskImage);
+t("...and the creatures stand in it, mixed toward the fog's colour", mobsEl.style.filter === "url(#fogmix)" && /^0\.\d+ 0 0 0 0\.\d+ /.test(fogMix.values) && fogMix.values.split(" ")[0] !== "1", mobsEl.style.filter + " " + fogMix.values);
+ctx.paint("mountain", "rain", "gully", "fm-rain", 0, 0, "", 0, 0, false, 0, 0);
+t("...not in the rain", mobsEl.style.filter === "", mobsEl.style.filter);
+t("...and rain is never masked", veilEl.className === "" && veilEl.style.maskImage === "", veilEl.className + " " + veilEl.style.maskImage);
+ctx.paint("mountain", "day", "gully", "fm-clear", 0, 0, "", 0, 0, false, 0, 0);
+t("...and when it clears the mask goes too", veilEl.className === "" && veilEl.style.maskImage === "", veilEl.className + " " + veilEl.style.maskImage);
+ctx.setMasks(null);
+
+// THE TORCH ON THE SNOW (rome, 2026-10-26): snow has no torch picture, so the
+// torch's light is laid over the snow from the ground's own light map.
+ctx.setMasks({ "gully-snowlight": 1 });
+ctx.paint("mountain", "snow", "gully", "sl-night", 1, 0, "", 0, 0, false, 1, 0);
+t("a torch in the snow at night lights the snow", strip(sceneEl.style.backgroundImage) === "/room-bg/gully-snow.webp" && ctx.snowEl.className === "on" && /room-fog\/gully-snowlight\.webp/.test(ctx.snowEl.style.maskImage) && /gully-snow\.webp/.test(ctx.snowEl.style.backgroundImage), ctx.snowEl.className + " " + ctx.snowEl.style.maskImage);
+t("...and what stands in it is in the firelight", mobsEl.className === "t-night-torch", mobsEl.className);
+ctx.paint("mountain", "snow", "gully", "sl-dusk", 1, 0, "", 0, 0, false, 0, 2);
+t("...at dusk too", ctx.snowEl.className === "on");
+ctx.paint("mountain", "snow", "gully", "sl-dark", 0, 0, "", 0, 0, false, 1, 0);
+t("...not with the torch out", ctx.snowEl.className === "" && ctx.snowEl.style.maskImage === "", ctx.snowEl.className);
+ctx.paint("mountain", "snow", "gully", "sl-noon", 1, 0, "", 0, 0, false, 0, 0);
+t("...nor at noon", ctx.snowEl.className === "", ctx.snowEl.className);
+ctx.paint("mountain", "night", "gully", "sl-clear", 1, 0, "", 0, 0, false, 1, 0);
+t("...and a clear night keeps its own torch plate", ctx.snowEl.className === "" && /gully-night-torch\.webp/.test(strip(sceneEl.style.backgroundImage)), strip(sceneEl.style.backgroundImage));
+ctx.setMasks(null);
+
+// EVERY ROOF WITH A WINDOW SHOWS THE SKY OUTSIDE IT (rome, 2026-10-26: the
+// Lodge Loft showed no dawn, no dusk, no rain). The server now sends a roofed
+// room the real sky with the covered flag; the window shows it, and the floor
+// stays dry. Every sheltered room with daylight in its picture, every sky.
+const windows = Object.keys(ctx.rooms).filter((r) => ctx.shelter[r] && (" " + ctx.rooms[r] + " ").includes(" day "));
+t("there are window rooms to check", windows.length >= 10 && windows.includes("the-lodge-loft"), windows.length + "");
+const skyOf = { dawn: /\/sky\/dawn/, dusk: /\/sky\/dusk/, moon: /\/sky\/moon/, night: /\/sky\/night/, rain: /\/sky\/after-rain/, fog: /\/sky\/after-rain/, snow: /\/sky\/after-rain/ };
+const bad = [];
+for (const room of windows) for (const [sky, n, low] of [["dawn", 0, 1], ["dusk", 0, 2], ["moon", 1, 0], ["night", 1, 0], ["rain", 0, 0], ["rain", 1, 0], ["fog", 0, 0], ["fog", 0, 1], ["snow", 0, 0]]) {
+  ctx.paint("den", sky, "", "win-" + room + sky + n + low, 0, 0, room, 0, 0, true, n, low);
+  const got = strip(skyEl.style.backgroundImage);
+  const wet = sky === "rain" || sky === "fog" || sky === "snow";
+  const want = wet ? (n ? (sky === "rain" ? "rain-night" : "wet-night") : low === 1 ? "wet-dawn" : low === 2 ? "wet-dusk" : sky === "snow" ? "after-rain" : sky) : null;
+  // The den's overcast picture has the grey day painted in its window: no sky behind it.
+  const painted = /-overcast\.webp/.test(strip(sceneEl.style.backgroundImage));
+  if ((!painted && (!skyOf[sky].test(got) || (want && skyEl.dataSky !== want))) || veilEl.className || ctx.weather())
+    bad.push(room + " " + sky + (n ? " night" : low ? " low" + low : "") + ": sky=" + got + " grade=" + skyEl.dataSky + " veil=" + veilEl.className + " falling=" + ctx.weather());
+}
+t("every window shows the sky outside, dry inside", bad.length === 0, bad.slice(0, 4).join(" | "));
 
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");

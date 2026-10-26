@@ -173,7 +173,7 @@ for (const m of grab("MOB_ANIM").matchAll(/"([a-z-]+)":\s*\{\s*n:\s*(\d+),\s*asp
 // lifted code reaches for - not just the mob one. Declaring only MOB_V left
 // BG_V undefined and took the whole preview script down with it.
 const stamp = (n) => (src.match(new RegExp("var " + n + "\\s*= \"(\\d+)\""))||[,"1"])[1];
-const MOB_V = stamp("MOB_V"), BG_V = stamp("BG_V"), SKY_V = stamp("SKY_V"), CARD_V = stamp("CARD_V");
+const MOB_V = stamp("MOB_V"), BG_V = stamp("BG_V"), SKY_V = stamp("SKY_V"), CARD_V = stamp("CARD_V"), FOG_V = stamp("FOG_V");
 // THE ROSTER IS TRIMMED HERE, before it is serialised, so the page never learns
 // about a creature whose strip is not in the tree beside it. Read off the world
 // rather than typed: whatever stands in a mountain room is a mountain creature,
@@ -460,7 +460,7 @@ fs.writeFileSync(OUT, `<!doctype html><meta charset="utf-8"><title>NOMAD mobs</t
 <div id="grid"></div>
 <script>
 var MOB_SPRITE=${JSON.stringify(SPRITE)}, MOB_ANIM=${JSON.stringify(ANIM)};
-var MOB_V="${MOB_V}", BG_V="${BG_V}", SKY_V="${SKY_V}", CARD_V="${CARD_V}";
+var MOB_V="${MOB_V}", BG_V="${BG_V}", SKY_V="${SKY_V}", CARD_V="${CARD_V}", FOG_V="${FOG_V}";
 var MOB_EYES=${JSON.stringify(EYES)};
 // THE ANSWER, WORKED OUT ABOVE, for exactly the grounds this build offers. null
 // means the world could not be read and the page will not pretend to know.

@@ -1167,6 +1167,37 @@ try {
     deer.target = 'someone';
     assert.equal(herds.roundExits(z, deer, exits, NOON).length, 2, 'a fight is not a round');
   });
+  check('the bell is heard inside the keep, not only read (2026-10-25)', () => {
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const bell = ev.slice(ev.indexOf('async function tickBell'), ev.indexOf('case "active"', ev.indexOf('async function tickBell')) + 2400);
+    for (const [what, snd] of [['a single bell-note rolls through the halls', 'bell'], ['The bell begins to RING', 'bells'], ['The bell shudders under your hand', 'bell'], ['The bell is RINGING inches from you', 'bells'], ['The bell is RINGING, a long way up', 'bells']]) {
+      const at = bell.indexOf(what);
+      assert.ok(at > 0, what + ' is still said');
+      const call = bell.slice(at, bell.indexOf('\n', at));
+      assert.match(call, new RegExp('"' + snd + '"\\);$'), what + ' carries the ' + snd + ' sound');
+    }
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /if \(far\) base\.far = far;/, 'a room line can carry its sound');
+  });
+  check('on hunted ground the prey give up the dawn, some stay in, and they bolt when you walk in (2026-10-25)', () => {
+    const { z, deer } = roundWorld();
+    z.world.mobTemplates.set('grey-wolf', { id: 'grey-wolf', name: 'a grey wolf', respawn_secs: 600, is_boss: 0 });
+    const wolf = { id: 'w', templateId: 'grey-wolf', roomId: 'w-home', home: 'w-home', hp: 10 };
+    assert.ok(!herds.wary(z, deer), 'quiet ground: nothing is wary');
+    z.conditions.set('wood', { kind: 'hunted', since: 0 });
+    assert.ok(herds.wary(z, deer), 'the deer are');
+    assert.ok(!herds.wary(z, wolf), 'the wolves are not');
+    const herd = Array.from({ length: 40 }, (_, i) => ({ ...deer, id: 'd' + i }));
+    assert.ok(herd.every((d) => herds.phaseFor(z, d, DAWN) === 'rest'), 'the dawn is given up');
+    const out = herd.filter((d) => herds.phaseFor(z, d, DUSK) === 'feed').length;
+    assert.ok(out > 8 && out < 32, 'some come out in the last light, some stay in: ' + out);
+    assert.ok(herd.every((d) => herds.phaseFor(z, d, DUSK) === herds.phaseFor(z, d, DUSK + 60_000)), 'the same answer all evening');
+    assert.equal(herds.roundGround(z, herd.find((d) => herds.phaseFor(z, d, DUSK) === 'rest'), DUSK), undefined, 'one that stays in walks nowhere');
+    z.conditions.delete('wood');
+    assert.equal(herds.phaseFor(z, deer, DAWN), 'feed', 'and when the hunting stops, the dawn comes back');
+    const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(verbs, /await ai\.provokeGrudges\(z, session, true\);[^\n]*\n\s*await ai\.waryBolt\(z, session, stealthMult\);/, 'walking in can put them to flight');
+  });
   check('a carrion eater feeds on the bone ground, an adder on the warm rock (2026-10-25)', () => {
     assert.ok(herds.feedsAt('carrion-vulture', 'the-bone-ground'), 'a vulture is out on the carrion ground');
     assert.ok(herds.feedsAt('carrion-vulture', 'the-deer-lawn'), 'and where the grazers die');

@@ -78,6 +78,14 @@
   var hNext = mk("button", stepCss, "\u203a");
   ["day", "dawn", "dusk", "night", "moon", "blood", "eclipse", "fog", "rain", "snow", "after-rain", "wet-dawn", "wet-dusk", "wet-night"].forEach(function (h) {
     var o = document.createElement("option"); o.value = h; o.textContent = h; hour.appendChild(o); });
+  // THE TIME OF DAY UNDER THE WEATHER. The server sends fog, rain and snow at
+  // any hour, with the night flag and the low light (dawn, dusk) beside them, so
+  // the weather has to be seen at each. "as the sky" is the hour the sky names.
+  var tod = mk("select", btnCss);
+  [["", "time: as the sky"], ["day", "time: day"], ["dawn", "time: dawn"], ["dusk", "time: dusk"], ["night", "time: night"]].forEach(function (x) {
+    var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; tod.appendChild(o); });
+  var askTod = new URLSearchParams(location.search).get("time");
+  if (askTod) tod.value = askTod;
   // THE HOLLOW'S EYES as the server would send them (chips.ts): the grudge and
   // the deep's breath. The blood moon and the eclipse come from the sky above.
   var eyeSel = mk("select", btnCss);
@@ -378,17 +386,22 @@
     // (rain after dark). Rooms and gates were painted without it, so a sealed
     // room with a window read noon at every hour (2026-10-23).
     var nightFlag = /[?&]night=1/.test(location.search) || h === "night" || h === "moon" || h === "blood" || h === "wet-night" ? 1 : 0;
-    var roofSky = !covered ? h : seen.band !== "road" ? "in"
-      : (h === "rain" || h === "snow" || h === "fog" || h === "after-rain") ? "day" : h;
+    var low = h === "dawn" || h === "wet-dawn" ? 1 : h === "dusk" || h === "wet-dusk" ? 2 : 0;
+    if (tod.value) { nightFlag = tod.value === "night" ? 1 : 0; low = tod.value === "dawn" ? 1 : tod.value === "dusk" ? 2 : 0; }
+    // ...and since 2026-10-26 a roof anywhere in open country is sent the sky
+    // as it is outside, weather and all (zone.ts artSkyFor); only the sunless
+    // places still get "in".
+    var OPEN = { out: 1, road: 1, wood: 1, mountain: 1, den: 1, crossing: 1 };
+    var roofSky = !covered ? h : OPEN[seen.band] ? h : "in";
     if (v.indexOf("room:") === 0) {
       var r = v.slice(5);
-      paintScene("upper", roofSky, "", r, torch, skyRollN, r, 0, red, covered, nightFlag);
+      paintScene("upper", roofSky, "", r, torch, skyRollN, r, 0, red, covered, nightFlag, low);
     } else if (v.indexOf("gate:") === 0) {
-      paintScene("mountain", roofSky, v, "preview-gate", torch, skyRollN, "", 0, red, covered, nightFlag);
+      paintScene("mountain", roofSky, v, "preview-gate", torch, skyRollN, "", 0, red, covered, nightFlag, low);
     } else {
       // THE GROUND'S OWN REGION, as the game sends it - this said "mountain" for
       // every ground, so the beach got the mountain's birds (2026-10-20)
-      paintScene(BAND_OF[groundAt[v.slice(7)]] || "mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red, undefined, nightFlag);
+      paintScene(BAND_OF[groundAt[v.slice(7)]] || "mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red, undefined, nightFlag, low);
     }
     fitPicture();
     var dead = nomadSel.value === "dead" && ids.indexOf("nomad") >= 0;
@@ -404,7 +417,7 @@
     shown.textContent = ids.length ? "standing: " + ids.join(", ") : "nothing standing";
     try { localStorage.setItem(KEY, JSON.stringify({ g: gnd.value, h: hour.value, t: torch, ids: ids, f: feast.value })); } catch (e) {}
   }
-  gnd.onchange = paint; hour.onchange = paint;
+  gnd.onchange = paint; hour.onchange = paint; tod.onchange = paint;
 
   // STEP THROUGH, WRAPPING AT THE ENDS. A select is the slowest way to look at
   // forty plates in a row; this is the fast one.

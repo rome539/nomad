@@ -76,6 +76,26 @@ What went wrong the first time, so it can be checked for:
 
 **Every plate has to be looked at.**
 
+## Fog masks
+
+Fog is drawn by distance, not by height on the screen: near things stay clear and far things go. Each day and night plate (and its flooded twin) has a fog mask, worked out from the plate's depth with the same model as above. A torch plate uses its night plate's mask.
+
+| File | What it is | In git? |
+|---|---|---|
+| `game-server/scripts/plate-fog.py` | Builds the masks | yes |
+| `game-server/public/room-fog/*.webp` | One mask per plate: black, its alpha is the fog | no, uploads from the working tree like the plates |
+| `game-server/public/room-fog/fog.json` | Which plates have a mask | no, same |
+
+From `game-server/`:
+
+```sh
+PLATE_FX_MODEL=~/.plate-fx/depth.onnx ~/.plate-fx/bin/python scripts/plate-fog.py
+```
+
+The same script also makes a **snow light** for every ground with a snow plate: wherever its night-torch plate is orange (red well over blue - the rest of a torch plate is night blue), smoothed so only the light and not the painted ground is kept (`room-fog/<ground>-snowlight.webp`). It needs only the night-torch plate. Snow has no torch plate, so at night with a torch the client adds the snow plate itself, coloured like the flame, through that light map.
+
+It skips plates that already have a mask, so a new plate only costs its own. Add `--force` to rebuild every mask, for example after changing the curve at the top of the script. Depth maps for plates outside `room-fx` are cached in `~/.plate-fx/depth-cache/`. **After any change, bump `FOG_V` in `public.ts`.** A plate without a mask falls back to the old veil by height, so a missing mask is never a hole.
+
 ## When a plate is remade
 
 The old flame positions and depth map belong to the old picture. For a remade plate:
