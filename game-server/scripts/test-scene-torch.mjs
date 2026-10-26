@@ -643,7 +643,10 @@ for (const room of ["the-white-ride", "the-gnawed-stand", "the-picked-bones", "t
 ctx.scenes.gully = "day night fog rain snow";
 ctx.paint("mountain", "fog", "gully", "fog-night", 0, 0, "", 0, 0, false, 1);
 t("night fog is the fog plate", strip(sceneEl.style.backgroundImage) === "/room-bg/gully-fog.webp", strip(sceneEl.style.backgroundImage));
-t("...graded for night", /night/.test(sceneEl.className), sceneEl.className);
+t("...graded with the game's night grade", /\bt-fog-night\b/.test(sceneEl.className), sceneEl.className);
+const fogNightRule = src.match(/#scene\.t-fog-night \{ filter: ([^}]*); \}/);
+const wetNightRule = src.match(/#sky\[data-sky="wet-night"\] \{ filter: ([^}]*); \}/);
+t("...which is the wet night's own grade, word for word", fogNightRule && wetNightRule && fogNightRule[1] === wetNightRule[1], fogNightRule && fogNightRule[1]);
 t("...and what stands in it lit for night", mobsEl.className === "t-night", mobsEl.className);
 ctx.paint("mountain", "fog", "gully", "fog-day", 0, 0, "", 0, 0, false, 0);
 t("day fog takes no night grade", !/night/.test(sceneEl.className), sceneEl.className);

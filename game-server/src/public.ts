@@ -1181,6 +1181,12 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #scene.t-night { filter: brightness(.42) saturate(.85); }
   body[data-view="image"] #scene.t-after-rain { filter: brightness(.94) saturate(.80) contrast(.96); }
   body[data-view="image"] #scene.t-fog   { filter: brightness(.92) saturate(.45) contrast(.86); }
+  /* FOG AFTER DARK takes the game's own night grade (rome, 2026-10-25: not dark
+     enough, and not the night we use) — the wet night's, word for word. The fog
+     plate is a daylit photograph; this brings it to the night plates' dark
+     cold blue (measured: fog ~27 against the night plates' ~20, where a plain
+     .42 dimming left it at ~50 and grey). */
+  body[data-view="image"] #scene.t-fog-night { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.25) contrast(1.08); }
   body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
   body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
   /* LIGHTNING LIGHTS THE PLATE ITSELF (rome, 2026-10-13): the picture, its sky
@@ -12798,7 +12804,8 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // so does whatever is standing in it. Fog plates carry their own sky, so
   // there is no sky layer to regrade.
   var fogNight = lastSky === "fog" && !!lastNight;
-  if ((rainNight || fogNight) && !lit && !singleLayer && scene) tint = "night";
+  if (rainNight && !lit && !singleLayer && scene) tint = "night";
+  if (fogNight && !lit && !singleLayer && scene) tint = "fog-night";
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
     var fade = scene !== scenePainted ? fadeScene() : null;
