@@ -1190,6 +1190,17 @@ export const PAGE = `<!doctype html>
   /* ...and at dawn and dusk the wet sky's low-light grades, word for word. */
   body[data-view="image"] #scene.t-fog-dawn { filter: brightness(.44) saturate(.60) contrast(1.04); }
   body[data-view="image"] #scene.t-fog-dusk { filter: brightness(.40) saturate(.60) contrast(1.04); }
+  /* Snow takes the same three, word for word (measured: night ~25-35 against
+     the night plates' ~18-28, the snow still pale). */
+  body[data-view="image"] #scene.t-snow-night { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.25) contrast(1.08); }
+  body[data-view="image"] #scene.t-snow-dawn { filter: brightness(.44) saturate(.60) contrast(1.04); }
+  body[data-view="image"] #scene.t-snow-dusk { filter: brightness(.40) saturate(.60) contrast(1.04); }
+  /* Rain is painted dark already: the night's colour at the night plates'
+     darkness (~20-26 measured; the full grade made it ~8), and the wet dawn
+     and dusk as they are. */
+  body[data-view="image"] #scene.t-rain-night { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.40) contrast(1.08); }
+  body[data-view="image"] #scene.t-rain-dawn { filter: brightness(.44) saturate(.60) contrast(1.04); }
+  body[data-view="image"] #scene.t-rain-dusk { filter: brightness(.40) saturate(.60) contrast(1.04); }
   body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
   body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
   /* LIGHTNING LIGHTS THE PLATE ITSELF (rome, 2026-10-13): the picture, its sky
@@ -12813,14 +12824,15 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // night fog was drawn as a bright grey noon. It takes the night grade, and
   // so does whatever is standing in it. Fog plates carry their own sky, so
   // there is no sky layer to regrade.
-  var fogNight = lastSky === "fog" && !!lastNight;
-  // ...AND FOG IN THE LOW LIGHT (rome, 2026-10-25: a foggy dawn drawn as noon).
-  // The wet sky's own dawn and dusk grades, word for word, for the plate and
-  // for what stands on it.
-  var fogLow = lastSky === "fog" && !lastNight && lastLow ? (lastLow === 2 ? "dusk" : "dawn") : "";
-  if (rainNight && !lit && !singleLayer && scene) tint = "night";
-  if (fogNight && !lit && !singleLayer && scene) tint = "fog-night";
-  if (fogLow && !lit && !singleLayer && scene) tint = "fog-" + fogLow;
+  // ...AND EVERY GROUND WEATHER BY THE HOUR (rome, 2026-10-25). Fog, rain and
+  // snow are daylit photographs and "fog"/"rain"/"snow" come down at any hour,
+  // so each takes the hour's grade: the wet sky's own night, dawn and dusk
+  // grades for fog and snow, word for word; rain the night's colour at the
+  // night plates' darkness (its plates are painted dark already, and the full
+  // grade put them near black), and the wet dawn and dusk as they are.
+  var wxKind = lastSky === "fog" || lastSky === "rain" || lastSky === "snow" ? lastSky : "";
+  var wxHour = wxKind ? (lastNight ? "night" : lastLow === 2 ? "dusk" : lastLow === 1 ? "dawn" : "") : "";
+  if (wxHour && !lit && !singleLayer && scene) tint = wxKind + "-" + wxHour;
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
     var fade = scene !== scenePainted ? fadeScene() : null;
@@ -12865,7 +12877,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // on ground the plate has lit to orange. It follows the PLATE, so an unpainted
     // ground keeps its dark and nothing is lit by a torch the picture cannot see.
     if (mobsEl) {
-      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + ((rainNight && mobHour === "rain") || (fogNight && mobHour === "fog") ? "night" : fogLow && mobHour === "fog" ? "wet-" + fogLow : mobHour) : "";
+      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + (wxHour && mobHour === wxKind ? (wxHour === "night" ? "night" : "wet-" + wxHour) : mobHour) : "";
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.
@@ -12933,7 +12945,8 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
 // ...AND FOG GRADED FOR THE HOUR (rome, 2026-10-25: the gates' torches went
 // out in the night and dawn fog). Same argument: the fog plate is painted for
 // fog, lanterns and all, and the night, dawn and dusk grades only darken it.
-var FX_UNDER_TINT = { moon: 1, eclipse: 1, "after-rain": 1, "fog-night": 1, "fog-dawn": 1, "fog-dusk": 1 };
+var FX_UNDER_TINT = { moon: 1, eclipse: 1, "after-rain": 1, "fog-night": 1, "fog-dawn": 1, "fog-dusk": 1,
+  "rain-night": 1, "rain-dawn": 1, "rain-dusk": 1, "snow-night": 1, "snow-dawn": 1, "snow-dusk": 1 };
 var fxCanvas = document.getElementById("scene-fx");
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");

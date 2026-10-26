@@ -686,7 +686,24 @@ t("...and in fog at dawn the fog, graded for dawn", strip(sceneEl.style.backgrou
 // room's flame effects run, or the gates' lanterns go out in night fog.
 const underTint = src.match(/var FX_UNDER_TINT = \{([^}]*)\}/)[1];
 for (const g of ["fog-night", "fog-dawn", "fog-dusk"]) t("the torches burn under " + g, underTint.includes('"' + g + '"'), underTint);
-for (const g of (src.match(/#scene\.t-(fog-[a-z]+) \{/g) || []).map((m) => m.slice(9, -2))) t("every fog grade the page draws keeps its torches: " + g, underTint.includes('"' + g + '"'));
+for (const g of (src.match(/#scene\.t-((?:fog|rain|snow)-[a-z]+) \{/g) || []).map((m) => m.slice(9, -2))) t("every weather grade the page draws keeps its torches: " + g, underTint.includes('"' + g + '"'));
+
+// RAIN AND SNOW BY THE HOUR (rome, 2026-10-25).
+ctx.scenes.gully = "day night fog rain snow";
+for (const [w, n, low, want, mobs] of [
+  ["snow", 1, 0, "t-snow-night", "t-night"], ["snow", 0, 1, "t-snow-dawn", "t-wet-dawn"], ["snow", 0, 2, "t-snow-dusk", "t-wet-dusk"],
+  ["rain", 1, 0, "t-rain-night", "t-night"], ["rain", 0, 1, "t-rain-dawn", "t-wet-dawn"], ["rain", 0, 2, "t-rain-dusk", "t-wet-dusk"],
+]) {
+  ctx.paint("mountain", w, "gully", w + n + low, 0, 0, "", 0, 0, false, n, low);
+  t(w + " " + (n ? "night" : low === 1 ? "dawn" : "dusk") + " is graded " + want, new RegExp("\\b" + want + "\\b").test(sceneEl.className) && mobsEl.className === mobs, sceneEl.className + " / " + mobsEl.className);
+}
+ctx.paint("mountain", "snow", "gully", "snow-noon", 0, 0, "", 0, 0, false, 0, 0);
+t("noon snow is untouched", !/t-snow-/.test(sceneEl.className), sceneEl.className);
+for (const [g, sk] of [["snow-night", "wet-night"], ["snow-dawn", "wet-dawn"], ["snow-dusk", "wet-dusk"], ["rain-dawn", "wet-dawn"], ["rain-dusk", "wet-dusk"]]) {
+  const a = src.match(new RegExp("#scene\\." + "t-" + g + " \\{ filter: ([^}]*); \\}"));
+  const b = src.match(new RegExp('#sky\\[data-sky="' + sk + '"\\]  ?\\{ filter: ([^}]*); \\}'));
+  t(g + " is the " + sk + " sky's grade, word for word", a && b && a[1] === b[1], a && a[1]);
+}
 
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");
