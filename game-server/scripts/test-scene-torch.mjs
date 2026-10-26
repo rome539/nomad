@@ -183,13 +183,14 @@ for (const hour of ["dusk", "dawn"]) {
   // plate under their own sky — a dark hillside under a burning one — and not
   // on a noon photograph turned down.
   r = paint(hour, "snow", 0);
-  t("...and the night ground when unlit", r.scene === "/room-bg/snow-night.webp", r.scene);
+  // DAWN IS THE DAY GROUND, GRADED (rome, 2026-10-26); dusk stays on the night plate.
+  t("...and its own ground when unlit", r.scene === (hour === "dawn" ? "/room-bg/snow-day.webp" : "/room-bg/snow-night.webp"), r.scene);
   // NO CORRECTION ON THE GROUND AT DUSK. The night plate is the right dark
   // ground for a dark hour; the sky behind it is what carries the evening.
   // DAWN IS LIFTED (rome, 2026-10-25): under either dawn sky the night floor
   // read too dark and too moonlit, so dawn grades it up and warms it.
   if (hour === "dusk") t("...and takes the plate raw", r.tint === "", "class=" + r.tint);
-  else t("...and takes the dawn's lift", r.tint === "t-dawn", "class=" + r.tint);
+  else t("...and takes the dawn's grade", r.tint === "t-dawn", "class=" + r.tint);
   t("...under its own sky still", skyIs(r.sky, hour), r.sky);
 }
 
@@ -394,7 +395,8 @@ console.log("the hour turns while you stand still");
   ctx.paint("mountain", "night", "scree", "still", 0, 0);
   const wasScene = strip(sceneEl.style.backgroundImage), wasSky = strip(skyEl.style.backgroundImage);
   ctx.paint(null, "dawn", null, null);
-  t("the ground is the same plate", strip(sceneEl.style.backgroundImage) === wasScene, wasScene);
+  // (dawn moved to the day plate, 2026-10-26: the ground changes with the hour now)
+  t("the ground turns with it", strip(sceneEl.style.backgroundImage) === "/room-bg/scree-day.webp" && wasScene === "/room-bg/scree-night.webp", wasScene + " -> " + strip(sceneEl.style.backgroundImage));
   t("...and the sky follows the hour anyway",
     strip(skyEl.style.backgroundImage) === "/sky/dawn.webp" && wasSky === "/sky/night.webp",
     wasSky + " -> " + strip(skyEl.style.backgroundImage));
@@ -665,13 +667,13 @@ for (const [w, n, low, ground, tint, sky, mobs, veil] of [
   ["fog", 0, 0, "day", "t-fog", "fog", "t-fog", "f-day"],
   ["fog", 1, 0, "night", "", "wet-night", "t-night", "f-night"],
   // a foggy dawn's ground takes the dawn lift (rome, 2026-10-26)
-  ["fog", 0, 1, "night", "t-dawn", "wet-dawn", "t-wet-dawn", "f-dawn"],
+  ["fog", 0, 1, "day", "t-dawn", "wet-dawn", "t-wet-dawn", "f-dawn"],
   ["fog", 0, 2, "night", "", "wet-dusk", "t-wet-dusk", "f-dusk"],
   ["rain", 0, 0, "day", "t-rain", "rain", "t-rain", ""],
   // rain after dark takes a wet grade on the night plate (rome, 2026-10-26: too bright)
   ["rain", 1, 0, "night", "t-rain-dark", "rain-night", "t-night", ""],
   // rain at dawn: dawn's ground under the cloud's shadow, and the rain's own sky - never the clear dawn sky (rome, 2026-10-26)
-  ["rain", 0, 1, "night", "t-rain-dawn", "wet-dawn", "t-wet-dawn", ""],
+  ["rain", 0, 1, "day", "t-rain-dawn", "wet-dawn", "t-wet-dawn", ""],
   // rain at dusk: dusk's ground under the same cloud shadow (rome, 2026-10-26)
   ["rain", 0, 2, "night", "t-rain-dusk", "wet-dusk", "t-wet-dusk", ""],
 ]) {
@@ -692,16 +694,16 @@ t("and when it clears the veil goes", veilEl.className === "", veilEl.className)
 // A ROOF WHOSE PICTURE IS THE OUTSIDE SHOWS THE OUTSIDE: at dawn the night
 // ground with its sky, and in fog the same ground under the veil.
 ctx.paint("out", "dawn", "", "ml-dawn", 0, 0, "the-marshals-lodging", 0, 0, true, 0, 1);
-t("the Lodging at dawn is the dawn ground under a sky", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-night.webp" && !!skyEl.style.backgroundImage, strip(sceneEl.style.backgroundImage));
+t("the Lodging at dawn is the dawn ground under a sky", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-day.webp" && !!skyEl.style.backgroundImage, strip(sceneEl.style.backgroundImage));
 ctx.paint("out", "fog", "", "ml-fogdawn", 0, 0, "the-marshals-lodging", 0, 0, true, 0, 1);
-t("...and in fog at dawn the same ground, under the dawn veil", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-night.webp" && veilEl.className === "f-dawn", strip(sceneEl.style.backgroundImage) + " " + veilEl.className);
+t("...and in fog at dawn the same ground, under the dawn veil", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-day.webp" && veilEl.className === "f-dawn", strip(sceneEl.style.backgroundImage) + " " + veilEl.className);
 ctx.paint("den", "fog", "", "loft-fog", 0, 0, "the-lodge-loft", 0, 0, true, 0, 0);
 t("...but a room with its own window plate has no fog inside it", veilEl.className === "", veilEl.className);
 
 // THE DAWN GROUND (rome, 2026-10-25): lifted on the night plate under every dawn sky, lamps still lit.
-t("the dawn ground has its grade", /#scene\.t-dawn \{ filter: brightness\(1\.\d+\)/.test(src));
+t("the dawn ground has its grade, the day plate dimmed", /#scene\.t-dawn \{ filter: brightness\(0?\.\d+\)/.test(src));
 ctx.paint("mountain", "dawn", "gate:weeper-arch", "dawn-gate", 0, 0, "", 0);
-t("...at a gate too, on its night plate", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-weeper-arch-night.webp" && sceneEl.className === "t-dawn", strip(sceneEl.style.backgroundImage) + " " + sceneEl.className);
+t("...at a gate too, on its day plate", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-weeper-arch-day.webp" && sceneEl.className === "t-dawn", strip(sceneEl.style.backgroundImage) + " " + sceneEl.className);
 t("...and its lanterns keep burning", /\bdawn: 1/.test(src.match(/var FX_UNDER_TINT = \{([^}]*)\}/)[1]));
 
 // RAIN BY DAY DARKENS THE WHOLE PICTURE ALIKE (rome, 2026-10-26: the tops of the

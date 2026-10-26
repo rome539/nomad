@@ -1161,14 +1161,14 @@ export const PAGE = `<!doctype html>
      stone. The sky behind carries the evening; the ground is simply dark.
      The three below stay because each is a real change to what falls on the
      ground rather than a repair to a borrowed picture. */
-  /* ...EXCEPT DAWN (rome, 2026-10-25: the night floor is not the right match,
-     under either dawn sky). Dawn's sky is nearly as bright as day's at the
-     horizon (measured: ~145 against day's ~155, the night sky's ~45), and the
-     night plate under it read ~30, cold with moonlight. The light is coming,
-     and it is not the moon's: the night ground is lifted and the blue taken
-     out of it. It stays the night plate, so the shadows are not noon's and the
-     lamps are still burning. */
-  body[data-view="image"] #scene.t-dawn { filter: brightness(1.55) sepia(.38) saturate(.85) hue-rotate(-8deg); }
+  /* ...EXCEPT DAWN, WHICH STANDS ON THE DAY PLATE (rome, 2026-10-26: the night
+     floor, even lifted, never looked right; "use the day and tint it"). Dawn's
+     sky is nearly as bright as day's at the horizon (measured ~145 against
+     ~155), so its ground is the day ground, dimmed, drained and warmed a touch
+     for the first light. The grey dawn after rain and a foggy dawn take a
+     greyer version of the same; rain at dawn lays the cloud's shadow over it. */
+  body[data-view="image"] #scene.t-dawn { filter: brightness(.66) saturate(.62) sepia(.18) hue-rotate(-8deg) contrast(1.05); }
+  body[data-view="image"] #scene.t-wet-dawn { filter: brightness(.58) saturate(.50) sepia(.10) contrast(1.04); }
   body[data-view="image"] #scene.t-eclipse { filter: brightness(.70) saturate(.55) contrast(1.06); }
   body[data-view="image"] #scene.t-moon    { filter: brightness(1.10) saturate(.92); }
   /* THE BLOOD MOON IS THE ONE TINT A FILTER CANNOT DO. Every CSS filter treats
@@ -1204,7 +1204,7 @@ export const PAGE = `<!doctype html>
      raw, ~25 here - snow at night reads ~25-35). */
   /* Rain at dawn: the dawn ground (t-dawn, word for word), then the cloud's
      shadow over it as daytime rain darkens the day. */
-  body[data-view="image"] #scene.t-rain-dawn { filter: brightness(1.55) sepia(.38) saturate(.85) hue-rotate(-8deg) brightness(.58) saturate(.85); }
+  body[data-view="image"] #scene.t-rain-dawn { filter: brightness(.66) saturate(.62) sepia(.18) hue-rotate(-8deg) contrast(1.05) brightness(.58) saturate(.85); }
   /* Rain at dusk: dusk's ground (the night plate, raw) under the same shadow. */
   body[data-view="image"] #scene.t-rain-dusk { filter: brightness(.58) saturate(.85); }
   body[data-view="image"] #scene.t-rain-dark { filter: brightness(.62) saturate(.85) contrast(1.05); }
@@ -1383,7 +1383,8 @@ export const PAGE = `<!doctype html>
      was written to stop. .44 holds the same creature-to-ground ratio the hour
      had before anything moved; the number changed only to keep the relationship
      that was already there. */
-  body[data-view="image"] #mobs.t-dawn img, body[data-view="image"] #mobs.t-dawn .mob { filter: brightness(.44) saturate(.80) sepia(.16) hue-rotate(-6deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  /* ...and what stands on the dawn ground takes the dawn ground's own grade (2026-10-26). */
+  body[data-view="image"] #mobs.t-dawn img, body[data-view="image"] #mobs.t-dawn .mob { filter: brightness(.66) saturate(.62) sepia(.18) hue-rotate(-8deg) contrast(1.05) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-dusk img, body[data-view="image"] #mobs.t-dusk .mob { filter: brightness(.42) saturate(.95) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-night img, body[data-view="image"] #mobs.t-night .mob { filter: brightness(.26) saturate(.70) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
   body[data-view="image"] #mobs.t-wet-night img, body[data-view="image"] #mobs.t-wet-night .mob { filter: brightness(.24) saturate(.60) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
@@ -11180,11 +11181,12 @@ var SKY_PAINTED = {
 // says so. Their tints move with them: see the note on those rules, which now
 // bring a night ground UP toward the evening instead of a day one down.
 var SKY_BASE = {
-  day: "day", "in": "day", dawn: "night", dusk: "night",
+  // DAWN IS THE DAY GROUND, GRADED (rome, 2026-10-26) - see t-dawn. Dusk stays on night.
+  day: "day", "in": "day", dawn: "day", dusk: "night",
   // The ground it borrows is the DAY ground, not the rain ground: the rain
   // plates have rain falling in them, and it has stopped.
   "after-rain": "day",
-  "wet-night": "night", "wet-dusk": "night", "wet-dawn": "night",
+  "wet-night": "night", "wet-dusk": "night", "wet-dawn": "day",
   // TOTALITY IS A DARK SCENE, not a daylit one under a strange sky. It sits
   // at midday, so the day ground was the obvious answer and the obvious
   // answer was wrong: the light goes out, and bright noon stone under a
@@ -11258,7 +11260,7 @@ var TORCH_HOURS = { night: 1, moon: 1, blood: 1, eclipse: 1, dusk: 1, dawn: 1, "
 // doing the work — same argument that moved dusk and dawn.
 // The wet low hours and the wet night stand on the night plate, which is the
 // right ground for them as it is; the grey is all in the sky.
-var NO_GROUND_TINT = { dusk: 1, blood: 1, "wet-night": 1, "wet-dusk": 1, "wet-dawn": 1 };
+var NO_GROUND_TINT = { dusk: 1, blood: 1, "wet-night": 1, "wet-dusk": 1 };
 // MORE THAN ONE SKY FOR AN HOUR. An hour listed here owns a POOL, and which one
 // is up is decided by the world-day count the server sends — so the sky changes
 // from one day to the next and never from one room to the next. A sky picked per
@@ -12750,6 +12752,8 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // flag beside it, and "in" maps to day - so every window room was noon
     // around the clock. Under a roof the hour comes from the flag.
     if (lastSky === "in") { pbase = lastNight ? "night" : "day"; slot = pbase; }
+    // An interior at dawn is still dark inside; only the open ground takes the day plate.
+    if (shut && (hour === "dawn" || hour === "wet-dawn")) pbase = "night";
     if (shut && WEATHER_FROM_INSIDE[hour]) { pbase = "night"; slot = SKY_PAINTED[hour] ? hour : "after-rain"; }
     // A ROOF WITH AN OVERCAST PICTURE (the den, rome 2026-10-19). Its daylight
     // comes in through gaps, so a wet or grey day is not the night plate - it is
@@ -13135,7 +13139,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
 // the night and dawn fog). Rain and fog by day grade the day plate greyer, and
 // snow's plate is painted for snow, lanterns and all; the night, dawn and dusk
 // grades on it only darken it.
-var FX_UNDER_TINT = { moon: 1, eclipse: 1, dawn: 1, "after-rain": 1, rain: 1, "rain-dark": 1, "rain-dawn": 1, "rain-dusk": 1, fog: 1, "snow-night": 1, "snow-dawn": 1, "snow-dusk": 1 };
+var FX_UNDER_TINT = { moon: 1, eclipse: 1, dawn: 1, "wet-dawn": 1, "after-rain": 1, rain: 1, "rain-dark": 1, "rain-dawn": 1, "rain-dusk": 1, fog: 1, "snow-night": 1, "snow-dawn": 1, "snow-dusk": 1 };
 var fxCanvas = document.getElementById("scene-fx");
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");
