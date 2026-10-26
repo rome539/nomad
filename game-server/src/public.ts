@@ -1187,6 +1187,9 @@ export const PAGE = `<!doctype html>
      cold blue (measured: fog ~27 against the night plates' ~20, where a plain
      .42 dimming left it at ~50 and grey). */
   body[data-view="image"] #scene.t-fog-night { filter: sepia(.75) hue-rotate(175deg) saturate(1.5) brightness(.25) contrast(1.08); }
+  /* ...and at dawn and dusk the wet sky's low-light grades, word for word. */
+  body[data-view="image"] #scene.t-fog-dawn { filter: brightness(.44) saturate(.60) contrast(1.04); }
+  body[data-view="image"] #scene.t-fog-dusk { filter: brightness(.40) saturate(.60) contrast(1.04); }
   body[data-view="image"] #scene.t-rain  { filter: brightness(.74) saturate(.80) contrast(1.04); }
   body[data-view="image"] #scene.t-snow  { filter: brightness(1.04) saturate(.55); }
   /* LIGHTNING LIGHTS THE PLATE ITSELF (rome, 2026-10-13): the picture, its sky
@@ -5604,7 +5607,7 @@ async function connect() {
       if (f.art) grantArt();
       lastEcl = f.ecl ? 1 : 0;
       lastBow = f.bow ? 1 : 0;
-      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered, f.nt);
+      paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered, f.nt, f.lo);
       roomEl.textContent = "";
       if (f.room) {
         roomEl.appendChild(document.createTextNode(f.room));
@@ -12525,12 +12528,14 @@ var lastCovered = false;
 // at every hour, and a room with no window still has to tell a wet noon from a
 // wet midnight (the den, below).
 var lastNight = 0;
-function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered, night) {
+var lastLow = 0; // 1 dawn, 2 dusk (the server's lo): the low light fog is graded for
+function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered, night, low) {
   // The sky name stands in for the roof only when the frame left "covered" out
   // (the night line once sat between these two and took the else for itself).
   if (covered !== undefined) lastCovered = !!covered;
   else if (sky !== undefined && sky !== null) lastCovered = sky === "in";
   if (night !== undefined && night !== null) lastNight = night ? 1 : 0;
+  if (low !== undefined && low !== null) lastLow = low || 0;
   // HOW MUCH WATER IS OVER THIS ROOM, and cleared the same way place is:
   // walking off a flooded shoal onto a dry road has to put the sheet away, so
   // an absent field is zero rather than "leave it as it was".
@@ -12788,7 +12793,12 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // was cut for a sky. Taking the sky away left the hole black. A borrowed
   // ground keeps its sky until the room gets its own plate; an interior is
   // opaque, so a sky behind it would never show anyway.
-  if (lastCovered && place && !SHELTERED[place]) { sky = ""; turn = ""; }
+  // ...AND A PLATE BORROWED THROUGH PLATE_OF IS THE SAME CASE (rome, 2026-10-25:
+  // the Marshal's Lodging black over the siege lines). The Lodging, the Mine
+  // Mouth, the Village Smithy and the Cider House are in ROOM_PLATE, so they
+  // read as having a picture of their own — but the picture is the open ground
+  // outside, cut for a sky, and taking the sky away left the hole black.
+  if (lastCovered && place && !SHELTERED[place] && !PLATE_OF[place]) { sky = ""; turn = ""; }
   var precipitation = !singleLayer && scene && !lastCovered && !SHELTERED[place] ? mobHour : "";
   // RAIN AFTER DARK (rome, 2026-10-20). The server sends "rain" as the sky at
   // any hour - rain is the news - and there is no rain-at-night photograph, so
@@ -12804,8 +12814,13 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // so does whatever is standing in it. Fog plates carry their own sky, so
   // there is no sky layer to regrade.
   var fogNight = lastSky === "fog" && !!lastNight;
+  // ...AND FOG IN THE LOW LIGHT (rome, 2026-10-25: a foggy dawn drawn as noon).
+  // The wet sky's own dawn and dusk grades, word for word, for the plate and
+  // for what stands on it.
+  var fogLow = lastSky === "fog" && !lastNight && lastLow ? (lastLow === 2 ? "dusk" : "dawn") : "";
   if (rainNight && !lit && !singleLayer && scene) tint = "night";
   if (fogNight && !lit && !singleLayer && scene) tint = "fog-night";
+  if (fogLow && !lit && !singleLayer && scene) tint = "fog-" + fogLow;
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
     var fade = scene !== scenePainted ? fadeScene() : null;
@@ -12850,7 +12865,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // on ground the plate has lit to orange. It follows the PLATE, so an unpainted
     // ground keeps its dark and nothing is lit by a torch the picture cannot see.
     if (mobsEl) {
-      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + ((rainNight && mobHour === "rain") || (fogNight && mobHour === "fog") ? "night" : mobHour) : "";
+      mobsEl.className = lit ? "t-night-torch" : mobHour ? "t-" + ((rainNight && mobHour === "rain") || (fogNight && mobHour === "fog") ? "night" : fogLow && mobHour === "fog" ? "wet-" + fogLow : mobHour) : "";
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you
       // would put the next room's animals wherever the last one's stood.

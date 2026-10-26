@@ -7961,6 +7961,12 @@ export const ART_ROOMS = new Set<string>([
   "the-marrow-seat", "the-gods-pool",
 ]);
 
+// A ROOF WHOSE PICTURE IS THE GROUND OUTSIDE (rome, 2026-10-25: the Marshal's
+// Lodging showed a clear noon while it was foggy at dawn outside). These are
+// roofed, so they stay INDOOR_ROOMS for shelter, but the picture they borrow
+// (public.ts PLATE_OF) is the open ground outside them, and a picture of the
+// outside has to show the outside's hour and weather.
+export const ROOF_SHOWS_OUTSIDE = new Set<string>(["the-marshals-lodging", "the-mine-mouth", "the-village-smithy", "the-cider-house"]);
 export const INDOOR_ROOMS = new Set<string>([
   // THE BEAR CAVES (mig 319): every room behind a mouth. The mouths keep the
   // day, the way the sea cave's does.

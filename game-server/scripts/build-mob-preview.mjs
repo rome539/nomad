@@ -484,7 +484,7 @@ var DROP_HOUR=${CUT_ONLY ? JSON.stringify([...WHOLE_PHOTOGRAPH]) : "null"};
 ${SCENE_TABLES}
 var sceneEl=document.getElementById("scene"), skyEl=document.getElementById("sky"),
     mobsEl=document.getElementById("mobs"), viewMode="image",
-    lastBand="", lastSky="", lastTerrain="", lastRoomKey="", lastPlace="", lastTorch=false, lastNight=0, skyRoll=0, scapeRaw=null,
+    lastBand="", lastSky="", lastTerrain="", lastRoomKey="", lastPlace="", lastTorch=false, lastNight=0, lastLow=0, skyRoll=0, scapeRaw=null,
     lastSea=0, scenePainted="", sceneSeq=0;
 ${WEATHER_STATE}
 ${fn("drawWeather")}

@@ -88,7 +88,7 @@ const ctx = {};
 const code = [
   depsFor(fn("paintScene"), "paintScene"),
   'var viewMode = "image";',
-  'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "", lastTorch = false, lastNight = 0, skyRoll = 0;',
+  'var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "", lastTorch = false, lastNight = 0, lastLow = 0, skyRoll = 0;',
   'var lastSea = 0, lastCovered = false, weatherKind = "";',
   'var scapeRaw = null;', // audio has its own lifecycle checks in test-world-sound.mjs
   'function setWeather(kind) { weatherKind = kind; }',
@@ -637,6 +637,16 @@ for (const room of ["the-white-ride", "the-gnawed-stand", "the-picked-bones", "t
   t(room + " paints the Moon Glade", strip(sceneEl.style.backgroundImage) === "/room-bg/the-moon-glade-night.webp", strip(sceneEl.style.backgroundImage));
 }
 
+// A ROOFED ROOM ON BORROWED GROUND KEEPS ITS SKY (rome, 2026-10-25: the
+// Marshal's Lodging was black over the siege lines). Its picture is the open
+// ground outside, cut for a sky, so the sky stays behind it.
+for (const room of ["the-marshals-lodging", "the-mine-mouth", "the-village-smithy", "the-cider-house"]) {
+  ctx.paint("out", "in", "", "borrow-" + room, 0, 0, room, 0, 0, true, 0);
+  t(room + " keeps a sky behind its borrowed ground", !!skyEl.style.backgroundImage, strip(sceneEl.style.backgroundImage));
+}
+ctx.paint("den", "in", "", "loft-own", 0, 0, "the-lodge-loft", 0, 0, true, 1);
+t("...a room with its own window plate still takes its sky through the window", /\/sky\//.test(skyEl.style.backgroundImage));
+
 // FOG AFTER DARK (rome, 2026-10-25): the fog plate is a daylit photograph and
 // "fog" comes down at any hour, so night fog was a bright noon. It takes the
 // night grade at night, and so does what stands in it; by day it is untouched.
@@ -651,6 +661,26 @@ t("...and what stands in it lit for night", mobsEl.className === "t-night", mobs
 ctx.paint("mountain", "fog", "gully", "fog-day", 0, 0, "", 0, 0, false, 0);
 t("day fog takes no night grade", !/night/.test(sceneEl.className), sceneEl.className);
 t("...and its creatures stand in fog", mobsEl.className === "t-fog", mobsEl.className);
+
+// FOG IN THE LOW LIGHT (rome, 2026-10-25): a foggy dawn was drawn as noon.
+ctx.paint("mountain", "fog", "gully", "fog-dawn", 0, 0, "", 0, 0, false, 0, 1);
+t("dawn fog takes the wet dawn's grade", /\bt-fog-dawn\b/.test(sceneEl.className), sceneEl.className);
+t("...and its creatures the wet dawn's", mobsEl.className === "t-wet-dawn", mobsEl.className);
+ctx.paint("mountain", "fog", "gully", "fog-dusk", 0, 0, "", 0, 0, false, 0, 2);
+t("dusk fog takes the wet dusk's grade", /\bt-fog-dusk\b/.test(sceneEl.className), sceneEl.className);
+ctx.paint("mountain", "fog", "gully", "fog-noon", 0, 0, "", 0, 0, false, 0, 0);
+t("noon fog is untouched", !/t-fog-/.test(sceneEl.className), sceneEl.className);
+for (const [hour, sk] of [["dawn", "wet-dawn"], ["dusk", "wet-dusk"]]) {
+  const a = src.match(new RegExp("#scene\\.t-fog-" + hour + " \\{ filter: ([^}]*); \\}"));
+  const b = src.match(new RegExp('#sky\\[data-sky="' + sk + '"\\]  ?\\{ filter: ([^}]*); \\}'));
+  t("the " + hour + " fog grade is the " + sk + " sky's, word for word", a && b && a[1] === b[1], a && a[1]);
+}
+// A ROOF WHOSE PICTURE IS THE OUTSIDE SHOWS THE OUTSIDE: at dawn the night
+// ground with its sky, in fog the fog plate graded for the hour.
+ctx.paint("out", "dawn", "", "ml-dawn", 0, 0, "the-marshals-lodging", 0, 0, true, 0, 1);
+t("the Lodging at dawn is the dawn ground under a sky", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-night.webp" && !!skyEl.style.backgroundImage, strip(sceneEl.style.backgroundImage));
+ctx.paint("out", "fog", "", "ml-fogdawn", 0, 0, "the-marshals-lodging", 0, 0, true, 0, 1);
+t("...and in fog at dawn the fog, graded for dawn", strip(sceneEl.style.backgroundImage) === "/room-bg/siege-lines-fog.webp" && /t-fog-dawn/.test(sceneEl.className), sceneEl.className);
 
 // ---- THE TIDE, DRAWN OVER THE GROUND -------------------------------------
 console.log(fail ? "\n" + fail + " FAILED" : "\nall good");

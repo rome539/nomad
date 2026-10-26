@@ -134,7 +134,7 @@ import { FORGE_STOCK,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -183,6 +183,11 @@ function passageLine(z: ZoneDO, roomId: string, region: string, age: number): st
   // band. Caught on the mountain, live, an hour after it shipped.
   const track = !open && (region === "upper" || region === "deep" || region === "gate") ? "the dust" : "the ground";
   return fresh ? `${cap(track)} is freshly disturbed — someone passed this way minutes ago.` : `Footprints disturb ${track} here.`;
+}
+
+// Dawn 1, dusk 2, any other hour 0: the low light the fog has to be graded for.
+function lowLight(now = Date.now()): number {
+  return isDawn(now) ? 1 : isDusk(now) ? 2 : 0;
 }
 
 export class ZoneDO implements DurableObject {
@@ -5305,7 +5310,7 @@ export class ZoneDO implements DurableObject {
       if (!seesArt(s.pubkey)) continue;
       // ...and night falling or lifting re-sends for everyone, not only the dens:
       // a rain that runs on into the dark has to turn its picture to night too.
-      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || (isNight() ? 1 : 0) !== s.artNight) this.sendStatus(s);
+      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || (isNight() ? 1 : 0) !== s.artNight || lowLight() !== (s.artLow ?? 0)) this.sendStatus(s);
     }
     // ...and the soundscape the same way: the rain is heard arriving.
     for (const s of this.sessions.values()) {
@@ -8958,6 +8963,10 @@ export class ZoneDO implements DurableObject {
           // wet noon from a wet midnight: the den's picture is overcast for one
           // and dark for the other (2026-10-19).
           nt: !seesArt(session.pubkey) ? undefined : (session.artNight = isNight() ? 1 : 0),
+          // ...AND THE LOW LIGHT, the same way (rome, 2026-10-25: fog at dawn was
+          // drawn as a bright noon). 1 dawn, 2 dusk, 0 otherwise. "fog" names the
+          // weather at any hour, and the fog plate is a daylit photograph.
+          lo: !seesArt(session.pubkey) ? undefined : (session.artLow = lowLight()),
           // THE RED NIGHT IS NOT A SKY SLOT. `sky` above picks which photograph
           // to paint, and weather wins that contest - correctly, because a
           // blood moon behind fog is a foggy picture. But the hollow ones'
@@ -9026,7 +9035,7 @@ export class ZoneDO implements DurableObject {
     // gatehouse is (outOfWorld), but the picture, the bar and the chips are of
     // where you actually are: at the gate, on your heels over your kit.
     if (this.inGatehouse.has(session.pubkey)) return "in";
-    const openSkyForArt = this.world!.entryRooms.has(session.roomId);
+    const openSkyForArt = this.world!.entryRooms.has(session.roomId) || ROOF_SHOWS_OUTSIDE.has(session.roomId);
     // A ROOF IN OPEN COUNTRY IS NOT A FORTRESS INTERIOR (rome, 2026-09-20: the
     // Carter's Rest showing him daylight on a night the rest of the world was
     // dark).

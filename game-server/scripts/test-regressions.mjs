@@ -1312,6 +1312,16 @@ try {
     assert.ok(wxCovers(z, 'fog', 'sally-port'));
     assert.ok(!wxCovers(z, 'fog', 'the-deer-lawn'), 'the wood is not under it');
   });
+  check('a roof whose picture is the outside gets the outside\'s sky, and dawn and dusk are sent (2026-10-25)', () => {
+    const z = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(z, /const openSkyForArt = this\.world!\.entryRooms\.has\(session\.roomId\) \|\| ROOF_SHOWS_OUTSIDE\.has\(session\.roomId\);/);
+    assert.match(z, /lo: !seesArt\(session\.pubkey\) \? undefined : \(session\.artLow = lowLight\(\)\)/);
+    assert.match(z, /lowLight\(\) !== \(s\.artLow \?\? 0\)\) this\.sendStatus\(s\)/, 'the picture turns at dawn even when the sky stays fog');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    for (const r of ['the-marshals-lodging', 'the-mine-mouth', 'the-village-smithy', 'the-cider-house']) assert.ok(zd.match(/ROOF_SHOWS_OUTSIDE = new Set<string>\(\[([^\]]*)\]/)[1].includes(r), r);
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /paintScene\(f\.band, f\.sky, f\.terrain, f\.room, f\.torch, f\.skyroll, f\.place, f\.sea, f\.red, f\.covered, f\.nt, f\.lo\);/);
+  });
   console.log('the ground shows what happened');
   function groundWorld() {
     const z = new ZoneDO({}, {});

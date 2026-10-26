@@ -77,6 +77,7 @@ export interface Session {
   artSky?: string;
   artBow?: number; // the rainbow last sent, so its coming and going re-sends the status
   artNight?: number; // the last `nt` sent: a den's picture turns at nightfall even when the sky string does not
+  artLow?: number; // the last `lo` sent: fog at dawn and dusk turns with the low light even when the sky string stays "fog"
   ambKey?: string; // ...and the last soundscape (sound.ts), for the same reason
   pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)
   linkdeadUntil?: number; // ms epoch a mid-fight disconnect holds the body in the world until; unset = normally connected (or normally gone)
