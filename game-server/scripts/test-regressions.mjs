@@ -999,7 +999,9 @@ try {
     const said = []; z.send = (_s, t) => said.push(t);
     z.feedKill = () => '';
     z.creatures = new Map(); z.sessions = new Map(); z.traces = new Map();
-    z.addTrace = (room, tr) => z.traces.set(room, [...(z.traces.get(room) ?? []), tr]);
+    // A COPY, as the real addTrace lays one (rome, 2026-10-26: the body stayed on the floor
+    // when it got up - this stub used to keep the same object and hid it).
+    z.addTrace = (room, tr) => { const laid = { ...tr }; z.traces.set(room, [...(z.traces.get(room) ?? []), laid]); return laid; };
     const tmpl = { id: 'twice-dead', name: 'a twice-dead', max_hp: 30, level: 3, is_boss: 0 };
     z.world = new Proxy({ mobTemplates: new Map([['twice-dead', tmpl]]) }, { get: (t, k) => k in t ? t[k] : (typeof k === 'string' ? (t[k] = new Map()) : undefined) });
     const me = { pubkey: 'me', name: 'Rome', roomId: 'r', items: [], kills: 0, bossKills: 0, target: 'td' };

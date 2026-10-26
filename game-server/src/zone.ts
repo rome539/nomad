@@ -6222,7 +6222,9 @@ export class ZoneDO implements DurableObject {
 
   // ---- traces: the world's memory ----
 
-  public addTrace(roomId: string, trace: Trace): void {
+  // Returns the trace as it was laid - a COPY of the one passed in (the mud's
+  // stamp is added to it), so anything that must find it again later keeps this.
+  public addTrace(roomId: string, trace: Trace): Trace {
     let list = this.traces.get(roomId);
     if (!list) { list = []; this.traces.set(roomId, list); }
     // Mud remembers: a print pressed into rain-wet ground reads fresh far
@@ -6258,6 +6260,7 @@ export class ZoneDO implements DurableObject {
       if (i === -1) break;
       list.splice(i, 1);
     }
+    return trace;
   }
 
   private pruneTraces(now: number): void {

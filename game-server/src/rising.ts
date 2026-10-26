@@ -36,8 +36,10 @@ export function fall(z: ZoneDO, killer: Session, c: Creature, tmpl: MobTemplate,
   z.actorFeed(killer, c.roomId, z.feedKill(killer.name, tmpl, vital), vital ? "vital" : "kill");
   z.roomSound(c.roomId, "Something falls {dir}, and is still.");
   z.creatureNoise(c.roomId);
-  const body: Trace = { kind: HOLLOW.has(tmpl.id) ? "remains" : "blood", at: now, label: tmpl.name, id: tmpl.id };
-  z.addTrace(c.roomId, body);
+  // THE BODY THAT WAS LAID, not the one handed over (rome, 2026-10-26: the body
+  // stayed on the floor while the risen thing stood up beside it). addTrace
+  // stores a copy, so rise() looked for an object that was never in the room.
+  const body = z.addTrace(c.roomId, { kind: HOLLOW.has(tmpl.id) ? "remains" : "blood", at: now, label: tmpl.name, id: tmpl.id });
   z.fxDied(c.roomId, c.templateId);
   z.creatures.delete(c.id);
   z.noteCreaturesChanged();
@@ -71,7 +73,10 @@ function rise(z: ZoneDO, f: Fallen, now: number): void {
   // The body was it. Whatever is left of it gets up.
   const here = z.traces.get(f.roomId);
   if (here) {
-    const i = here.indexOf(f.body);
+    // ...and failing that (a save between the fall and the rise makes new
+    // objects of every trace), the body of its own kind lying there.
+    let i = here.indexOf(f.body);
+    if (i < 0) i = here.findIndex((t) => t.kind === f.body.kind && t.id === f.body.id);
     if (i >= 0) here.splice(i, 1);
     if (!here.length) z.traces.delete(f.roomId);
   }
