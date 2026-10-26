@@ -7,6 +7,7 @@ import * as exhaustion from "./exhaustion";
 import type { ZoneDO } from "./zone";
 import * as den from "./den";
 import * as herds from "./herds";
+import * as chase from "./chase";
 import { shelteredInDen, rattle, hearthWarm } from "./den";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate, World } from "./world";
@@ -33,7 +34,7 @@ import {
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
-  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
+  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
@@ -1260,6 +1261,15 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       const notHeld = exits.filter((e) => !SENTINEL_ROOMS.has(e.to_room));
       if (notHeld.length) exits = notHeld;
     }
+    // ON A CHASE (chase.ts) it takes the way its quarry took, past every pull
+    // below, or - the way barred to it, a gate or a safe room - it does not move.
+    const chaseTo = mode === "wander" ? creature.chase?.to : undefined;
+    if (chaseTo) {
+      const after = exits.find((e) => e.to_room === chaseTo);
+      if (!after) return;
+      exits = [after];
+      creature.curious = chaseTo;
+    }
     // A CAVE DWELLER CHANGES CAVES (mig 319): before the territory pull, so the
     // step it takes after choosing is already a step toward the new one.
     if (mode === "wander" && !creature.target && CAVE_DWELLERS.has(tmpl.id)) caveTurn(z, creature, now);
@@ -1307,7 +1317,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // carries a migrant from the mouth to its range. Fleeing ignores the edge
     // (survival first; the next calm step starts the walk back). Patrollers
     // are exempt — their route is their territory. Never strands.
-    if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id] && creature.drift === undefined) {
+    if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id] && creature.drift === undefined && !chaseTo) {
       // A HUNGRY THING LEAVES. Where the territory pull is anchored: normally
       // the den, but a hunter whose own ground has nothing left to eat walks to
       // where the food is instead (huntGround). Everything below is unchanged —
@@ -1762,7 +1772,8 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         if (s.roomId === creature.roomId && z.reachable(s) && !creature.target
             && (remembers(z, creature, s.pubkey, now) || ratking.bold(z, creature))
             && !ratking.spares(z, creature, s)
-            && !styles.stalking(creature)) { // a stalking cat waits for you to stand still (styles.ts)
+            && !styles.stalking(creature) // a stalking cat waits for you to stand still (styles.ts)
+            && !creature.chase?.to) { // a chaser coming through after someone says so itself (chase.ts)
           creature.target = s.pubkey;
           z.send(s, `${cap(tmpl.name)} remembers you — and comes for you.`);
           // It gets the jump only if there is room to reach the player at all —
@@ -2038,11 +2049,13 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     // A FED FOX MAY KILL FOR NOTHING (SURPLUS_KILLERS) - decided below, once
     // there is something in the room to kill.
     const sport = !hungry && !corpseHere && !baitHere;
-    if (sport && (!SURPLUS_KILLERS.has(creature.templateId) || (creature.sportAt ?? 0) > now)) return false;
-    if (!chance(PREDATION_ODDS)) return false;
+    // ON A CHASE it has already decided: the one it ran after is the one it rushes.
+    const chased = chase.chasedHere(z, creature);
+    if (!chased && sport && (!SURPLUS_KILLERS.has(creature.templateId) || (creature.sportAt ?? 0) > now)) return false;
+    if (!chased && !chance(PREDATION_ODDS)) return false;
     // A target in the room; prefer one not already busy with a player (the easy meal).
-    let victim: Creature | null = null;
-    for (const c of z.creaturesInRoom(creature.roomId)) {
+    let victim: Creature | null = chased ?? null;
+    for (const c of chased ? [] : z.creaturesInRoom(creature.roomId)) {
       if (c.id === creature.id || !(prey?.has(c.templateId) || (strays && strayFor(z, creature, c)))) continue;
       // THE MOSS (rome, 2026-10-21): a sloth is a green-grey lump moving too
       // slowly to catch the eye, and a hunter often looks straight past it - no
@@ -2061,7 +2074,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       if (!c.target) break;
     }
     if (!victim) return false;
-    if (sport) {
+    if (sport && !chased) {
       creature.sportAt = now + SURPLUS_REARM_MS;
       if (!chance(SURPLUS_ODDS)) return false;
     }
@@ -2077,15 +2090,23 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     const odds = (HUNT_SUCCESS[creature.templateId] ?? HUNT_SUCCESS_DEFAULT) * (victim.asleep ? 2 : 1) * hour;
     if (!chance(Math.min(0.9, odds))) {
       exhaustion.creatureAttempt(creature, now);
-      creature.huntRestUntil = now + randInt(HUNT_REST_MIN, HUNT_REST_MAX) * 60_000;
       victim.asleep = false;
       victim.sleepUntil = undefined;
       z.fxClash(creature.roomId, creature.templateId);
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} goes for ${vt.name}, and misses, and ${vt.name} is gone.`, undefined, false);
-      z.roomSound(creature.roomId, "Something breaks cover {dir}, and something else goes after it, and stops.", undefined, undefined, false, { mob: creature.templateId, act: "scurry" });
+      // A blown animal has nothing to run on: it is missed, and it stands there.
+      if (winded(victim, now)) {
+        creature.huntRestUntil = now + CHASE_RUSH_MS;
+        z.roomFeed(creature.roomId, `${cap(tmpl.name)} goes for ${vt.name}, and misses, and ${vt.name} stands its ground, blown.`, undefined, false);
+        return true;
+      }
+      const after = chase.onMiss(creature, victim, now); // a runner goes after it (chase.ts)
+      if (!after) creature.huntRestUntil = now + randInt(HUNT_REST_MIN, HUNT_REST_MAX) * 60_000;
+      z.roomFeed(creature.roomId, `${cap(tmpl.name)} goes for ${vt.name}, and misses, and ${vt.name} is gone${after ? `, and ${tmpl.name} after it` : ""}.`, undefined, false);
+      z.roomSound(creature.roomId, after ? "Something breaks cover {dir}, and something else goes after it, running." : "Something breaks cover {dir}, and something else goes after it, and stops.", undefined, undefined, false, { mob: creature.templateId, act: "scurry" });
       await creatureMoves(z, victim, now, "flee", false);
       return true;
     }
+    chase.caught(creature);
     victim.asleep = false; // teeth wake anything
     victim.sleepUntil = undefined;
     // Same physics as every other blow: the prey's own armor soaks some of the

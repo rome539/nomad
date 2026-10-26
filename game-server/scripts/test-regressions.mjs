@@ -1332,6 +1332,73 @@ try {
     assert.match(zsrc, /const going = conditions\.ambient\(this, roomId\);/);
     assert.match(zsrc, /conditions: Object\.fromEntries\(this\.conditions\)/);
   });
+  function thickWorld() {
+    const { z } = condWorld('roe-deer');
+    z.world.mobTemplates.set('grey-wolf', { id: 'grey-wolf', name: 'a grey wolf', max_hp: 26, respawn_secs: 600, is_boss: 0 });
+    for (let i = 0; i < 4; i++) {
+      z.world.mobSpawns.push({ template_id: 'grey-wolf', room_id: 'w' + i });
+      z.creatures.set('g' + i, { id: 'g' + i, templateId: 'grey-wolf', roomId: 'w' + i, home: 'w' + i, hp: 26 });
+    }
+    return z;
+  }
+  check('ground with more hunters than its prey can feed goes thick, and the prey keep to cover (2026-10-26)', () => {
+    const z = thickWorld();
+    for (let h = 0; h <= 4; h++) { conditions.tick(z, h * H, true); assert.equal(conditions.of(z, 'mountain'), undefined, 'its own mix is not thick: hour ' + h); }
+    for (let i = 1; i < 10; i++) z.creatures.delete('h' + i); // the deer eaten out from under the wolves
+    conditions.tick(z, 5 * H, true);
+    assert.equal(conditions.of(z, 'mountain'), undefined, 'not on the first reading');
+    conditions.tick(z, 7 * H, true);
+    assert.deepEqual([conditions.of(z, 'mountain')?.kind, conditions.of(z, 'mountain')?.line], ['thick', 'grey-wolf']);
+    assert.ok(herds.wary(z, z.creatures.get('h0')), 'the deer that is left keeps to cover');
+    assert.ok(!herds.wary(z, z.creatures.get('g0')), 'the wolves do not');
+    const lines = new Set();
+    for (let i = 0; i < 400; i++) { const l = conditions.ambient(z, 'm1'); if (l) lines.add(l); }
+    assert.ok([...lines].some((l) => /grey wolf/.test(l)), 'the ground says whose');
+    for (let i = 1; i < 10; i++) z.creatures.set('h' + i, { id: 'h' + i, templateId: 'roe-deer', roomId: 'm' + i, home: 'm' + i, hp: 10 });
+    conditions.tick(z, 8 * H, true);
+    assert.equal(conditions.of(z, 'mountain'), undefined, 'the prey back, it clears');
+  });
+  check('three wolves are not thick, however few the deer (2026-10-26)', () => {
+    const z = thickWorld();
+    z.creatures.delete('g3');
+    for (let i = 0; i < 10; i++) z.creatures.delete('h' + i);
+    for (let h = 0; h <= 10; h++) { conditions.tick(z, h * H, true); assert.equal(conditions.of(z, 'mountain'), undefined, 'hour ' + h); }
+  });
+  check('ground whose own mix is mostly hunters is not thick for being itself (2026-10-26)', () => {
+    const z = thickWorld();
+    for (let i = 3; i < 10; i++) { z.creatures.delete('h' + i); z.world.mobSpawns.splice(z.world.mobSpawns.findIndex((r) => r.room_id === 'm' + i), 1); }
+    for (let i = 4; i < 8; i++) {
+      z.world.mobSpawns.push({ template_id: 'grey-wolf', room_id: 'w' + i });
+      z.creatures.set('g' + i, { id: 'g' + i, templateId: 'grey-wolf', roomId: 'w' + i, home: 'w' + i, hp: 26 });
+    }
+    for (let h = 0; h <= 10; h++) { conditions.tick(z, h * H, true); assert.equal(conditions.of(z, 'mountain'), undefined, 'eight wolves to three deer, as it was made: hour ' + h); }
+  });
+  check('only the hunters that run a ground down make it thick: eagles over it do not (2026-10-26)', () => {
+    const { z } = condWorld('roe-deer');
+    z.world.mobTemplates.set('hill-eagle', { id: 'hill-eagle', name: 'a hill eagle', max_hp: 20, respawn_secs: 600, is_boss: 0 });
+    for (let i = 0; i < 4; i++) {
+      z.world.mobSpawns.push({ template_id: 'hill-eagle', room_id: 'e' + i });
+      z.creatures.set('e' + i, { id: 'e' + i, templateId: 'hill-eagle', roomId: 'e' + i, home: 'e' + i, hp: 20 });
+    }
+    for (let i = 1; i < 10; i++) z.creatures.delete('h' + i);
+    for (let h = 0; h <= 10; h++) { conditions.tick(z, h * H, true); assert.equal(conditions.of(z, 'mountain'), undefined, 'hour ' + h); }
+  });
+  check('the tally in the gatehouse says each ground, facts not odds (2026-10-26)', () => {
+    const z = thickWorld();
+    assert.match(conditions.tally(z), /The Mountain — nothing out of the way/);
+    for (let i = 0; i < 9; i++) z.creatures.delete('h' + i);
+    assert.match(conditions.tally(z), /The Mountain — roe-deer scarce/);
+    z.conditions.set('mountain', { kind: 'hunted', since: 0 });
+    assert.match(conditions.tally(z), /The Mountain — hunted hard\. The game bolts at a footfall, gives up the dawn, and keeps to cover/, 'the wariness is said here');
+    z.conditions.set('mountain', { kind: 'thick', line: 'grey-wolf', since: 0 });
+    assert.match(conditions.tally(z), /The Mountain — grey wolf thick, and the game keeping to cover/);
+    z.conditions.set('mountain', { kind: 'murrain', line: 'mountain-hare', since: 0 });
+    assert.match(conditions.tally(z), /sickness in the mountain-hare/);
+    assert.ok(!/\d+%|odds|chance/.test(conditions.tally(z)), 'no odds');
+    const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(gsrc, /is\("tally", [^)]*\)\) return conditions\.tally\(z\);/, 'look tally reads it in the gatehouse');
+    assert.match(gsrc, /\('look tally'\)/, 'the room names it');
+  });
   check('an oversized save names what is filling it (2026-10-25)', () => {
     const blob = JSON.stringify({ small: 1, bloodOn: 'x'.repeat(40_000), board: 'y'.repeat(20_000), events: 'z'.repeat(5_000), tiny: [] });
     assert.equal(biggestFields(blob), 'bloodOn 39KB, board 20KB, events 5KB');

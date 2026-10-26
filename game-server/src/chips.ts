@@ -113,6 +113,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if ([...z.walkedOf(session.pubkey)].some((r) => !myWall.has(r) && z.world!.rooms.has(r))) inside.push("carve");
     // The keeper's slate hangs by the hatch in every gatehouse, always chalked.
     inside.push("look slate");
+    inside.push("look tally");
     // The board, offered only when somebody has actually pinned something —
     // a chip for an empty board teaches nothing and costs a row.
     if (gate.boardCount(z)) inside.push("board");

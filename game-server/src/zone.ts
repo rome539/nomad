@@ -4,6 +4,7 @@ const BUILD_RESTART_EVERY_MS = 120_000;
 import * as exhaustion from "./exhaustion";
 import * as herds from "./herds";
 import * as conditions from "./conditions";
+import * as chase from "./chase";
 // One Durable Object per zone: the authoritative simulation — who's where,
 // creature state, what lies on which floor.
 //
@@ -4888,6 +4889,7 @@ export class ZoneDO implements DurableObject {
         // reach that outlives a room change, so only it skips the room check.
         if (!victim || !this.reachable(victim) || (victim.roomId !== creature.roomId && !onRope)) {
           styles.lostPrey(this, creature, victim, now); // a cat follows instead of losing you
+          chase.lostYou(this, creature, victim, now); // a runner comes after you (chase.ts)
           creature.target = null;
           creature.rouseAt = undefined; // lost its prey — a dire-hyena winds up fresh next time
           continue;
@@ -5408,6 +5410,8 @@ export class ZoneDO implements DurableObject {
     ai.vulturesWait(this, now);
     // The bear decides about its warning; the cats follow and spring (styles.ts).
     await styles.tickHabits(this, now);
+    // ...and whatever is running something down follows it (chase.ts).
+    await chase.tick(this, now);
 
     // The day/night world-clock flips: tell whoever's standing outside to
     // see it (same courtesy the weather events already extend on their own

@@ -258,12 +258,15 @@ export function roundPhase(templateId: string, now: number): "feed" | "rest" {
 // only in the last light, half of them do not come out at all, and any of them
 // bolts when someone walks in on it (ai.waryBolt). The hunters are not wary;
 // they are what the prey is wary of. It lasts as long as the condition does.
+// Ground THICK with hunters (2026-10-26) makes its prey the same: what is being
+// hunted does not ask by whom.
 
 /** Prey on hunted ground. */
 export function wary(z: ZoneDO, c: Creature): boolean {
   const line = z.variantBase.get(c.templateId) ?? c.templateId;
   if (!isHerd(z.world!, line) || PREYS_ON.get(line)?.size || SCAVENGERS.has(line)) return false;
-  return conditions.of(z, z.regionOf(c.home ?? c.roomId))?.kind === "hunted";
+  const kind = conditions.of(z, z.regionOf(c.home ?? c.roomId))?.kind;
+  return kind === "hunted" || kind === "thick";
 }
 
 /** Whether this wary animal keeps to cover today: the same answer all day, a new one tomorrow. */

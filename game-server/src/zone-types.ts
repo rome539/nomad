@@ -209,6 +209,7 @@ export interface Creature {
   bluffHp?: number;     // ...and its health when it began (struck since = a fight)
   bluffedAt?: number;   // ...and when it last bluffed (the next one within BLUFF_REARM_MS is real)
   stalks?: string;      // styles.ts: a cat following this pubkey a room behind
+  chase?: { mob?: string; pubkey?: string; left: number; at: number; since: number; to?: string }; // chase.ts: what it is running after, rooms left, when it next comes through
   stalkSince?: number;
   skyHits?: number;     // styles.ts: throws that have landed on this bird while it was up
   groundedUntil?: number; // ...and, knocked out of the air, when it can fly again
@@ -329,7 +330,7 @@ export interface SimState {
   altarHearts?: string[]; // pubkeys whose still-cold heart the shrine is keeping — one promise per wanderer, cold until they come for it
   gibbetCut?: boolean; // the hanged man is down and stays down — see ZoneDO.gibbetCut for why this is persisted and not per-wake
   arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
-  conditions?: Record<string, { kind: "boom" | "murrain" | "hunted"; line?: string; since: number }>; // region -> what is going on there (conditions.ts)
+  conditions?: Record<string, { kind: "boom" | "murrain" | "hunted" | "thick"; line?: string; since: number }>; // region -> what is going on there (conditions.ts)
   condTrack?: Record<string, number>; // the conditions' clocks: recent kills, full-since, rest-until
   herds?: Record<string, number>; // "line@region" -> part of a body owed, and "_at" -> the herds' clock (herds.ts)
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns

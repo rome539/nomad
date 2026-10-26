@@ -2409,6 +2409,42 @@ export const BOLT_HOLD = [
   "{a} shifts its feet, ready to run and not running.",
   "{a} is breathing hard enough that you can hear it.",
 ];
+// THE CHASE (rome, 2026-10-26: predators should chase the prey, and players
+// too, for a few rooms). Before this a hunter that missed its rush stopped
+// dead and the prey was gone into the next room, and anything you ran from
+// lost you the moment you were through the door. Now the runners come after
+// it, a beat behind, for a number of rooms rolled when the chase starts and
+// never told - the same bet the prey's own wind is (FLEE_WIND_MIN/MAX). A deer
+// that runs out of breath before the wolf does is taken. A wanderer who keeps
+// moving, gets through a gate or a barred door, outlasts the chase, or has
+// hurt the thing badly enough, gets away. chase.ts.
+//   [fewest, most] rooms. Not listed: does not chase. The cats stalk instead
+//   (STALKERS), and what waits, flies or swims never chases at all.
+export const CHASE_PREY: Record<string, [number, number]> = {
+  // pack runners: they hunt by running the quarry down
+  "grey-wolf": [3, 5], "hill-wolf": [3, 5], "lead-wolf": [3, 5], "dire-wolf": [3, 5], "coyote": [3, 5],
+  "drove-dog": [3, 5], "masterless-dog": [3, 5], "lead-dog": [3, 5], "marsh-hound": [3, 5], "a-lymer": [3, 5],
+  "grave-hyena": [3, 5], "dire-hyena": [3, 5],
+  // the pouncers follow a miss a little way
+  "hill-fox": [1, 2], "snow-fox": [1, 2], "ermine": [1, 2],
+};
+export const CHASE_PLAYERS: Record<string, [number, number]> = {
+  "grey-wolf": [2, 4], "hill-wolf": [2, 4], "lead-wolf": [2, 4], "dire-wolf": [2, 4], "coyote": [2, 4],
+  "drove-dog": [2, 4], "masterless-dog": [2, 4], "lead-dog": [2, 4], "marsh-hound": [2, 4], "a-lymer": [2, 4],
+  "grave-hyena": [2, 4], "dire-hyena": [2, 4],
+  // a bear's charge is short, and so is a glutton's temper
+  "brown-bear": [1, 2], "the-baited-bear": [1, 2], "glutton": [1, 2],
+};
+export const CHASE_LAG_MIN_MS = 3_000;   // a beat behind: how long before it comes through after you
+export const CHASE_LAG_MAX_MS = 6_000;
+export const CHASE_RUSH_MS = 4_000;      // caught up with its prey, it rushes again this soon
+export const CHASE_LETS_GO = 0.4;        // hurt below this share of its health, it lets you go
+export const CHASE_MEMORY_MS = 2 * 60_000; // run from it again this soon and it is the same chase, not a fresh one
+export const CHASE_LINES = [
+  "{a} comes through after you, low and fast.",
+  "{a} is in after you before you have your feet under you.",
+  "{a} comes round the corner behind you at a run.",
+];
 
 export const BROODERS = new Set(["brood-rat"]);
 export const BROOD_CAP = 6; // most LIVING pups a mother sustains at once (total, by nest — counts dispersed pups too, so it can't runaway-infest); she breeds a replacement whenever one dies or is culled
@@ -4764,7 +4800,8 @@ export const PREY_WORRY_MULT = 1.0;   // damage per beat while held (a grip is n
 // lands perhaps one chase in five, a big cat one in four, a fox pouncing
 // on voles one in three, an owl nearer half. This is the chance the rush
 // connects at all; a miss sends the prey running into the next room and leaves
-// the hunter blown for HUNT_REST_MIN..MAX minutes before it tries again.
+// the hunter blown for HUNT_REST_MIN..MAX minutes before it tries again - unless
+// it is one that runs its prey down (CHASE_PREY), which goes after it.
 // Anything asleep is twice as easy to take. Unlisted hunters use the default.
 export const HUNT_SUCCESS_DEFAULT = 0.3;
 export const HUNT_SUCCESS: Record<string, number> = {
@@ -7113,6 +7150,24 @@ export const CONDITION_HUNTED_AT = 15;                   // recent player kills 
 export const CONDITION_HUNTED_CLEARS = 6;                // and below which it is not any more
 export const CONDITION_KILL_HALF_MS = 60 * 60_000;       // recent kills halve this often
 export const CONDITION_AMBIENT_ODDS = 0.35;              // of a region's passing lines, this share speak of it
+// THICK: the hunters outnumbering what feeds them, measured against the region's
+// own mix (its spawn rows), so the mountain's many hunters are not "thick" by
+// nature - only when the prey has gone out from under them.
+export const CONDITION_THICK_AT = 2;                     // hunters to prey standing, this many times the region's own mix
+export const CONDITION_THICK_CLEARS = 1.4;               // and below this many times it, not any more
+export const CONDITION_THICK_MIN = 4;                    // fewer hunters than this are not thick, whatever the prey
+export const CONDITION_THICK_AFTER_MS = 2 * 3_600_000;   // held this long before it starts
+// Only the hunters that range over a ground and run its prey down can make it
+// thick (rome, 2026-10-26: only the predators it makes sense for). Not what
+// waits for food to come to it (adders, congers, seals, crawlers), not what
+// takes it from the air or the reeds, not the bears that mostly forage, not a
+// sentinel on its post.
+export const THICK_HUNTERS = new Set<string>([
+  "grey-wolf", "hill-wolf", "lead-wolf", "dire-wolf", "coyote",
+  "drove-dog", "masterless-dog", "lead-dog", "marsh-hound", "a-lymer",
+  "grave-hyena", "dire-hyena", "hill-fox", "snow-fox",
+  "lynx", "wildcat", "cave-lion", "glutton",
+]);
 // WARY (rome, 2026-10-25). On hunted ground the prey change: they bolt when
 // someone walks in, the day's animals give up the dawn and come out only in the
 // last light, and some of them stay in cover through the feeding hours.
