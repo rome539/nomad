@@ -3992,6 +3992,15 @@ export const DREAMS: Record<string, string[]> = {
 // box out of BOTH laws at once, so the box walks out of the sealed room it is
 // the whole point of and can come up empty when you finally reach it.
 export const DOOR_PRIZE_BOXES = new Set(["reliquary", "box-kept", "box-glade", "box-cave", "box-armory"]);
+// ...EXCEPT THE BELL'S, NOW AND THEN (rome, 2026-10-26). The issue chest
+// refills for every ringing (mig 341), so it is twice a day, not once, and an
+// empty one now and then is the price of that: the last issue already given out
+// to somebody before you. Its door costs no key, so an empty lid costs only the
+// climb and the timing. The other doors' boxes still never come up empty.
+export const PRIZE_EMPTY_ODDS: Record<string, number> = { "box-armory": 0.25 };
+export const PRIZE_EMPTY_LINES: Record<string, string> = {
+  "box-armory": "The lid comes up on bare iron and old dust, and the stencilled mark inside it. Nothing. This issue was given out before you got up the ladder.",
+};
 // WHAT EACH CHEST LOOKS LIKE IN THE PICTURE (rome, 2026-10-13): a wooden chest
 // or an iron strongbox, each drawn shut and sprung. A cache missing from this
 // table is part of the place itself - a niche, a cavity, a pit, a cache under a

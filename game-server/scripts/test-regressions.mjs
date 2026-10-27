@@ -1071,6 +1071,22 @@ try {
     assert.equal(glaive.condition, 60, 'the stone takes it up in whole numbers');
   });
 
+  console.log('the bell door');
+  check('the issue chest is refilled for every bell, and sometimes empty (2026-10-26)', () => {
+    const mig = readFileSync(new URL('../migrations/341_the_issue_on_every_bell.sql', import.meta.url), 'utf8');
+    const secs = Number(/refill_secs = (\d+) WHERE id = 'box-armory'/.exec(mig)[1]);
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const num = (n) => eval(new RegExp(`export const ${n} = ([^;]+);`).exec(zd)[1].replace(/_/g, ''));
+    const hours = eval(/export const BELL_HOURS_UTC = (\[[^\]]+\]);/.exec(zd)[1]);
+    const jitter = num('BELL_JITTER_MS'), open = num('BELL_TELEGRAPH_MS') + num('BELL_ACTIVE_MS') + num('BELL_AFTERMATH_MS');
+    const gap = Math.min(...hours.map((h, i) => ((hours[(i + 1) % hours.length] - h + 24) % 24) * 3_600_000));
+    // opened at the last moment of one ringing, it is full before the earliest the next can start
+    assert.ok(secs * 1000 + open < gap - 2 * jitter, `refilled in ${secs / 3600}h, next bell as soon as ${(gap - 2 * jitter) / 3_600_000}h`);
+    assert.ok(secs * 1000 > open, 'and not twice in one ringing');
+    assert.match(zd, /export const PRIZE_EMPTY_ODDS: Record<string, number> = \{ "box-armory": 0\.25 \};/, 'the bell chest only, one in four');
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zsrc, /if \(DOOR_PRIZE_BOXES\.has\(cache\.id\) && chance\(PRIZE_EMPTY_ODDS\[cache\.id\] \?\? 0\)\) \{/, 'the other door boxes still never come up empty');
+  });
   console.log('the sound');
   check('sound turned off and back on wakes a context the browser parked or closed (2026-10-26)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');

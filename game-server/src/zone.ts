@@ -114,7 +114,7 @@ import { FORGE_STOCK,
   HOLLOW, BLOODLESS, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
-  RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_OPEN_BLOOD, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES,
+  RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_OPEN_BLOOD, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES, PRIZE_EMPTY_ODDS, PRIZE_EMPTY_LINES,
   BELL_DOOR_KEY, BELL_DOOR_SHUT, BELL_DOOR_TREMBLE, BELL_DOOR_OPEN,
   TIDE_SILT_COURSES, TIDE_PRY_MS, TIDE_DIGGING_TOOLS, tideSiltLine, TIDE_PRY_WET, TIDE_PRY_SETTLE, TIDE_PRY_TOOL_HINT, TIDE_PRY_MAKING, TIDE_PRY_OPEN,
   HABIT_ODDS, HABIT_COOLDOWN_MS, HABITS, HABIT_SKY, HABIT_NIGHT, HABIT_FIRE, HABIT_DEEP, HABIT_GRAVES, QUIRK_ODDS, QUIRK_COOLDOWN_MS, TREASURE_QUIRKS,
@@ -3148,6 +3148,14 @@ export class ZoneDO implements DurableObject {
     // as a haul — that's the sting. The prize boxes are exempt: each one's
     // price was paid at its DOOR (a boss and the black key; a riddle; a full
     // moon; the tide), and a dud would be too bitter on top of that.
+    // (Save the bell's own box, which refills for every ringing and sometimes on
+    // nothing: PRIZE_EMPTY_ODDS.)
+    if (DOOR_PRIZE_BOXES.has(cache.id) && chance(PRIZE_EMPTY_ODDS[cache.id] ?? 0)) {
+      this.send(session, PRIZE_EMPTY_LINES[cache.id] ?? "The lid comes up on bare iron. Nothing.");
+      this.sendCtx(session);
+      await this.persist();
+      return;
+    }
     if (!DOOR_PRIZE_BOXES.has(cache.id) && chance(CACHE_EMPTY_ODDS)) {
       this.send(session, pick([
         "Inside: nothing. Picked clean long before you, or never worth the forcing. The key's spent all the same.",
