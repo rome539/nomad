@@ -18,6 +18,7 @@ import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
 import * as conditions from "./conditions";
+import * as lore from "./lore";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, isFullMoon, moonPhase, eclipsePhase, skyBand, halfFrac } from "./zone-util";
 import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, KEEPER_LEARN_SALES, WORTH_MARK_AT, GEAR_FAILING_AT, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
@@ -2257,13 +2258,18 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
     const world = z.world!;
     const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
     const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
+    // THE DEN'S SHELF IS A COLUMN OF THIS MODAL when you are standing under a
+    // roof you may keep things in (den.ts). Nothing else about the modal changes
+    // — same box, same buttons — and it is gone the moment you step outside.
+    const shelf = await den.shelfHere(z, session);
+    const counts = await lore.copyCounts(z, session, session.items, lockbox, vault, shelf?.held ?? []); // " (42 rooms)" after each map and journal, as the text list has it
     const ser = (c: CarriedItem) => {
       const t = world.itemTemplates.get(c.itemId);
       const gear = z.isGear(c.itemId);
       return {
         row: c.rowId,
         description: t?.description ?? "",
-        name: z.displayName(c), // carries its rolled adjective, if any (099)
+        name: z.displayName(c) + (counts.get(c.rowId) ?? ""), // carries its rolled adjective, if any (099), and a copy's count
         rarity: t?.rarity ?? "common",
         slot: t?.slot ?? "",
         sealed: c.serial !== null,
@@ -2312,10 +2318,6 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
       }
       return out;
     };
-    // THE DEN'S SHELF IS A COLUMN OF THIS MODAL when you are standing under a
-    // roof you may keep things in (den.ts). Nothing else about the modal changes
-    // — same box, same buttons — and it is gone the moment you step outside.
-    const shelf = await den.shelfHere(z, session);
     const shelfRest = shelf ? z.slotsUsed(shelf.held.filter((c) => !z.isGear(c.itemId)), "lockbox") : 0;
     const payload = {
       v: 0, t: "bench", open: true, note: note ?? "", sfx: sfx ?? "",

@@ -2420,9 +2420,9 @@ export async function cmdRemove(z: ZoneDO, session: Session, arg: string): Promi
   z.sendCtx(session); // loadout changed — refresh the chips
 }
 
-export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session): string {
+export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session, counts?: Map<string, string>): string {
   const t = z.world!.itemTemplates.get(c.itemId);
-  let s = `  ${z.gearName(c.itemId, z.displayName(c))} [${t?.rarity ?? "?"}]${z.itemStat(t)}`;
+  let s = `  ${z.gearName(c.itemId, z.displayName(c))}${counts?.get(c.rowId) ?? ""} [${t?.rarity ?? "?"}]${z.itemStat(t)}`;
   const tags: string[] = [];
   if (t?.slot && SLOT_WORD[t.slot]) tags.push(SLOT_WORD[t.slot]);   // what it IS, first - the pack window says the same
   if (c.equipped) tags.push(t?.slot === "weapon" ? "wielded" : "worn");
@@ -2457,7 +2457,8 @@ export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session): string {
 
 // One keeping's contents as text, grouped like the modal: fungibles collapse
 // to a count, gear/equipped/sealed list on their own line.
-export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, holder?: Session, kind?: "pack" | "vault"): string[] {
+// copies: " (42 rooms)" after each map and journal (lore.copyCounts), by row.
+export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, holder?: Session, kind?: "pack" | "vault", copies?: Map<string, string>): string[] {
   const world = z.world!;
   const lines = [header];
   if (items.length === 0) { lines.push("  — empty —"); return lines; }
@@ -2465,7 +2466,7 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, ho
   // everything else is its own line.
   const list = (group: CarriedItem[], pad: string): string[] => {
     const out: string[] = [];
-    for (const c of group) if (c.equipped) out.push(pad + itemLine(z, c, holder));
+    for (const c of group) if (c.equipped) out.push(pad + itemLine(z, c, holder, copies));
     const counts = new Map<string, number>();
     for (const c of group) {
       if (z.stackable(c.itemId, c.serial, c.journalId) && !c.equipped) counts.set(c.itemId, (counts.get(c.itemId) ?? 0) + 1);
@@ -2473,7 +2474,7 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, ho
     // single pieces (the gear) before the stacks, as the windows sort them (kitRank)
     for (const c of group) {
       if (c.equipped || z.stackable(c.itemId, c.serial, c.journalId)) continue; // worn above, stacked below
-      out.push(pad + itemLine(z, c, holder));
+      out.push(pad + itemLine(z, c, holder, copies));
     }
     for (const [id, n] of counts) {
       const t = world.itemTemplates.get(id);
@@ -2549,8 +2550,9 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     ? ["The loose iron rides heavy and loud — you won't slip a blow under this load, and moving carries."]
     : [];
   const kit = kitWarnLines(z, session);
+  const counts = await lore.copyCounts(z, session, session.items);
   if (z.inCombat(session)) {
-    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack"), ...kit, ...loud].join("\n"));
+    return z.send(session, [...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack", counts), ...kit, ...loud].join("\n"));
   }
   const atGate = world.entryRooms.has(session.roomId);
   // A gate whose gatehouse is shut for works is not a gate for this purpose:
@@ -2566,20 +2568,21 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
     z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
     return z.send(session, [
       ...(boarded ? [boarded, ""] : []),
-      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack"),
+      ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack", counts),
       ...kit,
       ...loud,
       "('burn <item>' to destroy it, 'drop <item>' to shed it, 'equip'/'remove' to swap gear.)",
     ].join("\n"));
   }
   const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
+  const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
+  for (const [row, n] of await lore.copyCounts(z, session, lockbox, vault)) counts.set(row, n);
   const out: string[] = [];
-  out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack"));
+  out.push(...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack", counts));
   out.push(...kit);
   out.push(...loud);
-  out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`));
-  const vault = await loadContainer(z.env.DB, session.pubkey, "vault");
-  out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, "vault")}/${VAULT_CAP} sealed):`, undefined, "vault")); // fungibles ride free in the vault
+  out.push(...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`, undefined, undefined, counts));
+  out.push(...keepingLines(z, vault, `The deep keep (${z.slotsUsed(vault, "vault")}/${VAULT_CAP} sealed):`, undefined, "vault", counts)); // fungibles ride free in the vault
   // The front door rule: the keeping is laid out INSIDE the gatehouse — from
   // the gate room this walks you through the door first (announced, HUD
   // flipped), never a private step-out at the arch (rome, 2026-07-17).

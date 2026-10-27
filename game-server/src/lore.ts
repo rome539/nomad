@@ -108,17 +108,69 @@ export async function inkRooms(z: ZoneDO, session: Session): Promise<void> {
   }
 }
 
+// HOW FULL EACH COPY IS, NEXT TO ITS NAME (rome, 2026-10-26: so a player with
+// three maps does not get lost, and can open the one they want). Every map and
+// every journal is its own copy under the same name, so the pack listed three
+// identical "a surveyor's map" lines and `map` opened whichever it liked. The
+// count is what tells them apart: the rooms on the paper (what `map` will
+// actually draw, less the ground you stand on), the creatures in the book.
+export async function chartRooms(z: ZoneDO, session: Session | undefined, carried: CarriedItem): Promise<number> {
+  const world = z.world!;
+  if (carried.itemId === FULL_MAP) return world.rooms.size;
+  const id = carried.journalId;
+  const ink = !id ? new Set<string>()
+    : session?.mapInk?.get(id) ?? new Set(await mapInkLoad(z.env.DB, id));
+  if (carried.itemId === DETAILED_MAP) return ink.size;
+  const copy = id ?? carried.rowId;
+  const fill = CRUDE_FILL_MIN + crudeHand(copy) * (CRUDE_FILL_MAX - CRUDE_FILL_MIN);
+  let n = 0;
+  for (const room of world.rooms.keys()) if (ink.has(room) || mulberry32(hashSeed(copy + ":" + room))() < fill) n++;
+  return n;
+}
+
+/** " (42 rooms)" / " (9 creatures)" after each map and journal in these lists, by row. */
+export async function copyCounts(z: ZoneDO, session: Session | undefined, ...lists: CarriedItem[][]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  for (const list of lists) for (const c of list) {
+    if (MAP_ITEMS.has(c.itemId)) {
+      const n = await chartRooms(z, session, c);
+      out.set(c.rowId, ` (${n} room${n === 1 ? "" : "s"})`);
+    } else if (c.itemId === JOURNAL_ITEM) {
+      const n = c.journalId ? (await journalLoad(z.env.DB, c.journalId)).length : 0;
+      out.set(c.rowId, ` (${n} creature${n === 1 ? "" : "s"})`);
+    }
+  }
+  return out;
+}
+
 export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const maps = session.items.filter((c) => MAP_ITEMS.has(c.itemId));
   if (!maps.length) {
     return z.send(session, "You carry no map. The keeper sells them — a surveyor's blank dear, a half-drawn crude one cheap.");
   }
+  if (session.mapInk === undefined || maps.some((c) => !c.journalId)) await inkRooms(z, session); // every copy named and its ink in hand, so the counts are the map's own
+  const counts = new Map<CarriedItem, number>();
+  for (const c of maps) counts.set(c, await chartRooms(z, session, c));
+  const label = (c: CarriedItem) => `${z.world!.itemTemplates.get(c.itemId)!.name} (${counts.get(c)} room${counts.get(c) === 1 ? "" : "s"})`;
+  // BY ITS COUNT: 'map 42' (or 'map 42 rooms') opens the copy with 42 rooms on it.
+  const byCount = /^(\d+)(\s*rooms?)?$/i.exec(arg.trim());
+  let carried: CarriedItem | null | undefined = null;
+  if (byCount) {
+    carried = maps.find((c) => counts.get(c) === +byCount[1]);
+    if (!carried) return z.send(session, `None of your maps has ${byCount[1]} rooms on it. You carry ${maps.map(label).join(", ")}.`);
+  }
   // Name one, or default to the best you hold (a true map over a crude one).
-  let carried = arg ? maps.find((c) => nameMatches(z.world!.itemTemplates.get(c.itemId)!.name, arg)) : null;
+  if (!carried && arg && !byCount) carried = maps.find((c) => nameMatches(z.world!.itemTemplates.get(c.itemId)!.name, arg));
   // The finished chart outranks everything — there is nothing a surveyor's
-  // blank can tell you that it does not already say.
+  // blank can tell you that it does not already say. Then the fullest.
+  const fullest = (list: CarriedItem[]) => list.reduce<CarriedItem | undefined>((a, c) => (!a || counts.get(c)! > counts.get(a)! ? c : a), undefined);
   if (!carried) carried = maps.find((c) => c.itemId === FULL_MAP)
-    ?? maps.find((c) => c.itemId === DETAILED_MAP) ?? maps[0];
+    ?? fullest(maps.filter((c) => c.itemId === DETAILED_MAP)) ?? fullest(maps)!;
+  // More than one: after the unroll, which others there are and how to open them.
+  const others = maps.filter((c) => c !== carried);
+  const also = others.length
+    ? `\nYou also carry ${others.map(label).join(", ")}. ('map ${counts.get(others[0])}' opens ${others.length === 1 ? "it" : "that one"})`
+    : "";
   const whole = carried.itemId === FULL_MAP;
   const detailed = whole || carried.itemId === DETAILED_MAP;
   // A chart records nothing: it was finished before you were born, and walking
@@ -126,22 +178,22 @@ export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<
   if (!whole) await inkRooms(z, session);
   sendMap(z, session, carried, detailed);
   if (whole) {
-    return z.send(session, "You unfold the finished chart. All of it, at once — every hall and ride and stair, in one hand. Somebody walked this whole place with a chain and wrote down what they found, and then, apparently, stopped.");
+    return z.send(session, "You unfold the finished chart. All of it, at once — every hall and ride and stair, in one hand. Somebody walked this whole place with a chain and wrote down what they found, and then, apparently, stopped." + also);
   }
   if (detailed) {
     const inked = session.mapInk?.get(carried.journalId!)?.size ?? 1;
-    return z.send(session, inked <= 1
+    return z.send(session, (inked <= 1
       ? "You unroll the surveyor's blank — empty but for the ground underfoot. It charts what its carrier walks, set down true."
-      : `You unroll the surveyor's map. ${inked} halls are set down true, walked in by the hands that carried it.`);
+      : `You unroll the surveyor's map. ${inked} halls are set down true, walked in by the hands that carried it.`) + also);
   }
   // The unfold reads the hand that drew this copy: how much of the world the
   // copyist got down. What is drawn is true; the rest is yours to walk in.
   const hand = crudeHand(carried.journalId ?? carried.rowId);
-  z.send(session, hand >= 0.75
+  z.send(session, (hand >= 0.75
     ? "You unfold the crude map. Whoever copied it got a good deal of the world down, roughly but true. The gaps are yours to walk in."
     : hand < 0.3
       ? "You unfold the crude map. Scraps of the world, set down true, with wide blanks between. What you walk, it takes."
-      : "You unfold the crude map. Patches of the world drawn in, true as far as they go, and blank between. What you walk, it takes.");
+      : "You unfold the crude map. Patches of the world drawn in, true as far as they go, and blank between. What you walk, it takes.") + also);
 }
 
 // The hand that drew a given copy, rolled off the copy's own identity (its

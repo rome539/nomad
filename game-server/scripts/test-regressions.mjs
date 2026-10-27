@@ -27,7 +27,7 @@ try {
         "export {ZoneDO} from './zone';",
         "export {parse} from './parser';",
         "export * as den from './den';",
-        "export {cmdMap} from './lore';",
+        "export {cmdMap, copyCounts} from './lore';",
         "export {cmdGo} from './verbs';",
         "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, glutMult, tickGlut, offerCore, cmdOffer} from './gate';",
         "export {cmdLook} from './verbs';",
@@ -59,7 +59,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -435,6 +435,34 @@ try {
     me.roomId = blank; await cmdMap(z, me, '');
     me.roomId = 'r50'; await cmdMap(z, me, '');
     assert.ok(shownOf(frames.at(-1)).some((r) => r.id === blank), 'a walked room stays on the paper');
+  });
+
+  await checkAsync('each map says how many rooms it holds, and map <rooms> opens that one (2026-10-26)', async () => {
+    const { z, me, frames } = mapWorld('map-test-a');
+    me.items.push({ rowId: 'row2', itemId: 'crude-map', serial: null, equipped: false, condition: 100, journalId: 'map-test-b' });
+    const said = []; z.send = (_s, t) => said.push(t);
+    await cmdMap(z, me, ''); // as on every step: the ground underfoot is inked onto both
+    const counts = await copyCounts(z, me, me.items);
+    const n = (row) => Number(/\((\d+) rooms?\)/.exec(counts.get(row))[1]);
+    const [a, b] = [n('row1'), n('row2')];
+    assert.notEqual(a, b, 'two copies, two counts');
+    await cmdMap(z, me, String(b));
+    assert.equal(shownOf(frames.at(-1)).length, b, 'the count is the rooms the map draws');
+    assert.match(said.at(-1), new RegExp(`You also carry a crude map \\(${a} rooms\\)\\. \\('map ${a}' opens it\\)`), 'and the other is named, with how to open it');
+    await cmdMap(z, me, a + ' rooms');
+    assert.equal(shownOf(frames.at(-1)).length, a);
+    if (a > b) me.items.reverse(); // the thinner one first, so first-carried is not the answer by luck
+    await cmdMap(z, me, '');
+    assert.equal(shownOf(frames.at(-1)).length, Math.max(a, b), 'bare, the fullest');
+    const before = frames.length;
+    await cmdMap(z, me, '999');
+    assert.equal(frames.length, before, 'no such map: nothing opens');
+    assert.match(said.at(-1), /None of your maps has 999 rooms on it\. You carry a crude map \(\d+ rooms\), a crude map \(\d+ rooms\)\./);
+    const vsrc = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(vsrc, /\$\{z\.gearName\(c\.itemId, z\.displayName\(c\)\)\}\$\{counts\?\.get\(c\.rowId\) \?\? ""\}/, 'the pack list carries it');
+    assert.match(vsrc, /const counts = await lore\.copyCounts\(z, session, session\.items\);/);
+    const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(gsrc, /name: z\.displayName\(c\) \+ \(counts\.get\(c\.rowId\) \?\? ""\)/, 'and the pack window, the same');
   });
 
   // ---------------------------------------------------------------- vitals
