@@ -1669,6 +1669,22 @@ try {
     assert.match(ai, /const lines = RIVAL_LINES\[creature\.templateId\]/, 'the fight reads the lines for its kind');
   });
 
+  check('the torch effects let go of old creature strips instead of keeping every one (2026-10-27)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const fn = pub.match(/function fxMobPrune\(\) \{[\s\S]*?\n\}/)[0];
+    const keep = +pub.match(/var FX_MOB_KEEP = (\d+)/)[1], shown = +pub.match(/FX_MOBS = (\d+)/)[1];
+    assert.ok(keep >= shown, 'it never lets go of what is on the row');
+    assert.match(pub.match(/function fxMobs\(box\) \{[\s\S]*?\n\}/)[0], /fxMobPrune\(\)/, 'and it prunes as it draws');
+    const freed = [];
+    const run = new Function('fxMobTex', 'fxMobSeen', 'fxGl', 'FX_MOB_KEEP', fn + '; fxMobPrune();');
+    const tex = {}, seen = {};
+    for (let i = 0; i < 40; i++) { tex['m' + i] = { n: i }; seen['m' + i] = i; }
+    run(tex, seen, { deleteTexture: (t) => freed.push(t.n) }, keep);
+    assert.equal(Object.keys(tex).length, keep, 'only the last few stay: ' + Object.keys(tex).length);
+    assert.equal(freed.length, 40 - keep, 'and the rest are freed on the card, not just forgotten');
+    assert.ok(tex['m39'] && !tex['m0'], 'it is the oldest that go');
+  });
+
   check('the sapper\'s blow lands on his pick-down frame: alert, attack, then work-the-face (2026-10-27)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const row = pub.match(/"the-sapper":\s*\{ n: \d+, aspect: [\d.]+, f: (\{[^}]*\})/);

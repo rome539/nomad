@@ -13190,6 +13190,12 @@ var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("
 var fxGl = null, fxProg = null, fxU = {}, fxIndex = null, fxIndexAsked = false;
 var fxName = "", fxEntry = null, fxFrame = null, fxStamp = 0, fxT = 0, fxReady = false, fxSeq = 0;
 var fxTex = {}, fxMobTex = {}, fxEmbers = [], fxDust = [];
+// HOW MANY CREATURE STRIPS STAY ON THE GRAPHICS CARD (2026-10-27). Every strip a
+// lit room ever showed used to stay uploaded for the life of the tab, never
+// deleted: walk the world for an evening and it held most of the bestiary,
+// near a gigabyte decoded, and the tab sat at three. Now the last few seen are
+// kept and the rest let go; one that comes back is fetched from the cache again.
+var FX_MOB_KEEP = 12, fxMobSeen = {}, fxMobClock = 0;
 var FX_TORCHES = 24, FX_MOBS = 4;
 function fxInit() {
   if (fxGl || !fxCanvas) return !!fxGl;
@@ -13429,10 +13435,12 @@ function fxMobs(box) {
     var spec = loot ? { n: 1 } : id && MOB_ANIM[id];
     if (!spec) continue;
     var tx = fxMobTex[id];
+    fxMobSeen[id] = ++fxMobClock;
     if (tx === undefined) {
       fxMobTex[id] = null;                       // asked for; drawn once it lands
       (function (mid, url) {
-        fxLoad(url).then(function (im) { fxMobTex[mid] = fxUpload(6, im, false); });
+        // only into a slot still waiting: one pruned meanwhile, or already filled, is left alone
+        fxLoad(url).then(function (im) { if (fxMobTex[mid] === null) fxMobTex[mid] = fxUpload(6, im, false); });
       })(id, loot ? "/loot/" + loot + ".webp?v=" + LOOT_V : "/mob/" + id + ".webp?v=" + MOB_V);
       continue;
     }
@@ -13441,7 +13449,19 @@ function fxMobs(box) {
     var fr = Math.round((parseFloat(el.style.backgroundPositionX) || 0) / 100 * (spec.n - 1));
     out.push({ tx: tx, rect: [(r.left - box.left) / box.width, (r.top - box.top) / box.height, r.width / box.width, r.height / box.height], fr: [fr, spec.n] });
   }
+  fxMobPrune();
   return out;
+}
+// Let go of all but the FX_MOB_KEEP most recently seen. What is on the row now
+// was stamped this frame, so it is always among those kept.
+function fxMobPrune() {
+  var ids = Object.keys(fxMobTex);
+  if (ids.length <= FX_MOB_KEEP) return;
+  ids.sort(function (a, b) { return (fxMobSeen[b] || 0) - (fxMobSeen[a] || 0); });
+  for (var i = FX_MOB_KEEP; i < ids.length; i++) {
+    if (fxMobTex[ids[i]]) fxGl.deleteTexture(fxMobTex[ids[i]]);
+    delete fxMobTex[ids[i]]; delete fxMobSeen[ids[i]];
+  }
 }
 function fxDraw(now) {
   fxFrame = null;
