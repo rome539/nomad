@@ -26,7 +26,7 @@ import {
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES, DEN_BUILDS,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
-  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS, CACHE_ART, HOLLOW,} from "./zone-data";
+  WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS, CACHE_ART, HOLLOW, FLEE_SHOWN_MS,} from "./zone-data";
 
 // When steel is out, the chips narrow to the fight — in EVERY room. No
 // resting, banking, chatting, or reading the walls while something swings
@@ -230,7 +230,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       // caught by the light before it could spring: pressed into its crevice, plain to see
       const state = lurking && !creature.target ? "lurk-lit"
         : creature.windedUntil && now < creature.windedUntil ? "flee"
-        : creature.fled ? "flee"
+        : creature.fled && creature.fledAt && now - creature.fledAt < FLEE_SHOWN_MS ? "flee"
         : FLIERS.has(creature.templateId) && ai.airborne(creature, now) ? "aloft"
         : creature.stunned || (creature.staggerUntil && now < creature.staggerUntil) || (creature.blownUntil && now < creature.blownUntil) ? "reel"
         : creature.target === session.pubkey ? "hunt"

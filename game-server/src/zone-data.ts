@@ -2383,6 +2383,12 @@ export const RUNNERS = new Set(["fleet-rat", "roe-deer",
 export const FLEE_WIND_MIN = 3;      // the shortest rout an animal has in it...
 export const FLEE_WIND_MAX = 6;      // ...and the longest, rolled fresh each time
 export const FLEE_WIND_MS = 45_000;  // blown this long: no running, at bay, and it shows
+// THE PICTURE RUNS ONLY WHILE IT IS RUNNING (rome, 2026-10-27: a pale crawler
+// sat in the Sump stuck on its walking frames). `fled` counts the rooms of the
+// rout and is only cleared by the next ordinary walk, so a creature that bolted
+// in and then stayed put kept the flee gait for as long as it stayed. The
+// picture shows the flight for this long after the last room it ran.
+export const FLEE_SHOWN_MS = 6_000;
 // AND THE ROUT SLOWS BEFORE IT ENDS (rome, 2026-09-03: chase them room to room
 // and they should tire — the first bolt fast, and slower each time, until the
 // animal is spent where it stands).
@@ -6437,7 +6443,13 @@ export const DRAKE_HUNGER_MULT = 0.35;
 // the dark for days between meals: at a quarter it is hungry again about six
 // hours forty after a kill. Unlike the drake's this one is the animal, not the
 // weather, so catch-up charges it too.
-export const SLOW_EATERS: Record<string, number> = { "pale-crawler": 0.25 };
+// ...AND THEN IT WAS TAKEN OFF IT (rome, 2026-10-27). Since the herds (10-25)
+// the rats breed back from what is left, up to about four an hour across the
+// fortress and the deep, and at a quarter the crawlers took about two: the rats
+// sat near full everywhere. On the ordinary clock the crawler is hungry 1h40
+// after a kill and eats far more than the rats can breed back, so the rats get
+// scarce in the deep and a crawler that finds none turns on whoever is there.
+export const SLOW_EATERS: Record<string, number> = {};
 // WHAT EACH GROUND SEES WHEN IT GOES OVER. Sky only — a wanderer under a roof
 // or in a cave sees nothing, which is the same test the weather already uses
 // (OUTDOOR_ROOMS), and is why a thing this size can cross the world unseen by

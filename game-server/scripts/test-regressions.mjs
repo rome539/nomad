@@ -1575,6 +1575,35 @@ try {
     assert.match(zsrc, /this\.herds = new Map\(Object\.entries\(saved\.herds/);
   });
 
+  check('a creature that ran and then stayed put stops showing the flee gait (2026-10-27)', () => {
+    const chips = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(chips, /: creature\.fled && creature\.fledAt && now - creature\.fledAt < FLEE_SHOWN_MS \? "flee"/, 'flee is shown only just after a room it ran');
+    assert.ok(!/: creature\.fled \? "flee"/.test(chips), 'not for as long as the rout count is left over');
+    assert.match(ai, /creature\.fled = \(creature\.fled \?\? 0\) \+ 1;\n\s*creature\.fledAt = now;/, 'each room run stamps the time');
+  });
+
+  check('creatures on the deep-water picture stand on its flagstones, not in the pools (2026-10-27)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const line = Number(pub.match(/\n  "deep-water": (\d+),/)?.[1]);
+    assert.ok(line >= 68 && line <= 72, 'the floor starts at 70% of the frame; got ' + line);
+  });
+
+  check('a dropped wire does not ask the relays for your name again; new keys do (2026-10-27)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const resets = (pub.match(/(?<!var )profileTried = false;/g) || []).length;
+    assert.equal(resets, 1, 'the lookup is re-armed in exactly one place');
+    const rc = pub.slice(pub.indexOf('function reconnect() {'), pub.indexOf('function reconnect() {') + 1500);
+    assert.match(rc, /profileTried = false;/, 'and that place is the identity switch');
+  });
+
+  check('the pale crawler is hungry on the ordinary clock, not a quarter of it (2026-10-27)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const slow = zd.match(/export const SLOW_EATERS: Record<string, number> = (\{[^}]*\});/)?.[1];
+    assert.ok(slow !== undefined, 'SLOW_EATERS is still declared');
+    assert.ok(!/pale-crawler/.test(slow), 'the crawler is not on the slow clock');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

@@ -557,6 +557,10 @@ const LINES = {
 "marrow-cantor": {
   "hold-the-note": "Standing tall with the skull tipped back, the wired jaw wide open on a held note, the hollow chest swollen, the arms a little out from the sides. No sound is drawn - only the open jaw and the swelling chest",
   listen: "Standing still and listening: the skull tilted a little to one side and lifted, the whole body stopped, the hands held still at its sides",
+  // attack and sweep read off its shipped strip (2026-10-27): a low two-handed
+  // grab, then one arm flung across.
+  attack: "Lunging forward low at full reach with both bony hands out and the long fingers hooked to seize, the torn robe swinging after the body",
+  sweep: "A swipe of one bony hand flung out across the body at full reach, the other arm back, the skull turned after it",
 },
 "something-ahead": {
   listen: "Stopped dead mid-step and listening: one foot lifted off the ground and held there, the body stooped forward, the long arms hanging loose, the head pushed forward and perfectly still - it stops when you stop",
@@ -1025,6 +1029,11 @@ const REDRAW = {
   "the-bellfounder": ["idle","rake-the-melt","watch","alert","move-a","move-b","attack","death"],
   "the-drowned": ["idle","take-hold","alert","move-a","move-b","attack","listen","death"],
   "drowned-hulk": ["idle","take-hold","alert","move-a","move-b","attack","sweep","death"],
+  // the barrow-wight and the cantor had no recorded sheet, so the tool invented
+  // an eight with no sweep and death fifth (2026-10-27). These are the nine
+  // frames they ship, in the order of the strips, death last.
+  "twice-dead": ["idle","rise","listen","alert","move-a","move-b","attack","sweep","death"],
+  "marrow-cantor": ["idle","listen","hold-the-note","alert","move-a","move-b","attack","sweep","death"],
   "wildcat": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
 };
 
@@ -1654,6 +1663,21 @@ const SAY = {
   _spare: "The same pose as the previous cell, seen from a slightly different angle. THIS CELL IS A SECOND ATTEMPT at that pose and one of the two will be discarded",
 };
 
+// A CLEAR BACKGROUND, NOT MAGENTA (rome, 2026-10-27), for the sheets named
+// here. Magenta was tested and kept for every other sheet; these three redos
+// are drawn on real transparency instead. The cutter needs no change: it counts
+// any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
+// simply finds nothing to take. The swap runs on the finished text, so every
+// magenta line in the prompt goes, wherever a template put it.
+const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned"]);
+const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
+  .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
+    "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")
+  .replace(/CLEAR EMPTY MAGENTA/g, "CLEAR EMPTY TRANSPARENT SPACE")
+  .replace(/empty magenta/g, "empty transparent space")
+  .replace(/exactly the way the magenta background is/g, "the same way the background is keyed")
+  .replace(/#FF00FF|magenta/gi, "transparent");
+
 const THROWAWAY = poses.filter((p) => p[0] === "_");
 // THE WORD "OPAQUE" IS OUT OF THE MAGENTA LINE (rome, 2026-09-21: it kept
 // fouling the sheets). "Pure opaque solid magenta" reads to a generator as an
@@ -1667,7 +1691,7 @@ const THROWAWAY = poses.filter((p) => p[0] === "_");
 // put it INSIDE the template literal below - so the note about removing a word
 // from the prompt was itself printed into all 22 prompts. Everything from here
 // to the end of that literal is prompt text, not source.
-console.log(`# ${id} — ${poses.length} poses, ${COLS}x${ROWS} sheet at ${W}x${H}
+console.log(clearBg(`# ${id} — ${poses.length} poses, ${COLS}x${ROWS} sheet at ${W}x${H}
 # after generating:
 #   node scripts/cut-mob-sheet.mjs <sheet.png> ${id} ${poses.join(" ")}${THROWAWAY.length ? `
 #   rm ${THROWAWAY.map((p) => `output/*/${id}/${p}.png`).join(" ")}   # BEFORE building — the builder packs every png it finds` : ""}
@@ -1687,4 +1711,4 @@ ${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}Create ${poses.length} ful
 Reading order left to right, top row then bottom row:
 ${poses.map((p, i) => `${i + 1}. ${WORDING[p] || (LINES[id] && LINES[id][p]) || SAY[p] || p.replace(/-/g, " ")}`).join("\n")}
 
-No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human.${MANSHAPED[id] || LIVING_MEN.has(id) ? "" : " Do not make the animal a dragon hybrid."}`);
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human.${MANSHAPED[id] || LIVING_MEN.has(id) ? "" : " Do not make the animal a dragon hybrid."}`));

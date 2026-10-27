@@ -190,6 +190,7 @@ export interface Creature {
   calledTo?: string; // call-bus guard: it was SUMMONED here — it never calls from this room (a call must never trigger a call)
   leavesAt?: number; // TRANSIENT creatures have somewhere else to be: the ms they walk off the map for good (the chainman)
   fled?: number;        // rooms run in the CURRENT rout — reset when it gets clean away
+  fledAt?: number;      // when it last ran a room of it: the picture shows flight only just after (FLEE_SHOWN_MS)
   windAt?: number;      // how many it had in it this time (FLEE_WIND_MIN..MAX, rolled when the rout starts)
   windedUntil?: number; // ms until it has its breath back; until then it will not run, whatever it is
   lastBlowAt?: number;  // styles.ts: when it last landed a blow (a charger charges from a standstill; a heavy rests back to fresh)

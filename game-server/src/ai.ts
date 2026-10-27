@@ -1639,6 +1639,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // left. Spend it and the animal is blown where it stands.
       creature.windAt ??= randInt(FLEE_WIND_MIN, FLEE_WIND_MAX);
       creature.fled = (creature.fled ?? 0) + 1;
+      creature.fledAt = now;
       if (creature.fled >= creature.windAt) {
         creature.windedUntil = now + FLEE_WIND_MS;
         creature.fled = 0;

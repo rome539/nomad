@@ -5542,7 +5542,10 @@ async function connect() {
     try { ws.onopen = null; ws.onclose = null; ws.onmessage = null; ws.onerror = null; ws.close(); } catch (e) {}
     ws = null;
   }
-  profileTried = false;
+  // (The profile lookup is NOT re-armed here. It was, so every dropped wire
+  // asked the relays again and printed both lines into the scroll; rome saw it
+  // twice in a few minutes on the extension, 2026-10-27. One lookup per
+  // identity: reconnect() re-arms it when the keys actually change.)
   if (method === "ext" && !window.nostr) {
     print("— your key extension is not answering; entering with the pocket keys —", "sys");
     method = "guest";
@@ -6068,6 +6071,7 @@ function reconnect() {
   lastNamed = false;
   nameHint = null;
   nameClaimed = false;
+  profileTried = false;   // new keys: their name is worth one lookup
   hpEl.textContent = "\\u2026";
   hpEl.className = "";
   renderFx([]);
@@ -11629,7 +11633,10 @@ var MOB_LINE = {
   "deep-passage": 55,
   "deep-hall": 55,
   "deep-bone": 55,
-  "deep-water": 55,
+  // THE DEEP WATER'S FLOOR STARTS AT 70% (rome, 2026-10-27: a pale crawler in
+  // the Sump was nearly falling off the platform). Above 70 is the pools and the
+  // channel; at 55 a low creature's feet landed in the water.
+  "deep-water": 70,
   "deep-dark": 55,
   "kings-rooms": 55,
   "waiting-hall": 55,
