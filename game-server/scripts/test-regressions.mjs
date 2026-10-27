@@ -1043,6 +1043,49 @@ try {
     assert.equal(glaive.condition, 60, 'the stone takes it up in whole numbers');
   });
 
+  console.log('the sound');
+  check('sound turned off and back on wakes a context the browser parked or closed (2026-10-26)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const fn = (n) => { const i = pub.indexOf('\nfunction ' + n + '('); let d = 0;
+      for (let k = pub.indexOf('{', i); k < pub.length; k++) { if (pub[k] === '{') d++; else if (pub[k] === '}' && --d === 0) return pub.slice(i + 1, k + 1); } };
+    const made = [];
+    class FakeCtx {
+      constructor() { this.state = 'suspended'; this.resumed = 0; this.destination = {}; made.push(this); }
+      createGain() { return { gain: { value: 0 }, connect() {} }; }
+      resume() { this.resumed++; return Promise.resolve(); }
+    }
+    const listeners = [];
+    const document = { addEventListener: (k) => listeners.push(k), removeEventListener() {} };
+    const calls = [];
+    const run = new Function('AudioContext', 'document', 'calls',
+      `var actx = null, amaster = null, ambNodes = null, scape = null, soundOn = true, AMB_FADE = 1;
+       var SND_WAKE = ["pointerdown", "click"];
+       function fadeGain() {} function startAmb() { calls.push("amb"); } function scapeStart() { calls.push("scape"); }
+       ${fn('sndInit')}\n${fn('sndWatch')}\n${fn('wakeSnd')}
+       return { sndInit, sndWatch, wakeSnd, get actx() { return actx; }, set actx(v) { actx = v; }, set on(v) { soundOn = v; } };`);
+    const S = run(FakeCtx, document, calls);
+    S.sndInit();
+    const ctx = S.actx;
+    ctx.state = 'interrupted'; // an iPhone locked while the sound was off
+    S.sndInit();
+    assert.ok(ctx.resumed >= 2, 'woken from interrupted, not only from suspended');
+    ctx.state = 'closed';
+    S.sndInit();
+    assert.notEqual(S.actx, ctx, 'a closed context is built again');
+    S.actx.state = 'closed';
+    S.wakeSnd();
+    assert.ok(calls.includes('amb') && calls.includes('scape'), 'and its beds with it');
+    listeners.length = 0;
+    S.actx.state = 'suspended';
+    S.sndWatch();
+    assert.deepEqual(listeners, ['pointerdown', 'click'], 'stopped running: the wake goes back on');
+    listeners.length = 0;
+    S.on = false;
+    S.sndWatch();
+    assert.equal(listeners.length, 0, 'not while the sound is off');
+    assert.match(pub, /actx\.onstatechange = sndWatch;/);
+    assert.match(pub, /addEventListener\("visibilitychange", function \(\) \{ if \(!document\.hidden\) sndWatch\(\); \}\);/);
+  });
   console.log('the herds');
   // The wood in small: deer and wolves with rows across 10 rooms, nobody home.
   function herdWorld(deerRows = 10, wolfRows = 5) {

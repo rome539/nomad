@@ -3498,15 +3498,29 @@ function scapeStop() {
     ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap", "midge"].forEach(function (k) { try { dying[k].src.stop(); } catch (e) {} });
   }, AMB_FADE * 1000 + 60);
 }
+// SOUND OFF, THEN BACK ON, AND NOTHING (rome, 2026-10-26). The browser parks a
+// context while the sound is off and the phone locks or the tab goes behind
+// another - "suspended", or on an iPhone "interrupted" - and may close it
+// outright. Only "suspended" was ever woken, and the wake on touch had already
+// been taken down the first time the sound ran, so it stayed silent until a
+// reload. Now: anything short of running is woken, a closed one is built
+// again, and whenever it stops running the wake goes back on.
 function sndInit() {
+  if (actx && actx.state === "closed") { actx = null; amaster = null; ambNodes = null; scape = null; }
   if (!actx) {
     try { actx = new AudioContext(); } catch (e) { return; }
     amaster = actx.createGain();
     amaster.gain.value = 0;
     amaster.connect(actx.destination);
+    actx.onstatechange = sndWatch;
   }
   fadeGain(actx, amaster.gain, soundOn ? 0.5 : 0, AMB_FADE);
-  if (actx.state === "suspended") { try { actx.resume(); } catch (e) {} }
+  if (actx.state !== "running") {
+    try { var woke = actx.resume(); if (woke && woke.catch) woke.catch(function () {}); } catch (e) {}
+  }
+}
+function sndWatch() {
+  if (actx && soundOn && actx.state !== "running") SND_WAKE.forEach(function (k) { document.addEventListener(k, wakeSnd); });
 }
 // One event, one voice — same casting as the trailer.
 // CREATURE VOICES. One voice per kind of animal, not per creature: every sprite
@@ -9997,13 +10011,14 @@ aboutbtn.addEventListener("click", function () {
 var SND_WAKE = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
 function wakeSnd() {
   if (!soundOn) return;
-  var fresh = !actx;
+  var fresh = !actx || actx.state === "closed"; // a closed one is built again, beds and all
   sndInit();
   if (!actx) return;
   if (fresh) { startAmb(); scapeStart(); }
   if (actx.state === "running") SND_WAKE.forEach(function (k) { document.removeEventListener(k, wakeSnd); });
 }
 SND_WAKE.forEach(function (k) { document.addEventListener(k, wakeSnd); });
+document.addEventListener("visibilitychange", function () { if (!document.hidden) sndWatch(); });
 // The trailer's typing clicks, live: each printable key taps the highpass.
 cmd.addEventListener("keydown", function (e) {
   if (soundOn && actx && e.key && e.key.length === 1) {
