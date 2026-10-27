@@ -6463,7 +6463,6 @@ function chipLabel(s) {
   m = /^(attack|get) (.+)$/.exec(s);
   if (m) return m[2];
   if (s === "look slate") return "slate";
-  if (s === "look tally") return "tally";
   return s;
 }
 // A chip's colour tells you what tapping it DOES: red bites, green mends, gold

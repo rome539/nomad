@@ -1454,21 +1454,22 @@ try {
     for (let i = 1; i < 10; i++) z.creatures.delete('h' + i);
     for (let h = 0; h <= 10; h++) { conditions.tick(z, h * H, true); assert.equal(conditions.of(z, 'mountain'), undefined, 'hour ' + h); }
   });
-  check('the tally in the gatehouse says each ground, facts not odds (2026-10-26)', () => {
+  check('the regions are in the keeper census, not on a wall for players (2026-10-26)', () => {
     const z = thickWorld();
-    assert.match(conditions.tally(z), /The Mountain — nothing out of the way/);
+    conditions.tick(z, 0, true);
+    const read = () => conditions.censusLines(z, 0).join('\n');
+    assert.match(read(), /The Mountain — none; kills 0\.0; hunters 1\.0x/, 'its own mix reads 1x');
     for (let i = 0; i < 9; i++) z.creatures.delete('h' + i);
-    assert.match(conditions.tally(z), /The Mountain — roe-deer scarce/);
-    z.conditions.set('mountain', { kind: 'hunted', since: 0 });
-    assert.match(conditions.tally(z), /The Mountain — hunted hard\. The game bolts at a footfall, gives up the dawn, and keeps to cover/, 'the wariness is said here');
+    for (let i = 0; i < 8; i++) conditions.noteKill(z, 'mountain', 0);
+    conditions.tick(z, H, true);
+    assert.match(conditions.censusLines(z, H).join('\n'), /The Mountain — none; kills \d\.\d; hunters 10\.0x \(over the line 0m\); scarce: roe-deer/, 'how near the next one is');
     z.conditions.set('mountain', { kind: 'thick', line: 'grey-wolf', since: 0 });
-    assert.match(conditions.tally(z), /The Mountain — grey wolf thick, and the game keeping to cover/);
-    z.conditions.set('mountain', { kind: 'murrain', line: 'mountain-hare', since: 0 });
-    assert.match(conditions.tally(z), /sickness in the mountain-hare/);
-    assert.ok(!/\d+%|odds|chance/.test(conditions.tally(z)), 'no odds');
+    assert.match(conditions.censusLines(z, H).join('\n'), /The Mountain — thick \(grey wolf\) for 60m/);
     const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
-    assert.match(gsrc, /is\("tally", [^)]*\)\) return conditions\.tally\(z\);/, 'look tally reads it in the gatehouse');
-    assert.match(gsrc, /\('look tally'\)/, 'the room names it');
+    assert.ok(!/look tally|conditions\.tally/.test(gsrc), 'no tally in the gatehouse');
+    assert.ok(!/look tally/.test(readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8')), 'and no chip for one');
+    const vsrc = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(vsrc, /lines\.push\("", \.\.\.conditions\.censusLines\(z, now\)\);/, 'the census reads it');
   });
   check('an oversized save names what is filling it (2026-10-25)', () => {
     const blob = JSON.stringify({ small: 1, bloodOn: 'x'.repeat(40_000), board: 'y'.repeat(20_000), events: 'z'.repeat(5_000), tiny: [] });

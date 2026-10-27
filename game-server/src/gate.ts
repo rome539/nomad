@@ -17,7 +17,6 @@ import { isGameKeyConfigured, signLootEvent } from "./signing";
 import { uuid, randInt, chance, pick } from "./rng";
 import * as events from "./events";
 import * as works from "./works";
-import * as conditions from "./conditions";
 import * as lore from "./lore";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, isFullMoon, moonPhase, eclipsePhase, skyBand, halfFrac } from "./zone-util";
 import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, KEEPER_LEARN_SALES, WORTH_MARK_AT, GEAR_FAILING_AT, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
@@ -2882,7 +2881,6 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
       + " ('barter' opens it)";
   }
   if (is("slate", "weather slate", "keepers slate", "keeper's slate", "sky", "weather")) return slateText(z);
-  if (is("tally", "beam", "tally beam", "charcoal", "lines", "ground")) return conditions.tally(z);
   if (is("board", "notices", "notice", "cork", "notice board", "posts")) {
     const live = boardLive(z);
     return live.length === 0
@@ -2934,7 +2932,6 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
     ? "By the door, a stretch of wall plastered smooth and scratched over with other people's chalk — none of it in a hand you can read. Your own corner is bare. ('carve' what you've walked)"
     : `By the door, the wall chart — and ${marks} halls of it are yours. ('study' it; 'carve' to add what you've walked)`);
   lines.push("Beside the hatch hangs the keeper's slate, with the sky chalked on it. ('look slate')");
-  lines.push("Over the door, a beam scored in charcoal with what the ground is doing out there. ('look tally')");
   // The board, beside the hatch. Only spoken of when it has something on it: an
   // empty board is furniture, and the room already has enough of that.
   const notices = boardLive(z).length;

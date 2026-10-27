@@ -26,6 +26,7 @@ import * as light from "./light";
 import * as events from "./events";
 import * as pvp from "./pvp";
 import * as lore from "./lore";
+import * as conditions from "./conditions";
 import * as den from "./den";
 import * as detail from "./detail";
 import * as wanderer from "./wanderer";
@@ -2758,6 +2759,8 @@ export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {
       lines.push(`  ${bare(id)}${form}${was ? ` — was ${was}` : ""}   [${[...capOf.get(id)!.entries()].map(([b, c]) => `${b} 0/${c} !`).join(", ")}]`);
     }
   }
+  // WHAT EACH GROUND IS GOING THROUGH (conditions.ts), and how near the next.
+  lines.push("", ...conditions.censusLines(z, now));
   // THE PACKS THAT RANGE (RANGERS): where each is, the ground it chose and why.
   for (const tid of [...RANGERS]) {
     const pack = [...z.creatures.values()].filter((c) => c.templateId === tid).sort((a, b) => (a.id < b.id ? -1 : 1));

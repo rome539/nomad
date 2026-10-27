@@ -25,12 +25,12 @@
 //            for CONDITION_THICK_AFTER_MS. The prey keep to cover, as on hunted
 //            ground (herds.wary). Ends below CONDITION_THICK_CLEARS times it.
 //
-// TOLD BY THE GROUND (rome: leave the keeper quiet for this one). A region in a
-// condition says so in its passing lines, in the room you are standing in, and
-// in what is actually there — more of a thing, thinner ones, bodies. No banner
-// and no keeper line. The one other place it is said is the tally in the
-// gatehouse (tally, below), where those coming in off the ground score what
-// they found there: you have to walk in to read it.
+// TOLD ONLY BY THE GROUND (rome: leave the keeper quiet for this one). A region
+// in a condition says so in its passing lines, in the room you are standing
+// in, and in what is actually there — more of a thing, thinner ones, bodies.
+// No banner, no list, no keeper line. (A tally in the gatehouse said it for a
+// day, 2026-10-26; rome took it out - the census was meant for him. His census
+// reads it, censusLines below.)
 import type { ZoneDO } from "./zone";
 import type { Creature } from "./zone-types";
 import { chance, randInt } from "./rng";
@@ -168,6 +168,7 @@ export function tick(z: ZoneDO, now: number, silent: boolean): void {
     const cond = z.conditions.get(region);
     const kills = killsIn(z, region, now);
     const thick = thickness(region);
+    z.condTrack.set(`ratio:${region}`, thick); // the reading itself, for the keeper's census
     const tk = `thick:${region}`;
     if (thick >= CONDITION_THICK_AT) { if (!z.condTrack.has(tk)) z.condTrack.set(tk, now); } else z.condTrack.delete(tk);
     // HUNTED outranks the rest: whatever the ground was doing, it is being killed now.
@@ -287,15 +288,15 @@ export function ambient(z: ZoneDO, roomId: string): string | null {
   return pool[randInt(0, pool.length - 1)];
 }
 
-// THE TALLY (rome, 2026-10-25: a place that says each region's state, and where
-// the wariness gets said). A beam in the gatehouse that those coming in off the
-// ground score what they found on it, one ground to a line. What it says is a
-// fact about the ground, never odds: the game gone shy, a thing thick, a thing
-// scarce. Read only from in there (gate.ts, gatehouseFixture) - the walk in is
-// what it costs.
-export function tally(z: ZoneDO): string {
+// THE REGIONS IN THE KEEPER'S CENSUS (rome, 2026-10-26: for me and my census,
+// not for players). Each surface ground's condition and how long it has stood,
+// and the two numbers that start one before it starts: recent kills against
+// the hunted line, and the hunters' share against the region's own mix. Read
+// by verbs.cmdCensus, behind the one key. Players are told only by the ground.
+export function censusLines(z: ZoneDO, now: number): string[] {
   const world = z.world!;
-  const bare = (id?: string) => (id ? world.mobTemplates.get(id)?.name ?? id : "something").replace(/^(an?|the) /i, "");
+  const bare = (id?: string) => (id ? world.mobTemplates.get(id)?.name ?? id : "?").replace(/^(an?|the) /i, "");
+  const ago = (t: number) => { const m = Math.round((now - t) / 60_000); return m < 90 ? `${m}m` : `${(m / 60).toFixed(1)}h`; };
   const caps = new Map<string, number>(), alive = new Map<string, number>();
   const rowed = new Set(world.mobSpawns.map((s) => s.template_id));
   for (const s of world.mobSpawns) {
@@ -308,21 +309,20 @@ export function tally(z: ZoneDO): string {
     alive.set(key, (alive.get(key) ?? 0) + 1);
   }
   const grounds = Object.keys(REGION_LABELS).filter((r) => OUTDOOR_REGIONS.has(r) && [...caps.keys()].some((k) => k.endsWith(`@${r}`)));
-  const rows = grounds.map((r) => {
+  const lines = [`Region conditions (hunted at ${CONDITION_HUNTED_AT} kills, clears under ${CONDITION_HUNTED_CLEARS}; thick at ${CONDITION_THICK_AT}x its mix for ${CONDITION_THICK_AFTER_MS / 3_600_000}h, clears under ${CONDITION_THICK_CLEARS}x):`];
+  for (const r of grounds) {
     const cond = z.conditions.get(r);
-    let said: string;
-    if (cond?.kind === "hunted") said = "hunted hard. The game bolts at a footfall, gives up the dawn, and keeps to cover";
-    else if (cond?.kind === "thick") said = `${bare(cond.line)} thick, and the game keeping to cover`;
-    else if (cond?.kind === "boom") said = `${bare(cond.line)} thick on the ground, out at all hours`;
-    else if (cond?.kind === "murrain") said = `sickness in the ${bare(cond.line)}, and dead ones lying with no mark on them`;
-    else {
-      // Nothing going on: what is scarce, the same "under a quarter" the keeper's own census marks.
-      const scarce = [...caps.entries()]
-        .filter(([key, k]) => key.endsWith(`@${r}`) && k >= 2 && (alive.get(key) ?? 0) < k / 4)
-        .map(([key]) => bare(key.split("@")[0]));
-      said = scarce.length ? `${[...new Set(scarce)].slice(0, 3).join(", ")} scarce` : "nothing out of the way";
-    }
-    return `  ${REGION_LABELS[r]} — ${said}`;
-  });
-  return ["A beam over the door, scored all along in charcoal by those coming in off the ground: what they found out there, a line to a ground, each hand rubbed over the last.", ...rows].join("\n");
+    const what = !cond ? "none"
+      : `${cond.kind}${cond.line ? ` (${bare(cond.line)})` : ""} for ${ago(cond.since)}`;
+    const rest = z.condTrack.get(`rest:${r}`);
+    const thickSince = z.condTrack.get(`thick:${r}`);
+    const ratio = z.condTrack.get(`ratio:${r}`) ?? 0;
+    const scarce = [...caps.entries()]
+      .filter(([key, k]) => key.endsWith(`@${r}`) && k >= 2 && (alive.get(key) ?? 0) < k / 4)
+      .map(([key]) => bare(key.split("@")[0]));
+    lines.push(`  ${REGION_LABELS[r]} — ${what}; kills ${killsIn(z, r, now).toFixed(1)}; hunters ${ratio.toFixed(1)}x${thickSince !== undefined && cond?.kind !== "thick" ? ` (over the line ${ago(thickSince)})` : ""}`
+      + (!cond && rest !== undefined && rest > now ? `; resting ${Math.round((rest - now) / 3_600_000)}h more` : "")
+      + (scarce.length ? `; scarce: ${[...new Set(scarce)].join(", ")}` : ""));
+  }
+  return lines;
 }
