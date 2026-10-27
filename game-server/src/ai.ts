@@ -63,6 +63,7 @@ import {
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING,
   EAT_SHOW_MS,
+  RIVAL_LINES,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -2030,8 +2031,9 @@ export async function rivalsFight(z: ZoneDO, creature: Creature, now: number): P
   ];
   loser.huntAt = 0;
   loser.huntFor = undefined;
-  z.roomFeed(roomId, `${cap(tmpl.name)} turns on another of its kind, and they go at each other in the wet. One drags itself off, bitten.`, undefined, false);
-  z.roomSound(roomId, "Something thrashes and hisses {dir}, two of something, and then one of it drags itself away.", undefined, undefined, false, { mob: creature.templateId, act: "fight" });
+  const lines = RIVAL_LINES[creature.templateId] ?? RIVAL_LINES["pale-crawler"];
+  z.roomFeed(roomId, lines.feed.replace("{A}", cap(tmpl.name)), undefined, false);
+  z.roomSound(roomId, lines.sound, undefined, undefined, false, { mob: creature.templateId, act: "fight" });
   await creatureMoves(z, loser, now, "flee", !!loser.hidden);   // the dark moving, if it was the dark
   return true;
 }

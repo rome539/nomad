@@ -1604,6 +1604,23 @@ try {
     assert.ok(!/pale-crawler/.test(slow), 'the crawler is not on the slow clock');
   });
 
+  check('a sheet drawn on transparency is keyed by its alpha, so its haze is not creature (2026-10-27)', () => {
+    const cut = readFileSync(new URL('./cut-mob-sheet.mjs', import.meta.url), 'utf8');
+    assert.match(cut, /const ALPHA_FLOOR = 32;/);
+    assert.match(cut, /return sheetRaw\.data\[i \+ 3\] >= ALPHA_FLOOR && Math\.min\(/, 'the cell finder skips the haze');
+    assert.match(cut, /if \(data\[p \+ 3\] < ALPHA_FLOOR\) \{ data\[p\] = data\[p\+1\] = data\[p\+2\] = data\[p\+3\] = 0; continue; \}/, 'and the key clears it');
+  });
+
+  check('two dire hyenas in one room fight for it, in their own voice (2026-10-27)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    const rivals = zd.match(/export const RAT_RIVALS = new Set\(\[([^\]]*)\]\)/)?.[1] ?? '';
+    assert.match(rivals, /"dire-hyena"/, 'the dire hyena is a rival of its own kind');
+    assert.match(rivals, /"pale-crawler"/, 'and the crawler still is');
+    assert.match(zd, /"dire-hyena": \{\n\s*feed: "[^"]*snapping and shrieking/, 'it fights in its own words, not the crawlers\' wet dark');
+    assert.match(ai, /const lines = RIVAL_LINES\[creature\.templateId\]/, 'the fight reads the lines for its kind');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

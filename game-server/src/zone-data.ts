@@ -5003,7 +5003,21 @@ export const LURKER_CROWD = 2;                     // a dark room already holdin
 // population and the deep's food are untouched. RIVAL_REST_MS is the breath
 // after a fight in which neither starts or takes another - without it a beaten
 // one could flee into the next one's room and be worn down to nothing.
-export const RAT_RIVALS = new Set(["pale-crawler"]);
+// ...AND THE DIRE HYENAS (rome, 2026-10-27): two of the big ones in one room
+// go at each other the same way. Same law, never a kill.
+export const RAT_RIVALS = new Set(["pale-crawler", "dire-hyena"]);
+// What a rival fight looks and sounds like, per kind: the crawlers' was written
+// for the wet dark and is wrong for anything with a voice.
+export const RIVAL_LINES: Record<string, { feed: string; sound: string }> = {
+  "pale-crawler": {
+    feed: "{A} turns on another of its kind, and they go at each other in the wet. One drags itself off, bitten.",
+    sound: "Something thrashes and hisses {dir}, two of something, and then one of it drags itself away.",
+  },
+  "dire-hyena": {
+    feed: "{A} turns on another of its kind, and the two go at each other snapping and shrieking. One breaks off and slinks away, bitten.",
+    sound: "Two big hyenas go at each other {dir}, whooping and snarling, and then one of them goes off yelping.",
+  },
+};
 export const RIVAL_AVOID_MS = 30 * 60_000;
 export const RIVAL_REST_MS = 10 * 60_000;
 export const LURKER_HUNT_DRIFT_MS = 40 * 60_000;   // ~40 min between hunting moves (vs the 3h idle drift)
@@ -7742,8 +7756,22 @@ export const WOOD_RULES: [string, RegExp][] = [
   ["wet", /^the-(alder-carr|black-alders|black-mud|black-pool|brown-water|drinking-pool|drowned-holly|drowned-roots|eel-ditch|far-mire|far-south-turning|fishponds|flooded-ride|frog-chorus|heronry|leaning-alders|low-mist|mire-edge|moat-bank|moss-floor|old-pond|osier-beds|quaking-ground|reed-break|rush-bed|sedge-flat|silted-pond|sodden-ground|south-ride|spring-head|standing-water|stew-pond|still-air|sunk-fence|wet-hollow|willow-break|willow-margin|withy-hut)$/],
   // open grass inside the wood: clearings, lawns and the cut rides
   ["glade", /^the-(deer-lawn|empty-ride|first-clearing|flood-meadow|long-glade|north-marches|north-ride|open-canopy|sunken-lawn|west-ride|white-ride)$/],
-  // the plain wood - every stand, thicket, planted row and burnt patch, and the maze rooms that are meant to be unmemorable
-  ["wood", /^the-(ant-hills|ash-heap|ash-stand|badger-ground|birch-edge|blind-corner|boar-ground|boundary-oak|bracken-edge|bracken-sea|bramble-margin|broken-avenue|burnt-stand|charcoal-flat|charcoal-hut|charcoal-ring|close-dark|close-ground|crooked-stand|crow-roost|deer-fence|deer-path|dry-gully|eaves|edge-of-it|fallen-giant|gnawed-stand|grey-lie|fallen-wall|far-birches|far-hollow|far-north-turning|fox-earths|grey-thicket|high-holly|hollow-beeches|hollow-yew|holly-brake|holly-hedge|holly-maze|hornbeam-row|hunters-stand|keepers-approach|last-oaks|leaning-wood|lichen-wood|lightning-split|lime-kiln|listening-stand|mast-fall|nettle-glade|north-turning|old-burn|old-coppice|orchard-gone-wild|outer-scrub|park-pale|picked-bones|pine-dark|poachers-camp|pollard-row|same-tree|south-turning|stone-pile|sunken-ditch|swallowing|thin-birches|thin-soil|timber-stack|turned-ground|turning|turning-leaves|white-ground|wind-shorn-edge|windfall|yew-walk)$/],
+  // THE WOOD SPLIT FURTHER (rome, 2026-10-27): six grounds out of the plain
+  // wood, each named room by room from what the room says it is.
+  // the worked wood: felling, stumps, saw pit, cord stacks, skid road
+  ["wood-felling", /^the-(felling-edge|stump-field|hauling-ride|brash-heaps|saw-pit|sawdust-floor|skid-road|axe-stumps|bark-strip|cord-stacks|sawyers-bench|wedge-ground|split-oak)$/],
+  // the cut and coppiced wet: withy beds, willow stools, soaking pits
+  ["wood-osier", /^the-(withy-holt|cut-osiers|soaking-pit|willow-stools|bundle-ground|wet-ride|pollard-line|holt-drain|osier-carr|peeling-bank|basket-ground|withy-drain)$/],
+  // the castle's outer works the wood grew back over: ditches, banks, footings
+  ["wood-bailey", /^the-(paved-road|road-ruts|outer-ditch|counterscarp|barbican-footings|killing-ground|guard-footings|pay-stone|mounting-block|outer-bailey|bailey-wall|rampart-walk|old-palisade|ward-ditch|turning-bay|tilt-yard|horse-pond|boundary-cross)$/],
+  // the colliers' floors and the old fire
+  ["wood-burnt", /^the-(charcoal-flat|burnt-stand|charcoal-ring|old-burn|burners-flat)$/],
+  // holly, yew and the dark under them
+  ["wood-holly", /^the-(holly-brake|high-holly|holly-maze|yew-walk|hollow-yew|holly-hedge|holly-tree|yew-shade|twisted-yews|holly-wall|holly-dark)$/],
+  // the thin outer wood: birch, thorn and the open country past it
+  ["wood-birch", /^the-(birch-edge|wind-shorn-edge|outer-scrub|thin-birches|far-birches|edge-of-it)$/],
+  // the plain wood - every stand, thicket and planted row, and the maze rooms that are meant to be unmemorable
+  ["wood", /^the-(ant-hills|ash-heap|ash-stand|badger-ground|blind-corner|boar-ground|boundary-oak|bracken-edge|bracken-sea|bramble-margin|broken-avenue|charcoal-hut|close-dark|close-ground|crooked-stand|crow-roost|deer-fence|deer-path|dry-gully|eaves|fallen-giant|gnawed-stand|grey-lie|fallen-wall|far-hollow|far-north-turning|fox-earths|grey-thicket|hollow-beeches|hornbeam-row|hunters-stand|keepers-approach|last-oaks|leaning-wood|lichen-wood|lightning-split|lime-kiln|listening-stand|mast-fall|nettle-glade|north-turning|old-coppice|orchard-gone-wild|park-pale|picked-bones|pine-dark|poachers-camp|pollard-row|same-tree|south-turning|stone-pile|sunken-ditch|swallowing|thin-soil|timber-stack|turned-ground|turning|turning-leaves|white-ground|windfall)$/],
   // everything else in the wood is the wood
   ["wood", /^/],
 ];
@@ -7770,6 +7798,11 @@ export const TERRAIN_RULES: [string, RegExp][] = [
   // stand them in an alder wood above the cloud and "ledge" among cairns on a
   // mountain nobody has marked.
   ["slab",         /^the-(moss-flush|red-moss|cushion-ledge)$/],
+  // THE GLACIER, THE CREST AND THE TOWERS (rome, 2026-10-27): three grounds
+  // split off snow, cairn and crag, by name, ahead of the word rules below.
+  ["glacier",      /^the-(grey-ice|moat|ice-fall|crevasse-field|bergschrund|ice-shelf|serac-field|ice-blocks|crevasse-lip|glacier-bend|white-tower|blue-ice|slot|melt-lip|ice-plain|glacier-head|moulin|glacier-toe)$/],
+  ["ridge",        /^the-(bad-step|horns|drop-either-side|blade|cold-crest|spur-head|spur-end|south-rib|crest-step|knife|ridge-walk|ridge-end|ridge-drop|last-crest|north-crest|crest-walk|crest-gap)$/],
+  ["towers",       /^the-(chimney-foot|first-buttress|rib-foot|rib-gap|second-rib|under-rib|arete-foot|first-tower|second-tower|sun-buttress|gendarme|tower-foot|black-tower|tower-gap)$/],
   // WORD BOUNDARIES ARE NOT OPTIONAL HERE. Without them "race" caught every
   // TERRACE on the hill and called twenty-five flat rock shelves a mountain
   // stream; "ash" caught the outwash, "col" caught the cold, "pen" caught the

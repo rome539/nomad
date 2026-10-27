@@ -101,11 +101,18 @@ console.log(`${meta.width}x${meta.height} → ${COLS}x${ROWS} grid, cells ${cw}x
 // a creature drawn in genuinely separate pieces would be read as two poses, and
 // a row where one pose failed to render would promote a stray bit. Both show up
 // as a smallest piece that is tiny next to the largest.
+// A CLEAR SHEET IS KEYED BY ITS OWN ALPHA (rome, 2026-10-27: the barrow-wight,
+// the cantor and the drowned thing were drawn on transparency, not magenta).
+// The generator leaves a faint haze round every figure, alpha under 32, and it
+// reaches the cell edges: counted as creature it joined every pose to its
+// borders and called nine frames in ten clipped. Below the floor it is
+// background. A magenta sheet is opaque everywhere, so this never touches one.
+const ALPHA_FLOOR = 32;
 const sheetRaw = await sharp(sheet).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 const SW = sheetRaw.info.width, SH = sheetRaw.info.height, SC = sheetRaw.info.channels;
 const sInk = (x, y) => {
   const i = (y * SW + x) * SC;
-  return sheetRaw.data[i + 3] > 8 && Math.min(sheetRaw.data[i] - sheetRaw.data[i + 1],
+  return sheetRaw.data[i + 3] >= ALPHA_FLOOR && Math.min(sheetRaw.data[i] - sheetRaw.data[i + 1],
                                               sheetRaw.data[i + 2] - sheetRaw.data[i + 1]) <= 30;
 };
 const boxes = [];            // boxes[row][col] = {x0,x1}
@@ -190,6 +197,7 @@ for (let i = 0; i < poses.length; i++) {
   const { data, info } = cell;
   let kept = 0;
   for (let p = 0; p < data.length; p += 4) {
+    if (data[p + 3] < ALPHA_FLOOR) { data[p] = data[p+1] = data[p+2] = data[p+3] = 0; continue; }
     const r = data[p], g = data[p + 1], b = data[p + 2];
     const spill = Math.min(r - g, b - g);
     // THIN THINGS SURVIVE THE KEY (--soft, 2026-10-20). Anything past 30 of

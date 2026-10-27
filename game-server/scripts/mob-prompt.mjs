@@ -222,6 +222,8 @@ const LINES = {
 "drowned-hulk": {
   "take-hold": "Both huge swollen hands closed on something at chest height and hauling it in, the vast weight thrown back. What it holds is NOT drawn",
   attack: "Lunging forward with both huge swollen hands out to seize at full reach, the vast body pitched after them",
+  // read off its shipped strip (2026-10-27): one arm swung across, fist shut
+  sweep: "A heavy swing of one huge swollen arm across the body at full reach, the fist closed, the other arm held in, the whole vast weight turned into it",
 },
 "the-wrecker": {
   alert: "Has seen you and squared up to you: weight forward on both feet, the head up and the eyes on you, ready to move, the fists low",
@@ -365,6 +367,8 @@ const LINES = {
   "move-b": WALK_B,
   attack: "Coming out at full stretch with both arms forward and low, body committed",
   recover: "Drawing back after the lunge, arms coming in, his own reed settling back around him and the outline closing up again",
+  // read off its shipped strip (2026-10-27): one bony arm flung out across
+  sweep: "A swipe of one bony arm flung out across the body at full reach, the other arm back, the reed growing out of him swinging with it",
   death: "Dead, lying limp on its side, no gore and no effects",
 },
 "the-scaffold-hand": {
@@ -1034,6 +1038,8 @@ const REDRAW = {
   // frames they ship, in the order of the strips, death last.
   "twice-dead": ["idle","rise","listen","alert","move-a","move-b","attack","sweep","death"],
   "marrow-cantor": ["idle","listen","hold-the-note","alert","move-a","move-b","attack","sweep","death"],
+  // ...and the reed walker, whose invented list had recover and no keep-pace or sweep
+  "the-reed-walker": ["idle","part-the-reed","keep-pace","alert","move-a","move-b","attack","sweep","death"],
   "wildcat": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
 };
 
@@ -1669,7 +1675,7 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned"]);
+const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")

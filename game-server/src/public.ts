@@ -10091,13 +10091,13 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "110";      // /mob/      strips and their eye layers
+var MOB_V  = "111";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "46";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "47";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "4";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "21";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "5";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "22";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10220,6 +10220,12 @@ var TERRAIN_PLATE = {
   // THE BEAR CAVES (mig 319): the mouth in daylight and weather, the passage
   // and the chamber in the dark behind it.
   "cave-mouth": ["cave-mouth"], "cave-passage": ["cave-passage"], cave: ["cave"],
+  // THE REGIONS SPLIT FURTHER (rome, 2026-10-27). The plain wood was 216 rooms
+  // on one picture and the hill's snow, cairn and crag the next biggest after
+  // the catch-all; each new ground takes the rooms whose own text is about it.
+  "wood-felling": ["wood-felling"], "wood-osier": ["wood-osier"], "wood-bailey": ["wood-bailey"],
+  "wood-burnt": ["wood-burnt"], "wood-holly": ["wood-holly"], "wood-birch": ["wood-birch"],
+  glacier: ["glacier"], ridge: ["ridge"], towers: ["towers"],
 };
 // THE GATEHOUSE KEEPS THE YEAR (rome, 2026-09-27). Four dressings of the same
 // room, painted over the same picture, each hung for a stretch of the real
@@ -11150,6 +11156,17 @@ var TERRAIN_SCENES = {
   "cave-mouth":   "day night night-torch fog rain snow",
   "cave-passage": "night night-torch",
   cave:           "night night-torch",
+  // THE NEW GROUNDS (2026-10-27) are four plates, not six: fog and rain are
+  // laid over the day or night plate by the client now.
+  "wood-felling": "day night night-torch snow",
+  "wood-osier":   "day night night-torch snow",
+  "wood-bailey":  "day night night-torch snow",
+  "wood-burnt":   "day night night-torch snow",
+  "wood-holly":   "day night night-torch snow",
+  "wood-birch":   "day night night-torch snow",
+  glacier:        "day night night-torch snow",
+  ridge:          "day night night-torch snow",
+  towers:         "day night night-torch snow",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
@@ -11468,6 +11485,11 @@ var MOB_LINE = {
                  // 2026-10-22); five points up from the default.
                  "the-summit": 50,
                  boulder: 64, glass: 70, snow: 64, "the-rib-cage": 66,
+                 // THE NEW GROUNDS (2026-10-27), read off their day plates: the
+                 // line sits where each one's open level floor begins.
+                 "wood-felling": 62, "wood-osier": 66, "wood-bailey": 58,
+                 "wood-burnt": 58, "wood-holly": 62, "wood-birch": 66,
+                 glacier: 72, ridge: 60, towers: 70,
                  // THE HOLDING (rome, 2026-09-29: the creatures looked huge against
                  // it). The ruined walls stand close round the courtyard, so a
                  // creature on the default line stood out among them at full size
@@ -14033,14 +14055,14 @@ var MOB_ANIM = {
   "rag-and-bone":   { n: 8, aspect: 0.978, f: {"idle":0,"take-it-up":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "drowned-god":   { n: 8, aspect: 0.991, f: {"idle":0,"keep-the-seat":1,"take-hold":2,"lift-you-clear":3,"alert":4,"attack":5,"recover":6,"death":7} },
   "drowned-hulk":   { n: 8, aspect: 0.951, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
-  "the-drowned":   { n: 8, aspect: 0.932, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"listen":6,"death":7} },
+  "the-drowned":   { n: 8, aspect: 1.037, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"listen":6,"death":7} },
   "marrow-king":   { n: 8, aspect: 1.047, f: {"idle":0,"keep-the-seat":1,"rise":2,"take-hold":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "thrice-dead":   { n: 8, aspect: 1.053, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
-  "twice-dead":   { n: 9, aspect: 0.97, f: {"idle":0,"rise":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "twice-dead":   { n: 9, aspect: 1.023, f: {"idle":0,"rise":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "last-watchman":   { n: 9, aspect: 1.258, f: {"idle":0,"hold-the-salute":1,"look-down-the-road":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "warden-captain":   { n: 9, aspect: 1.103, f: {"idle":0,"hold-the-salute":1,"ground-the-maul":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "bone-knight":   { n: 9, aspect: 1, f: {"idle":0,"hold-the-salute":1,"ground-the-sword":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "marrow-cantor":   { n: 9, aspect: 0.942, f: {"idle":0,"listen":1,"hold-the-note":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "marrow-cantor":   { n: 9, aspect: 1.126, f: {"idle":0,"listen":1,"hold-the-note":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "skeleton":   { n: 8, aspect: 1.095, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "white-roe":           { n: 8, aspect: 1.037, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
