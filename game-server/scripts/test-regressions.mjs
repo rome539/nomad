@@ -39,7 +39,7 @@ try {
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
         "export {biggestFields} from './simstore';",
-        "export {wxCovers} from './events';",
+        "export {wxCovers, tickEscape} from './events';",
         "export * as study from './study';",
         "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
         "export * as rising from './rising';",
@@ -59,7 +59,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -663,7 +663,7 @@ try {
   });
   check('while it lives the fortress coughs, and a cough is a noise (2026-10-24)', () => {
     const { z } = kingWorld();
-    ratking.crown(z, Date.now());
+    ratking.crown(z, Date.now() - 4 * 3_600_000); // long enough ago that the sickness is at full
     const noise = [], heard = [], said = new Map();
     z.creatureNoise = (r) => noise.push(r);
     const voiced = [];
@@ -685,6 +685,54 @@ try {
     assert.ok(noise.length > 20, 'in the fortress, about one cough in four minutes: ' + noise.length);
     assert.ok(noise.every((r) => r === 'the-cells'), 'nobody on the moor or at the gate coughs');
     assert.equal((said.get('out') ?? []).length, 0, 'the surface hears nothing of it');
+  });
+  check('the cough builds after the king comes and fades after he falls (2026-10-27)', () => {
+    const { z } = kingWorld();
+    const H = 3_600_000, t0 = Date.now();
+    assert.equal(ratking.sickness(z, t0), 0, 'no king, no sickness');
+    const king = ratking.crown(z, t0);
+    assert.equal(ratking.sickness(z, t0), 0, 'nothing in the air the moment he comes');
+    const mid = ratking.sickness(z, t0 + 1.5 * H);
+    assert.ok(mid > 0.3 && mid < 0.7, 'halfway up after an hour and a half: ' + mid);
+    assert.equal(ratking.sickness(z, t0 + 5 * H), 1, 'full once it has built');
+    king.hp = 0; ratking.fell(z, t0 + 5 * H);
+    const going = ratking.sickness(z, t0 + 6 * H);
+    assert.ok(going > 0.3 && going < 0.7, 'still in the air an hour after he falls: ' + going);
+    assert.equal(ratking.sickness(z, t0 + 8 * H), 0, 'and gone after that');
+    const noise = [];
+    z.creatureNoise = (r) => noise.push(r); z.roomSound = () => {}; z.send = () => {};
+    z.inGatehouse = new Set(); z.outOfWorld = () => false; z.regionOf = () => 'upper';
+    z.sessions = new Map([['in', { pubkey: 'in', name: 'Rome', roomId: 'the-cells' }]]);
+    for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.fell(z, t0 + 5 * H); ratking.roll(z, t0 + 5.2 * H); }
+    assert.ok(noise.length > 10, 'the dead king\'s air still sets people coughing: ' + noise.length);
+  });
+  await checkAsync('the gaunt gets loose on its own clock, about once a day, not on the roll (2026-10-27)', async () => {
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const pool = ev.match(/const POOL: \[string, number, string\]\[\] = \[([\s\S]*?)\n\];/)[1].replace(/\/\/.*$/gm, '');
+    assert.doesNotMatch(pool, /"escape"/, 'it holds no ticket in the roll');
+    const H = 3_600_000, NEVER = 9_000_000_000_000_000;
+    const z = { events: new Map(), creatures: new Map(), sessions: new Map(),
+      world: { mobTemplates: new Map([['the-gaunt', { id: 'the-gaunt', max_hp: 90 }]]), rooms: new Map([['the-deep-hall', {}]]), safeRooms: new Set() },
+      regionOf: () => 'deep', roomFeedBands() {}, roomFeed() {}, noteCreaturesChanged() {}, refreshRoomCtx() {} };
+    let t = 1_000_000_000_000;
+    await tickEscape(z, t);
+    const first = z.events.get('escape').until - t;
+    assert.ok(first >= 1 * H && first <= 6 * H, 'the first comes within hours, not never: ' + first / H);
+    t = z.events.get('escape').until; await tickEscape(z, t);
+    assert.equal(z.events.get('escape').phase, 'telegraph', 'it cries out');
+    t += 2 * 60_000; await tickEscape(z, t);
+    assert.equal([...z.creatures.values()].filter((c) => c.templateId === 'the-gaunt').length, 1, 'and gets loose');
+    t += 60 * 60_000; await tickEscape(z, t);
+    assert.equal(z.creatures.size, 0, 'an hour on it goes back down');
+    t += 5 * 60_000; await tickEscape(z, t);
+    const st = z.events.get('escape'), next = st.until - t;
+    assert.equal(st.phase, 'idle');
+    assert.ok(next >= 18 * H && next <= 30 * H, 'and the next is a day off: ' + next / H);
+    st.until = NEVER; await tickEscape(z, t);
+    assert.ok(z.events.get('escape').until < NEVER, 'a save that parked it forever gets its clock back');
+    st.until = t - 3 * H; await tickEscape(z, t);
+    assert.equal(z.events.get('escape').phase, 'idle', 'due while nobody was on: it does not spring on login');
+    assert.ok(z.events.get('escape').until > t, 'it lands a while after instead');
   });
   check('the keeper speaks of the king now and then, not every ten minutes (2026-10-24)', () => {
     const { z } = kingWorld();
@@ -1619,6 +1667,23 @@ try {
     assert.match(rivals, /"pale-crawler"/, 'and the crawler still is');
     assert.match(zd, /"dire-hyena": \{\n\s*feed: "[^"]*snapping and shrieking/, 'it fights in its own words, not the crawlers\' wet dark');
     assert.match(ai, /const lines = RIVAL_LINES\[creature\.templateId\]/, 'the fight reads the lines for its kind');
+  });
+
+  check('the sapper\'s blow lands on his pick-down frame: alert, attack, then work-the-face (2026-10-27)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const row = pub.match(/"the-sapper":\s*\{ n: \d+, aspect: [\d.]+, f: (\{[^}]*\})/);
+    assert.ok(row, 'his strip row is there');
+    const f = JSON.parse(row[1]);
+    assert.equal(f.recover, f['work-the-face'], 'he comes off the swing with the pick swung down');
+    const build = readFileSync(new URL('./build-mob-strips.mjs', import.meta.url), 'utf8');
+    assert.match(build, /"the-sapper": \{ "recover": "work-the-face" \}/, 'a rebuild keeps it');
+  });
+
+  check('the sapper is one of the dead, and bare bone like his picture (2026-10-27)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const setOf = (name) => zd.match(new RegExp('export const ' + name + ' = new Set\\(\\[([\\s\\S]*?)\\]\\);'))?.[1] ?? '';
+    assert.match(setOf('HOLLOW'), /"the-sapper"/, 'he does not bleed, hunger or run');
+    assert.doesNotMatch(setOf('GRAVE_FLESH'), /"the-sapper"/, 'he is drawn as bone, so only a blunt blow finds his vitals');
   });
 
   console.log(`\n${passed} regression checks pass`);

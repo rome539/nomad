@@ -36,7 +36,7 @@ import {
   BOIL_TELEGRAPH_MS, BOIL_STEP_MS, BOIL_AFTERMATH_MS, BOIL_BITE,
   WAKE_TELEGRAPH_MS, WAKE_ACTIVE_MS, WAKE_AFTERMATH_MS, WAKE_FRESH_MS, WAKE_CAP, WAKE_CHARGE_CORPSES, BLOOD_MOON_WAKE_CHARGE,
   WANT_TABLE, WANT_MULT, WANT_TELEGRAPH_MS, WANT_ACTIVE_MS, WANT_AFTERMATH_MS,
-  ESCAPE_TMPL, ESCAPE_TELEGRAPH_MS, ESCAPE_ACTIVE_MS, ESCAPE_AFTERMATH_MS,
+  ESCAPE_TMPL, ESCAPE_FIRST_MIN_MS, ESCAPE_FIRST_MAX_MS, ESCAPE_EVERY_MIN_MS, ESCAPE_EVERY_MAX_MS, ESCAPE_TELEGRAPH_MS, ESCAPE_ACTIVE_MS, ESCAPE_AFTERMATH_MS,
   ESCAPE_STRIDE_MIN_MS, ESCAPE_STRIDE_MAX_MS, ESCAPE_ROUSE_MS,
   LIGHTS_ROOMS, LIGHTS_TELEGRAPH_MS, LIGHTS_ACTIVE_MS, LIGHTS_AFTERMATH_MS,
   LIGHTS_STEP_MIN_MS, LIGHTS_STEP_MAX_MS,
@@ -111,7 +111,10 @@ const POOL: [string, number, string][] = [
   ["boil", 2, "warrens"], ["wake", 2, "warrens"],
   ["exhale", 2, "deep"], ["song", 2, "deep"],
   ["gloam", 2, "upper"], ["want", 2, "gate"],
-  ["lights", 2, "road"], ["escape", 1, "deep"], ["spate", 2, "road"], ["carrier", 2, "road"],
+  ["lights", 2, "road"], ["spate", 2, "road"], ["carrier", 2, "road"],
+  // The escape is not drawn for either (rome, 2026-10-27): at one ticket in 39
+  // it came about once in sixty hours of somebody being on, so nobody met it.
+  // It keeps its own clock now, about once a day (tickEscape).
   // THE CROSSING — 203 rooms whose whole design is a water that moves.
   ["sea", 3, "crossing"],
   // THE WOOD (mig-less, 2026-08-06) — 170 rooms that had no weather of their own
@@ -3277,12 +3280,14 @@ function findGaunt(z: ZoneDO) {
   return null;
 }
 
-async function tickEscape(z: ZoneDO, now: number): Promise<void> {
+export async function tickEscape(z: ZoneDO, now: number): Promise<void> {
   let st = z.events.get("escape");
   if (!st) {
-    st = { phase: "idle", until: NEVER };
+    st = { phase: "idle", until: now + randInt(ESCAPE_FIRST_MIN_MS, ESCAPE_FIRST_MAX_MS) };
     z.events.set("escape", st);
   }
+  // A save from when the roll owned it has it parked forever: give it its clock.
+  if (st.phase === "idle" && st.until >= NEVER) st.until = now + randInt(ESCAPE_FIRST_MIN_MS, ESCAPE_FIRST_MAX_MS);
   // While it walks: it strides (no grazing cadence), and a shared room turns
   // into the rouse-and-spring — telegraphed, escapable, then committed.
   if (st.phase === "active") {
@@ -3326,6 +3331,14 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
         st.until = NEVER;
         break;
       }
+      // Due while nobody was on (the tick needs an audience): it got out
+      // unobserved, so the next lands a while after someone comes, never on login.
+      if (now - st.until > ROLL_GRACE_MS) {
+        st.until = now + randInt(ROLL_MISSED_MIN_MS, ROLL_MISSED_MAX_MS);
+        break;
+      }
+      // The bell and the tide stop the world; it waits for them to finish.
+      if (phaseOf(z, "bell") !== "idle" || phaseOf(z, "tide") !== "idle") return;
       st.phase = "telegraph";
       st.until = now + ESCAPE_TELEGRAPH_MS;
       z.roomFeedBands(FORTRESS_BANDS, "From somewhere far under the keep, a long, starving cry rolls up through the stone — and then the sound of something giving way.", "evt", true, "cry");
@@ -3373,7 +3386,7 @@ async function tickEscape(z: ZoneDO, now: number): Promise<void> {
     }
     case "aftermath": {
       st.phase = "idle";
-      st.until = NEVER;
+      st.until = now + randInt(ESCAPE_EVERY_MIN_MS, ESCAPE_EVERY_MAX_MS);
       break;
     }
   }

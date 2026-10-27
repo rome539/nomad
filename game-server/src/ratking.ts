@@ -18,7 +18,7 @@ import * as coughing from "./cough";
 import {
   RAT_KING, RAT_KING_HOME, RAT_KING_RATS, RAT_KING_ROLL_PER_MIN, RAT_KING_LEADERLESS_MS,
   RAT_KING_LEADERLESS_FLEE_MULT, RAT_CROWN_TRAIT, WARRENS_ROOMS, WANDER_MIN_MS, WANDER_MAX_MS,
-  RAT_KING_COUGH_PER_MIN, RAT_KING_OMEN_PER_MIN, RAT_KING_KEEPER_PER_MIN, RAT_KING_KEEPER_GAP_MS, RAT_KING_COUGH_LINES, RAT_KING_OMEN_LINES, RAT_KING_KEEPER_LINES,
+  RAT_KING_COUGH_PER_MIN, RAT_KING_COUGH_RISE_MS, RAT_KING_COUGH_FADE_MS, RAT_KING_OMEN_PER_MIN, RAT_KING_KEEPER_PER_MIN, RAT_KING_KEEPER_GAP_MS, RAT_KING_COUGH_LINES, RAT_KING_OMEN_LINES, RAT_KING_KEEPER_LINES,
   FORTRESS_BANDS,
 } from "./zone-data";
 
@@ -62,8 +62,33 @@ export function roll(z: ZoneDO, now: number): void {
   const s = st(z);
   if (now - s.lastRoll < 60_000) return;
   s.lastRoll = now;
-  if (kingAlive(z)) { omens(z); return; }
+  if (kingAlive(z)) { omens(z, now); return; }
+  lingers(z, now);
   if (chance(RAT_KING_ROLL_PER_MIN)) crown(z, now);
+}
+
+// HOW THICK THE SICKNESS IS IN THE AIR, 0 to 1 (rome, 2026-10-27). It does not
+// arrive with the king: it builds over RAT_KING_COUGH_RISE_MS from his coming,
+// and it does not leave with him either, thinning out over RAT_KING_COUGH_FADE_MS
+// after he falls. A king with no crownedAt (one from before this) is at full.
+export function sickness(z: ZoneDO, now: number): number {
+  for (const c of z.creatures.values()) {
+    if (c.templateId !== RAT_KING || c.hp <= 0) continue;
+    return c.crownedAt ? Math.min(1, Math.max(0, (now - c.crownedAt) / RAT_KING_COUGH_RISE_MS)) : 1;
+  }
+  const since = now - st(z).fellAt;
+  return st(z).fellAt && since < RAT_KING_COUGH_FADE_MS ? 1 - since / RAT_KING_COUGH_FADE_MS : 0;
+}
+
+function inTheAir(z: ZoneDO, s: Session): boolean {
+  return !z.inGatehouse.has(s.pubkey) && !z.outOfWorld(s) && FORTRESS_INSIDE.has(z.regionOf(s.roomId));
+}
+
+// After he falls: no more signs, only the cough, going.
+function lingers(z: ZoneDO, now: number): void {
+  const k = sickness(z, now);
+  if (!k) return;
+  for (const s of z.sessions.values()) if (inTheAir(z, s) && chance(RAT_KING_COUGH_PER_MIN * k)) cough(z, s);
 }
 
 // A RAT KING IS AN OMEN (rome, 2026-10-24: the old belief that one meant
@@ -73,7 +98,8 @@ export function roll(z: ZoneDO, now: number): void {
 // fortress catches something in the air down there and COUGHS: loud, heard
 // next door, and noise like any other, so it brings the curious.
 const keeperSaid = new Map<string, number>(); // pubkey -> when the keeper last spoke of the king to them
-function omens(z: ZoneDO): void {
+function omens(z: ZoneDO, now: number): void {
+  const k = sickness(z, now);
   for (const s of z.sessions.values()) {
     if (z.inGatehouse.has(s.pubkey)) {
       const said = keeperSaid.get(s.pubkey) ?? 0;
@@ -83,8 +109,8 @@ function omens(z: ZoneDO): void {
       }
       continue;
     }
-    if (z.outOfWorld(s) || !FORTRESS_INSIDE.has(z.regionOf(s.roomId))) continue;
-    if (chance(RAT_KING_COUGH_PER_MIN)) cough(z, s);
+    if (!inTheAir(z, s)) continue;
+    if (chance(RAT_KING_COUGH_PER_MIN * k)) cough(z, s);
     else if (chance(RAT_KING_OMEN_PER_MIN)) z.send(s, pick(RAT_KING_OMEN_LINES), "amb");
   }
 }
@@ -99,7 +125,7 @@ export function crown(z: ZoneDO, now: number): Creature | null {
   if (!tmpl || kingAlive(z)) return null;
   const c: Creature = {
     id: uuid(), templateId: RAT_KING, roomId: RAT_KING_HOME, home: RAT_KING_HOME,
-    hp: tmpl.max_hp, hunger: randInt(20, 60), grudges: [], target: null,
+    hp: tmpl.max_hp, hunger: randInt(20, 60), grudges: [], target: null, crownedAt: now,
     nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
   };
   z.creatures.set(c.id, c);

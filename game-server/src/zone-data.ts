@@ -2196,7 +2196,12 @@ export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surf
   // ground floor. Every one is a drowned MAN. Left out they kept banking hunger
   // to the cap with no mouth to spend it — the same bug, four rooms over.
   // (the conger stays out on purpose: it is a living eel that eats.)
-  "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
+  "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller",
+  // The sapper brought the wall down two hundred years ago and is still driving
+  // the gallery at it (rome, 2026-10-27): one of the dead at work, like these.
+  // He is bare bone in his coat, so he stays out of GRAVE_FLESH: only a blunt
+  // blow finds his vitals.
+  "the-sapper"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
 // THE WOOD'S OWN (rome, 2026-09-27): the woodward and the charcoal burner are
 // things of timber and char, not men, and a blade that opens a wound in them
 // finds no blood. Bleeding only - they are not HOLLOW, and keep everything else
@@ -6967,6 +6972,11 @@ export const COUGH_DUST_LINES = [
 // whoever is in the fortress, and now and then a sign.
 export const RAT_KING_COUGH_PER_MIN = 0.25;
 export const RAT_KING_OMEN_PER_MIN = 0.1;
+// The cough is not at full the moment he comes, nor gone the moment he dies
+// (rome, 2026-10-27): it builds to RAT_KING_COUGH_PER_MIN over the first hours
+// of his reign, and after he falls it thins back to nothing.
+export const RAT_KING_COUGH_RISE_MS = 3 * 3_600_000;
+export const RAT_KING_COUGH_FADE_MS = 2 * 3_600_000;
 // THE KEEPER MENTIONS IT, HE DOES NOT GO ON ABOUT IT (rome, 2026-10-24: he
 // was saying it every ten minutes on the omen's own rate). His own odds, and
 // once said, not again to that wanderer for RAT_KING_KEEPER_GAP_MS.
@@ -8813,6 +8823,11 @@ export const BOUNTY_CHURN_MAX_MS = 90 * 60_000;
 // (the keeper prizes it), or read the emptying rooms and stay out of its way.
 // If nothing puts it down, it answers some call and pours back into the dark.
 export const ESCAPE_TMPL = "the-gaunt";
+// ITS OWN CLOCK (rome, 2026-10-27): about once a day, not a ticket in the roll.
+export const ESCAPE_EVERY_MIN_MS = 18 * 3_600_000;
+export const ESCAPE_EVERY_MAX_MS = 30 * 3_600_000;
+export const ESCAPE_FIRST_MIN_MS = 1 * 3_600_000;   // the first after this ships, or after a fresh world
+export const ESCAPE_FIRST_MAX_MS = 6 * 3_600_000;
 export const ESCAPE_TELEGRAPH_MS = 2 * 60_000;
 export const ESCAPE_ACTIVE_MS = 60 * 60_000;
 export const ESCAPE_AFTERMATH_MS = 5 * 60_000;

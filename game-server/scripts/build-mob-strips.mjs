@@ -76,6 +76,10 @@ const FOREIGN = new Set(["gill-adder", "stone-adder", "the-gravid-adder"]);
 // So the beat is up-glide-up-glide, the arc still has its glide and its landing,
 // and the cell that was freed still pays for the meal.
 const ALIAS = { "down": ["glide", "up"] };
+// One creature's own second name for a drawn frame. The sapper's pick-down cell
+// (work-the-face) is also where his overhead blow lands, so his swing runs
+// alert, attack, then comes off it on that frame (rome, 2026-10-27).
+const OWN_ALIAS = { "the-sapper": { "recover": "work-the-face" } };
 // Creatures that are one creature under two template ids — see the copy in the
 // write step. Keyed by the id that is DRAWN, listing the ids that take its art.
 const SAME_ART = { "warden": ["warden-surface"] };
@@ -410,6 +414,8 @@ for (const [id, dir] of [...found].sort()) {
     if (f[name] !== undefined) continue;
     for (const same of prefs) if (f[same] !== undefined) { f[name] = f[same]; break; }
   }
+  for (const [name, same] of Object.entries(OWN_ALIAS[id] || {}))
+    if (f[name] === undefined && f[same] !== undefined) f[name] = f[same];
   rows.push({ id, n: order.length, aspect: +(fw / fh).toFixed(3), f, order });
   console.log(id.padEnd(20) + String(order.length).padStart(2) + " frames  " + order.join(" "));
 }

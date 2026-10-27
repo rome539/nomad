@@ -214,6 +214,14 @@ const LINES = {
   "rake-the-melt": "Crouched low on his heels with the long iron rake in both hands, drawing it slowly back through the melt below him. The melt is NOT drawn",
   attack: "A hard overhead swing of the long iron rake, brought down with both hands",
 },
+// The sapper's redo (rome, 2026-10-27): the generic lines asked a man with a
+// pick for "the species' own" threat and attack.
+"the-sapper": {
+  "work-the-face": "On his knees, bent forward, the short pick in both hands driven forward and down into a chalk face in front of him at chest height. The face is NOT drawn",
+  listen: "On his knees, still, the pick held low across his thighs, the head turned a little to one side, listening",
+  alert: "Has seen you and come up off his knees: crouched low the way a man walks in four feet of headroom, weight forward, the short pick held ready in both hands",
+  attack: "A short hard overhand swing of the pick, brought down with both hands from a low crouch",
+},
 "the-drowned": {
   "take-hold": "Both swollen hands closed on something at chest height and hauling it in, the weight thrown back. What it holds is NOT drawn",
   listen: "Standing still, the head lifted and turned a little to one side, listening",
@@ -1040,6 +1048,12 @@ const REDRAW = {
   "marrow-cantor": ["idle","listen","hold-the-note","alert","move-a","move-b","attack","sweep","death"],
   // ...and the reed walker, whose invented list had recover and no keep-pace or sweep
   "the-reed-walker": ["idle","part-the-reed","keep-pace","alert","move-a","move-b","attack","sweep","death"],
+  // the refuge man, the sapper and the skeleton, redone on clear backgrounds
+  // (rome, 2026-10-27): the orders of the strips they replace
+  "the-refuge-man": ["idle","turn-from-the-wall","hold-the-door","alert","move-a","move-b","attack","sweep","death"],
+  "the-sapper": ["idle","work-the-face","listen","alert","move-a","move-b","attack","death"],
+  "skeleton": ["idle","listen","alert","move-a","move-b","attack","sweep","death"],
+  "thrice-dead": ["idle","rise","alert","move-a","move-b","attack","sweep","death"],
   "wildcat": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
 };
 
@@ -1304,6 +1318,16 @@ const LAND_DEAD = {
     skin: "\nWHAT IS LEFT ON IT IS CURED, NOT ROTTEN AND NOT WET: dark hard meat over yellow bone, an old body dried out under a cairn, not one decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.",
     mood: "Unhurried and patient, not raging: it has been put down twice and got back up both times, and it will come on again.",
   },
+  // The sapper (rome, 2026-10-27: he is one of the dead). Two hundred years on
+  // his knees in a dry chalk gallery, not in the sea: dry, chalk-white, worn.
+  "the-sapper": {
+    decay: "- THE KNEES ARE WORN THROUGH TO BONE. He has worked on his knees for two hundred years: both kneecaps stand bare and polished through the torn breeches, and the shins below them are worn thin to the bone.\n"
+      + "- THE CHALK HAS GOT INTO HIM: pale chalk dust packed hard into the bone, the sockets of the skull and the seams of his clothes, so he is nearly the colour of the face he cuts.\n"
+      + "- THE HANDS ARE WHOLE, because the hands are the job.",
+    cloth: "- A miner's short coat and breeches, dry and chalk-whitened, stiff with age, torn through at the knees and elbows.",
+    skin: "\nHE IS BARE BONE: a skull with no face left on it, ribs and arm bones showing through the coat, dry and pale under the chalk. No skin, NOT wet, NOT green, NOT the colour of a video-game zombie.",
+    mood: "Not menacing the viewer and not looking at the viewer: still driving the gallery at a wall that came down two hundred years ago, and the viewer is not part of it.",
+  },
 };
 
 // The shared half, which the widow does not get: she is the one the sea missed.
@@ -1486,6 +1510,7 @@ const EYE_BLOCK = FACELESS[id] ? NO_EYES : HOLLOW_EYES;
 // lantern that gives no light. An armed creature drawn unarmed is wrong in the
 // one frame that matters most, the attack.
 const CARRIES = {
+  "the-sapper": "HE IS ARMED WITH HIS PICK. A short-hafted sapper's pick, heavy in the head, is in his hands in every cell and MOVES WITH THE POSE - working at nothing in front of him while he works the face, held still while he listens, swung down overhand in the blow, lying beside him in death. He never punches.",
   "skeleton": "IT IS ARMED, AND THE SWORD IS WHAT IT FIGHTS WITH. A soldier's arming sword, the edge gone to orange rust-lace, in one bare-boned hand. The sword is PRESENT in every cell and MOVES WITH THE POSE - carried low at rest, up in the guard, swung through in the blow, and lying with the body in death. It is never held in one frozen carry position while the pose changes around it.",
   "bone-knight": "IT IS ARMED, AND IT KEPT ITS SHIELD. A rusted arming sword in one hand, an ancient kite-shield on the other arm, lacquer crazed over older bone. Both are PRESENT in every cell and BOTH MOVE WITH THE POSE - the sword cuts and the shield covers. This is the one that remembers how to use them, so it must never be drawn striking with anything but the sword.",
   "warden": "IT CARRIES A LANTERN AND HAS NO WEAPON AT ALL. A dark iron lantern hangs from one gauntlet, unlit - no flame, no glow, no light coming out of it - in every cell. It is a thing carried on a round, not a light source. The other gauntlet is empty, and because it has nothing to fight with, the blow IS that empty gauntlet: a straight armoured punch. That is correct for this one and only this one.",
@@ -1675,7 +1700,7 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker"]);
+const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")

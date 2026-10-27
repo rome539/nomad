@@ -3568,12 +3568,12 @@ var VOICE_FAMILY = {
   bear: "the-baited-bear the-chain-breaker brown-bear",
   hare: "mountain-hare snow-hare",
   sloth: "wood-sloth",
-  human: "cutthroat cutpurse footpad wayman strand-thief the-wrecker the-chainman the-sapper the-bellfounder the-butter-wife the-milker the-herd the-one-who-stayed road-carrier",
+  human: "cutthroat cutpurse footpad wayman strand-thief the-wrecker the-chainman the-bellfounder the-butter-wife the-milker the-herd the-one-who-stayed road-carrier",
   mason: "the-bridge-mason",
   drover: "the-drover",
   eelcutter: "the-eel-cutter",
   fowler: "the-fowler",
-  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk",
+  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk the-sapper",
   boneknight: "bone-knight",
   hulk: "drowned-hulk",
   drownedgod: "drowned-god",
@@ -10091,7 +10091,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "111";      // /mob/      strips and their eye layers
+var MOB_V  = "113";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "47";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
@@ -14027,7 +14027,7 @@ var MOB_ANIM = {
   "nomad":   { n: 14, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13} },
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-woodward":                { n: 8, aspect: 1.014, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
-  "the-sapper":                  { n: 8, aspect: 1.014, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-sapper":                  { n: 8, aspect: 1.076, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7,"recover":1} },
   "the-keeper-of-the-holding":   { n: 8, aspect: 0.986, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-gaunt":                   { n: 8, aspect: 1.005, f: {"idle":0,"alert":1,"cast-about":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-follower":                { n: 9, aspect: 1.158, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
@@ -14054,16 +14054,16 @@ var MOB_ANIM = {
   "verdigris-thing":   { n: 9, aspect: 1.036, f: {"idle":0,"lay-on-the-hand":1,"seek-the-metal":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "rag-and-bone":   { n: 8, aspect: 0.978, f: {"idle":0,"take-it-up":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "drowned-god":   { n: 8, aspect: 0.991, f: {"idle":0,"keep-the-seat":1,"take-hold":2,"lift-you-clear":3,"alert":4,"attack":5,"recover":6,"death":7} },
-  "drowned-hulk":   { n: 8, aspect: 0.951, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "drowned-hulk":   { n: 8, aspect: 1.016, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-drowned":   { n: 8, aspect: 1.037, f: {"idle":0,"take-hold":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"listen":6,"death":7} },
   "marrow-king":   { n: 8, aspect: 1.047, f: {"idle":0,"keep-the-seat":1,"rise":2,"take-hold":3,"alert":4,"attack":5,"sweep":6,"death":7} },
-  "thrice-dead":   { n: 8, aspect: 1.053, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "thrice-dead":   { n: 8, aspect: 0.98, f: {"idle":0,"rise":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "twice-dead":   { n: 9, aspect: 1.023, f: {"idle":0,"rise":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "last-watchman":   { n: 9, aspect: 1.258, f: {"idle":0,"hold-the-salute":1,"look-down-the-road":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "warden-captain":   { n: 9, aspect: 1.103, f: {"idle":0,"hold-the-salute":1,"ground-the-maul":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "bone-knight":   { n: 9, aspect: 1, f: {"idle":0,"hold-the-salute":1,"ground-the-sword":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "marrow-cantor":   { n: 9, aspect: 1.126, f: {"idle":0,"listen":1,"hold-the-note":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "skeleton":   { n: 8, aspect: 1.095, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "skeleton":   { n: 8, aspect: 1.305, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "white-roe":           { n: 8, aspect: 1.037, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-toll-clerk":      { n: 8, aspect: 0.969, f: {"idle":0,"shift-the-weight":1,"alert":2,"count-it-out":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -14089,8 +14089,8 @@ var MOB_ANIM = {
   "the-tide-warden":        { n: 8, aspect: 0.992, f: {"idle":0,"cut-the-stick":1,"look-at-the-water":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-scaffold-hand":      { n: 8, aspect: 0.972, f: {"idle":0,"work-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-salt-widow":         { n: 9, aspect: 0.951, f: {"idle":0,"feed-the-flue":1,"work-the-pan":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "the-refuge-man":         { n: 9, aspect: 1.075, f: {"idle":0,"turn-from-the-wall":1,"hold-the-door":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "the-reed-walker":        { n: 9, aspect: 1.034, f: {"idle":0,"part-the-reed":1,"keep-pace":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "the-refuge-man":         { n: 9, aspect: 0.904, f: {"idle":0,"turn-from-the-wall":1,"hold-the-door":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "the-reed-walker":        { n: 9, aspect: 0.968, f: {"idle":0,"part-the-reed":1,"keep-pace":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-pilot":              { n: 8, aspect: 0.991, f: {"idle":0,"read-the-water":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-great-devil-crab":   { n: 8, aspect: 1.254, f: {"idle":0,"alert":1,"attack":2,"recover":3,"death":4,"rest":5,"bite":6,"sweep":7} },
   "the-eel-cutter":         { n: 8, aspect: 1.387, f: {"idle":0,"lift-the-trap":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
@@ -14400,7 +14400,9 @@ var MOB_EYES = {
   // than a detection failure: his idle and his work are both drawn turned away
   // and bent, with the head down between the shoulders, so there is no eye in
   // the picture to key. Those two frames simply have nothing laid over them.
-  "the-miller": 1, "the-toll-clerk": 1, "the-long-warden": 1
+  "the-miller": 1, "the-toll-clerk": 1, "the-long-warden": 1,
+  // The sapper joined the dead on 2026-10-27 and his redraw carries the marker.
+  "the-sapper": 1
 };
 
 var IDLE_MS = 1400;      // how long one idle frame is held...

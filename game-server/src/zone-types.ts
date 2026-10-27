@@ -130,6 +130,7 @@ export interface Creature {
   noticeAt?: number;  // a slow noticer (SLOW_TO_NOTICE): the beat it finally answers the fight
   mobbedAt?: number;  // a mobbed owl (MOBBED_OWLS): when the crows last found it
   hushedAt?: number;  // a noise cover (NOISE_COVER): when a hunter last shut it up
+  crownedAt?: number; // the rat king: when it came, so its sickness can build (ratking.ts)
   grudges: Grudge[]; // who hurt it, and when — memory that fades with time
   nextWanderAt: number; // ms epoch
   target: string | null; // pubkey it is fighting

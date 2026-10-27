@@ -25,7 +25,7 @@ try {
   } });
 
   const T = { 'wild-boar': 34, 'the-baited-bear': 76, 'grey-wolf': 26, 'lead-wolf': 54, rat: 11, 'fen-viper': 18,
-    'great-gull': 28, 'the-great-crab': 85, skeleton: 20, 'pale-crawler': 30, footpad: 18, 'the-sapper': 34 };
+    'great-gull': 28, 'the-great-crab': 85, skeleton: 20, 'pale-crawler': 30, footpad: 18, 'the-bellfounder': 34 };
   function world(creatures, weapon = null) {
     const feed = [];
     const z = {
@@ -233,14 +233,14 @@ try {
     const { z } = world([pad]);
     roll = 0;
     assert.equal(S.creatureBlow(z, pad, tmpl('footpad'), you('f'), now).feint, true, 'a footpad feints');
-    const sapper = { id: 'p', templateId: 'the-sapper', roomId: 'r', hp: 34, target: 'you' };
+    const sapper = { id: 'p', templateId: 'the-bellfounder', roomId: 'r', hp: 34, target: 'you' };
     const { z: z2, feed } = world([sapper]);
-    assert.equal(S.playerSwing(z2, you('p'), sapper, tmpl('the-sapper'), blade(2), now).mult, 1, 'healthy: steady');
+    assert.equal(S.playerSwing(z2, you('p'), sapper, tmpl('the-bellfounder'), blade(2), now).mult, 1, 'healthy: steady');
     sapper.hp = 15;
-    assert.equal(S.playerSwing(z2, you('p'), sapper, tmpl('the-sapper'), blade(2), now).mult, 0.6, 'hurt: guarded against the edge');
-    assert.equal(S.playerSwing(z2, you('p'), sapper, tmpl('the-sapper'), maul, now).mult, 1, 'weight goes through the guard');
+    assert.equal(S.playerSwing(z2, you('p'), sapper, tmpl('the-bellfounder'), blade(2), now).mult, 0.6, 'hurt: guarded against the edge');
+    assert.equal(S.playerSwing(z2, you('p'), sapper, tmpl('the-bellfounder'), maul, now).mult, 1, 'weight goes through the guard');
     sapper.hp = 5;
-    assert.equal(S.creatureBlow(z2, sapper, tmpl('the-sapper'), you('p'), now).mult, 1.5, 'nearly done: reckless');
+    assert.equal(S.creatureBlow(z2, sapper, tmpl('the-bellfounder'), you('p'), now).mult, 1.5, 'nearly done: reckless');
     assert.equal(feed.length, 2, 'each change of stance is told once');
     console.log('PASS: cutthroats feint; folk go guarded, then reckless, and say so.');
   }
