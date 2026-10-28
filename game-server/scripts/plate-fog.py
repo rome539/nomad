@@ -97,9 +97,12 @@ def main():
         done.append(name)
         print(name)
     lights = 0
-    for f in sorted(os.listdir(SRC)):
-        if not f.endswith("-snow.webp"): continue
-        base = f[:-len("-snow.webp")]
+    # ...and the same light for a torch at dawn (rome, 2026-10-28): dawn stands
+    # on the day plate, which has no torch picture either, so every ground with
+    # a day plate and a torch plate gets the map too. (Still named -snowlight:
+    # the snow was the first to need it.)
+    bases = sorted({f[:-len(e)] for f in os.listdir(SRC) for e in ("-snow.webp", "-day.webp") if f.endswith(e)})
+    for base in bases:
         torch = os.path.join(SRC, base + "-night-torch.webp")
         if not os.path.exists(torch): continue
         out = os.path.join(OUT, base + "-snowlight.webp")

@@ -1537,6 +1537,18 @@ try {
     const vsrc = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.match(vsrc, /lines\.push\("", \.\.\.conditions\.censusLines\(z, now\)\);/, 'the census reads it');
   });
+  check('a ranging pack is not scarce on its rows: the census says where it is (2026-10-28)', () => {
+    const { z } = condWorld('roe-deer');
+    z.regionOf = (room) => room.startsWith('c') ? 'wood' : 'mountain';
+    z.world.mobTemplates.set('coyote', { id: 'coyote', name: 'a coyote', max_hp: 14, respawn_secs: 600, is_boss: 0 });
+    for (let i = 0; i < 5; i++) {
+      z.world.mobSpawns.push({ template_id: 'coyote', room_id: 'c' + i });
+      z.creatures.set('k' + i, { id: 'k' + i, templateId: 'coyote', roomId: 'm0', home: 'm0', hp: 14 });
+    }
+    const read = conditions.censusLines(z, 0).join('\n');
+    assert.ok(!/scarce: coyote/.test(read), 'the whole pack alive on the mountain is not scarce in the wood');
+    assert.match(read, /Coyotes, ranging: 5 on The Mountain \(of 5\)/, 'where the pack is');
+  });
   check('an oversized save names what is filling it (2026-10-25)', () => {
     const blob = JSON.stringify({ small: 1, bloodOn: 'x'.repeat(40_000), board: 'y'.repeat(20_000), events: 'z'.repeat(5_000), tiny: [] });
     assert.equal(biggestFields(blob), 'bloodOn 39KB, board 20KB, events 5KB');

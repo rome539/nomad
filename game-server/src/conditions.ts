@@ -41,7 +41,7 @@ import {
   CONDITION_MURRAIN_AFTER_MS, CONDITION_MURRAIN_ENDS, CONDITION_MURRAIN_HP, CONDITION_MURRAIN_DEATH_PER_H,
   CONDITION_HUNTED_AT, CONDITION_HUNTED_CLEARS, CONDITION_KILL_HALF_MS, CONDITION_AMBIENT_ODDS,
   CONDITION_BOOM_DRAW, CONDITION_BOOM_MAX_MS, CONDITION_REST_MS, CONDITION_BOOM_JITTER_MS, CONDITION_BOOM_MIN_HERD,
-  CONDITION_THICK_AT, CONDITION_THICK_CLEARS, CONDITION_THICK_MIN, CONDITION_THICK_AFTER_MS, THICK_HUNTERS, REGION_LABELS,
+  CONDITION_THICK_AT, CONDITION_THICK_CLEARS, CONDITION_THICK_MIN, CONDITION_THICK_AFTER_MS, THICK_HUNTERS, REGION_LABELS, RANGERS,
 } from "./zone-data";
 
 export type Condition = { kind: "boom" | "murrain" | "hunted" | "thick"; line?: string; since: number };
@@ -318,11 +318,25 @@ export function censusLines(z: ZoneDO, now: number): string[] {
     const thickSince = z.condTrack.get(`thick:${r}`);
     const ratio = z.condTrack.get(`ratio:${r}`) ?? 0;
     const scarce = [...caps.entries()]
-      .filter(([key, k]) => key.endsWith(`@${r}`) && k >= 2 && (alive.get(key) ?? 0) < k / 4)
+      .filter(([key, k]) => key.endsWith(`@${r}`) && k >= 2 && (alive.get(key) ?? 0) < k / 4 && !RANGERS.has(key.split("@")[0]))
       .map(([key]) => bare(key.split("@")[0]));
     lines.push(`  ${REGION_LABELS[r]} — ${what}; kills ${killsIn(z, r, now).toFixed(1)}; hunters ${ratio.toFixed(1)}x${thickSince !== undefined && cond?.kind !== "thick" ? ` (over the line ${ago(thickSince)})` : ""}`
       + (!cond && rest !== undefined && rest > now ? `; resting ${Math.round((rest - now) / 3_600_000)}h more` : "")
       + (scarce.length ? `; scarce: ${[...new Set(scarce)].join(", ")}` : ""));
+  }
+  // A ranging pack's rows stay where they were written while it lives wherever
+  // it last chose, so it is never scarce on its rows: say where it is instead.
+  for (const id of RANGERS) {
+    const rows = world.mobSpawns.filter((s) => s.template_id === id).length;
+    if (!rows) continue;
+    const on = new Map<string, number>();
+    for (const c of z.creatures.values()) {
+      if (c.templateId !== id && z.variantBase.get(c.templateId) !== id) continue;
+      const r = z.regionOf(c.home ?? c.roomId);
+      on.set(r, (on.get(r) ?? 0) + 1);
+    }
+    const where = [...on].map(([r, n]) => `${n} on ${REGION_LABELS[r] ?? r}`).join(", ");
+    lines.push(`  ${cap(bare(id))}s, ranging: ${where || "none living"} (of ${rows})`);
   }
   return lines;
 }

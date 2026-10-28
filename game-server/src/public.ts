@@ -1304,12 +1304,26 @@ export const PAGE = `<!doctype html>
      snow picture itself, coloured like the flame (#torchwarm), is added over the
      darkened scene where the torch's light falls - the light map taken from the
      ground's own night and torch pictures (scripts/plate-fog.py). It breathes a
-     little, as the torch plates' own light does. */
+     little, as the torch plates' own light does. THE COLOUR IS THE TORCH PLATES'
+     (rome, 2026-10-28: it did not match): where a torch plate is lit it is the
+     day plate times 1.60 red, 1.09 green, .46 blue (the median of 84 grounds),
+     and the snow-night grade leaves about .20/.25/.30 of the snow under it, so
+     #torchwarm adds the difference. */
   #snowlight { display: none; position: fixed; left: 0; right: 0; top: 0; bottom: var(--botth); z-index: 0; pointer-events: none;
     background-size: 100% 100%; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; filter: url(#torchwarm); mix-blend-mode: plus-lighter; }
   body[data-view="image"] #snowlight.on { display: block; animation: snowflick 2.6s ease-in-out infinite alternate; }
   @keyframes snowflick { 0% { opacity: .9; } 40% { opacity: 1; } 70% { opacity: .86; } 100% { opacity: .97; } }
   @media (prefers-reduced-motion: reduce) { body[data-view="image"] #snowlight.on { animation: none; } }
+  /* ...and at dawn the torch plate itself, through the same map: not added, shown. */
+  body[data-view="image"] #snowlight.plate { filter: none; mix-blend-mode: normal; animation: none; }
+  /* THE GATE LANTERNS BURN AS BRIGHT WITHOUT YOUR TORCH (rome, 2026-10-28). Round
+     the painted lanterns only (the gradients on the outer box), the torch plate
+     through its light map (the inner one). */
+  #lamplight { display: none; position: fixed; left: 0; right: 0; top: 0; bottom: var(--botth); z-index: 0; pointer-events: none;
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+  #lamplight > i { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: block; background-size: 100% 100%;
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+  body[data-view="image"] #lamplight.on { display: block; }
   #fogveil { display: none; position: fixed; left: 0; right: 0; top: 0; bottom: var(--botth); z-index: 0; pointer-events: none; }
   /* ...LAID THROUGH THE PLATE'S OWN FOG MASK (scripts/plate-fog.py): the colour
      is solid and the mask, worked out from the picture's depth, says how much
@@ -2620,11 +2634,12 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   </div>
   <div id="sky" aria-hidden="true"></div>
   <div id="scene" aria-hidden="true"></div>
+  <div id="snowlight" aria-hidden="true"></div>
+  <div id="lamplight" aria-hidden="true"><i></i></div>
   <canvas id="scene-fx" aria-hidden="true"></canvas>
   <canvas id="scene-sparks" aria-hidden="true"></canvas>
-  <div id="snowlight" aria-hidden="true"></div>
   <div id="fogveil" aria-hidden="true"></div>
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fogmix" color-interpolation-filters="sRGB"><feColorMatrix id="fogmixm" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><filter id="torchwarm" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1.3 0 0 0 0 0 .62 0 0 0 0 0 .22 0 0 0 0 0 1 0"/></filter></svg>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fogmix" color-interpolation-filters="sRGB"><feColorMatrix id="fogmixm" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><filter id="torchwarm" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1.4 0 0 0 0 0 .83 0 0 0 0 0 .16 0 0 0 0 0 1 0"/></filter></svg>
   <div id="mobs" aria-hidden="true"></div>
   <canvas id="weather-particles" aria-hidden="true"></canvas>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
@@ -10116,13 +10131,13 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "114";      // /mob/      strips and their eye layers
+var MOB_V  = "117";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "48";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "49";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "6";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "23";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "8";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "24";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11760,6 +11775,16 @@ var sceneEl = document.getElementById("scene");
 var skyEl = document.getElementById("sky");
 var fogVeilEl = document.getElementById("fogveil");
 var snowLightEl = document.getElementById("snowlight");
+var lampLightEl = document.getElementById("lamplight");
+// THE GATE LANTERNS BURN AS BRIGHT WITHOUT YOUR TORCH (rome, 2026-10-28: at a
+// gate at night - plain, rain at any hour, the moons, the eclipse - lighting a
+// torch made the lantern brighter). The night plates paint the flame and leave
+// the stone round it cold; the torch plates throw its light on it. So round
+// each painted lantern the torch plate itself is shown, through its own light
+// map, over whatever the hour has done to the ground: the lantern is the same
+// pixels with the torch or without - and the same in the snow, in the rain by
+// day, and at dawn, so every lantern matches.
+var LANTERN_REACH = 2.5; // the lantern's light, in flame radii
 // WHICH PLATES HAVE A FOG MASK (scripts/plate-fog.py). Until it arrives, and for
 // a plate without one, the fog falls back to the veil by height.
 var fogMasks = null;
@@ -11767,7 +11792,13 @@ var fogMasks = null;
 var FOG_RGB = { day: [196, 200, 204], dawn: [104, 108, 116], dusk: [52, 64, 82], night: [40, 56, 74] };
 try {
   fetch("/room-fog/fog.json?v=" + FOG_V).then(function (r) { return r.ok ? r.json() : []; })
-    .then(function (list) { var m = {}; (list || []).forEach(function (n) { m[n] = 1; }); fogMasks = m; }).catch(function () {});
+    .then(function (list) {
+      var m = {}; (list || []).forEach(function (n) { m[n] = 1; }); fogMasks = m;
+      // A ROOM PAINTED BEFORE THIS ARRIVED HAD NO LIGHT MAPS (rome, 2026-10-28:
+      // after a reload at a gate the lantern's light did not show until you
+      // left and came back). Paint it again now that they are known.
+      if (paintScene.last) paintScene.apply(null, paintScene.last);
+    }).catch(function () {});
 } catch (e) {}
 // EVERY SKY AT THE SAME SIZE (rome, 2026-09-28). One scale for all of them:
 // the one a 1584 x 993 picture needs to cover the box. A sky painted shorter
@@ -12725,6 +12756,8 @@ var lastCovered = false;
 var lastNight = 0;
 var lastLow = 0; // 1 dawn, 2 dusk (the server's lo): the low light fog is graded for
 function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, covered, night, low) {
+  // The last real paint, so a map that arrives after it can paint it again.
+  if (band !== null && band !== undefined) paintScene.last = Array.prototype.slice.call(arguments);
   // The sky name stands in for the roof only when the frame left "covered" out
   // (the night line once sat between these two and took the else for itself).
   if (covered !== undefined) lastCovered = !!covered;
@@ -12776,7 +12809,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // yet is standing in the plain dark however bright your hand is. The
   // creatures read this rather than lastTorch, so nothing ever blazes on a
   // hillside the picture left unlit.
-  var scene = "", sky = "", tint = "", lit = false, turn = "", line = MOB_LINE_DEFAULT;
+  var scene = "", sky = "", tint = "", lit = false, turn = "", line = MOB_LINE_DEFAULT, dawnTorch = "", dawnTorchSrc = "";
   var floor = [4, 96];
   var singleLayer = false, singleClass = "";
   var seatAt = "";   // the picture's name, so a throne in it can seat its king (SEAT_ON)
@@ -12863,6 +12896,15 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       sky = "/sky/" + pp.file + ".webp"; turn = pp.turn;
     }
     lit = pwant === "night-torch";
+    // DAWN WITH A TORCH IS DONE AS THE SNOW AT NIGHT IS (rome, 2026-10-28: dawn
+    // is drawn on the day plate, and lighting the torch turned it into the night
+    // plate). The ground stays dawn's, and the torch's light is laid on it
+    // through the light map taken from the torch plate (snowLight, below).
+    // Indoors at dawn the plate is night's, and the torch plate is right.
+    if (lit && pbase === "day") {
+      dawnTorch = stem; dawnTorchSrc = scene; lit = false;
+      scene = "/room-bg/" + stem + "-day.webp";
+    }
     tint = (lit || shut || NO_GROUND_TINT[hour] || pbase === hour) ? "" : hour;
     // A ROOF IS OVER THEM TOO — AND SO IS A HILL. SHELTERED names the rooms with
     // a slot in them; it does not name the ones with no opening at all, because
@@ -12928,6 +12970,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // whenever it was borrowed. Day stone under a dusk sky is still lit for
     // noon, and the eye catches that before it catches anything else.
     lit = want === "night-torch";
+    if (lit && base === "day") { // dawn with a torch, as above
+      dawnTorch = "gate-" + gate; dawnTorchSrc = scene; lit = false;
+      scene = "/room-bg/gate-" + gate + "-day.webp";
+    }
     line = MOB_LINE["gate-" + gate] || MOB_LINE_GATE;
     // A TORCH PLATE TAKES NO HOUR CORRECTION, EVER. The correction exists to
     // relight a ground that was shot under the wrong sky — and a torch plate's
@@ -12985,6 +13031,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
         sky = "/sky/" + tp.file + ".webp"; turn = tp.turn;
       }
       lit = twant === "night-torch";
+      if (lit && tbase === "day") { // dawn with a torch, as above
+        dawnTorch = terr; dawnTorchSrc = scene; lit = false;
+        scene = "/room-bg/" + terr + "-day" + floodSuffix(terr, "day") + ".webp";
+      }
       line = MOB_LINE[terr] || MOB_LINE_DEFAULT;
       tint = (lit || NO_GROUND_TINT[hour] || tbase === hour) ? "" : hour;
       // AND THE SAME FOR WHAT IS STANDING IN IT. The ground already knows it is
@@ -13064,6 +13114,14 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // too bright; about where snow at night sits). The night plate takes a wet
   // grade; a torch plate keeps its own light.
   if (wxLayer === "rain" && wxHour === "night" && !lit && !singleLayer && scene && outside) tint = "rain-dark";
+  // A TORCH IN THE RAIN STAYS UNDER THE CLOUD (rome, 2026-10-28: lighting the
+  // torch at night, dusk or dawn took the cloud's shadow off the floor; and the
+  // shadow is on the floor, not on the torch). The effects layer lays it, as
+  // dark as the night's wet grade after dark and the cloud's darkening alone at
+  // dawn and dusk, and lifts it wherever the plate is lit, so the pool of light
+  // keeps its strength. Without effects the plate takes that grade whole.
+  var cloudTint = lit && wxLayer === "rain" && wxHour && !singleLayer && scene && outside ? (wxHour === "night" ? "rain-dark" : "rain-dusk") : "";
+  var cloud = cloudTint === "rain-dark" ? .62 : cloudTint ? .58 : 1;
   // THE FOG BY DISTANCE (rome, 2026-10-26: the veil by height looked wrong - the
   // tree beside you washed out at its crown as hard as the far wood). Each plate
   // has a mask worked out from its own depth; the fog's colour is laid through
@@ -13072,8 +13130,21 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   var fogName = veil && scene ? scene.slice(9, -5).replace("-night-torch", "-night") : "";
   var fogMask = fogName && typeof fogMasks !== "undefined" && fogMasks && fogMasks[fogName] ? "/room-fog/" + fogName + ".webp?v=" + FOG_V : "";
   // A TORCH IN THE SNOW after dark, out under the sky: the snow plate's light map.
-  var snowName = lastTorch && wxKind === "snow" && wxHour && !roofedWx && !lastCovered && scene && scene.slice(-10) === "-snow.webp" ? scene.slice(9, -10) + "-snowlight" : "";
+  var snowName = lastTorch && wxKind === "snow" && wxHour && !roofedWx && !lastCovered && scene && scene.slice(-10) === "-snow.webp" ? scene.slice(9, -10) + "-snowlight"
+    : dawnTorch ? dawnTorch + "-snowlight" : "";   // ...and at dawn, through the same map
+  // AT DAWN THE TORCH'S LIGHT IS THE TORCH PLATE'S OWN (rome, 2026-10-28: the
+  // snow's warm glow at dawn did not match the torch at any other hour): where
+  // its light falls the torch plate itself is shown, the dawn ground elsewhere.
+  var snowPlate = snowName && dawnTorch ? dawnTorchSrc + "?v=" + BG_V : "";
   var snowLight = snowName && typeof fogMasks !== "undefined" && fogMasks && fogMasks[snowName] ? "/room-fog/" + snowName + ".webp?v=" + FOG_V : "";
+  // ...and a gate's lantern, the same everywhere it is dark enough to see it
+  // (rome, 2026-10-28): after dark, in the snow, in the rain at any hour, and at
+  // dawn - always the torch plate's own lantern, and never changed by your torch.
+  var lampM = !lit && scene ? scene.slice(9).match(/^(gate-.+)-(night|snow|day)\.webp$/) : null;
+  if (lampM && lampM[2] === "snow" && !(wxKind === "snow" && wxHour)) lampM = null;
+  if (lampM && lampM[2] === "day" && wxLayer !== "rain" && hour !== "dawn" && hour !== "wet-dawn" && !(lastLow === 1 && !lastNight)) lampM = null;
+  var lampMap = lampM && typeof fogMasks !== "undefined" && fogMasks && fogMasks[lampM[1] + "-snowlight"] ? "/room-fog/" + lampM[1] + "-snowlight.webp?v=" + FOG_V : "";
+  var lampSrc = lampMap ? "/room-bg/" + lampM[1] + "-night-torch.webp?v=" + BG_V : "";
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
     var fade = scene !== scenePainted ? fadeScene() : null;
@@ -13152,22 +13223,39 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     // same box and the plate now occupies all of it.
     sceneEl.style.backgroundPosition = "center center";
     scenePainted = scene;
+    // Where the lanterns are: the flames room-fx found in the night plate.
+    var lampT = lampMap && typeof fxIndex !== "undefined" && fxIndex && fxIndex[lampM[1] + "-night"] ? fxIndex[lampM[1] + "-night"].t || [] : [];
+    var lampAt = lampT.map(function (q) {
+      var r = 2 * LANTERN_REACH * (.012 + .13 * q[2]);
+      return "radial-gradient(" + (r * 99300 / 1584).toFixed(2) + "% " + (r * 100).toFixed(2) + "% at " + (q[0] * 100).toFixed(2) + "% " + (q[1] * 100).toFixed(2)
+        + "%, #000, rgba(0,0,0,.78) 25%, rgba(0,0,0,.37) 50%, rgba(0,0,0,.1) 75%, transparent)";
+    });
     if (typeof snowLightEl !== "undefined" && snowLightEl) {
-      snowLightEl.className = snowLight ? "on" : "";
+      snowLightEl.className = snowLight ? (snowPlate ? "on plate" : "on") : "";
       if (snowLightEl.style) {
-        snowLightEl.style.backgroundImage = snowLight ? url : "";
+        snowLightEl.style.backgroundImage = snowLight ? (snowPlate ? "url(" + snowPlate + ")" : url) : "";
+        // (Round a gate's lantern the lantern layer lies over this light, so the
+        // torch's light never reaches the lantern.)
         snowLightEl.style.webkitMaskImage = snowLightEl.style.maskImage = snowLight ? "url(" + snowLight + ")" : "";
       }
+    }
+    if (typeof lampLightEl !== "undefined" && lampLightEl) {
+      var lampIn = lampLightEl.firstChild;
+      lampLightEl.className = lampT.length ? "on" : "";
+      lampLightEl.style.webkitMaskImage = lampLightEl.style.maskImage = lampAt.join(", ");
+      lampIn.style.backgroundImage = lampT.length ? "url(" + lampSrc + ")" : "";
+      lampIn.style.webkitMaskImage = lampIn.style.maskImage = lampT.length ? "url(" + lampMap + ")" : "";
     }
     if (typeof fogVeilEl !== "undefined" && fogVeilEl) {
       fogVeilEl.className = veil ? "f-" + veil + (fogMask ? " masked" : "") : "";
       if (fogVeilEl.style) fogVeilEl.style.webkitMaskImage = fogVeilEl.style.maskImage = fogMask ? "url(" + fogMask + ")" : "";
     }
     setWeather(precipitation);
-    if (typeof sceneFx !== "undefined") sceneFx.paint(scene, tint, preparedFx);
+    var fxOn = typeof sceneFx !== "undefined" && sceneFx.paint(scene, tint, preparedFx, cloud);
+    if (cloudTint && !fxOn) sceneEl.className = "t-" + cloudTint;
     if (fade) fade();
   };
-  var waiting = 5, ready = true, preparedFx = null;
+  var waiting = 8, ready = true, preparedFx = null;
   function loaded(ok) {
     ready = ready && ok;
     if (--waiting === 0 && ready) put();
@@ -13176,6 +13264,9 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   readySceneImage(sky ? sky + "?v=" + SKY_V : "", loaded);
   readySceneImage(fogMask, loaded);
   readySceneImage(snowLight, loaded);
+  readySceneImage(lampMap, loaded);
+  readySceneImage(lampSrc, loaded);
+  readySceneImage(snowLight ? snowPlate : "", loaded);
   // The mist, reflections, shadows and flames belong to the same picture.
   // Prepare their maps alongside the ground and sky, before any layer swaps.
   if (typeof sceneFx !== "undefined" && sceneFx.prepare) {
@@ -13227,7 +13318,7 @@ var fxTex = {}, fxMobTex = {}, fxEmbers = [], fxDust = [];
 // near a gigabyte decoded, and the tab sat at three. Now the last few seen are
 // kept and the rest let go; one that comes back is fetched from the cache again.
 var FX_MOB_KEEP = 12, fxMobSeen = {}, fxMobClock = 0;
-var FX_TORCHES = 24, FX_MOBS = 4;
+var FX_TORCHES = 24, FX_MOBS = 4, fxCloud = 1;
 function fxInit() {
   if (fxGl || !fxCanvas) return !!fxGl;
   try { fxGl = fxCanvas.getContext("webgl", { premultipliedAlpha: true, alpha: true }); } catch (e) { fxGl = null; }
@@ -13242,7 +13333,7 @@ function fxInit() {
     "#endif",
     "varying vec2 v;",
     "uniform sampler2D plate, depth, mob0, mob1, mob2, mob3;",
-    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, handOn, handFlick;",
+    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, handOn, handFlick, cloud;",
     "uniform vec2 sway;",
     "uniform vec3 torch[" + FX_TORCHES + "];",
     "uniform float flick[" + FX_TORCHES + "];",
@@ -13311,6 +13402,8 @@ function fxInit() {
     "    sh = max(sh, shade(mob3, mobRect[3], mobFrame[3]));",
     "    k *= 1. - sh * smoothstep(.5, .62, v.y) * handFlick;",
     "  }",
+    // The cloud's shadow over the ground, lifted where the plate is lit.
+    "  k *= mix(cloud, 1., smoothstep(.12, .45, dot(pl.rgb, vec3(.299, .587, .114))));",
     "  float m = 0.; vec3 mc = vec3(0.);",
     "  if (mistOn > .5){",
     "    float band = smoothstep(.42, .62, v.y) * (1. - smoothstep(.72, 1., v.y) * .75);",
@@ -13337,7 +13430,7 @@ function fxInit() {
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   var ap = gl.getAttribLocation(fxProg, "p"); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
-  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "handOn", "handFlick",
+  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "handOn", "handFlick", "cloud",
    "sway", "torch", "flick", "mobRect", "mobFrame"].forEach(function (k) { fxU[k] = gl.getUniformLocation(fxProg, k); });
   gl.uniform1i(fxU.plate, 0); gl.uniform1i(fxU.depth, 1);
   gl.uniform1i(fxU.mob0, 2); gl.uniform1i(fxU.mob1, 3); gl.uniform1i(fxU.mob2, 4); gl.uniform1i(fxU.mob3, 5);
@@ -13404,10 +13497,11 @@ function fxPrepare(scene, tint, done) {
 }
 // Commit only prepared assets, synchronously with their room image. No network
 // callback is allowed to replace the visible effects after this point.
-function fxScene(scene, tint, prepared) {
-  if (!prepared || stillness || viewMode !== "image" || !fxInit()) { fxStop(); return; }
+function fxScene(scene, tint, prepared, cloud) {
+  if (!prepared || stillness || viewMode !== "image" || !fxInit()) { fxStop(); return false; }
+  fxCloud = cloud || 1;
   var name = prepared.name, entry = prepared.entry, im = prepared.images;
-  if (name === fxName && fxReady) { fxRun(); return; }
+  if (name === fxName && fxReady) { fxRun(); return true; }
   fxStop();
   fxName = name; fxEntry = entry;
   try {
@@ -13428,7 +13522,8 @@ function fxScene(scene, tint, prepared) {
       vx: (Math.random() - .5) * .008, vy: (Math.random() - .6) * .005, s: .6 + Math.random(), ph: Math.random() * 6.3 });
     fxReady = true;
     fxDraw(performance.now()); // first mist/flame/reflection frame is part of this commit
-  } catch (e) { fxStop(); }
+    return true;
+  } catch (e) { fxStop(); return false; }
 }
 function fxStop() {
   fxSeq++;
@@ -13518,7 +13613,7 @@ function fxDraw(now) {
     fl[i] = .8 + .07 * Math.sin(t * 2.1 + s) + .04 * Math.sin(t * 5.3 + s * 2) + .025 * Math.sin(t * 13.7 + s * 3);
   }
   var sx = .09 * Math.sin(t * .55) + .03 * Math.sin(t * 1.7 + 2), sy = .04 * Math.sin(t * .8 + 1);
-  gl.uniform1f(fxU.t, t); gl.uniform1f(fxU.aspect, fxTex.aspect || 1.6);
+  gl.uniform1f(fxU.t, t); gl.uniform1f(fxU.aspect, fxTex.aspect || 1.6); gl.uniform1f(fxU.cloud, fxCloud);
   gl.uniform1fv(fxU.flick, fl); gl.uniform2f(fxU.sway, sx, sy);
   gl.uniform1f(fxU.handFlick, 1 + .06 * Math.sin(t * 2.3) + .04 * Math.sin(t * 6.1 + 1.3) + .03 * Math.sin(t * 15.7 + .4));
   var mobs = e && e.hand ? fxMobs(box) : [];
@@ -14114,7 +14209,7 @@ var MOB_ANIM = {
   "warden-captain":   { n: 9, aspect: 1.103, f: {"idle":0,"hold-the-salute":1,"ground-the-maul":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "bone-knight":   { n: 9, aspect: 1, f: {"idle":0,"hold-the-salute":1,"ground-the-sword":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "marrow-cantor":   { n: 9, aspect: 1.126, f: {"idle":0,"listen":1,"hold-the-note":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "skeleton":   { n: 8, aspect: 1.305, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "skeleton":   { n: 8, aspect: 0.981, f: {"idle":0,"listen":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "white-roe":           { n: 8, aspect: 1.037, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-toll-clerk":      { n: 8, aspect: 0.969, f: {"idle":0,"shift-the-weight":1,"alert":2,"count-it-out":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -15319,6 +15414,9 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one) {
   // ...and ONE swing outside a round (the skeleton your noise woke lashing out
   // once): the same consume-once, so a room of them does not all swing for it.
   var ones = one ? one.slice() : [];
+  // ...and ONE entry per creature that swung or was hit (zone.ts noteFx), so a
+  // blow on one coyote moves that one and not the pack (rome, 2026-10-28).
+  var swings = swung ? swung.slice() : [], hits = struck ? struck.slice() : [];
   for (var i = 0; i < anims.length; i++) {
     var a = anims[i];
     var deathAt = deaths.indexOf(a.id);
@@ -15335,7 +15433,8 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one) {
       a.phase = "attack"; a.t = 0;   // the opening blow, and back to what it was after
       a.blow = (a.strikes && a.strikes.length > 1) ? a.strikes[Math.floor(Math.random() * a.strikes.length)] : a.strike;
     }
-    else if (swung && swung.indexOf(a.id) >= 0 && a.strike) {
+    else if (swings.indexOf(a.id) >= 0 && a.strike) {
+      swings.splice(swings.indexOf(a.id), 1);
       // NOT ALL AT ONCE. The wire reports a whole round in one message, so
       // without this every creature in a dogpile swings on the same frame.
       a.phase = "attack"; a.t = -Math.random() * STAGGER_S;
@@ -15347,7 +15446,7 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one) {
         ? a.strikes[Math.floor(Math.random() * a.strikes.length)]
         : a.strike;
     }
-    else if (struck && struck.indexOf(a.id) >= 0) { a.phase = "hit"; a.t = 0; }
+    else if (hits.indexOf(a.id) >= 0) { hits.splice(hits.indexOf(a.id), 1); a.phase = "hit"; a.t = 0; }
     // WHICH EATING FRAME, decided by which signal arrived. A creature drawn with
     // only one uses it for both, which is what every grazer and every scavenger
     // did before either signal existed.

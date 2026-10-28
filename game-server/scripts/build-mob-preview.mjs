@@ -1112,6 +1112,9 @@ const checks = [
   // called a page verified while its torch button threw on every click.
   ["the torch button changes the ground", (() => {
     try {
+      // At night: the key press above leaves the hour on dawn, and a torch at
+      // dawn keeps the dawn ground (2026-10-28), so the swap is a night one.
+      nodes.hour.value = "night"; nodes.hour.onchange();
       const before = seen("scene");
       nodes.torch.onclick();
       return /night-torch/.test(seen("scene")) && seen("scene") !== before;

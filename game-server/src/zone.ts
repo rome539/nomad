@@ -278,7 +278,11 @@ export class ZoneDO implements DurableObject {
   // two moments are recorded as they happen and flushed once per combat round:
   // who swung at you, and who you landed on. Ids only, no damage, no names; the
   // log still carries everything a player actually reads.
-  private combatFx = new Map<string, { swung: string[]; struck: string[] }>();
+  // One entry PER CREATURE, named by its template (the sprites are), so a pack
+  // of five where one was hit says "coyote" once and not five times (rome,
+  // 2026-10-28: hitting one coyote made all of them recoil): the client
+  // consumes each entry once, as it does deaths.
+  private combatFx = new Map<string, { swung: string[]; struck: string[]; seen: Set<string> }>();
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
   public conditions = new Map<string, conditions.Condition>(); // what is going on in each region (conditions.ts)
@@ -4479,7 +4483,7 @@ export class ZoneDO implements DurableObject {
             dmg = Math.max(1, Math.round(dmg * how.mult)); // a spent charger, bone against an edge, a guard, a pinned arm
             dmg = exhaustion.playerDamage(dmg, session.exhaustion);
             creature.hp -= dmg;
-            this.noteFx(session.pubkey, "struck", creature.templateId);   // it takes the recoil
+            this.noteFx(session.pubkey, "struck", creature);   // it takes the recoil
             this.markHurt(creature, tmpl, session.pubkey);
             // A landed blow on a crow is a stone in the pond: the murder rises.
             this.rouseCrows(session, creature);
@@ -5126,7 +5130,7 @@ export class ZoneDO implements DurableObject {
         dmg = Math.max(1, Math.round(dmg * ARMOR_K / (this.equippedArmor(victim) + ARMOR_K))); // % mitigation, never immunity
         dmg = Math.max(1, Math.round(dmg * STANCE[victim.stance].def));
         victim.hp -= dmg;
-        this.noteFx(victim.pubkey, "swung", creature.templateId);   // and it swings
+        this.noteFx(victim.pubkey, "swung", creature);   // and it swings
         // The vitals lottery — the Tarkov headshot. Any creature but the small
         // things (findsVitals) may find the gap on any landed hit: instant, ignoring what hp
         // you had left; armor over the vitals only bought the odds down. Drops to
@@ -6860,11 +6864,14 @@ export class ZoneDO implements DurableObject {
     }
   }
 
-  private noteFx(pubkey: string, kind: "swung" | "struck", templateId: string): void {
+  private noteFx(pubkey: string, kind: "swung" | "struck", creature: Creature): void {
     if (!seesArt(pubkey)) return;   // nobody without pictures needs this
     let e = this.combatFx.get(pubkey);
-    if (!e) { e = { swung: [], struck: [] }; this.combatFx.set(pubkey, e); }
-    if (e[kind].indexOf(templateId) < 0) e[kind].push(templateId);
+    if (!e) { e = { swung: [], struck: [], seen: new Set() }; this.combatFx.set(pubkey, e); }
+    const key = kind + ":" + creature.id;   // once per creature a round, however often it landed
+    if (e.seen.has(key)) return;
+    e.seen.add(key);
+    e[kind].push(creature.templateId);
   }
 
   public markHurt(creature: Creature, tmpl: MobTemplate, pubkey: string): void {

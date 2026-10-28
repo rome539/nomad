@@ -87,6 +87,20 @@ t("a blow winds up, lands, and comes off it",fr.includes("attack")&&fr.indexOf("
 // the whole movement has to fit inside one four-second round
 t("...and it fits inside the round",ATTACK_S_OF+STAG_OF<4,"attack "+ATTACK_S_OF+"s + up to "+STAG_OF+"s stagger");
 
+// ONE ENTRY, ONE CREATURE (rome, 2026-10-28: hitting one coyote made all of them
+// recoil). The beat names each creature that was hit or swung once, by its kind.
+{
+  const pack = [mk("hill-wolf"), mk("hill-wolf"), mk("hill-wolf")];
+  ctx.set(pack); ctx.mobBeat(null, ["hill-wolf"], null);
+  t("a blow on one of a pack moves that one, not the pack", pack.filter((x) => x.phase === "hit").length === 1, pack.map((x) => x.phase).join(","));
+  const pack2 = [mk("hill-wolf"), mk("hill-wolf"), mk("hill-wolf")];
+  ctx.set(pack2); ctx.mobBeat(["hill-wolf", "hill-wolf"], null, null);
+  t("...and two of them swinging is two swings", pack2.filter((x) => x.phase === "attack").length === 2, pack2.map((x) => x.phase).join(","));
+  ctx.clr();
+  const zsrc = fs.readFileSync(new URL("../src/zone.ts", import.meta.url), "utf8");
+  t("...and the server names each creature once, not each kind", /const key = kind \+ ":" \+ creature\.id;/.test(zsrc) && /e\[kind\]\.push\(creature\.templateId\)/.test(zsrc));
+}
+
 a=mk("_bare");ctx.set([a]);let was=a.phase;ctx.mobBeat(["_bare"],null,null);
 t("no strike pose drawn = pose untouched",a.phase===was);
 a=mk("_bare");ctx.set([a]);ctx.mobBeat(null,null,["_bare"]);

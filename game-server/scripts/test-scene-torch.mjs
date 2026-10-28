@@ -109,6 +109,8 @@ const code = [
   "ctx.weather = function(){ return weatherKind; };",
   "ctx.shelter = SHELTERED;",
   "var fogMasks = null; ctx.setMasks = function(m){ fogMasks = m; };",
+  "var sceneFx; ctx.setFx = function(f){ sceneFx = f; };",
+  "var lampLightEl, fxIndex; ctx.setLamp = function(el, idx){ lampLightEl = el; fxIndex = idx; };",
 ].join("\n");
 new Function("ctx", "_scene", "_sky", "_mobs", "_flood", "_veil", "document", code)(
   ctx, sceneEl, skyEl, mobsEl, floodEl, veilEl, { getElementById: (id) => (id === "fogmixm" ? fogMix : null) });
@@ -175,10 +177,20 @@ console.log("the last of the evening — a light is struck before full dark");
 // night's, and that holds whichever of the hour's pictures the day landed on.
 const skyIs = (got, hour) => got === "/sky/" + hour + ".webp" || got.indexOf("/sky/" + hour + "-") === 0;
 for (const hour of ["dusk", "dawn"]) {
+  ctx.setMasks({ "snow-snowlight": 1 });
   r = paint(hour, "snow", 1);
-  t(hour + ": the torch ground", r.scene === "/room-bg/snow-night-torch.webp", r.scene);
+  // DAWN WITH A TORCH IS DONE AS THE SNOW AT NIGHT IS (rome, 2026-10-28): the
+  // dawn ground, graded, with the torch's light laid on it through its map.
+  if (hour === "dawn") t("dawn: a torch keeps the dawn ground and shows the torch plate where its light falls",
+    r.scene === "/room-bg/snow-day.webp" && r.tint === "t-dawn" && ctx.snowEl.className === "on plate" && /snow-snowlight/.test(ctx.snowEl.style.maskImage)
+    && /snow-night-torch\.webp/.test(ctx.snowEl.style.backgroundImage),
+    r.scene + " class=" + r.tint + " light=" + ctx.snowEl.className + " " + ctx.snowEl.style.backgroundImage);
+  else {
+    t(hour + ": the torch ground", r.scene === "/room-bg/snow-night-torch.webp", r.scene);
+    t("...undimmed by the hour", r.tint === "", "class=" + r.tint);
+  }
+  ctx.setMasks(null);
   t("...under its own sky, not night's", skyIs(r.sky, hour), r.sky);
-  t("...undimmed by the hour", r.tint === "", "class=" + r.tint);
   // THE GROUND GOES BEFORE THE SKY DOES. Unlit, these two stand on the NIGHT
   // plate under their own sky — a dark hillside under a burning one — and not
   // on a noon photograph turned down.
@@ -685,6 +697,56 @@ for (const [w, n, low, ground, tint, sky, mobs, veil] of [
     strip(sceneEl.style.backgroundImage) === "/room-bg/gully-" + ground + ".webp" && sceneEl.className === tint
     && strip(skyEl.style.backgroundImage) === "/sky/after-rain.webp" && skyEl.dataSky === sky
     && mobsEl.className === mobs && veilEl.className === veil, got);
+}
+// A TORCH IN THE RAIN STAYS UNDER THE CLOUD (rome, 2026-10-28).
+// (At dawn the torch's light is laid on the dawn ground, under the dawn's rain shadow.)
+for (const [n, low, ground, tint] of [[1, 0, "night-torch", "t-rain-dark"], [0, 1, "day", "t-rain-dawn"], [0, 2, "night-torch", "t-rain-dusk"]]) {
+  ctx.paint("mountain", "rain", "gully", "rain-torch" + n + low, 1, 0, "", 0, 0, false, n, low);
+  t("a torch in the rain by " + (n ? "night" : low === 1 ? "dawn" : "dusk") + " keeps the cloud's shadow on the floor",
+    strip(sceneEl.style.backgroundImage) === "/room-bg/gully-" + ground + ".webp" && sceneEl.className === tint, strip(sceneEl.style.backgroundImage) + " " + sceneEl.className);
+}
+// ...and with the effects running the shadow is theirs, lifted where the plate
+// is lit, so the plate takes no grade and the torch keeps its strength.
+let fxCloud = null;
+ctx.setFx({ prepare(s, tn, done) { done({}); }, paint(s, tn, p, c) { fxCloud = c; return true; }, stop() {} });
+for (const [n, low, k] of [[1, 0, .62], [0, 2, .58]]) {
+  ctx.paint("mountain", "rain", "gully", "rain-torch-fx" + n + low, 1, 0, "", 0, 0, false, n, low);
+  t("with effects, a torch in the rain by " + (n ? "night" : low === 1 ? "dawn" : "dusk") + " leaves the torch plate undimmed and hands the shadow to the effects",
+    sceneEl.className === "" && fxCloud === k, sceneEl.className + " cloud=" + fxCloud);
+}
+ctx.paint("mountain", "rain", "gully", "rain-fx-day", 1, 0, "", 0, 0, false, 0, 0);
+t("...and no shadow is handed over by day", fxCloud === 1, "cloud=" + fxCloud);
+ctx.setFx(undefined);
+t("the effects lift the cloud's shadow where the plate is lit", /k \*= mix\(cloud, 1\., smoothstep\(/.test(src));
+// THE GATE LANTERNS BURN AS BRIGHT WITHOUT YOUR TORCH (rome, 2026-10-28).
+{
+  const inner = { style: {} }, lamp = { className: "", style: {}, firstChild: inner };
+  ctx.setLamp(lamp, { "gate-gate-night": { t: [[0.86, 0.35, 0.33]] } });
+  ctx.setMasks({ "gate-gate-snowlight": 1 });
+  // [sky, night, low light, torch, the layer's class, what it shows]: the
+  // torch plate's own lantern, the same everywhere and with or without a torch
+  const L = "gate-gate-night-torch";
+  for (const [w, n, low, torch, want, shows] of [
+    ["night", 1, 0, 0, "on", L], ["moon", 1, 0, 0, "on", L], ["blood", 1, 0, 0, "on", L], ["eclipse", 1, 0, 0, "on", L],
+    ["dusk", 0, 2, 0, "on", L], ["dawn", 0, 1, 0, "on", L], ["dawn", 0, 1, 1, "on", L],
+    ["rain", 1, 0, 0, "on", L], ["rain", 0, 2, 0, "on", L], ["rain", 0, 1, 0, "on", L], ["rain", 0, 1, 1, "on", L], ["rain", 0, 0, 0, "on", L], ["rain", 0, 0, 1, "on", L],
+    ["snow", 1, 0, 0, "on", L], ["snow", 0, 2, 0, "on", L], ["snow", 0, 1, 0, "on", L], ["snow", 1, 0, 1, "on", L],
+    ["fog", 0, 1, 0, "on", L], ["wet-dawn", 0, 0, 0, "on", L], ["wet-dawn", 0, 0, 1, "on", L],
+    ["night", 1, 0, 1, "", ""], ["rain", 1, 0, 1, "", ""],
+  ]) {
+    ctx.paint("mountain", w, "gate:gate", "lamp-" + w + n + low + torch, torch, 0, "", 0, 0, false, n, low);
+    t("a gate's lantern in " + w + (n ? " at night" : low === 2 ? " at dusk" : low === 1 ? " at dawn" : w === "rain" ? " by day" : "") + (torch ? " with a torch is the torch's own picture" : " without one is the torch plate's lantern"),
+      lamp.className === want && (!want || /radial-gradient/.test(lamp.style.maskImage) && /gate-gate-snowlight/.test(inner.style.maskImage) && (inner.style.backgroundImage || "").includes(shows)),
+      strip(sceneEl.style.backgroundImage) + " | " + lamp.className + " | " + inner.style.backgroundImage);
+  }
+  t("...and in the snow at night the lantern lies over the torch's light, under the flame's",
+    /<div id="snowlight"[^>]*><\/div>\s*<div id="lamplight"[^>]*><i><\/i><\/div>\s*<canvas id="scene-fx"/.test(src));
+  t("...and a room painted before the light maps arrived is painted again when they do",
+    /fogMasks = m;[\s\S]{0,400}if \(paintScene\.last\) paintScene\.apply\(null, paintScene\.last\);/.test(src)
+    && /paintScene\.last = Array\.prototype\.slice\.call\(arguments\)/.test(src));
+  ctx.paint("mountain", "day", "gate:gate", "lamp-day", 0, 0, "", 0, 0, false, 0, 0);
+  t("...and by day it is not lit", lamp.className === "", lamp.className);
+  ctx.setLamp(undefined, undefined); ctx.setMasks(null);
 }
 ctx.paint("mountain", "rain", "gully", "rain-falls", 0, 0, "", 0, 0, false, 1, 0);
 t("the rain still falls after dark", ctx.weather() === "rain", ctx.weather());
