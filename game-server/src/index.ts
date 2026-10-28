@@ -36,9 +36,16 @@ const PROFILE = {
   website: "https://nomadmud.com",
 };
 
-export default {
+const worker = {
   async fetch(req: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
+    // A HEAD IS A GET WITHOUT THE BODY (2026-10-27). Every route asks for GET, so
+    // a HEAD fell through all of them to the 404, and a crawler or link checker
+    // asking "is this page here" was told no.
+    if (req.method === "HEAD") {
+      const res = await worker.fetch(new Request(req, { method: "GET" }), env, ctx);
+      return new Response(null, { status: res.status, statusText: res.statusText, headers: res.headers });
+    }
 
     const url = new URL(req.url);
     const { pathname } = url;
@@ -413,3 +420,4 @@ export default {
     ).bind(cutoff).run();
   },
 } satisfies ExportedHandler<Env>;
+export default worker;

@@ -21,7 +21,8 @@ export const PAGE = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>NOMAD — Multiplayer Text Dungeon on Nostr</title>
 <link rel="canonical" href="https://nomadmud.com/">
-<meta name="description" content="A living text dungeon on Nostr. The dead stay dead.">
+<meta name="description" content="NOMAD is a free multiplayer text dungeon, a MUD, played in the browser over Nostr. A living world where creatures hunt and remember you, wounds stay, and the dead stay dead.">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"NOMAD","url":"https://nomadmud.com/","description":"A free multiplayer text dungeon (MUD) played in the browser over Nostr: a living world where creatures hunt and remember you, wounds stay, and the dead stay dead.","genre":["MUD","Text adventure","Roguelike","Extraction"],"playMode":"MultiPlayer","gamePlatform":"Web browser","applicationCategory":"Game","operatingSystem":"Any","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"image":"https://nomadmud.com/og.jpg?v=4"}</script>
 <link rel="icon" type="image/png" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
@@ -1852,7 +1853,9 @@ export const PAGE = `<!doctype html>
     gap: 14px; text-align: center; padding: 24px; padding-bottom: 18vh; transition: opacity .9s ease;
   }
   #threshold.gone { opacity: 0; pointer-events: none; }
-  #thr-title { color: var(--gold); font-size: clamp(48px, 5.5vw, 68px); letter-spacing: .16em; font-weight: 700; line-height: 1; margin-bottom: 0; }
+  /* A real heading (2026-10-27: the page had none for search to read), dressed
+     exactly as the div it replaced. */
+  #thr-title { color: var(--gold); font-size: clamp(48px, 5.5vw, 68px); letter-spacing: .16em; font-weight: 700; line-height: 1; margin: 0; font-family: inherit; }
   #thr-line { color: var(--dim); font-size: 14px; max-width: 46ch; line-height: 1.5; }
   #thr-enter {
     margin-top: 56px; font-family: inherit; font-size: 17px; letter-spacing: .08em;
@@ -1874,6 +1877,9 @@ export const PAGE = `<!doctype html>
     position: absolute; left: 0; right: 0; bottom: 20px; z-index: 2;
     color: var(--dim); font-size: 12.5px; text-align: center; padding: 0 16px;
   }
+  /* What NOMAD is, in plain words, for a stranger and for search (2026-10-27).
+     Inside the pinned footer, so the centred stack does not move. */
+  #thr-about { margin: 0 auto 6px; max-width: 64ch; line-height: 1.5; font-size: 12px; opacity: .8; }
   #thr-guide { color: var(--bone); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   #thr-guide:hover, #thr-guide:focus-visible { color: var(--cream); outline: none; }
   /* ---- the door's news: one live line under the keys, and the reckoning ----
@@ -2399,11 +2405,11 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <span id="rightbar"><span id="fx"></span><span id="idbtn"><span id="hp">keys</span> <span class="caret">&#9662;</span></span></span>
   </div>
   <div id="threshold">
-    <div id="thr-title">NOMAD</div>
+    <h1 id="thr-title">NOMAD</h1>
     <div id="thr-line">a shared dungeon, alive whether or not anyone is watching</div>
     <button id="thr-enter" type="button">enter</button>
     <button id="thr-reck" type="button">the reckoning</button>
-    <div id="thr-help">first time? <a id="thr-guide" href="/guide">how it works</a></div>
+    <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser over Nostr. The creatures hunt, sleep and remember you, wounds stay, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a></div>
   </div>
   <div id="reckm" role="dialog" aria-modal="true" aria-labelledby="recktitle">
     <div class="lbox">
@@ -10110,7 +10116,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "113";      // /mob/      strips and their eye layers
+var MOB_V  = "114";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "47";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
@@ -14065,7 +14071,7 @@ var MOB_ANIM = {
   "wood-stag":   { n: 8, aspect: 1.045, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "nomad":   { n: 14, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13} },
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-woodward":                { n: 8, aspect: 1.014, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-woodward":                { n: 8, aspect: 1.153, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-sapper":                  { n: 8, aspect: 1.076, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7,"recover":1} },
   "the-keeper-of-the-holding":   { n: 8, aspect: 0.986, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-gaunt":                   { n: 8, aspect: 1.005, f: {"idle":0,"alert":1,"cast-about":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },

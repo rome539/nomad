@@ -60,4 +60,13 @@ try {
   assert.equal(forwarded,3,'failed snapshots are not cached or relabeled as successful');
  } finally {if(previous===undefined)delete globalThis.caches;else globalThis.caches=previous;}
  console.log('PASS public rate limits fail closed, auth has a separate budget, build pings are throttled, and world caching preserves failures');
+ // A HEAD is a GET without the body (2026-10-27): it used to fall through every route to the 404.
+ for(const route of ['/','/guide']){
+  const get=await worker.fetch(new Request('https://audit.invalid'+route),env), head=await worker.fetch(new Request('https://audit.invalid'+route,{method:'HEAD'}),env);
+  assert.equal(get.status,200,route+' answers GET');
+  assert.equal(head.status,get.status,route+' answers HEAD the same as GET');
+  assert.equal(head.headers.get('content-type'),get.headers.get('content-type'),route+' with the same type');
+  assert.equal(head.body,null,route+' and no body');
+ }
+ console.log('PASS a HEAD answers like a GET, without the body');
 }finally{await rm(dir,{recursive:true,force:true})}
