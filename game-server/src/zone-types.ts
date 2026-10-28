@@ -191,6 +191,7 @@ export interface Creature {
   walkingTo?: string;  // this thing is GOING somewhere far off: every wander step closes the distance (roomDist), and it stops when it arrives. The watering run's wire, generalised — a hyena walks to water, a carrier walks a road, and whatever the Crossing puts on the water will walk it too.
   avoids?: { roomId: string; until: number }[]; // place-fear: rooms this one steers around (a rat's bad memory, a thief's warning)
   calledTo?: string; // call-bus guard: it was SUMMONED here — it never calls from this room (a call must never trigger a call)
+  marching?: string; // the crab migration: the shore it came up out of, and walks back to when the march turns (events.ts tickCrabs)
   leavesAt?: number; // TRANSIENT creatures have somewhere else to be: the ms they walk off the map for good (the chainman)
   fled?: number;        // rooms run in the CURRENT rout — reset when it gets clean away
   fledAt?: number;      // when it last ran a room of it: the picture shows flight only just after (FLEE_SHOWN_MS)

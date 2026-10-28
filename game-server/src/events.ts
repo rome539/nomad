@@ -60,6 +60,8 @@ import {
   SPATE_ROOMS, SPATE_COURSE, SPATE_INDEX, SPATE_BITE, SPATE_SWEEP_ODDS, SPATE_CARRY_ODDS, ROAD_FORDS,
   CARRIER_TELEGRAPH_MS, CARRIER_ACTIVE_MIN_MS, CARRIER_ACTIVE_MAX_MS, CARRIER_AFTERMATH_MS,
   CARRIER_FROM, CARRIER_TO, CARRIER_STRIDE, CARRIER_SLOW_MULT, CARRIER_ESCORT, CARRIER_ESCORT_ROOMS, CARRIER_SATCHEL,
+  CRAB_TELEGRAPH_MS, CRAB_ACTIVE_MS, CRAB_RETREAT_MS, CRAB_HORDE, CRAB_WAVE, CRAB_WAVE_MS, CRAB_DEVIL_ODDS, CRAB_STRIDE,
+  CRAB_ROAD_MOUTHS, CRAB_ROAD_REACH, CRAB_BANDS,
   SPATE_SWEEP_MIN, SPATE_SWEEP_MAX, SPATE_TELEGRAPH_MS, SPATE_ACTIVE_MIN_MS, SPATE_ACTIVE_MAX_MS, SPATE_AFTERMATH_MS,
   FORTRESS_BANDS, SURFACE_BANDS, DEEP_HEARD_BANDS, KEEP_HEARD_BANDS, FEN_HEARD_BANDS, WANT_HEARD_BANDS, GLOAM_HEARD_BANDS, MOUNTAIN_HEARD_BANDS,
   RUT_TELEGRAPH_MS, RUT_ACTIVE_MIN_MS, RUT_ACTIVE_MAX_MS, RUT_AFTERMATH_MS,
@@ -117,6 +119,9 @@ const POOL: [string, number, string][] = [
   // It keeps its own clock now, about once a day (tickEscape).
   // THE CROSSING — 203 rooms whose whole design is a water that moves.
   ["sea", 3, "crossing"],
+  // THE CRAB MIGRATION takes the Crossing AND the roads up from it, so it
+  // claims both grounds ("+" joins them) and waits for both to be free.
+  ["crabs", 2, "crossing+road"],
   // THE WOOD (mig-less, 2026-08-06) — 170 rooms that had no weather of their own
   ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"], ["mast", 2, "wood"],
   // THE DEN GROUND — 60 rooms, likewise
@@ -158,7 +163,7 @@ function bandsBusy(z: ZoneDO): { any: boolean; bands: Set<string> } {
   let any = false;
   for (const [id, , band] of POOL) {
     if (phaseOf(z, id) === "idle") continue;
-    if (band === ANY) any = true; else bands.add(band);
+    if (band === ANY) any = true; else for (const b of band.split("+")) bands.add(b);
   }
   return { any, bands };
 }
@@ -928,6 +933,8 @@ export function skyClause(z: ZoneDO, roomId: string): string {
   // The run is visible all night; the making water is when it is worth being
   // here, so the room SAYS which of the two you are standing in rather than
   // hiding the difference in a multiplier.
+  const crabs = crabsOn(z, roomId);
+  if (crabs !== "idle") return " " + CRAB_LINES[crabs];
   if (region === "crossing" && eelRunOn(z, roomId)) {
     return eelRunFlooding(z, roomId)
       ? " The water is full of eels — silver, moving, all of them going the same way — and the flood is under them and pushing. This is the hour of it."
@@ -1113,6 +1120,8 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
       default: break;
     }
   }
+  const crabs = crabsOn(z, roomId);
+  if (crabs !== "idle") return CRAB_LINES[crabs];
   if (z.world!.rooms.get(roomId)?.region === "crossing" && eelRunOn(z, roomId)) {
     return eelRunFlooding(z, roomId)
       ? "The water is full of eels — silver, moving, all of them going the same way — and the flood is under them and pushing. This is the hour of it."
@@ -1169,6 +1178,18 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
 
 // Ambience while the sky is doing something (zone's ambientLine reads this
 // first for outdoor rooms; null falls through to the normal pools).
+// The crab migration in the room text and the sky probe (crabsOn says where).
+const CRAB_LINES: Record<string, string> = {
+  telegraph: "Out on the strand the weed is clicking, in more places than you can count, and it does not stop.",
+  active: "The ground is moving. Crabs, everywhere you look, all of them sideways and all of them going inland.",
+  aftermath: "The crabs are going back, all of them the one way, toward the water.",
+};
+const CRAB_AMBIENT = [
+  "A crab comes over the stones at your feet, sideways, and three more behind it.",
+  "The clicking is everywhere, claws on stone, the whole ground at it.",
+  "Something nips at your boot and is gone sideways before you can look.",
+  "The crabs go on past, inland, as if you were a rock they had to go round.",
+];
 const RAIN_AMBIENT = [
   "Rain runs off everything that still has an edge.",
   "The downpour flattens the briars and drums on the open ground.",
@@ -1340,6 +1361,7 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
     if (snowed(z, roomId)) return pick(SNOW_AMBIENT);
   }
   if (!OUTDOOR_ROOMS.has(roomId)) return null;
+  if (crabsOn(z, roomId) === "active") return pick(CRAB_AMBIENT);
   if (region === "crossing" && eelRunOn(z, roomId)) return pick(EEL_RUN_AMBIENT);
   const p = wxPhase(z, "rain", roomId);
   if (p === "active") return pick(RAIN_AMBIENT);
@@ -1563,6 +1585,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickLights(z, now);
   await tickSpate(z, now);
   await tickCarrier(z, now);
+  await tickCrabs(z, now);
   await tickCrows(z, now);
   await tickExhale(z, now);
   await tickSong(z, now);
@@ -2068,6 +2091,148 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
   }
 }
 
+// ---- THE CRAB MIGRATION (the Crossing and the roads) ----
+// See zone-data CRAB_* for the shape. The march is real crabs, so everything
+// the world already does to a crab (a fight, a gull, a fox) it does to these;
+// the arc only puts them down, points them somewhere, and takes back what is
+// left at the end.
+
+// The ground the march covers: all of the Crossing, and the road up from each
+// of its two mouths as far as CRAB_ROAD_REACH. Built once per world.
+const crabGroundOf = new WeakMap<object, Set<string>>();
+function crabGround(z: ZoneDO): Set<string> {
+  const world = z.world!;
+  let ground = crabGroundOf.get(world);
+  if (ground) return ground;
+  ground = new Set<string>();
+  for (const [id, r] of world.rooms) if (r.region === "crossing") ground.add(id);
+  const dist = new Map<string, number>();
+  const queue = CRAB_ROAD_MOUTHS.filter((r) => world.rooms.has(r));
+  for (const r of queue) dist.set(r, 0);
+  while (queue.length) {
+    const at = queue.shift()!;
+    ground.add(at);
+    const d = dist.get(at)!;
+    if (d >= CRAB_ROAD_REACH) continue;
+    for (const e of world.exits.get(at) ?? []) {
+      if (e.key_item || dist.has(e.to_room) || world.rooms.get(e.to_room)?.region !== "road") continue;
+      dist.set(e.to_room, d + 1);
+      queue.push(e.to_room);
+    }
+  }
+  for (const r of world.safeRooms) ground.delete(r);
+  for (const r of world.entryRooms) ground.delete(r);
+  crabGroundOf.set(world, ground);
+  return ground;
+}
+
+// The shores the coast's own crabs come from: where the march comes up.
+function crabShores(z: ZoneDO): string[] {
+  const ground = crabGround(z);
+  const shores = new Set<string>();
+  for (const s of z.world!.mobSpawns) {
+    if ((s.template_id === "wrack-crab" || s.template_id === "devil-crab") && ground.has(s.room_id)) shores.add(s.room_id);
+  }
+  return [...shores];
+}
+
+// Is this room under the march? (the room text, the ambient)
+export function crabsOn(z: ZoneDO, roomId: string): EventState["phase"] {
+  const p = phaseOf(z, "crabs");
+  if (p === "idle") return p;
+  if (p === "telegraph") return z.world!.rooms.get(roomId)?.region === "crossing" ? p : "idle";
+  return crabGround(z).has(roomId) ? p : "idle";
+}
+
+// A crab on the march goes for anyone it shares a room with (ai.ts reads this
+// on your entry and on its arrival). Once the march turns it only wants the sea.
+export function crabMarching(z: ZoneDO, creature: { marching?: string }): boolean {
+  return !!creature.marching && phaseOf(z, "crabs") === "active";
+}
+
+function crabTo(z: ZoneDO): string {
+  const ground = [...crabGround(z)];
+  return ground[randInt(0, ground.length - 1)];
+}
+
+function crabWave(z: ZoneDO, st: EventState, now: number): void {
+  const ids = held(st);
+  const shores = crabShores(z);
+  if (!shores.length) return;
+  for (let i = 0; i < CRAB_WAVE && ids.length < CRAB_HORDE; i++) {
+    const shore = shores[randInt(0, shores.length - 1)];
+    const id = hatch(z, chance(CRAB_DEVIL_ODDS) ? "devil-crab" : "wrack-crab", shore, now, CRAB_STRIDE);
+    if (!id) continue;
+    const c = z.creatures.get(id)!;
+    c.marching = shore;
+    c.walkingTo = crabTo(z);
+    ids.push(id);
+  }
+  hold(st, ids);
+  st.moveAt = ids.length < CRAB_HORDE ? now + CRAB_WAVE_MS : undefined; // the next lot up out of the sea
+}
+
+export async function tickCrabs(z: ZoneDO, now: number): Promise<void> {
+  let st = z.events.get("crabs");
+  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("crabs", st); }
+  const inCrossing = (roomId: string) => z.world!.rooms.get(roomId)?.region === "crossing";
+  const onGround = (roomId: string) => crabGround(z).has(roomId);
+
+  // THEY KEEP WALKING. Each crab is pointed at a room of the march's ground and,
+  // arriving, is pointed at another; when the march turns, each is pointed home.
+  if (st.phase === "active" || st.phase === "aftermath") {
+    if (st.phase === "active" && st.moveAt && now >= st.moveAt) crabWave(z, st, now);
+    for (const id of held(st)) {
+      const c = z.creatures.get(id);
+      if (!c || !c.marching || c.target || (c.eatingIn === c.roomId && (c.eatingUntil ?? 0) > now)) continue; // a crab at a meal finishes it
+      if (st.phase === "aftermath") c.walkingTo = c.roomId === c.marching ? undefined : c.marching;
+      else if (!c.walkingTo) c.walkingTo = crabTo(z);
+      if (c.walkingTo) c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(CRAB_STRIDE[0], CRAB_STRIDE[1]));
+    }
+  }
+
+  if (now < st.until) return;
+  switch (st.phase) {
+    case "idle": {
+      st.phase = "telegraph";
+      st.until = now + CRAB_TELEGRAPH_MS;
+      feedWhere(z, inCrossing, "Out on the strand the weed starts to click, in one place and then in a hundred, and it does not stop.");
+      z.roomFeedBands(new Set(["road"]), "Every gull on the coast has gone down to the shore at once, screaming, and stayed there.", "evt");
+      break;
+    }
+    case "telegraph": {
+      st.phase = "active";
+      st.until = now + CRAB_ACTIVE_MS;
+      st.data = undefined;
+      crabWave(z, st, now);
+      if (!held(st).length) { st.phase = "idle"; st.until = NEVER; st.moveAt = undefined; break; }
+      feedWhere(z, inCrossing, "The crabs are coming up out of the sea. Not some of them. All of them, sideways, over the weed and the stones, and they are coming inland.");
+      z.roomFeedBands(new Set(["road"]), "Word comes up the road from the shore: the crabs are out of the sea, the whole coast of them, and they are on the road.", "evt");
+      break;
+    }
+    case "active": {
+      st.phase = "aftermath";
+      st.until = now + CRAB_RETREAT_MS;
+      st.moveAt = undefined;
+      feedWhere(z, onGround, "The march turns. Every crab on the move stops where it is, and then they are all going back the way they came, toward the water.");
+      break;
+    }
+    case "aftermath": {
+      // What is still out goes into the water and the weed. A crab somebody
+      // killed is not here to take back, and the world keeps that.
+      const left = new Set<string>();
+      for (const id of held(st)) { const c = z.creatures.get(id); if (c) left.add(c.roomId); }
+      recall(z, held(st));
+      for (const roomId of left) z.roomFeed(roomId, "The last of the crabs go down into the weed and the water, and are gone.", undefined, false, "evt");
+      feedWhere(z, onGround, "The ground is still again. The crabs have gone back to the sea.");
+      st.data = undefined;
+      st.phase = "idle";
+      st.until = NEVER;
+      break;
+    }
+  }
+}
+
 // ---- THE SPATE (the east road) ----
 // The beck rises and takes the low way. See zone-data SPATE_COURSE for the full
 // reasoning; the short version is that the east road was built as three
@@ -2417,7 +2582,7 @@ function tickRoll(z: ZoneDO, now: number): void {
     z.events.set(arcId, ev);
     return;
   }
-  const open = POOL.filter(([, , band]) => band === ANY ? (!busy.any && !busy.bands.size) : (!busy.any && !busy.bands.has(band)));
+  const open = POOL.filter(([, , band]) => band === ANY ? (!busy.any && !busy.bands.size) : (!busy.any && !band.split("+").some((b) => busy.bands.has(b))));
   if (!open.length) return;
   const total = open.reduce((sum, [, w]) => sum + w, 0);
   let n = randInt(1, total);

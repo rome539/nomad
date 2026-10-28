@@ -135,6 +135,9 @@ export const GROUND_ROOTED = new Set<string>([
   "watercress", "sloes", "beech-mast", "hoof-fungus", "cave-lichen", "cave-nettle",
   "grave-moss", "crowberries", "windfall-pears", "pale-cap", "bloodwort", "bog-moss",
   "melt-water", "well-water",
+  // mig 342: the orchards, the bramble and the hazel, and the shore's shellfish
+  // (they live on that floor; nobody left them there)
+  "windfall-apples", "blackberries", "hazelnuts", "samphire", "mussels", "cockles", "limpets",
 ]);
 // THE LAST HAND (rome, 2026-09-01: give gear a purpose when you find it on the
 // floor — like picking it off a skeleton).
@@ -1349,7 +1352,9 @@ export const RELIABLE_GEAR = new Set(["loose-rock"]); // the starter tool: exemp
 // wolf-earth were take-wait-take faucets — exactly what the law was written to
 // kill (mig 180's own comment claimed the pelt rode the dice; the code never
 // gave it to it). These three are "sometimes there" now, like the gear.
-export const DICE_REGROW = new Set(["wolf-pelt", "toll-token", "raven-feather"]);
+// The den's three materials ride it too (mig 343): the world gives them up
+// now and then, and the keeper's shelf stays the reliable place to buy them.
+export const DICE_REGROW = new Set(["wolf-pelt", "toll-token", "raven-feather", "split-wood", "leather-offcuts", "bone-offcuts"]);
 // ...but "always comes back" at the GATE has no drain out in the world: a rock
 // carried off and left where you die (or dropped in a room that doesn't grow
 // them) is net-new — the gate refills behind it, and a rock isn't edible, so
@@ -8457,6 +8462,26 @@ export const CARRIER_ESCORT_ROOMS = ["the-hollow-way", "the-cut-bank", "the-verg
 // only honest way to price a decision like this one.
 export const CARRIER_SATCHEL = ["dry-cigarettes", "toll-token", "iron", "linen-strips"];
 
+// ---- THE CRAB MIGRATION (the Crossing and the roads, 2026-10-28) --------------
+// rome asked for a horde of crabs that takes the Crossing and the roads over.
+// They are real crabs, hatched out of the shores the coast's own crabs live on,
+// and each one walks somewhere: a room of the Crossing, or the road up from it
+// through one of its two road mouths. While the march is on they go for anyone
+// they share a room with. When it turns they walk back to the shore they came
+// out of, and what is still standing at the end goes into the water. What a
+// player killed stays killed, and the gulls and the foxes get the rest.
+export const CRAB_TELEGRAPH_MS = 6 * 60_000;     // the clicking, before the crabs
+export const CRAB_ACTIVE_MS = 45 * 60_000;       // the march
+export const CRAB_RETREAT_MS = 10 * 60_000;      // the walk back to the water
+export const CRAB_HORDE = 48;                    // crabs out, all told
+export const CRAB_WAVE = 16;                     // ...coming up this many at a time
+export const CRAB_WAVE_MS = 4 * 60_000;          // ...this far apart
+export const CRAB_DEVIL_ODDS = 0.15;             // one in seven or so is a velvet crab
+export const CRAB_STRIDE: [number, number] = [8000, 20_000]; // sideways, and quicker than you would think
+export const CRAB_ROAD_MOUTHS = ["the-far-shore-stone", "the-causey-foot"]; // where the Crossing meets the roads
+export const CRAB_ROAD_REACH = 10;               // how far up the roads the march gets
+export const CRAB_BANDS = new Set<string>(["crossing", "road"]);
+
 // ---- THE SPATE (the east road's own arc, 2026-08-10) --------------------------
 // THE BECK RISES. The east road was built as three independent routes because a
 // corridor is a corridor — and redundancy that never gets tested is just extra
@@ -9040,6 +9065,26 @@ export const FAT_DROPS: Record<string, number> = {
   "bull-seal": 0.35,
   "wild-boar": 0.2,
   "old-boar": 0.3,
+};
+// THE DEN'S MATERIALS OFF A KILL (rome, 2026-10-28: the keeper should not be
+// the only place they come from). Cut from the body like the fat, on top of
+// what each already drops. Leather from what has a hide worth cutting; bone and
+// horn from what carries horn, tusk, antler or shell, and from the walking dead.
+// The bigger the animal, the likelier.
+export const LEATHER_DROPS: Record<string, number> = {
+  "roe-deer": 0.25, "white-roe": 0.3, "red-hind": 0.35, "red-stag": 0.5, "wood-stag": 0.5,
+  "wild-boar": 0.35, "old-boar": 0.5, "feral-goat": 0.3, "old-billy": 0.45,
+  "grey-wolf": 0.25, "hill-wolf": 0.3, "dire-wolf": 0.4, "lead-wolf": 0.4,
+  "drove-dog": 0.2, "lead-dog": 0.25, "masterless-dog": 0.2, "a-fold-dog": 0.2, "marsh-hound": 0.2, "coyote": 0.2,
+  "hill-fox": 0.2, "snow-fox": 0.2, "grave-hyena": 0.25, "dire-hyena": 0.35,
+  "lynx": 0.35, "wildcat": 0.2, "glutton": 0.35, "brown-bear": 0.5, "cave-lion": 0.5,
+  "grey-seal": 0.35, "bull-seal": 0.45, "otter": 0.15, "dog-otter": 0.2, "wood-sloth": 0.2,
+};
+export const BONE_DROPS: Record<string, number> = {
+  "roe-deer": 0.25, "white-roe": 0.3, "red-hind": 0.25, "red-stag": 0.5, "wood-stag": 0.5,
+  "wild-boar": 0.35, "old-boar": 0.5, "feral-goat": 0.35, "old-billy": 0.5,
+  "wrack-crab": 0.1, "devil-crab": 0.15,
+  "skeleton": 0.3, "twice-dead": 0.35, "thrice-dead": 0.35, "bone-knight": 0.4, "bone-breaker": 0.45,
 };
 // The longbrand (088): the rare torch — the hammerstone's pattern on fire.
 // Garrison-made for the night watch: heartwood dipped and dipped again until
@@ -10258,7 +10303,7 @@ export const FOOD_SPOIL_HEAL_MULT = 0.5;              // spoiled food is HONEST:
 // going soft and grey in a pack in two and a half hours. They are separated out
 // only so the fire can refuse them in words that are true of them (a mast has
 // not "been through a barrel"); everywhere else they are simply FOOD_KEEPS.
-export const NATURAL_KEEPS = new Set(["gull-egg", "beech-mast"]);
+export const NATURAL_KEEPS = new Set(["gull-egg", "beech-mast", "hazelnuts"]);
 // Water does not go off — melt-water keeps for the same reason well-water does
 // (268). The berries are NOT here: they are picked fruit and they spoil.
 export const FOOD_KEEPS = new Set(["smoked-haunch", "salt-fish", "hardtack", "well-water", "melt-water", "dried-meat", ...NATURAL_KEEPS]);
@@ -10413,10 +10458,17 @@ export const COOK_RECIPES: Record<string, string> = {
   "cave-fish":      "grilled-cave-fish", // 11 -> 16
   "pale-eel":       "grilled-eel",       // 16 -> 21
   "marrow-lamprey": "roast-lamprey",     // 20 -> 25
+  // THE SHORE'S SHELLFISH AND THE ORCHARD'S APPLES (mig 342): the oldest
+  // fire on a shore, and an apple in the embers.
+  "mussels":         "steamed-mussels",   //  4 -> 9
+  "cockles":         "boiled-cockles",    //  3 -> 8
+  "limpets":         "roast-limpets",     //  2 -> 7
+  "windfall-apples": "baked-apples",      //  5 -> 10
   // NOT HERE, on purpose: salt-fish, smoked-haunch, dried-meat, hardtack — all
   // FOOD_KEEPS, all already through a fire or a barrel. And no raw MEAT: the
   // haunches are the racks' business and always have been. This is the fire on
-  // the shore, and what you put on it is what you pulled out of the water.
+  // the shore, and what you put on it is what you pulled out of the water
+  // (and, since 342, an orchard's windfalls).
 };
 // COOKED FOOD KEEPS LONGER THAN RAW — but it still goes (rome, 2026-08-13: the
 // new food is spoiling too fast). When the fire shipped, every cooked form

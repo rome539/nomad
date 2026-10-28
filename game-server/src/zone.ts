@@ -138,7 +138,7 @@ import { FORGE_STOCK,
   SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
-  LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
+  LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT,
   MARKERS, MARK_MS, MARK_HEED_MULT, MARK_CALL_ODDS, SWEEPERS,
   FERRY_DRAG_ROOM, FERRY_DRAG_ODDS, FERRY_DRAG_MAX, SLOW_TO_NOTICE, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, RAVEN_NEST_ROOMS, RAVEN_SCOOPERS,
@@ -7195,10 +7195,11 @@ export class ZoneDO implements DurableObject {
       }
     }
 
-    // FAT, for the lantern's well (zone-data FAT_DROPS), on top of the rest.
-    const fatOdds = FAT_DROPS[tmpl.id];
-    if (fatOdds && chance(fatOdds)) {
-      const ft = this.world!.itemTemplates.get(FAT_ITEM);
+    // FAT, for the lantern's well (zone-data FAT_DROPS), and the den's leather
+    // and bone (LEATHER_DROPS, BONE_DROPS), each on top of the rest.
+    for (const [cutId, odds] of [[FAT_ITEM, FAT_DROPS[tmpl.id]], [LEATHER_ID, LEATHER_DROPS[tmpl.id]], [BONE_BITS_ID, BONE_DROPS[tmpl.id]]] as const) {
+      if (!odds || !chance(odds)) continue;
+      const ft = this.world!.itemTemplates.get(cutId);
       if (ft) {
         if (await this.grantItem(killer, ft.id)) {
           this.send(killer, `You cut ${ft.name} from ${tmpl.name}.`);

@@ -39,7 +39,7 @@ try {
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
         "export {biggestFields} from './simstore';",
-        "export {wxCovers, tickEscape} from './events';",
+        "export {wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn} from './events';",
         "export * as study from './study';",
         "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
         "export * as rising from './rising';",
@@ -59,7 +59,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, provokeGrudges, creatureTell, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, provokeGrudges, creatureTell, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -726,6 +726,58 @@ try {
     for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.fell(z, t0 + 5 * H); ratking.roll(z, t0 + 5.2 * H); fresh(); }
     assert.ok(noise.length > 10, 'the dead king\'s air still sets people coughing: ' + noise.length);
   });
+  await checkAsync('the crab migration comes up, takes the crossing and the road, and goes back (2026-10-28)', async () => {
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const aiSrc = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    const num = (n) => Number(new RegExp(`export const ${n} = ([0-9_ *]+);`).exec(zd)[1].replace(/_/g, '').split('*').reduce((a, b) => a * Number(b), 1));
+    const pool = ev.match(/const POOL: \[string, number, string\]\[\] = \[([\s\S]*?)\n\];/)[1].replace(/\/\/.*$/gm, '');
+    assert.match(pool, /\["crabs", 2, "crossing\+road"\]/, 'drawn on the roll, holding both grounds');
+    assert.equal((aiSrc.match(/events\.crabMarching\(z, creature\)/g) ?? []).length >= 3, true, 'it goes for you on your entry and on its arrival');
+    assert.match(aiSrc, /if \(c\.marching\) continue;\n      const line = caps\.has/, 'the march does not count against the shore\'s own crabs');
+    const WAVE = num('CRAB_WAVE'), HORDE = num('CRAB_HORDE'), REACH = num('CRAB_ROAD_REACH');
+    // a shore, a strand, the causey foot and a road running on past the reach
+    const rooms = new Map([['the-wrack-line', { region: 'crossing' }], ['the-strand', { region: 'crossing' }], ['the-causey-foot', { region: 'road' }]]);
+    const exits = new Map([['the-wrack-line', [{ to_room: 'the-strand' }]], ['the-strand', [{ to_room: 'the-wrack-line' }, { to_room: 'the-causey-foot' }]]]);
+    let prev = 'the-causey-foot';
+    for (let i = 1; i <= REACH + 3; i++) {
+      const r = 'road-' + i; rooms.set(r, { region: 'road' });
+      exits.set(prev, [...(exits.get(prev) ?? []), { to_room: r }]); exits.set(r, [{ to_room: prev }]); prev = r;
+    }
+    const tmpl = (id) => [id, { id, max_hp: 16 }];
+    const z = { events: new Map(), creatures: new Map(), sessions: new Map(),
+      world: { rooms, exits, safeRooms: new Set(), entryRooms: new Set(), mobTemplates: new Map([tmpl('wrack-crab'), tmpl('devil-crab')]),
+        mobSpawns: [{ template_id: 'wrack-crab', room_id: 'the-wrack-line' }, { template_id: 'grey-wolf', room_id: 'the-strand' }] },
+      roomFeedBands() {}, roomFeed() {}, noteCreaturesChanged() {}, refreshRoomCtx() {} };
+    let t = 1_000_000_000_000;
+    z.events.set('crabs', { phase: 'idle', until: t });
+    await tickCrabs(z, t);
+    assert.equal(z.events.get('crabs').phase, 'telegraph', 'the clicking first');
+    assert.equal(crabsOn(z, 'the-strand'), 'telegraph', 'heard on the strand');
+    assert.equal(crabsOn(z, 'the-causey-foot'), 'idle', 'not yet on the road');
+    t = z.events.get('crabs').until; await tickCrabs(z, t);
+    assert.equal(z.events.get('crabs').phase, 'active');
+    const crabs = () => [...z.creatures.values()];
+    assert.equal(crabs().length, WAVE, 'the first wave comes up');
+    assert.ok(crabs().every((c) => c.roomId === 'the-wrack-line' && c.marching === 'the-wrack-line'), 'out of the shore the crabs live on');
+    assert.ok(crabs().every((c) => crabsOn(z, c.walkingTo) === 'active'), 'each walking somewhere on the march\'s ground');
+    assert.ok(crabs().every((c) => crabMarching(z, c)), 'and going for anyone in the way');
+    assert.equal(crabsOn(z, 'road-' + REACH), 'active', 'the road up from the mouth is taken');
+    assert.equal(crabsOn(z, 'road-' + (REACH + 1)), 'idle', 'only so far up it');
+    for (let i = 0; i < Math.ceil(HORDE / WAVE) + 1; i++) { t += num('CRAB_WAVE_MS'); await tickCrabs(z, t); }
+    assert.equal(crabs().length, HORDE, 'wave after wave, to the whole horde and no more');
+    const dead = crabs()[0]; z.creatures.delete(dead.id); // somebody killed one
+    for (const c of crabs()) { c.roomId = 'road-3'; c.walkingTo = 'road-5'; } // out on the road when the march turns
+    t = z.events.get('crabs').until; await tickCrabs(z, t);
+    assert.equal(z.events.get('crabs').phase, 'aftermath', 'the march turns');
+    await tickCrabs(z, t + 1);
+    assert.ok(crabs().every((c) => !crabMarching(z, c)), 'and stops going for people');
+    assert.ok(crabs().every((c) => c.walkingTo === c.marching), 'every crab walks back to its shore');
+    t = z.events.get('crabs').until; await tickCrabs(z, t);
+    assert.equal(z.creatures.size, 0, 'what is left goes into the sea');
+    assert.equal(z.events.get('crabs').phase, 'idle');
+    assert.equal(crabsOn(z, 'the-strand'), 'idle');
+  });
   await checkAsync('the gaunt gets loose on its own clock, about once a day, not on the roll (2026-10-27)', async () => {
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     const pool = ev.match(/const POOL: \[string, number, string\]\[\] = \[([\s\S]*?)\n\];/)[1].replace(/\/\/.*$/gm, '');
@@ -777,8 +829,8 @@ try {
   });
   check('the creature hooks ask the rat king', () => {
     const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
-    assert.match(ai, /if \(ratking\.spares\(z, creature, session\)\) continue;\s*const hostile = AGGRESSIVE\.has\(creature\.templateId\) \|\| bloodWake \|\| ratking\.bold\(z, creature\);/);
-    assert.match(ai, /remembers\(z, creature, s\.pubkey, now\) \|\| ratking\.bold\(z, creature\)\)\s*&& !ratking\.spares\(z, creature, s\)/);
+    assert.match(ai, /if \(ratking\.spares\(z, creature, session\)\) continue;\s*const hostile = AGGRESSIVE\.has\(creature\.templateId\) \|\| bloodWake \|\| ratking\.bold\(z, creature\)(?: \|\| events\.crabMarching\(z, creature\))?;/);
+    assert.match(ai, /remembers\(z, creature, s\.pubkey, now\) \|\| ratking\.bold\(z, creature\)(?: \|\| events\.crabMarching\(z, creature\))?\)\s*&& !ratking\.spares\(z, creature, s\)/);
   });
 
   // ---------------------------------------------------------------- the cough

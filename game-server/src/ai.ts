@@ -731,6 +731,12 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
       const mark = [...z.sessions.values()].find((s) => s.pubkey === creature.target && !z.outOfWorld(s));
       return mark ? `fixed on ${mark.name}` : "on the hunt";
     }
+    // THE CRAB MIGRATION: one of the march, going where they are all going.
+    if (creature.marching && !eatingNow(creature)) {
+      const p = events.phaseOf(z, "crabs");
+      if (p === "active") return "on the march with all the others, sideways and inland, claws up";
+      if (p === "aftermath") return "going back toward the water with all the others, sideways and quick";
+    }
     // A MEAL TAKES TIME (EAT_SHOW_MS): the animal over its food reads as eating,
     // in the body it has, and that is what a study catches as "feeding".
     // WHAT IT IS EATING (rome, 2026-10-28: "head down, eating" never said what).
@@ -945,7 +951,7 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       // THE RAT KING'S RATS go for anyone on sight while it lives (ratking.ts),
       // and no rat comes for the one who wears its crown, whatever it remembers.
       if (ratking.spares(z, creature, session)) continue;
-      const hostile = AGGRESSIVE.has(creature.templateId) || bloodWake || ratking.bold(z, creature);
+      const hostile = AGGRESSIVE.has(creature.templateId) || bloodWake || ratking.bold(z, creature) || events.crabMarching(z, creature); // a crab on the march goes for whoever is in its way
       // A king with no quarrel with you speaks as you come in (KING_WORDS); the
       // Drowned God speaks in its own pause before it rises (zone.ts).
       if (ambush && !holdsGrudge && !hostile && KING_WORDS[creature.templateId] && creature.templateId !== DROWNED_GOD) {
@@ -985,6 +991,8 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
         ? `${cap(tmpl.name)} fixes on you the moment you cross into its post — and moves to bar the way.`
         : bloodWake
         ? pick(BLOOD_MOON_WAKE_TELLS).replace("{a}", cap(tmpl.name))
+        : events.crabMarching(z, creature)
+        ? `${cap(tmpl.name)} comes over the stones at you sideways, claws up.`
         : `${cap(tmpl.name)} has you, and does not wait to see what you mean by it.`);
       z.roomFeed(session.roomId, !onSight
         ? `${cap(tmpl.name)} goes for ${session.name}.`
@@ -1788,12 +1796,14 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // only thing that strikes on arrival here.
       for (const s of z.sessions.values()) {
         if (s.roomId === creature.roomId && z.reachable(s) && !creature.target
-            && (remembers(z, creature, s.pubkey, now) || ratking.bold(z, creature))
+            && (remembers(z, creature, s.pubkey, now) || ratking.bold(z, creature) || events.crabMarching(z, creature))
             && !ratking.spares(z, creature, s)
             && !styles.stalking(creature) // a stalking cat waits for you to stand still (styles.ts)
             && !creature.chase?.to) { // a chaser coming through after someone says so itself (chase.ts)
           creature.target = s.pubkey;
-          z.send(s, `${cap(tmpl.name)} remembers you — and comes for you.`);
+          z.send(s, events.crabMarching(z, creature) && !remembers(z, creature, s.pubkey, now)
+            ? `${cap(tmpl.name)} comes over the stones at you sideways, claws up.`
+            : `${cap(tmpl.name)} remembers you — and comes for you.`);
           // It gets the jump only if there is room to reach the player at all —
           // creatureFirstStrike owns that gate now (bodies engaged AND the
           // tick's blow budget), so this no longer spends a blow slot of its
@@ -3810,6 +3820,9 @@ export function scheduleArrivals(z: ZoneDO, now: number): void {
       // fleet-rats) counts against ITS cap; only rolled promotions fold into
       // the base line. Folding everything made the designed mother invisible
       // to her own cap — the warren minted mothers forever.
+      // A crab on the march is the sea's, not the shore's: the shore's own
+      // crabs keep their count and their refill while the march is out.
+      if (c.marching) continue;
       const line = caps.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
       alive.set(line, (alive.get(line) ?? 0) + 1);
       const band = z.regionOf(c.roomId);
