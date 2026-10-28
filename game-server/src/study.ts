@@ -63,7 +63,7 @@ export function required(templateId: string): Behaviour[] {
 // What the living animal is doing this moment, as the book would put it.
 export function behaviourNow(z: ZoneDO, c: Creature, now = Date.now()): Behaviour {
   if (c.cuddling || (SENTINELS.has(c.templateId) ? !z.sentinelAwake(c) : c.asleep)) return "asleep";
-  if (c.holding || (c.eatingUntil ?? 0) > now) return "feeding";
+  if (c.holding || ai.eatingNow(c, now)) return "feeding";
   if (ai.hungers(c.templateId) && c.hunger >= HUNGRY_AT) return "hungry";
   return "about";
 }

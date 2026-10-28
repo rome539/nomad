@@ -34,7 +34,7 @@ try {
         "export * as body from './body';",
         "export * as ratking from './ratking';",
         "export * as coughing from './cough';",
-        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges} from './ai';",
+        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell} from './ai';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
@@ -59,7 +59,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, provokeGrudges, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, provokeGrudges, creatureTell, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -855,6 +855,30 @@ try {
     assert.equal(study.behaviourNow(z, c, now + 60_000), 'feeding');
     assert.ok(c.nextWanderAt >= now + 60_000, 'it stays put over the meal');
     assert.equal(study.behaviourNow(z, c, now + 3 * 60_000), 'about', 'and the meal ends');
+  });
+  check('an animal that walks off its meal stops reading as eating (2026-10-28, the hyena)', () => {
+    const z = new ZoneDO({}, {});
+    z.sentinelAwake = () => true;
+    const c = { id: 'h', templateId: 'grave-hyena', roomId: 'the-camp-ground', hunger: 10, nextWanderAt: 0 };
+    const now = Date.now();
+    ate(c, now);
+    assert.equal(study.behaviourNow(z, c, now + 30_000), 'feeding', 'over the meal it is eating');
+    c.roomId = 'the-horse-lines';
+    assert.notEqual(study.behaviourNow(z, c, now + 30_000), 'feeding', 'a room away, the meal is behind it');
+    c.roomId = 'the-camp-ground';
+    assert.notEqual(study.behaviourNow(z, c, now + 30_000), 'feeding', 'and walking back does not pick the meal up again');
+  });
+  check('an eating animal says what kind of meal it is, never what the kill was (2026-10-28)', () => {
+    const z = new ZoneDO({}, {});
+    z.sentinelAwake = () => true;
+    z.world = { mobTemplates: new Map([['grave-hyena', { id: 'grave-hyena', name: 'a grave-hyena', max_hp: 30 }], ['gibbet-crow', { id: 'gibbet-crow', name: 'a gibbet crow', max_hp: 14 }], ['roe-deer', { id: 'roe-deer', name: 'a roe deer', max_hp: 16 }]]), rooms: new Map(), entryRooms: new Set(), exits: new Map() };
+    const tell = (templateId, on) => { const c = { id: templateId, templateId, roomId: 'r', hunger: 0, hp: 30, nextWanderAt: 0 }; z.creatures = new Map([[c.id, c]]); ate(c, Date.now(), on); return creatureTell(z, c, 'me'); };
+    assert.equal(tell('grave-hyena', 'carrion'), 'head down in a carcass, tearing at what is left');
+    assert.equal(tell('grave-hyena', 'kill'), 'head down over its kill, eating');
+    assert.equal(tell('grave-hyena', 'scraps'), 'nosing through scraps on the ground and eating them');
+    assert.equal(tell('roe-deer', 'graze'), 'head down, grazing');
+    assert.match(tell('gibbet-crow', 'carrion'), /bill/);
+    for (const on of ['kill', 'carrion', 'scraps', 'graze']) assert.notEqual(tell('grave-hyena', on), 'head down, eating', on);
   });
   function studyWorld() {
     const { db, D1 } = sqliteD1();

@@ -733,10 +733,18 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     }
     // A MEAL TAKES TIME (EAT_SHOW_MS): the animal over its food reads as eating,
     // in the body it has, and that is what a study catches as "feeding".
-    if ((creature.eatingUntil ?? 0) > Date.now()) {
-      return BEAKS.has(creature.templateId) ? "head down over a meal, tearing at it with its bill"
-        : COILS.has(creature.templateId) ? "working a meal slowly down its throat"
-        : "head down, eating";
+    // WHAT IT IS EATING (rome, 2026-10-28: "head down, eating" never said what).
+    // The kind of meal, in the body it has - never what the kill was.
+    if (eatingNow(creature)) {
+      const on = creature.eatingOn ?? "kill";
+      if (COILS.has(creature.templateId)) return on === "kill" ? "working its kill slowly down its throat" : "working a meal slowly down its throat";
+      if (BEAKS.has(creature.templateId)) return on === "kill" ? "standing on its kill, tearing at it with its bill"
+        : on === "carrion" ? "head down in a carcass, tearing at it with its bill"
+        : "pecking at something on the ground and swallowing it";
+      return on === "kill" ? "head down over its kill, eating"
+        : on === "carrion" ? "head down in a carcass, tearing at what is left"
+        : on === "graze" ? "head down, grazing"
+        : "nosing through scraps on the ground and eating them";
     }
     // Nothing has it fixed on a fight — so read what it's actually DOING. The
     // legibility law covers peace too: a scavenger tearing a body, a hyena
@@ -1575,6 +1583,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // What beat it colors how it runs — read before the flee clears the target.
     const fledFrom = mode === "flee" ? creature.target : null;
     creature.roomId = exit.to_room;
+    creature.eatingUntil = undefined; // it has walked off its meal (eatingNow)
     z.noteCreaturesChanged(); // the room index must not remember where it stood
     if (!creature.hidden) rattle(z, creature.roomId); // a bone rattle on a den door here hears it come
     clues.leaveTracks(z, creature, from, exit.dir, now); // under snow or in mud, it leaves prints going this way
@@ -1844,7 +1853,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       z.roamed.delete(`${eaten}@${creature.roomId}`);
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       creature.hunger = Math.max(0, creature.hunger - MEAL_ITEM); // a found meal, not a kill
-      ate(creature);
+      ate(creature, undefined, "scraps");
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
       z.addTrace(creature.roomId, { kind: "scraps", at });
       if (!silent) {
@@ -1897,7 +1906,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       // within the hour now, which is what a thing living on scraps does.
       // A bear on its own feeding ground eats a real meal (OWN_FORAGE_MEAL_LEFT).
       creature.hunger = grazeHere && OWN_FORAGE_ROOMS.has(creature.templateId) ? Math.min(creature.hunger, OWN_FORAGE_MEAL_LEFT) : Math.max(0, creature.hunger - MEAL_GRAZE);
-      ate(creature, at);
+      ate(creature, at, grazeHere ? "graze" : "scraps");
       creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.mastOn(z) ? Math.round(FORAGE_HEAL * MAST_FORAGE_MULT)
         : grazeHere && events.wrackIn(z, creature.roomId) ? Math.round(FORAGE_HEAL * WRACK_FORAGE_MULT)
         : grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT)
@@ -2654,7 +2663,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     list.splice(idx, 1);
     if (list.length === 0) z.traces.delete(creature.roomId);
     creature.hunger = Math.max(0, creature.hunger - MEAL_CORPSE); // a whole body, and it still is not a kill
-    ate(creature);
+    ate(creature, undefined, "carrion");
     // WHAT THE CORPSE IS WORTH TO THIS ONE. A bone-cracker gets through to the
     // marrow and takes double; a sour-gutted thing eats and is no better for it.
     // Both make the FLOOR of a fight tactical rather than scenery: with bodies
@@ -4686,8 +4695,18 @@ export function bossPhase(z: ZoneDO, creature: Creature, tmpl: MobTemplate, foe:
 //               than give it a mouth with nothing to put in it.
 // A meal holds the animal over it for EAT_SHOW_MS: it stays put, and reads as
 // eating (creatureTell; the study's "feeding").
-export function ate(c: Creature, now = Date.now()): void {
+// ...BUT ONLY WHERE THE MEAL IS (rome, 2026-10-28: a hyena read "head down,
+// eating" in every room it walked into afterwards). Only wandering waits for
+// the meal; thirst, scent and the rest still move it, and the food stays
+// behind. So it is eating only while it is still in the room it ate in.
+export function eatingNow(c: Creature, now = Date.now()): boolean {
+  if (c.eatingIn !== c.roomId) c.eatingUntil = undefined; // moved some other way: the meal stays behind for good
+  return (c.eatingUntil ?? 0) > now;
+}
+export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "kill"): void {
+  c.eatingOn = on;
   c.eatingUntil = now + EAT_SHOW_MS;
+  c.eatingIn = c.roomId;
   c.nextWanderAt = Math.max(c.nextWanderAt, c.eatingUntil);
 }
 
