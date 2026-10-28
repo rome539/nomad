@@ -1675,6 +1675,14 @@ export const PAGE = `<!doctype html>
   #log .stun   { color: var(--bone); padding-left: 12px; }
   #log .gain   { color: var(--gold); }
   #log .dim    { color: var(--dim); }
+  /* A ROOM READS IN GROUPS (rome, 2026-10-28: the look was one flat list).
+     The words and their order are the server's; the page only marks what each
+     line is - the way out, the signs on the ground, what lies here, what is
+     here - and leaves a little air where one kind gives way to the next. */
+  #log .rm-gap  { margin-top: 0.6em; }
+  #log .rm-sign { color: var(--dim); font-style: italic; }
+  #log .rm-item { color: var(--bone); }
+  #log .rm-mob  { color: var(--cream, inherit); font-weight: 700; }
   .bitem .kind { color: var(--dim); font-size: .85em; }
   #log .amb    { color: var(--dim); }   /* the walls and the weather talking: there, not shouting (rome, 2026-10-18) */
   /* Gear wearing down — an amber caution so a fraying blade or thinning plate is
@@ -4820,6 +4828,10 @@ function print(text, cls, who, pk, voiced) {
   // split per line so each event wears its own color.
   var lines = cls ? [text] : String(text).split("\\n");
   var sounds = [];
+  // A room look: after its exits, each line is a sign, a thing lying here or a
+  // creature here (see the rm- styles). Nothing is reordered or reworded.
+  var roomBlock = !cls && lines.length > 1 && knownRooms[lines[0]];
+  var rmKind = "head", rmPast = false;
   // Scrolling only follows when the reader is already at the bottom — an old
   // log being read must not yank itself down for every feed line that lands.
   var stick = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
@@ -4831,6 +4843,19 @@ function print(text, cls, who, pk, voiced) {
     var plain = lines[i].indexOf("\u0001") === -1 ? lines[i] : stripRarity(lines[i]);
     var c = cls || classify(plain);
     if (c) div.className = c;
+    if (roomBlock && i > 0) {
+      var k = /^Exits: |^There is no way out\\./.test(plain) ? "exits"
+        : !rmPast ? "desc"
+        : / (is|are) here(\\.|,| -| \\u2014)| (stands?|sits?|crouches|lies) here, (?!locked|sprung)/.test(plain) && !/ lies here\\.$/.test(plain) ? "mob"
+        : / lies here|hangs in the smoke-racks|^Loot lies scattered| sits here, locked/.test(plain) ? "item"
+        : "sign";
+      if (k === "exits") rmPast = true;
+      if (k !== rmKind && k !== "desc") div.classList.add("rm-gap");
+      if (k === "sign") div.classList.add("rm-sign");
+      if (k === "item" && !c) div.classList.add("rm-item");
+      if (k === "mob" && !c) div.classList.add("rm-mob");
+      rmKind = k;
+    }
     paintVoice(div, lines[i], c, who, pk);
     log.appendChild(div);
     // A person spoke or moved while you're in a modal: float it over the top.

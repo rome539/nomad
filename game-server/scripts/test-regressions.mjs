@@ -1843,6 +1843,41 @@ try {
     assert.deepEqual(missing.filter(g => /^(marsh|ferry|road|wood)-/.test(g)), [], 'these land under Other');
   });
 
+  check('kill sign counts every kill, tells sizes and ages apart, varies its words and never names them (2026-10-28)', () => {
+    const z = new ZoneDO({}, {});
+    z.world = { rooms: new Map([['moor', { id: 'moor', name: 'The Moor', region: 'out' }]]), entryRooms: new Set() };
+    const now = Date.now(), H = 3_600_000;
+    const k = (prey, ago) => ({ kind: 'blood', prey, at: now - ago });
+    const say = (list) => { z.traces = new Map([['moor', list]]); return z.traceLines('moor', now); };
+    for (let b = 0; b < 12; b++) {
+      const five = say([k('roe-deer', 5 * 60_000 + b), k('hill-fox', 20 * 60_000 + b), k('roe-deer', 2 * H + b), k('hill-fox', 3 * H + b), k('roe-deer', 4 * H + b)]);
+      assert.equal(five.filter((l) => /kill/i.test(l)).length, 1, five.join(' | '));
+      assert.match(five[0], /[Ff]ive/, five[0]);
+      assert.match(five[0], /two (fresh|still wet)/, five[0]);
+      const two = say([k('rat', 60_000 + b), k('red-stag', 2 * H + b)])[0];
+      assert.match(two, /A small one, fresh: .*\. A big one, older: .*\.$/, two);
+      const three = say([k('rat', 60_000 + b), k('mountain-hare', 2 * H + b), k('hill-fox', 3 * H + b)])[0];
+      assert.match(three, /Two small ones, one still fresh: .* A middling one, older: /, three);
+      const mixed5 = say([k('rat', 60_000 + b), k('rat', 2 * H + b), k('ptarmigan', 3 * H + b), k('roe-deer', 2 * H + 5 + b), k('wild-boar', 4 * H + b)])[0];
+      assert.match(mixed5, /[Ff]ive kills.*three small, one middling and one big/, mixed5);
+      const same = say([k('roe-deer', 60_000 + b), k('hill-fox', 2 * H + b)])[0];
+      assert.doesNotMatch(same, /small|middling|big/, 'one size keeps the plain count line: ' + same);
+      for (const l of [five[0], two, three, mixed5, same]) assert.doesNotMatch(l, /\b(rat|stag|hare|fox|deer|boar|ptarmigan)\b/i, 'never names it: ' + l);
+    }
+    const one = new Set(Array.from({ length: 40 }, (_, b) => say([k('roe-deer', 60_000 + b * 7919)])[0]));
+    assert.ok(one.size >= 3, 'a fresh kill reads in more than one way');
+    assert.equal(say([k('roe-deer', 61_234)])[0], say([k('roe-deer', 61_234)])[0], 'the same kill reads the same on every look');
+    assert.match(say([k('roe-deer', 60_000)])[0], /kill|killed|eaten/i, 'one kill still reads as a kill');
+    // Only an animal something really hunts may be sorted (seals, bears and a cave lion once were).
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const preys = zd.slice(zd.indexOf('export const PREYS_ON'), zd.indexOf('\n]);', zd.indexOf('export const PREYS_ON')));
+    const hunted = new Set([...preys.matchAll(/new Set\(\[([^\]]*)\]\)/g)].flatMap((m) => [...m[1].matchAll(/"([a-z-]+)"/g)].map((x) => x[1])));
+    for (const name of ['KILL_SMALL', 'KILL_BIG']) {
+      const ids = [...zd.match(new RegExp('export const ' + name + ' = new Set\\(\\[([\\s\\S]*?)\\]\\);'))[1].matchAll(/"([a-z-]+)"/g)].map((m) => m[1]);
+      assert.deepEqual(ids.filter((id) => !hunted.has(id)), [], name + ' holds something nothing hunts');
+    }
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

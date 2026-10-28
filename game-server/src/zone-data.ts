@@ -4919,6 +4919,18 @@ export const FOUL_LOOT: { item: string; weight: number }[] = [
 export const CROWS_DEAD_RANGE = 6;
 export const CROWS_DEAD_FRESH_MS = 45 * 60_000;
 export const CROWS_DEAD_MIN_HP = 10;
+// HOW BIG A KILL WAS, for the line that counts several on one ground (rome,
+// 2026-10-28: a rat's kill and a stag's must not read the same). Only what
+// something in PREYS_ON really hunts is sorted; a test holds it. Anything not
+// listed is middling - a roe, a goat, a fox, a dog, a wolf.
+export const KILL_SMALL = new Set([
+  "rat", "fleet-rat", "brood-rat", "hedgehog", "ptarmigan", "mountain-hare", "snow-hare",
+  "oystercatcher", "mountain-chough", "gibbet-crow", "scarp-raven", "ermine", "wrack-crab", "devil-crab",
+  "gill-adder", "stone-adder", "fen-viper", "ford-eel", "silver-eel",
+]);
+export const KILL_BIG = new Set([
+  "red-stag", "wood-stag", "red-hind", "wild-boar", "old-boar", "dire-wolf", "dire-hyena", "old-billy",
+]);
 // ...BUT A KILL THAT WAS EATEN WHERE IT FELL is only scraps (rome, 2026-10-18:
 // a hunter tears into what it runs down, so there is little left to circle).
 // The crows come down for a short while and go. The size rule applies to these

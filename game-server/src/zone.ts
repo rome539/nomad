@@ -125,7 +125,7 @@ import { FORGE_STOCK,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT,
-  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, MOB_HIT, MOB_VITALS,
+  REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, KILL_SMALL, KILL_BIG, MOB_HIT, MOB_VITALS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   REGION_LABELS, NIGHT_LIT, GATE_ROOMS,
   DEEP_ROOMS, WARRENS_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
@@ -189,6 +189,98 @@ function passageLine(z: ZoneDO, roomId: string, region: string, age: number): st
 // Dawn 1, dusk 2, any other hour 0: the low light the fog has to be graded for.
 function lowLight(now = Date.now()): number {
   return isDawn(now) ? 1 : isDusk(now) ? 2 : 0;
+}
+
+// KILL SIGN READS IN MORE THAN ONE WAY (rome, 2026-10-28: give the text more
+// variety). Each kill picks its wording from its own time of death, so the
+// same kill reads the same on every look and the next one reads differently.
+function killPick<T>(pool: T[], at: number, salt = ""): T {
+  return pool[(Math.imul(hashSeed(salt + ":" + at), 2654435761) >>> 16) % pool.length];
+}
+const KILL_ONE_FRESH = [
+  (g: string) => `Something was killed here and eaten where it fell: hair, ${g} torn up, and not much left.`,
+  (g: string) => `A kill, not long since: ${g} gouged, hair everywhere, and only scraps where it was eaten.`,
+  (g: string) => `Something was pulled down and eaten here. The blood on ${g} is still dark and wet, and there is hair in it.`,
+  (g: string) => `Fresh kill sign: hair, ${g} scuffed and bloodied, and a few gnawed scraps where something was eaten in a hurry.`,
+];
+const KILL_ONE_OLD = [
+  (g: string) => "A kill, a while back: tufts of hair and a dark patch where something was eaten.",
+  (g: string) => `An old kill: a stain gone dark on ${g}, and hair caught in it. Nothing else is left.`,
+  (g: string) => "Something was eaten here a while ago. A dark patch and a few tufts of hair are all that remain.",
+];
+// The count line, when every kill is one size.
+const KILL_MANY_FRESH = [
+  (n: string, g: string) => `${cap(n)} kills here, eaten where they fell: hair, ${g} torn up, and not much left of any of them.`,
+  (n: string, g: string) => `${cap(n)} kills on this ground, all of them recent: blood and hair everywhere, ${g} churned.`,
+  (n: string, g: string) => `Something has been killing here: ${n} kills, all fresh, with hair and scraps all over ${g}.`,
+];
+const KILL_MANY_OLD = [
+  (n: string, g: string) => `${cap(n)} kills here, a while back: tufts of hair and dark patches where things were eaten.`,
+  (n: string, g: string) => `${cap(n)} old kills on this ground: dark patches and dry hair, nothing worth the taking.`,
+  (n: string, g: string) => `This ground has seen ${n} kills, none of them recent: stains gone dark on ${g}, and hair.`,
+];
+const KILL_MANY_MIXED = [
+  (n: string, f: string, o: string, g: string, oneOld: boolean) => `${cap(n)} kills here, eaten where they fell: ${f} fresh, with hair and ${g} torn up, and ${o} older, just tufts of hair and ${oneOld ? "a dark patch" : "dark patches"}.`,
+  (n: string, f: string, o: string, g: string) => `${cap(n)} kills on this ground: ${f} still wet, ${o} long gone dark, and hair on all of it.`,
+  (n: string, f: string, o: string, g: string) => `Something keeps killing here. ${cap(n)} kills: ${f} fresh, blood still on ${g}, and ${o} older, gone to dark stains.`,
+];
+// What each size leaves, fresh and old, for one kill and for several.
+type KillLeft = (fur: string, g: string) => string;
+const KILL_LEFT: Record<"small" | "middling" | "big", { fresh: KillLeft[]; old: KillLeft[]; freshMany: KillLeft[]; oldMany: KillLeft[] }> = {
+  small: {
+    fresh: [(f) => `a smear of blood and a scrap of ${f}`, (f) => `a bloodied tuft of ${f} and little else`, (f) => `a few drops of blood and some ${f}`],
+    old: [(f) => `a dry smear and a scrap of ${f}`, (f) => `a scrap of ${f} stuck to a dark spot`],
+    freshMany: [(f) => `smears of blood and scraps of ${f}`, (f) => `bloodied tufts of ${f} here and there`],
+    oldMany: [(f) => `dry smears and scraps of ${f}`, (f) => `scraps of ${f} stuck to dark spots`],
+  },
+  middling: {
+    fresh: [(f, g) => `hair and ${g} torn up`, () => "blood, hair and gnawed scraps", (f, g) => `torn ${g} and hair in the blood`],
+    old: [() => "tufts of hair and a dark patch", () => "a dark stain and dry hair"],
+    freshMany: [(f, g) => `hair and ${g} torn up`, () => "blood, hair and gnawed scraps"],
+    oldMany: [() => "tufts of hair and dark patches", () => "dark stains and dry hair"],
+  },
+  big: {
+    fresh: [(f, g) => `${g} torn up wide and bones cracked open`, () => "a great dark pool and split bones", () => "cracked bones and hair everywhere"],
+    old: [() => "cracked bones and a wide dark patch", () => "bones picked clean and a broad stain"],
+    freshMany: [(f, g) => `${g} torn up wide and bones cracked open`, () => "great dark pools and split bones"],
+    oldMany: [() => "cracked bones and wide dark patches", () => "bones picked clean and broad stains"],
+  },
+};
+// SEVERAL KILLS OF DIFFERENT SIZES ON ONE GROUND (traceLines). One short
+// sentence per size, smallest first: how many, how old, what is left. From
+// five kills up it is a tally. Never what they were or what killed them. Null
+// when every kill is one size, which keeps the plain count line.
+function mixedKillsLine(kills: Trace[], now: number, ground: string, num: (k: number) => string): string | null {
+  const size = (t: Trace) => KILL_SMALL.has(t.prey!) ? 0 : KILL_BIG.has(t.prey!) ? 2 : 1;
+  const groups = [0, 1, 2].map((z) => kills.filter((t) => size(t) === z));
+  if (groups.filter((g) => g.length).length < 2) return null;
+  const isFresh = (t: Trace) => now - t.at < 3_600_000;
+  const fur = (g: Trace[]) => { const p = g[0].prey!; return BEAKS.has(p) || p === "oystercatcher" ? "feathers" : COILS.has(p) ? "scales" : p.endsWith("-crab") ? "broken shell" : "fur"; };
+  const words = ["small", "middling", "big"] as const;
+  const n = num(kills.length), at = kills[0].at;
+  if (kills.length >= 5) {
+    const tally = groups.map((g, z) => g.length ? `${num(g.length)} ${words[z]}` : "").filter(Boolean);
+    const left = groups.map((g, z) => !g.length ? "" : z === 0 ? fur(g) : z === 1 ? "hair" : "cracked bones").filter(Boolean);
+    const list = (xs: string[]) => xs.length > 1 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs[0];
+    const newest = isFresh(kills[0]) ? "the newest still fresh" : "all of them a while back";
+    return killPick([
+      () => `${cap(n)} kills here: ${list(tally)}, ${newest}. ${cap(list(left))} all over ${ground}.`,
+      () => `This ground has become a killing floor: ${n} kills, ${list(tally)}, ${newest}. ${cap(list(left))} everywhere.`,
+      () => `${cap(n)} kills on this one stretch of ground: ${list(tally)}. ${cap(list(left))}, ${newest}.`,
+    ], at, "tally")();
+  }
+  const parts = groups.map((g, z) => {
+    if (!g.length) return "";
+    const f = g.filter(isFresh).length;
+    const w = words[z];
+    const who = g.length === 1 ? `A ${w} one` : `${cap(num(g.length))} ${w} ones`;
+    const age = f === g.length ? (g.length === 1 ? "fresh" : g.length === 2 ? "both fresh" : "all fresh")
+      : f === 0 ? (g.length === 1 ? "older" : g.length === 2 ? "both older" : "all older")
+      : `${num(f)} still fresh`;
+    const pool = KILL_LEFT[w][(f ? "fresh" : "old") + (g.length > 1 ? "Many" : "") as "fresh" | "old" | "freshMany" | "oldMany"];
+    return `${who}, ${age}: ${killPick(pool, g[0].at, w)(fur(g), ground)}.`;
+  }).filter(Boolean);
+  return `${killPick([`${cap(n)} kills here.`, `${cap(n)} kills on this ground.`, `Something has made ${n} kills here.`], at, "open")} ${parts.join(" ")}`;
 }
 
 export class ZoneDO implements DurableObject {
@@ -6330,11 +6422,29 @@ export class ZoneDO implements DurableObject {
     // everything else, so a herd's comings and goings never push a kill out
     // of the three things the ground has to say.
     const quiet = (t: Trace) => (t.kind === "graze" || t.kind === "lie" ? 1 : 0);
-    const rest = list
+    const live = list
       .filter((t) => t.kind !== "carve" && now - t.at < (TRACE_LIFE_MS[t.kind] ?? 0))
-      .sort((a, b) => quiet(a) - quiet(b) || b.at - a.at)
-      .slice(0, 3);
+      .sort((a, b) => quiet(a) - quiet(b) || b.at - a.at);
+    // TWO KILLS OR MORE ARE ONE LINE THAT SAYS HOW MANY (rome, 2026-10-28: a
+    // fresh kill and an old one read as the same thing said twice). Every kill
+    // still on the ground is counted, fresh told from old, and the line takes
+    // one of the ground's three places however many there are.
+    const kills = live.filter((t) => t.kind === "blood" && t.prey && !t.sick);
+    const killLine = kills.length > 1;
+    // The newest kill holds the line's place among the signs; the others fold into it.
+    const rest = (killLine ? live.filter((t) => !kills.includes(t) || t === kills[0]) : live).slice(0, 3);
     for (const t of rest) {
+      if (killLine && t === kills[0]) {
+        const fresh = kills.filter((k) => now - k.at < 3_600_000).length, old = kills.length - fresh;
+        const num = (k: number) => ["no", "one", "two", "three", "four", "five", "six"][k] ?? "many";
+        const mixed = mixedKillsLine(kills, now, ground, num);
+        if (mixed) { lines.push(mixed); continue; }
+        const k = num(kills.length);
+        lines.push(fresh === kills.length ? killPick(KILL_MANY_FRESH, kills[0].at, roomId)(k, ground)
+          : fresh === 0 ? killPick(KILL_MANY_OLD, kills[0].at, roomId)(k, ground)
+          : killPick(KILL_MANY_MIXED, kills[0].at, roomId)(k, num(fresh), num(old), ground, old === 1));
+        continue;
+      }
       const age = now - t.at;
       // WHAT KIND OF DEATH, NOT WHOSE (rome, 2026-10-25: don't get too specific).
       // A body nothing touched reads as one; a predator's kill, eaten where it
@@ -6343,8 +6453,7 @@ export class ZoneDO implements DurableObject {
         if (age < 3 * 3_600_000) lines.push(`Something lay down on ${ground} here and died, and nothing has been at it. There is no wound, and hardly any blood.`);
         else lines.push("Something died here without a mark on it, a while ago.");
       } else if (t.kind === "blood" && t.prey) {
-        if (age < 3_600_000) lines.push(`Something was killed here and eaten where it fell: hair, ${ground} torn up, and not much left.`);
-        else lines.push("A kill, a while back: tufts of hair and a dark patch where something was eaten.");
+        lines.push(killPick(age < 3_600_000 ? KILL_ONE_FRESH : KILL_ONE_OLD, t.at, roomId)(ground));
       } else if (t.kind === "graze") {
         if (age < 3_600_000) lines.push("The ground here has been grazed, and not long since: cropped short, trodden, and dunged.");
         else lines.push("Old grazing sign: the turf cropped and the droppings gone dry.");

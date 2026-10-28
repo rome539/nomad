@@ -106,6 +106,23 @@
   var torchB = mk("button", btnCss, "torch: off"); var torch = 0;
   torchB.onclick = function () { torch = torch ? 0 : 1; torchB.textContent = "torch: " + (torch ? "on" : "off"); torchB.style.color = torch ? "#d8a94e" : "#c9bda3"; paint(); };
 
+  // A ROOM'S LOOK, through the log's own print(), so how a look reads can be
+  // judged here (rome, 2026-10-28: the Camp Ground, a kill, crows and a hyena).
+  var lookB = mk("button", btnCss, "sample look");
+  lookB.onclick = function () {
+    knownRooms["The Camp Ground"] = 1;
+    print(["The Camp Ground",
+      "Rows of shallow rectangular hollows in the turf, each the size of a hut, in ranks with streets between them, going on further than you would like to count. Nothing above ground survives. The shape of a town that stood here for a season is cut into the grass and will be there for a thousand years.",
+      "Exits: south, north, west, east.",
+      "The ground is freshly disturbed \u2014 someone passed this way minutes ago.",
+      "Two kills here, eaten where they fell: one fresh, with hair and the packed earth torn up, and one older, just tufts of hair and a dark patch.",
+      "Far off to the south, crows are wheeling low over something, and more are coming in.",
+      "A pitch-soaked torch lies here.",
+      "A grave-hyena is here, lapping the bloodied stone clean."].join("\n"));
+    print("Tiny claws scrabble away to the south, fast.", "amb");
+  };
+  window.__sampleLook = lookB.onclick;
+
   // THE GATEHOUSE'S FEASTS go by the real date, so without this you would wait
   // months to see three of them. "by date" is what a player gets today.
   var feast = mk("select", btnCss);
