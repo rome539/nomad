@@ -63,7 +63,7 @@ import {
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING,
   EAT_SHOW_MS,
-  RIVAL_LINES,
+  RIVAL_LINES, DROWNED_GOD, KING_WORDS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -719,7 +719,7 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     if (winded(creature, Date.now())) return "blown, sides going like a bellows, out of running";
     if (creature.stunned) return "reeling and dazed";
     if (creature.bleedTicks && creature.bleedTicks > 0) return "bleeding freely, dark spatter on the stone";
-    if (creature.rouseAt && Date.now() < creature.rouseAt) return "winding up to spring, hackles high";
+    if (creature.rouseAt && Date.now() < creature.rouseAt) return creature.templateId === DROWNED_GOD ? "risen to the head in the black water, looking at you, not yet coming" : "winding up to spring, hackles high";
     if (creature.waitsOn && creature.waitSettled && !creature.target) {
       return creature.waitsOn === viewer ? "settled a little way off, watching you, waiting"
         : "settled a little way off, watching somebody who is bleeding";
@@ -938,6 +938,13 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       // and no rat comes for the one who wears its crown, whatever it remembers.
       if (ratking.spares(z, creature, session)) continue;
       const hostile = AGGRESSIVE.has(creature.templateId) || bloodWake || ratking.bold(z, creature);
+      // A king with no quarrel with you speaks as you come in (KING_WORDS); the
+      // Drowned God speaks in its own pause before it rises (zone.ts).
+      if (ambush && !holdsGrudge && !hostile && KING_WORDS[creature.templateId] && creature.templateId !== DROWNED_GOD) {
+        const kingName = z.world!.mobTemplates.get(creature.templateId)?.name ?? "the king";
+        z.send(session, pick(KING_WORDS[creature.templateId]));
+        z.roomFeed(session.roomId, `${cap(kingName)} speaks to ${session.name}.`, session.pubkey, false);
+      }
       if (!holdsGrudge && !guards && !hostile) continue;
       const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
       // A dire-hyena guarding its kill no longer jumps you the instant you walk

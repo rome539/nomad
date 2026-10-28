@@ -216,6 +216,13 @@ const LINES = {
 },
 // The sapper's redo (rome, 2026-10-27): the generic lines asked a man with a
 // pick for "the species' own" threat and attack.
+"the-woodward": {
+  idle: "Standing at ease at his full height, the felling axe carried low at the trail in one hand, the head turned along the way he walks",
+  watch: "Stopped, the head come round and up, looking, the axe still low at the trail, weight settled on the root feet",
+  alert: "Has seen you and decided about it: squared up and facing, the axe taken up across the body in both hands, unhurried",
+  attack: "The felling axe raised high overhead in both hands and brought straight down, the whole heavy body behind it",
+  sweep: "The felling axe swung flat across the body at full reach in both hands, the coat swinging out with it",
+},
 "the-sapper": {
   "work-the-face": "On his knees, bent forward, the short pick in both hands driven forward and down into a chalk face in front of him at chest height. The face is NOT drawn",
   listen: "On his knees, still, the pick held low across his thighs, the head turned a little to one side, listening",
@@ -1000,6 +1007,7 @@ const BIRD_SHEETS = {
 // wrong one out of sixteen lists, which is how eight drawn sheets lost a real
 // cell. Restored, with hit gone instead.
 const REDRAW = {
+  "the-woodward": ["idle","watch","alert","move-a","move-b","attack","sweep","death"],
   // ONE EATING FRAME FOR THE BEAR (rome, 2026-10-21). It hunts and forages, so it
   // was asked for feed AND graze - and with no carcass and no ground drawn the
   // two came back as the same head-down bear. Foraging shows the feed frame.
@@ -1490,6 +1498,10 @@ const MANSHAPED = {
   // prompt until the redo of 2026-10-20 came back without it.
   "the-keeper-of-the-holding": "IT IS A MONSTER, NOT A HUMAN. A very tall, very thin grey thing, far taller than a doorway is meant for: its limbs are too long and bend at one joint too many, its skin is dry, pale grey and pulled tight over the bones, and its hands are long and spidery with black nails. Its head is long and narrow and bald, hanging forward on a long neck, with a wide lipless mouth and two small, black, sunken eyes. It wears the old household coat with faded facings, too short in the sleeves for its arms, old boots, and the ring of iron keys at its belt. It stands upright on two legs, stooped under a ceiling that is not there.",
   "the-drowned": "IT IS A DROWNED MAN AND KEEPS A MAN'S SHAPE. Two arms, two legs, a head on a neck, standing upright. Bloated - swollen thick at the limbs and the belly, the skin tight and waterlogged - but still plainly the body of a person, not a beast and not a shapeless mass.",
+  // THE WOODWARD (rome, 2026-09-27): not human either. Like the keeper's, his
+  // look lived only in the prompt handed over that day, and that prompt is gone;
+  // this is written from the sheet it drew (2026-10-27).
+  "the-woodward": "HE IS A MONSTER, NOT A MAN, THOUGH HE IS MAN-SHAPED. Two arms, two legs, a head, standing upright, big and heavy-built - but there is no skin and no flesh: the whole body is dark wood, furrowed bark over a frame of grown timber, the grain running down the limbs like muscle. The face is a long mask of bark with two deep dark eye-holes and no mouth to speak of, and from the top of the head a crown of short broken twigs stands up. The feet are roots, splayed and gripping. Over it all hangs a long coat of oiled leather gone black with age, open down the front, torn at the hem, with grey-green lichen grown thick over the shoulders.",
   "drowned-hulk": "IT IS A DROWNED MAN AND KEEPS A MAN'S SHAPE, swollen vast. Two arms, two legs, a head on a neck, standing upright, enormously bloated and pale - far bigger than a man but built like one, not a beast and not a shapeless mass.",
 };
 const MAN = MANSHAPED[id] ? "\n" + MANSHAPED[id] + "\n" : "";
@@ -1510,6 +1522,7 @@ const EYE_BLOCK = FACELESS[id] ? NO_EYES : HOLLOW_EYES;
 // lantern that gives no light. An armed creature drawn unarmed is wrong in the
 // one frame that matters most, the attack.
 const CARRIES = {
+  "the-woodward": "HE IS ARMED WITH A FELLING AXE: a long ash haft and a broad, worn steel head. It is in his hands in every cell and MOVES WITH THE POSE - carried low at the trail at rest and on the move, taken up across the body when he has seen you, raised high overhead and brought down in the blow, swung flat at full reach in the sweep, and lying beside him in death.",
   "the-sapper": "HE IS ARMED WITH HIS PICK. A short-hafted sapper's pick, heavy in the head, is in his hands in every cell and MOVES WITH THE POSE - working at nothing in front of him while he works the face, held still while he listens, swung down overhand in the blow, lying beside him in death. He never punches.",
   "skeleton": "IT IS ARMED, AND THE SWORD IS WHAT IT FIGHTS WITH. A soldier's arming sword, the edge gone to orange rust-lace, in one bare-boned hand. The sword is PRESENT in every cell and MOVES WITH THE POSE - carried low at rest, up in the guard, swung through in the blow, and lying with the body in death. It is never held in one frozen carry position while the pose changes around it.",
   "bone-knight": "IT IS ARMED, AND IT KEPT ITS SHIELD. A rusted arming sword in one hand, an ancient kite-shield on the other arm, lacquer crazed over older bone. Both are PRESENT in every cell and BOTH MOVE WITH THE POSE - the sword cuts and the shield covers. This is the one that remembers how to use them, so it must never be drawn striking with anything but the sword.",
@@ -1520,7 +1533,7 @@ const CARRIES = {
 };
 const HELD = CARRIES[id] ? "\n" + CARRIES[id] + "\n" : "";
 
-const WHAT_IT_IS = !inSet("HOLLOW") ? "" : inSet("GRAVE_FLESH") ? `
+const WHAT_IT_IS = !inSet("HOLLOW") ? HELD : inSet("GRAVE_FLESH") ? `
 THIS IS NOT A LIVING PERSON, AND THE BODY ITSELF MUST SAY SO. The test: if you covered the head completely, this must still be unmistakably a dead thing. Do not put the deadness in the face or the skin tone alone. The wrongness is in the anatomy - in what is missing, and in mass that is wrong for a living body.
 
 WHAT IS LEFT OF THIS ONE:
@@ -1567,7 +1580,8 @@ const PEOPLE = new Set([
   "cutthroat", "road-carrier",                         // the road, living
   "the-herd", "the-milker", "the-butter-wife", "the-one-who-stayed",   // the mountain's shepherds
 ]);
-const worked = () => inSet("HOLLOW") || PEOPLE.has(id);
+// A carrier holds its thing in its hands, so it is drawn as a body at work, not an animal.
+const worked = () => inSet("HOLLOW") || PEOPLE.has(id) || !!CARRIES[id];
 // Every person in PEOPLE who is not one of the dead.
 const LIVING_MEN = { has: (x) => PEOPLE.has(x) && !(x === id && inSet("HOLLOW")) };
 // THE LIVING LOOK (rome, 2026-10-20). The strand thief's sheet is the THEME of
@@ -1700,7 +1714,7 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead"]);
+const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")

@@ -34,7 +34,7 @@ try {
         "export * as body from './body';",
         "export * as ratking from './ratking';",
         "export * as coughing from './cough';",
-        "export {reconcilePopulation, ate, scheduleArrivals} from './ai';",
+        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges} from './ai';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
@@ -59,7 +59,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, provokeGrudges, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1667,6 +1667,72 @@ try {
     assert.match(rivals, /"pale-crawler"/, 'and the crawler still is');
     assert.match(zd, /"dire-hyena": \{\n\s*feed: "[^"]*snapping and shrieking/, 'it fights in its own words, not the crawlers\' wet dark');
     assert.match(ai, /const lines = RIVAL_LINES\[creature\.templateId\]/, 'the fight reads the lines for its kind');
+  });
+
+  check('the drowned god looks before it rises, so it can be studied alive (2026-10-27)', () => {
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const a = zs.indexOf('if (creature.target && creature.templateId === DROWNED_GOD)');
+    const b = zs.indexOf('} else if (!creature.target && DROWNERS.has(creature.templateId)) {', a);
+    assert.ok(a > 0 && b > a, 'the god has its own wind-up ahead of the other drowned');
+    const block = zs.slice(a, b) + '}';
+    const run = new Function('creature', 'tmpl', 'now', 'DROWNED_GOD', 'GOD_ROUSE_MS', 'cap', 'pick', 'KING_WORDS', block);
+    const me = { pubkey: 'me', roomId: 'the-gods-pool', name: 'Rome' }, said = [];
+    const poses = [];
+    const z = { sessions: new Map([['me', me]]), reachable: () => true, send: (_s, t) => said.push(t), roomFeed() {}, fxPose: (_r, _id, p) => poses.push(p) };
+    const god = { id: 'g', templateId: 'drowned-god', roomId: 'the-gods-pool', target: null };
+    const words = { 'drowned-god': ['"Come in," says the Drowned God.'] };
+    const beat = (t) => run.call(z, god, { name: 'the Drowned God' }, t, 'drowned-god', 8000, (x) => x[0].toUpperCase() + x.slice(1), (xs) => xs[0], words);
+    beat(0);
+    assert.equal(god.target, null, 'the beat you come in, it only looks');
+    assert.deepEqual(said, ['"Come in," says the Drowned God.'], 'and speaks to you first');
+    assert.deepEqual(poses, [], 'still crouched on the rim while it speaks');
+    assert.equal(me.target, undefined, 'and you are not in a fight, so you can study it');
+    beat(4000);
+    assert.equal(god.target, null, 'nor the beat after');
+    beat(8000);
+    assert.equal(god.target, 'me', 'then it comes for you');
+    assert.deepEqual(poses, ['alert'], 'standing up as it does');
+    god.target = null; me.target = null; god.rouseAt = 4000; me.roomId = 'elsewhere';
+    beat(20000);
+    assert.equal(god.rouseAt, undefined, 'an empty pool settles it again');
+    me.roomId = 'the-gods-pool'; god.target = 'me'; god.rouseAt = 30000;
+    beat(30000);
+    assert.equal(god.rouseAt, undefined, 'a fight you started drops the wind-up, so the next visit gets its own');
+  });
+
+  await checkAsync('the kings speak to you as you come in, before any fight (2026-10-27)', async () => {
+    const z = new ZoneDO({}, {});
+    z.world = { mobTemplates: new Map([['forgotten-king', { id: 'forgotten-king', name: 'the Forgotten King', is_boss: 1, level: 5 }]]), mobSpawns: [], itemTemplates: new Map() };
+    const king = { id: 'k', templateId: 'forgotten-king', roomId: 'sunken-throne', hp: 90, grudges: [], target: null };
+    z.creatures = new Map([['k', king]]);
+    const said = [], feed = [];
+    z.send = (_s, t) => said.push(t); z.roomFeed = (_r, t) => feed.push(t); z.outOfWorld = () => false;
+    z.creatureFirstStrike = async () => {};
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'sunken-throne' };
+    await provokeGrudges(z, me, true);
+    assert.equal(said.length, 1, 'he says something as you come in: ' + said);
+    assert.match(said[0], /"/, 'in his own words');
+    assert.deepEqual(feed, ['The Forgotten King speaks to Rome.'], 'and the room sees him speak to you');
+    assert.equal(king.target, null, 'and does not start the fight');
+    said.length = 0;
+    await provokeGrudges(z, me, false);
+    assert.equal(said.length, 0, 'a reconnect is not walking in');
+    king.grudges = [{ pk: 'me', at: Date.now() }];
+    await provokeGrudges(z, me, true);
+    assert.ok(!said.some((t) => /"/.test(t)), 'with a quarrel between you there is no talk');
+  });
+
+  check('the log keeps a day of text and lets the rest go (2026-10-27)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const keep = eval(pub.match(/var LOG_KEEP_MS = ([^;]+);/)[1]);
+    assert.equal(keep, 24 * 3600000, 'a day');
+    const fn = pub.match(/function logTrim\(now\) \{[\s\S]*?\n\}/)[0];
+    assert.match(pub, /new MutationObserver\([\s\S]{0,200}logStamp\(muts\[i\]\.addedNodes/, 'every line is stamped, wherever it is added from');
+    const H = 3600000, now = 100 * H;
+    const kids = [{ __t: now - 30 * H }, { __t: now - 25 * H }, { __t: now - 2 * H }, { __t: now }];
+    const log = { get firstChild() { return kids[0] || null; }, removeChild(n) { kids.splice(kids.indexOf(n), 1); } };
+    new Function('log', 'LOG_KEEP_MS', fn + '; logTrim(' + now + ');')(log, keep);
+    assert.deepEqual(kids.map((k) => (now - k.__t) / H), [2, 0], 'older than a day comes off the top, the rest stays');
   });
 
   check('the torch effects let go of old creature strips instead of keeping every one (2026-10-27)', () => {

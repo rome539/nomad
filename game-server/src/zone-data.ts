@@ -5068,6 +5068,30 @@ export const BOLD_DMG_MULT = 1.35; // a gorged scavenger swings harder
 // Silted Pond, Wet Hollow, Tussock Ford, Dead Alders, Quaking Flat), so this
 // costs nothing to place and gives the WOOD what the deep already had: water
 // you decide to enter, and dry ground that is honestly safer.
+// The Drowned God's wind-up before it takes you (zone.ts): two combat beats.
+export const DROWNED_GOD = "drowned-god";
+export const GOD_ROUSE_MS = 8000;
+// THE KINGS SPEAK BEFORE THEY FIGHT (rome, 2026-10-27). Walk into a king's room
+// with no quarrel between you and he says something first: the Forgotten King
+// and the Marrow-King as you come in (ai.provokeGrudges), the Drowned God from
+// its crouch on the rim, in the pause before it rises (zone.ts).
+export const KING_WORDS: Record<string, string[]> = {
+  "forgotten-king": [
+    `The Forgotten King does not rise. "Another one. Stay, if you like. I have had longer company than you, and quieter."`,
+    `"They took the names off everything down here," the Forgotten King says, to no one in particular. "Mine first. I find I do not miss it."`,
+    `The Forgotten King's head turns an inch toward you. "You came all this way down to look at a crown. Look, then."`,
+  ],
+  "marrow-king": [
+    `The Marrow-King's jaw works before the words come. "Count them," he says, and lifts a hand made of other men's bones. "Everyone who came before you is here. There is room."`,
+    `"You are not the first to stand where you are standing," says the Marrow-King. "You are not even the first this year."`,
+    `The Marrow-King settles deeper into his seat, and something inside him clicks into place. "Go on, then. They all do."`,
+  ],
+  "drowned-god": [
+    `The black water stirs. The Drowned God lifts its head on the rim of the pool and speaks in a voice like a flooded room: "There was a king here once. I am what the water put in his place."`,
+    `The black water stirs. Something crouched on the rim of the pool turns its head toward you, and a voice comes out of the dark like water finding a crack: "You still breathe. How strange that must be."`,
+    `The black water stirs. "Come in," says the Drowned God, without getting up. "Everyone does, in the end."`,
+  ],
+};
 export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "the-mire-walker",
   // THE MILLER (mig 188) is the first drowned thing on the SURFACE, and he is
   // here on purpose: the Crossing is the great water, and the seize-and-hold

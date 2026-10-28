@@ -2675,6 +2675,25 @@ var GOOGLE_CLIENT_ID = "__GOOGLE_CLIENT_ID__";
 var GOOGLE_PICKER_KEY = "__GOOGLE_PICKER_KEY__";
 
 var log = document.getElementById("log");
+// A DAY OF TEXT, NO MORE (rome, 2026-10-27). The log never let a line go, so a
+// tab left open kept everything it had ever said. Every line is stamped as it
+// lands, from wherever it is added, and once a minute what is older than a day
+// comes off the top.
+var LOG_KEEP_MS = 24 * 3600000;
+function logStamp(nodes, now) {
+  for (var i = 0; i < nodes.length; i++) if (nodes[i].__t === undefined) nodes[i].__t = now;
+}
+function logTrim(now) {
+  while (log.firstChild && (log.firstChild.__t === undefined ? (log.firstChild.__t = now, false) : now - log.firstChild.__t > LOG_KEEP_MS))
+    log.removeChild(log.firstChild);
+}
+if (log && typeof MutationObserver !== "undefined") {
+  new MutationObserver(function (muts) {
+    var now = Date.now();
+    for (var i = 0; i < muts.length; i++) logStamp(muts[i].addedNodes, now);
+  }).observe(log, { childList: true });
+  setInterval(function () { logTrim(Date.now()); }, 60000);
+}
 
 var cmd = document.getElementById("cmd");
 var roomEl = document.getElementById("room");

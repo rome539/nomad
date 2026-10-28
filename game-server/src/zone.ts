@@ -111,7 +111,7 @@ import { FORGE_STOCK,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
-  HOLLOW, BLOODLESS, GRAVE_FLESH, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
+  HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
   RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_OPEN_BLOOD, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES, PRIZE_EMPTY_ODDS, PRIZE_EMPTY_LINES,
@@ -4873,7 +4873,31 @@ export class ZoneDO implements DurableObject {
         }
       }
       // A drowned thing takes anyone who wades into its water — no grudge needed.
-      if (!creature.target && DROWNERS.has(creature.templateId)) {
+      // THE GOD LOOKS BEFORE IT RISES (rome, 2026-10-27). It took you on the beat
+      // you came in, so nobody was ever out of a fight in its pool and its page
+      // could never be written. Now it fixes on you for GOD_ROUSE_MS first: long
+      // enough to watch it, leave, or strike first. A wind-up left over from a
+      // fight that started early is dropped, so the next visit gets one too.
+      if (creature.target && creature.templateId === DROWNED_GOD) creature.rouseAt = undefined;
+      if (!creature.target && creature.templateId === DROWNED_GOD) {
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
+        if (!prey) {
+          creature.rouseAt = undefined;
+        } else if (creature.rouseAt === undefined) {
+          creature.rouseAt = now + GOD_ROUSE_MS;
+          // Still crouched on the rim while it speaks: no pose sent, so the
+          // picture keeps its seat until it rises.
+          this.send(prey, pick(KING_WORDS[DROWNED_GOD]));
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} speaks to ${prey.name} from the rim of the pool.`, prey.pubkey, false);
+        } else if (now >= creature.rouseAt) {
+          creature.rouseAt = undefined;
+          creature.target = prey.pubkey;
+          if (!prey.target) prey.target = creature.id;
+          this.send(prey, `The water heaves — ${tmpl.name} stands up off the rim and comes for you.`);
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} stands up and comes for ${prey.name}.`, prey.pubkey, false);
+          this.fxPose(creature.roomId, creature.templateId, "alert");
+        }
+      } else if (!creature.target && DROWNERS.has(creature.templateId)) {
         const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
         if (prey) {
           creature.target = prey.pubkey;
