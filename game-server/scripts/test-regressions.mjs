@@ -1567,6 +1567,10 @@ try {
     assert.ok(!/scarce: coyote/.test(read), 'the whole pack alive on the mountain is not scarce in the wood');
     assert.match(read, /Coyotes, ranging: 5 on The Mountain \(of 5\)/, 'where the pack is');
   });
+  check('the command line is named a search, so Safari offers no contacts (2026-10-28)', () => {
+    const psrc = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(psrc, /<input id="cmd" type="search" name="search" autocomplete="off"/);
+  });
   check('an oversized save names what is filling it (2026-10-25)', () => {
     const blob = JSON.stringify({ small: 1, bloodOn: 'x'.repeat(40_000), board: 'y'.repeat(20_000), events: 'z'.repeat(5_000), tiny: [] });
     assert.equal(biggestFields(blob), 'bloodOn 39KB, board 20KB, events 5KB');
@@ -1812,6 +1816,31 @@ try {
     const setOf = (name) => zd.match(new RegExp('export const ' + name + ' = new Set\\(\\[([\\s\\S]*?)\\]\\);'))?.[1] ?? '';
     assert.match(setOf('HOLLOW'), /"the-sapper"/, 'he does not bleed, hunger or run');
     assert.doesNotMatch(setOf('GRAVE_FLESH'), /"the-sapper"/, 'he is drawn as bone, so only a blunt blow finds his vitals');
+  });
+
+  check('the three marsh grounds take their own rooms off the shared marsh (2026-10-28)', () => {
+    const own = {
+      'marsh-samphire': ['samphire-flat', 'samphire-flats', 'samphire-island', 'sea-lavender', 'saltmarsh-pools', 'flashes', 'salt-pans', 'salt-workings'],
+      'marsh-carr': ['wet-carr', 'decoy-wood', 'decoy-pipe', 'fowlers-track', 'fowlers-hide', 'wildfowler', 'old-boat', 'quaking-turf'],
+      'marsh-dyke': ['sea-dyke', 'old-sea-bank', 'salting-edge', 'saltings-gate', 'marsh-strand', 'samphire-turn'],
+      'ferry-hard': ['far-hard', 'far-ferry-steps', 'far-noust', 'boat-house', 'oar-store', 'ferryman-stone', 'signal-mast', 'warping-post', 'ferry-house', 'ferry-steps', 'ferry-strand'],
+    };
+    for (const [ground, rooms] of Object.entries(own))
+      for (const r of rooms) assert.equal(terrainOf('the-' + r, '', 'crossing'), ground, 'the-' + r);
+    assert.equal(terrainOf('the-saltings', '', 'crossing'), 'marsh', 'the rest of the marsh keeps the old plate');
+    assert.equal(terrainOf('the-mid-channel', '', 'crossing'), 'ferry', 'the channel keeps the ferry plate');
+  });
+
+  check('every ground in the game is under its region in the preview panel, never Other (2026-10-28)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const block = pub.match(/var TERRAIN_SCENES = \{([\s\S]*?)\n\};/)[1];
+    const grounds = [...block.matchAll(/^\s*"?([a-z][a-z-]*)"?\s*:/gm)].map(m => m[1]);
+    const panel = readFileSync(new URL('./game-panel.js', import.meta.url), 'utf8');
+    const placed = new Set([...panel.match(/var GROUND_PLACE = \{([\s\S]*?)\};/)[1].matchAll(/:\s*"([^"]*)"/g)].flatMap(m => m[1].split(' ')));
+    assert.ok(grounds.length > 40, 'read the ground list');
+    for (const g of ['marsh-samphire', 'marsh-carr', 'marsh-dyke', 'ferry-hard', 'road-gill']) assert.ok(grounds.includes(g), g + ' is a ground');
+    const missing = grounds.filter(g => !placed.has(g));
+    assert.deepEqual(missing.filter(g => /^(marsh|ferry|road|wood)-/.test(g)), [], 'these land under Other');
   });
 
   console.log(`\n${passed} regression checks pass`);

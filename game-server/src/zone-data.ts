@@ -7656,6 +7656,15 @@ export const CROSSING_RULES: [string, RegExp][] = [
   // They are sea cave and they always were: the terrain already exists, it is
   // the region's one interior, and it is drawn dark (night / night-torch only).
   ["sea-cave",   /sea-cave|salt-pool|blowhole|fallen-roof|sand-crawl|drowned-chamber|weed-gallery/],
+  // THREE MARSH GROUNDS (rome, 2026-10-28): the samphire flats, the wet carr and
+  // the dyke top, each its own picture now. By exact id and up front, so they
+  // win over the wide "marsh" line below.
+  ["marsh-samphire", /^the-(samphire-flat|samphire-flats|samphire-island|sea-lavender|saltmarsh-pools|flashes|salt-pans|salt-workings)$/],
+  ["marsh-carr",     /^the-(wet-carr|decoy-wood|decoy-pipe|fowlers-track|fowlers-hide|wildfowler|old-boat|quaking-turf)$/],
+  ["marsh-dyke",     /^the-(sea-dyke|old-sea-bank|salting-edge|saltings-gate|marsh-strand|samphire-turn)$/],
+  // AND THE FERRY HARD (rome, 2026-10-28): the stone landings either side of the
+  // deep channel, off the shared ferry picture.
+  ["ferry-hard",     /^the-(far-hard|far-ferry-steps|far-noust|boat-house|oar-store|ferryman-stone|signal-mast|warping-post|ferry-house|ferry-steps|ferry-strand)$/],
   // Three road corners named for what they lead to, which is not what they are.
   ["shore-road", /^the-ford-corner$|^the-ferry-lane$|^the-strand-road$|^the-marsh-road$/],
   ["bridge",     /bridge|\bpier\b|plank-span|beam-walk|broken-arch|near-arch|far-arch|starling|scaffold-stub|drowned-span|tollhouse-shell|^the-gap$/],

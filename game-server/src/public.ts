@@ -2647,7 +2647,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   <div id="chips"></div>
   <div id="inputline">
     <span class="prompt">&#9656;</span>
-    <input id="cmd" type="search" name="q" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-label="Game command" placeholder="Type a command…">
+    <input id="cmd" type="search" name="search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-label="Game command" placeholder="Type a command…">
     <button id="phone-send" type="button">Send</button>
     <button id="phone-done" type="button" aria-label="Dismiss keyboard">Done</button>
   </div>
@@ -10133,11 +10133,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "117";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "49";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "52";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "8";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "24";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "11";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "28";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10267,6 +10267,7 @@ var TERRAIN_PLATE = {
   "wood-burnt": ["wood-burnt"], "wood-holly": ["wood-holly"], "wood-birch": ["wood-birch"],
   glacier: ["glacier"], ridge: ["ridge"], towers: ["towers"],
   "road-oaks": ["road-oaks"], "road-hedges": ["road-hedges"], "road-moor": ["road-moor"], "road-gill": ["road-gill"],
+  "marsh-samphire": ["marsh-samphire"], "marsh-carr": ["marsh-carr"], "marsh-dyke": ["marsh-dyke"], "ferry-hard": ["ferry-hard"],
 };
 // THE GATEHOUSE KEEPS THE YEAR (rome, 2026-09-27). Four dressings of the same
 // room, painted over the same picture, each hung for a stretch of the real
@@ -11212,6 +11213,10 @@ var TERRAIN_SCENES = {
   "road-hedges":  "day night night-torch snow",
   "road-moor":    "day night night-torch snow",
   "road-gill":    "day night night-torch snow",
+  "marsh-samphire": "day night night-torch snow",
+  "marsh-carr":   "day night night-torch snow",
+  "marsh-dyke":   "day night night-torch snow",
+  "ferry-hard":   "day night night-torch snow",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
@@ -11536,6 +11541,7 @@ var MOB_LINE = {
                  "wood-burnt": 58, "wood-holly": 62, "wood-birch": 66,
                  glacier: 72, ridge: 60, towers: 70,
                  "road-oaks": 70, "road-hedges": 72, "road-moor": 64, "road-gill": 80,
+                 "marsh-samphire": 72, "marsh-carr": 68, "marsh-dyke": 66, "ferry-hard": 74,
                  // THE HOLDING (rome, 2026-09-29: the creatures looked huge against
                  // it). The ruined walls stand close round the courtyard, so a
                  // creature on the default line stood out among them at full size
