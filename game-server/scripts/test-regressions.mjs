@@ -703,7 +703,9 @@ try {
     z.creatureNoise = (r) => noise.push(r); z.roomSound = () => {}; z.send = () => {};
     z.inGatehouse = new Set(); z.outOfWorld = () => false; z.regionOf = () => 'upper';
     z.sessions = new Map([['in', { pubkey: 'in', name: 'Rome', roomId: 'the-cells' }]]);
-    for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.fell(z, t0 + 5 * H); ratking.roll(z, t0 + 5.2 * H); }
+    // a new king can be crowned on any roll (about 1 in 5 over 300), and his air starts clean: take him off again
+    const fresh = () => { for (const [id, c] of z.creatures) if (c.templateId === 'rat-king' && c !== king) z.creatures.delete(id); };
+    for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.fell(z, t0 + 5 * H); ratking.roll(z, t0 + 5.2 * H); fresh(); }
     assert.ok(noise.length > 10, 'the dead king\'s air still sets people coughing: ' + noise.length);
   });
   await checkAsync('the gaunt gets loose on its own clock, about once a day, not on the roll (2026-10-27)', async () => {
@@ -1749,6 +1751,20 @@ try {
     assert.equal(Object.keys(tex).length, keep, 'only the last few stay: ' + Object.keys(tex).length);
     assert.equal(freed.length, 40 - keep, 'and the rest are freed on the card, not just forgotten');
     assert.ok(tex['m39'] && !tex['m0'], 'it is the oldest that go');
+  });
+
+  check('the woodward winds up on frame 6 and brings the axe down on frame 7; his second blow skips the wind-up (2026-10-27)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const f = JSON.parse(pub.match(/"the-woodward":\s*\{ n: \d+, aspect: [\d.]+, f: (\{[^}]*\})/)[1]);
+    assert.equal(f.alert, 2, 'frame 3 is where he squares up');
+    assert.equal(f.swing, 5, 'frame 6 is the wind-up');
+    assert.equal(f.attack, 6, 'frame 7 is the axe coming down');
+    assert.equal(f.sweep, 6, 'and the second blow lands on it too');
+    assert.match(pub, /var woundUp = f\.swing !== undefined && blow === "attack";/, 'only the main blow goes through the wind-up');
+    assert.match(pub, /var gatherTo = woundUp \? 0\.45 : 0\.20/, 'and it is held for 45% of the swing, long enough to see');
+    assert.match(pub, /name = woundUp \? "swing" : a\.watch;/, 'the gather shows the wind-up frame');
+    const build = readFileSync(new URL('./build-mob-strips.mjs', import.meta.url), 'utf8');
+    assert.match(build, /"the-woodward": \{ "swing": "attack", "attack": "sweep" \}/, 'a rebuild keeps it');
   });
 
   check('the sapper\'s blow lands on his pick-down frame: alert, attack, then work-the-face (2026-10-27)', () => {

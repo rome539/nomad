@@ -2409,7 +2409,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div id="thr-line">a shared dungeon, alive whether or not anyone is watching</div>
     <button id="thr-enter" type="button">enter</button>
     <button id="thr-reck" type="button">the reckoning</button>
-    <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser over Nostr. The creatures hunt, sleep and remember you, wounds stay, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a></div>
+    <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser. The creatures hunt, sleep and remember you, wounds stay, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a></div>
   </div>
   <div id="reckm" role="dialog" aria-modal="true" aria-labelledby="recktitle">
     <div class="lbox">
@@ -10118,11 +10118,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "114";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "47";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "48";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "5";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "22";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "6";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "23";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10251,6 +10251,7 @@ var TERRAIN_PLATE = {
   "wood-felling": ["wood-felling"], "wood-osier": ["wood-osier"], "wood-bailey": ["wood-bailey"],
   "wood-burnt": ["wood-burnt"], "wood-holly": ["wood-holly"], "wood-birch": ["wood-birch"],
   glacier: ["glacier"], ridge: ["ridge"], towers: ["towers"],
+  "road-oaks": ["road-oaks"], "road-hedges": ["road-hedges"], "road-moor": ["road-moor"], "road-gill": ["road-gill"],
 };
 // THE GATEHOUSE KEEPS THE YEAR (rome, 2026-09-27). Four dressings of the same
 // room, painted over the same picture, each hung for a stretch of the real
@@ -11192,6 +11193,10 @@ var TERRAIN_SCENES = {
   glacier:        "day night night-torch snow",
   ridge:          "day night night-torch snow",
   towers:         "day night night-torch snow",
+  "road-oaks":    "day night night-torch snow",
+  "road-hedges":  "day night night-torch snow",
+  "road-moor":    "day night night-torch snow",
+  "road-gill":    "day night night-torch snow",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
@@ -11515,6 +11520,7 @@ var MOB_LINE = {
                  "wood-felling": 62, "wood-osier": 66, "wood-bailey": 58,
                  "wood-burnt": 58, "wood-holly": 62, "wood-birch": 66,
                  glacier: 72, ridge: 60, towers: 70,
+                 "road-oaks": 70, "road-hedges": 72, "road-moor": 64, "road-gill": 80,
                  // THE HOLDING (rome, 2026-09-29: the creatures looked huge against
                  // it). The ruined walls stand close round the courtyard, so a
                  // creature on the default line stood out among them at full size
@@ -14071,7 +14077,7 @@ var MOB_ANIM = {
   "wood-stag":   { n: 8, aspect: 1.045, f: {"idle":0,"rest":1,"hold-ground":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "nomad":   { n: 14, aspect: 1.079, f: {"idle":0,"move-a":1,"move-b":2,"windup":3,"attack":4,"guard":5,"crouch":6,"rest":7,"point":8,"wave":9,"beckon":10,"nod":11,"keen":12,"death":13} },
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-woodward":                { n: 8, aspect: 1.153, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-woodward":                { n: 8, aspect: 1.153, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":6,"sweep":6,"death":7,"swing":5} },
   "the-sapper":                  { n: 8, aspect: 1.076, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7,"recover":1} },
   "the-keeper-of-the-holding":   { n: 8, aspect: 0.986, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-gaunt":                   { n: 8, aspect: 1.005, f: {"idle":0,"alert":1,"cast-about":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
@@ -15035,6 +15041,10 @@ function poseAt(a, now) {
     } else {
       var blow = a.blow || a.strike;
       var u = Math.min(t / ATTACK_S, 1);
+      // Only the main blow goes through a drawn wind-up, and then the gather is
+      // held long enough to see (see below).
+      var woundUp = f.swing !== undefined && blow === "attack";
+      var gatherTo = woundUp ? 0.45 : 0.20, blowTo = woundUp ? 0.75 : 0.58;
       // A BREATH IS NOT A BITE AND MUST NOT BE TIMED LIKE ONE. The windup is the
       // whole of what makes it frightening — the chest drawing up and swelling
       // before anything comes out — and the drakes were drawn a frame for
@@ -15056,18 +15066,23 @@ function poseAt(a, now) {
           x = -(1 - (u - 0.74) / 0.26) * SWAY * 0.14;
           s *= 0.985 + ((u - 0.74) / 0.26) * 0.015;
         }
-      } else if (u < 0.20) {                            // gathers, and draws back
+      } else if (u < gatherTo) {                        // gathers, and draws back
         // THROUGH THE FRAME DRAWN FOR THE GATHER, where one exists - the mirror
         // of the "recover" rule below. One creature carries a "swing", and it is
         // the load before the blow rather than the blow: arms taken up and back,
         // body leaning away, nothing released. Without this it was in his IDLE
         // cycle instead, so he wound up to hit nobody every few seconds and then
         // struck from a pose he was never drawn gathering in.
-        name = (f.swing !== undefined) ? "swing" : a.watch;
-        x = -Math.sin(u / 0.20 * Math.PI / 2) * SWAY * 0.30;
-      } else if (u < 0.58) {                            // and goes
+        // Only the main blow winds up: the woodward's sweep comes straight from
+        // the alert (rome, 2026-10-27).
+        // A DRAWN WIND-UP IS HELD LONG ENOUGH TO SEE (rome, 2026-10-27). At a
+        // fifth of the swing the woodward's raised axe was gone in a third of a
+        // second; with a frame drawn for it the gather takes the first 45%.
+        name = woundUp ? "swing" : a.watch;
+        x = -Math.sin(u / gatherTo * Math.PI / 2) * SWAY * 0.30;
+      } else if (u < blowTo) {                          // and goes
         name = blow;
-        x = Math.sin((u - 0.20) / 0.38 * Math.PI) * SWAY * 1.0;
+        x = Math.sin((u - gatherTo) / (blowTo - gatherTo) * Math.PI) * SWAY * 1.0;
       } else {                                          // and comes off it
         // THROUGH THE FRAME DRAWN FOR COMING OFF IT, where one exists
         // (2026-09-09). Four creatures carry a "recover" and it is the only
@@ -15081,7 +15096,7 @@ function poseAt(a, now) {
         // returning through. The recovery is a real third of the swing here;
         // it is worth the frame it was given.
         name = (f.recover !== undefined) ? "recover" : a.watch;
-        x = -(1 - (u - 0.58) / 0.42) * SWAY * 0.22;
+        x = -(1 - (u - blowTo) / (1 - blowTo)) * SWAY * 0.22;
       }
     }
   } else if (a.phase === "hit") {

@@ -599,7 +599,8 @@ t("...and the frost-heaved stretch", strip(sceneEl.style.backgroundImage) === "/
   const j = zd.indexOf("export const ROAD_RULES");
   const rules = eval(zd.slice(zd.indexOf("= [", j) + 2, zd.indexOf("\n];", j) + 2));
   const named = [...new Set(rules.map((r) => r[0]))];
-  const ROAD_OWN = ["the-kept-road", "the-frost-heaved-paving", "the-cart-ruts"];
+  // The road's own pictures: its three ages, and the four grounds painted for it on 2026-10-27.
+  const ROAD_OWN = ["the-kept-road", "the-frost-heaved-paving", "the-cart-ruts", "road-oaks", "road-hedges", "road-moor", "road-gill"];
   const ALLOWED_BORROW = ["alder", "cairn", "fold", "reed", "marsh", "scree"];
   const foreign = named.filter((n) => !ROAD_OWN.includes(n) && !ALLOWED_BORROW.includes(n));
   t("the road borrows only the six grounds that are the same country",

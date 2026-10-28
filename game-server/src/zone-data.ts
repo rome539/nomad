@@ -7726,6 +7726,13 @@ export const CROSSING_RULES: [string, RegExp][] = [
 // the whitelist and fails on anything else, so it has to be taken deliberately,
 // with the plate open.
 export const ROAD_RULES: [string, RegExp][] = [
+  // THE FOUR ROAD GROUNDS (rome, 2026-10-27): the hedged lane, the moor road,
+  // the oaks and the gill, each its own picture now. First, so they win over the
+  // older lines below that once gave these rooms the cart ruts or the alders.
+  ["road-hedges", /^the-(elder-hedge|sunken-lane|green-lane|holloway|thorn-lane|sunken-drove|thorn-gap|hollow-way|hawthorn-narrows|grid-lane|deep-lane|fuel-road|hollow-lane|hedge-gap|holly-bank|blackthorn-lane)$/],
+  ["road-moor", /^the-(long-rise|open-stretch|sheep-trod|hill-gate|stony-rise|tops|sheepwalk|boundary-dyke|west-brow|peat-track|heather-bench|turf-stack-ruin|moor-gate)$/],
+  ["road-oaks", /^the-(gap-in-the-trees|wood-gate|first-oaks|wood-bank|hanger|holly-scarp|spring-line-oaks|seep-edge)$/],
+  ["road-gill", /^the-(shallow-ford|drowned-ford|stepping-stones|beck-mouth|cattle-drink|hatchpool|force|gill-foot|gill-pot|rowan-gill|gill-narrows|shepherds-ford|beck-gully|gully-steps|beck-ford|alder-gill|gully-mouth)$/],
   // Twenty-six of these rooms are not in any regions/*.rooms file - they were
   // hand-authored in migration 225 and carry region 'road' in the world table,
   // so a survey of the region sources alone MISSES them and the catch-all below
@@ -7735,7 +7742,7 @@ export const ROAD_RULES: [string, RegExp][] = [
   // come back to it until the scarp: a ditch, a carr, a mill, a gill.
   ["the-frost-heaved-paving",    /^the-(postern-ditch|drain-mouth|grave-drain|culvert)$/],
   ["alder",    /^the-(postern-carr|withy-beds|osier-island|sunken-alders|hanging-wood|otter-holt|peat-cuttings|dead-alders|osier-landing|willow-landing|peat-cuts|oak-hollow|hollow-oak)$/],
-  ["the-cart-ruts",     /^the-(spring-bank|stepping-stones|beck-mouth|mill-leat|drowned-mill|mill-loft|tail-race|hatchpool|force|fall-shelter|gill-foot|gill-pot|rowan-gill|gill-narrows|shepherds-ford|spring-line|beck-head|beck-stair|drowned-ford|scarp-spring|bothy-spring|shallow-ford|tussock-ford|flooded-quarry|cattle-drink)$/],
+  ["the-cart-ruts",     /^the-(spring-bank|mill-leat|drowned-mill|mill-loft|tail-race|fall-shelter|spring-line|beck-head|beck-stair|scarp-spring|bothy-spring|tussock-ford|flooded-quarry)$/],
   ["marsh",    /^the-(millpond|flood-mead|marl-hole|fen-edge|fen-gut|quaking-flat|open-water|ditch-end|lapwing-flat)$/],
   ["the-cart-ruts", /^the-(moss-path|turf-road|wet-furlong|dam-walk|plank-crossing|plank-bridge|sinking-path|drowned-hurdles|rush-shore|waste-foot)$/],
   ["reed",     /^the-(rush-ground|trap-line|eel-traps|heron-stand)$/],
@@ -7753,7 +7760,7 @@ export const ROAD_RULES: [string, RegExp][] = [
   // under them without being told: dressed stone, then stone the frost has
   // lifted, then no stone at all.
   // No stone left: two ruts and a spine of turf. The droves and the green lanes.
-  ["the-cart-ruts", /^the-(beck-lane|deep-lane|fuel-road|gorse-break|lych-way|sheep-trod|sledge-track|cross-field|coffin-stone|wood-gate|hill-gate|cart-road|track|rutted-track|green-lane|holloway|sunken-lane|sunken-drove|drovers-turn|drovers-stance|gap-in-the-trees|thorn-lane|gorse-tunnel|haul-road|spoil-banks|peat-road|drove-green|drove-head|grid-lane|grid-drop|cattle-grid|thorn-drop|grave-verge|wind-row|broken-cross|high-verge)$/],
+  ["the-cart-ruts", /^the-(beck-lane|gorse-break|lych-way|sledge-track|cross-field|coffin-stone|cart-road|track|rutted-track|drovers-turn|drovers-stance|gorse-tunnel|haul-road|spoil-banks|peat-road|drove-green|drove-head|grid-drop|cattle-grid|thorn-drop|grave-verge|wind-row|broken-cross|high-verge)$/],
   // The stone still there and no longer flat: lifted, tipped, grass in the joints.
   ["the-frost-heaved-paving", /^the-(broken-paving|weed-paving|last-paving|paving-end|broken-culvert)$/],
   // Dressed, kerbed, cambered, draining. Everything the road still is.

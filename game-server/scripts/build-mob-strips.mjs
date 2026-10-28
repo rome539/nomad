@@ -80,6 +80,11 @@ const ALIAS = { "down": ["glide", "up"] };
 // (work-the-face) is also where his overhead blow lands, so his swing runs
 // alert, attack, then comes off it on that frame (rome, 2026-10-27).
 const OWN_ALIAS = { "the-sapper": { "recover": "work-the-face" } };
+// One creature's names moved onto other drawn frames, read from the frames as
+// cut. The woodward's overhead cell is the wind-up and his flat cell is where
+// the axe comes down (rome, 2026-10-27): his main blow runs alert, wind-up,
+// down; his second goes from alert straight down, with no wind-up.
+const OWN_REMAP = { "the-woodward": { "swing": "attack", "attack": "sweep" } };
 // Creatures that are one creature under two template ids — see the copy in the
 // write step. Keyed by the id that is DRAWN, listing the ids that take its art.
 const SAME_ART = { "warden": ["warden-surface"] };
@@ -416,6 +421,9 @@ for (const [id, dir] of [...found].sort()) {
   }
   for (const [name, same] of Object.entries(OWN_ALIAS[id] || {}))
     if (f[name] === undefined && f[same] !== undefined) f[name] = f[same];
+  const cut = { ...f };
+  for (const [name, from] of Object.entries(OWN_REMAP[id] || {}))
+    if (cut[from] !== undefined) f[name] = cut[from];
   rows.push({ id, n: order.length, aspect: +(fw / fh).toFixed(3), f, order });
   console.log(id.padEnd(20) + String(order.length).padStart(2) + " frames  " + order.join(" "));
 }
