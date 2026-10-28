@@ -154,6 +154,24 @@ try {
       assert.equal(z.nightLitPicture(me), true, 'outside, the lived-in ground should still light (the test is not testing anything)');
     } finally { Date.now = realNow; OUTDOOR_ROOMS.delete('moor'); }
   });
+  check('a gate at night shows no torch light unless you carry one (2026-10-28)', () => {
+    let night = 0;
+    for (let day = 0; day < 400 && !night; day++) {
+      const t = day * DAY_CYCLE_MS + DAY_CYCLE_MS * .75;
+      if (isNight(t) && !isFullMoon(t)) night = t;
+    }
+    const realNow = Date.now;
+    Date.now = () => night;
+    const had = OUTDOOR_ROOMS.has('weeper-arch');
+    OUTDOOR_ROOMS.add('weeper-arch');
+    try {
+      const { z, me } = denWorld();
+      z.inDen.delete('me'); z.dens = new Map();
+      z.roomLit = () => false; z.roomHasBearer = () => false;
+      me.roomId = 'weeper-arch';
+      assert.equal(z.nightLitPicture(me), false, 'the weeper arch took the torch picture with no torch');
+    } finally { Date.now = realNow; if (!had) OUTDOOR_ROOMS.delete('weeper-arch'); }
+  });
   await checkAsync('a direction does not walk you out through a shut door (2026-10-22)', async () => {
     const { z, me, last } = denWorld();
     await cmdGo(z, me, 'north');

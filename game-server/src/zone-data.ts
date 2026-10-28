@@ -7581,6 +7581,14 @@ export const NIGHT_LIT = new Set<string>([
   // mountain after dark, and a light in a doorway is what you steer by.
   "the-shieling", "the-stell", "the-slabs", "the-shelter-crag",
 ]);
+// THE GATES PAINT THEIR OWN LANTERN (rome, 2026-10-28: a gate at night looked
+// torch-lit with no torch in your hand). They are lit ground above, for what you
+// can see there, but their night picture already has the lantern burning, so
+// they never take the torch picture for it: only your own light swaps it.
+export const GATE_ROOMS = new Set<string>([
+  "gate", "weeper-arch", "sally-port", "the-first-milestone", "the-timber-stack", "the-withy-hut", "the-gate-arch",
+  "the-ferry-house", "the-relay-house", "the-crossing-house", "the-shieling", "the-stell", "the-slabs", "the-shelter-crag",
+]);
 export const OUTDOOR_REGIONS = new Set<string>(["out", "road", "wood", "mountain", "den", "crossing"]);
 
 // WHAT KIND OF GROUND A ROOM IS, for the client that paints it (the status

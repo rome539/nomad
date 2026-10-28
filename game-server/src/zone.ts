@@ -127,7 +127,7 @@ import { FORGE_STOCK,
   BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, MOB_HIT, MOB_VITALS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
-  REGION_LABELS, NIGHT_LIT,
+  REGION_LABELS, NIGHT_LIT, GATE_ROOMS,
   DEEP_ROOMS, WARRENS_ROOMS, AMBIENCE, ROOM_AMBIENCE, MOTES, MOTES_ODDS, AMBIENT_COOLDOWN_MS, AMBIENT_ODDS, RECONNECT_GRACE_MS, SEAMLESS_RECONNECT_MS,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, GATEHOUSE_AMBIENT_CEILING_MS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
@@ -2479,6 +2479,7 @@ export class ZoneDO implements DurableObject {
     // carry and the hearth you rest by count, and both are asked for already.
     if (this.inDen.has(session.pubkey)) return false;
     const roomId = session.roomId;
+    if (GATE_ROOMS.has(roomId)) return false; // the gate's own picture has its lantern lit (zone-data GATE_ROOMS)
     if (!OUTDOOR_ROOMS.has(roomId) || !isNight() || (isFullMoon() && !events.wetSky(this, roomId))) return false;
     if (DARK_ROOMS.has(roomId) || events.gloamed(this, roomId)) return this.roomLit(roomId) || this.roomHasBearer(roomId, session);
     if (NIGHT_LIT.has(roomId) || this.roomLit(roomId) || this.roomHasBearer(roomId, session)) return true;
