@@ -4,6 +4,7 @@
 // call sites (every command, every tick, gate.ts, ai.ts) stay unchanged.
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
+import * as campfire from "./campfire";
 import * as events from "./events";
 import * as pvp from "./pvp";
 import * as gate from "./gate";
@@ -371,16 +372,13 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       suggest.push(`cure ${shortName(world.itemTemplates.get(raw.itemId)!.name)}`);
     }
   }
-  // A raw catch and a way to make fire: the same teaching chip as the racks,
-  // for the station that has no room of its own. Only offered when the verb
-  // would actually work — a fire already on the stone, the flame in your hand,
-  // or a torch in the pack to spend on one.
+  // A raw catch and a campfire burning: the same teaching chip as the racks,
+  // for the station that has no room of its own. And the fire itself, offered
+  // only when 'campfire' would actually make or feed one.
   if (!fighting) {
     const raw = session.items.find((c) => COOK_RECIPES[c.itemId] && c.serial === null);
-    const fire = Date.now() < (z.groundTorch.get(session.roomId) ?? 0)
-      || session.litSource === "torch"
-      || session.items.some((c) => c.itemId === TORCH_ITEM && c.serial === null);
-    if (raw && fire) suggest.push(`cook ${shortName(world.itemTemplates.get(raw.itemId)!.name)}`);
+    if (raw && campfire.burning(z, session.roomId)) suggest.push(`cook ${shortName(world.itemTemplates.get(raw.itemId)!.name)}`);
+    if (campfire.canTend(z, session)) suggest.push("campfire");
   }
   const gearless = session.items.find((c) => {
     if (c.equipped) return false;

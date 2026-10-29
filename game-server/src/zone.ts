@@ -80,6 +80,7 @@ import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
+import * as campfire from "./campfire";
 import * as body from "./body";
 import * as ratking from "./ratking";
 import * as rising from "./rising";
@@ -124,7 +125,7 @@ import { FORGE_STOCK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
-  BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT,
+  BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT, CHILL_MEND_MULT,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, KILL_SMALL, KILL_BIG, MOB_HIT, MOB_VITALS,
   BLUNT_ARMOR_IGNORE, STAGGER_WINDOW_MS, STAGGER_STUN_BONUS, STAGGER_ARMOR_BONUS, STAGGER_CLEAVE_DMG_BONUS, STAGGER_EDGE_TELL,
   REGION_LABELS, NIGHT_LIT, GATE_ROOMS,
@@ -431,6 +432,7 @@ export class ZoneDO implements DurableObject {
   private placedSpawns = new Set<string>(); // ground spawns already laid once
   private seededDens = new Set<string>(); // mob_spawn ids already populated once — new dens fill on the load that adds them, not on the migration clock
   public groundCond = new Map<string, number>(); // "itemId@roomId" -> condition of gear on the floor, so wear survives a drop/pickup
+  public campfires = new Map<string, number>(); // roomId -> ms epoch a campfire burns until (campfire.ts)
   public groundTorch = new Map<string, number>(); // roomId -> ms epoch a torch dropped/fallen onto the floor keeps burning until; while now < it the room is lit for EVERYONE in it, and it's an open flame (fire-fear flees, lurkers can't spring). Burns its remaining life down, then guts out.
   public groundLore = new Map<string, string>(); // "itemId@roomId" -> the engraving on floor gear, so the mark survives the stones (077)
   public groundRolled = new Map<string, string>(); // "itemId@roomId" -> what this copy rolled (099), so a lottery trait survives a drop/pickup like the engraving does
@@ -838,6 +840,7 @@ export class ZoneDO implements DurableObject {
       this.seededDens = new Set(saved.seededDens ?? (saved.creatures ?? []).map((c: any) => c.id));
       this.groundCond = new Map(Object.entries(saved.groundCond ?? {}));
       this.groundTorch = new Map(Object.entries(saved.groundTorch ?? {}));
+      this.campfires = new Map(Object.entries(saved.campfires ?? {}));
       this.groundLore = new Map(Object.entries(saved.groundLore ?? {}));
       this.groundRolled = new Map(Object.entries(saved.groundRolled ?? {}));
       this.groundHeart = new Map(Object.entries(saved.groundHeart ?? {}));
@@ -1234,6 +1237,7 @@ export class ZoneDO implements DurableObject {
       seededDens: [...this.seededDens],
       groundCond: Object.fromEntries(this.groundCond),
       groundTorch: Object.fromEntries(this.groundTorch),
+      campfires: Object.fromEntries(this.campfires),
       groundLore: Object.fromEntries(this.groundLore),
       groundRolled: Object.fromEntries(this.groundRolled),
       groundHeart: Object.fromEntries(this.groundHeart),
@@ -1332,6 +1336,7 @@ export class ZoneDO implements DurableObject {
     this.seededDens.clear();
     this.groundCond.clear();
     this.groundTorch.clear();
+    this.campfires.clear();
     this.groundLore.clear();
     this.groundRolled.clear();
     this.groundHeart.clear();
@@ -2388,9 +2393,9 @@ export class ZoneDO implements DurableObject {
       case "keen": return verbs.cmdKeen(this, session, cmd.arg);
       case "sing": return verbs.cmdSing(this, session, cmd.arg);
       case "eat": return verbs.cmdEat(this, session, cmd.arg);
-      case "feed": return verbs.cmdFeed(this, session, cmd.arg);
+      case "feed": return /^(the )?(camp|bon)?fire$/i.test(cmd.arg.trim()) ? campfire.cmdCampfire(this, session) : verbs.cmdFeed(this, session, cmd.arg);
       case "bandage": return verbs.cmdBandage(this, session, cmd.arg);
-      case "light": return light.cmdLight(this, session, cmd.arg);
+      case "light": return /^(a |the )?(camp|bon)?fire$/i.test(cmd.arg.trim()) ? campfire.cmdCampfire(this, session) : light.cmdLight(this, session, cmd.arg);
       case "fill": return light.cmdFill(this, session, cmd.arg);
       case "douse": return light.cmdDouse(this, session);
       case "sheet": return verbs.cmdSheet(this, session);
@@ -2444,6 +2449,7 @@ export class ZoneDO implements DurableObject {
       case "smoke": return verbs.cmdSmoke(this, session, cmd.arg);
       case "cure": return verbs.cmdCure(this, session, cmd.arg);
       case "cook": return verbs.cmdCook(this, session, cmd.arg);
+      case "campfire": return campfire.cmdCampfire(this, session);
       case "squink": return verbs.cmdSquink(this, session);
       case "xyzzy": return verbs.cmdXyzzy(this, session);
     }
@@ -2508,6 +2514,8 @@ export class ZoneDO implements DurableObject {
   public roomLit(roomId: string): boolean {
     const until = this.groundTorch.get(roomId);
     if (!!until && Date.now() < until) return true;
+    // ...and a campfire is the same open flame, bigger (campfire.ts).
+    if (campfire.burning(this, roomId)) return true;
     // A FIREKEEPER'S CLAMP burns while he does. Not a torch on the floor with a
     // clock on it — a banked mound that has been alight for days and will be
     // alight tomorrow. Kill him and the wood takes its dark back.
@@ -5998,7 +6006,7 @@ export class ZoneDO implements DurableObject {
         // cold against you like a sodden coat, and the wind and the dry
         // weather after it is the drying.
         const coldMult = this.wearsTrait(session, "fleeced") ? FLEECED_COLD_MULT
-          : (this.wearsTrait(session, "sodden") || events.raining(this, session.roomId)) ? SODDEN_COLD_MULT : 1;
+          : (this.wearsTrait(session, "sodden") || cough.isWet(session)) ? SODDEN_COLD_MULT : 1;
         // Wind rides the cold: a rest that was already chancy is chancier.
         const inWind = events.windy(this, session.roomId);
         // THE SHELTERS (2026-09-01): a roof that holds and walls that break
@@ -6012,7 +6020,8 @@ export class ZoneDO implements DurableObject {
         // the gate room, which is open ground, so anyone inside who was not
         // dozing by the fire had the cold taking their rest through the walls.
         // The pack crouch at a gate is still out in it.
-        const indoors = this.inGatehouse.has(session.pubkey) || den.hearthWarm(this, session); // ...nor by a den's lit hearth
+        const indoors = this.inGatehouse.has(session.pubkey) || den.hearthWarm(this, session) // ...nor by a den's lit hearth
+          || campfire.warmsYou(this, session); // ...nor at a campfire
         if (!byFire && !indoors && !warmed && !souped && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
           // A silent tax is a lie: tell them, once in a while, why the rest is
           // closing nothing. (Throttled — not a line every skipped tick.)
@@ -6037,13 +6046,16 @@ export class ZoneDO implements DurableObject {
           }
           continue;
         }
+        // THE CHILL (rome, 2026-10-29): once it is in your chest, rest mends at
+        // CHILL_MEND_MULT until you are warm. Warmth clears it on the minute (cough.ts).
+        const chillMult = session.chilled && !byFire && !indoors ? CHILL_MEND_MULT : 1;
         // THE FEVER (2026-08-06). On bad ground sleep will not take: an hour
         // off your feet is worth a fraction of an hour. It is not a cure you
         // can buy or a fight you can win — the answer is to leave, which is the
         // whole point of putting it on the ground people LIVE on. The gate's
         // fire is unreachable by it (the fever is the den band's own).
         const feverMult = events.fevered(this, session.roomId) ? FEVER_MEND_MULT : 1;
-        session.hp = Math.min(session.maxHp, Math.round((session.hp + healingDue * feverMult) * 100) / 100);
+        session.hp = Math.min(session.maxHp, Math.round((session.hp + healingDue * feverMult * chillMult) * 100) / 100);
         this.sendStatus(session);
         if (session.hp >= session.maxHp) {
           // Fully healed: save it now so a restart can't revert a finished rest.
@@ -8034,6 +8046,7 @@ export class ZoneDO implements DurableObject {
       // A torch someone set (or dropped) on the stone, still burning — the room's
       // own light while it lasts.
       if (this.roomHasFirekeeper(room.id)) lines.push("A charcoal clamp stands smouldering under its turf, a low red seam breathing at the foot of it — banked days ago, and warm the whole way round.");
+      else if (campfire.burning(this, room.id)) lines.push("A campfire burns here, crackling low, and the warmth of it reaches a good way out.");
       else if (room.id === "the-lantern-stump" && this.roomLit(room.id)) lines.push("The lantern stump is burning — the road has its light back, for as long as the torch in it lasts.");
       else if (this.roomLit(room.id)) lines.push("A torch burns on the floor here, throwing the dark back off the walls.");
       // Or the light is in somebody's hand. Say whose work you're seeing by —

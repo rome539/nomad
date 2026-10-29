@@ -66,6 +66,8 @@ export interface Session {
   coughWaterUntil?: number; // ms epoch you are still coughing up the drowned's black water until (cough.ts; ephemeral)
   chillMs?: number; // how long you have been cold and wet with nothing to warm you (cough.ts; ephemeral)
   chilled?: boolean; // the chill has got into your chest: you cough until you warm up (cough.ts; ephemeral)
+  wetUntil?: number; // ms epoch you are soaked until — rain or water put you there, a fire or the air takes you out (cough.ts; ephemeral)
+  chillBiteAt?: number; // ms epoch the chill last took a point off you (cough.ts; ephemeral)
   litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.
   litSource?: "torch" | "lantern" | "brand"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack), a brand an open flame in the WEAPON hand (2026-08-20)
   litRow?: string; // WHICH row is alight, when litSource is "brand" (2026-08-20): more than one burning weapon can ride in a pack now, so the burnout must spend the one actually lit and not the first brand it finds
@@ -355,6 +357,7 @@ export interface SimState {
   seededDens?: string[]; // mob_spawn ids already populated once — so a migration's new dens fill on load instead of trickling in on the migration clock
   groundCond?: Record<string, number>; // "itemId@roomId" -> condition of gear on the floor, so wear survives drop/pickup
   groundTorch?: Record<string, number>; // roomId -> ms epoch a torch burning on the floor lasts until (a dropped/fallen flame lighting the room for all in it)
+  campfires?: Record<string, number>; // roomId -> ms epoch a campfire burns until (campfire.ts)
   groundLore?: Record<string, string>; // "itemId@roomId" -> lore_id of engraved gear on the floor, so the mark survives too (077)
   groundRolled?: Record<string, string>; // "itemId@roomId" -> rolled_traits of lottery gear on the floor, so the roll survives a drop/pickup (099)
   groundHeart?: Record<string, number>; // "itemId@roomId" -> a dropped heart's acquired_at, so the floor can't wash its rot off

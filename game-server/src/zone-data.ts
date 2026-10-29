@@ -3726,6 +3726,11 @@ export const WRACK_FORAGE_MULT = 1.5;
 export const SNOW_PERSIST_MS = 40 * 60_000;  // the season outlasts the weather
 export const SNOW_TRACE_LIFE_MULT = 0.5;     // fresh snow covers the record
 export const SNOW_NOISE_MULT = 0.5;          // and wraps every sound
+// ...and DEEP SNOW HOLDS YOUR FEET (rome, 2026-10-29): while it lies, every
+// move on the mountain carries this many kilos more of load for the parts of
+// moving the load law reads (the parting blow as you break off a fight, the
+// crash into a room of sleepers) — never the dodge, which is the fight's.
+export const SNOW_LOAD_KG = 6;
 export const SNOW_LINES = [
   " Snow lies on the mountain — the hill holds its winter, and every sound in it is wrapped and put away.",
   " The mountain is under snow, and the snow is old enough to have opinions about what stays on it and what sinks.",
@@ -6994,6 +6999,29 @@ export const COUGH_WATER_PER_MIN = 0.7;
 export const COUGH_CHILL_AFTER_MS = 10 * 60_000;   // cold and wet with nothing to warm you, this long
 export const COUGH_CHILL_PER_MIN = 0.3;
 export const COUGH_SMOKE_PER_MIN = 0.35;
+// THE WET (rome, 2026-10-29). Rain and water soak you, and you stay soaked
+// after the sky clears: it is being wet, not the rain, that holds the cold
+// against you (the rest tax and the chill both read it). A fire dries you at
+// once; the open air does it in its own time, and the wind twice as fast.
+export const WET_DRY_MS = 10 * 60_000;
+// THE CHILL BITES (rome, 2026-10-29). Once it is in your chest rest mends you
+// at half speed until you are warm (first written as no mending at all; rome
+// found that too harsh the same day), and while you stay out in the cold and the wet it
+// takes a point every CHILL_BITE_MS - down to a floor, never through it. The
+// cold weakens a wanderer for whatever comes next; it does not kill him alone.
+export const CHILL_BITE_MS = 2 * 60_000;
+export const CHILL_FLOOR = 0.25;                   // of max hp
+export const CHILL_MEND_MULT = 0.5;                // rest mends at this rate while the chill is in you
+// THE CAMPFIRE (rome, 2026-10-29). A bundle of split wood on open ground,
+// lit from a torch or struck from a rock on scrap iron. It burns
+// CAMPFIRE_MS a bundle, anyone may feed it to CAMPFIRE_MAX_MS, and the rain
+// puts it out. It is the only fire in the open: it cooks, it warms, it dries,
+// and it lights the room for everybody — the most visible thing a wanderer
+// can do. A torch is only ever the spark now, and is not spent.
+export const CAMPFIRE_MS = 15 * 60_000;
+export const CAMPFIRE_MAX_MS = 60 * 60_000;
+export const CAMPFIRE_STRIKE_ODDS = 0.35;  // a rock struck on scrap iron catches the wood this often
+export const CAMPFIRE_WIND_MULT = 0.5;     // ...and the wind halves every way of lighting it
 export const COUGH_WATER_LINES = [
   "You cough up black water, and more of it, and it will not stop coming.",
   "Your chest heaves and brings up a mouthful of the drowned's cold water, loud.",

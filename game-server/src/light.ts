@@ -9,6 +9,7 @@
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import * as events from "./events";
+import { tickCampfires } from "./campfire";
 import { underCover } from "./detail";
 import { setItemCondition, setItemFuel, removeItemRow, hasTrait } from "./world";
 import type { CarriedItem } from "./world";
@@ -481,6 +482,8 @@ export async function tickLights(z: ZoneDO, now: number): Promise<void> {
         : "Your torch burns low, the flame guttering — not long now.", "dmgin");
     }
   }
+  // Campfires burn down and drown the same way (campfire.ts).
+  tickCampfires(z, now);
   // Torches burning on the FLOOR (dropped, or fallen from a dead hand) gutter out
   // too. When one dies the room loses its shared light — tell anyone standing
   // there, and if the room is born-dark, the dark closes back over them. The

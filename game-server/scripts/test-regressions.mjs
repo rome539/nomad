@@ -35,6 +35,10 @@ try {
         "export * as body from './body';",
         "export * as ratking from './ratking';",
         "export * as coughing from './cough';",
+        "export * as campfire from './campfire';",
+        "export {cmdCook, moveLoad} from './verbs';",
+        "export {walkCost} from './exhaustion';",
+        "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
         "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell} from './ai';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
@@ -60,7 +64,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, reconcilePopulation, provokeGrudges, creatureTell, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -895,6 +899,105 @@ try {
     assert.ok(!me.chilled); assert.match(said.at(-1), /cough lets go/);
     coughing.weather.coldBites = () => true; coughing.weather.raining = () => false;
     z.inGatehouse.clear(); me.chillMs = 0; minutes(30); assert.ok(!me.chilled, 'cold but dry is no chill');
+  });
+  check('being wet outlasts the rain, feeds the chill, and a fire takes it off you (2026-10-29)', () => {
+    const { z, me, said } = coughWorld();
+    let t = Date.now();
+    const minutes = (n) => { for (let i = 0; i < n; i++) { t += 60_000; coughing.resetForTest(z); coughing.tick(z, t); } };
+    const wet = () => coughing.isWet(me, t);
+    coughing.weather.coldBites = () => true; coughing.weather.windy = () => false; coughing.weather.inWater = () => false;
+    coughing.weather.raining = () => true; minutes(1);
+    assert.ok(wet(), 'the rain soaks you'); assert.match(said.at(-1), /soaked you through/);
+    coughing.weather.raining = () => false; minutes(5);
+    assert.ok(wet(), 'and you are still wet after it has stopped');
+    minutes(4);
+    assert.ok(me.chilled, 'wet in the cold after the rain has gone is still a chill');
+    z.campfires.set('r', t + 3 * 60_000); minutes(1);
+    assert.ok(!me.chilled && !wet(), 'a campfire dries you and lifts the chill');
+    z.campfires.clear(); coughing.weather.coldBites = () => false;
+    coughing.weather.raining = () => true; minutes(1); coughing.weather.raining = () => false;
+    coughing.weather.windy = () => true; minutes(6);
+    assert.ok(!wet(), 'the wind dries you in half the time');
+    coughing.weather.windy = () => false; coughing.weather.raining = () => true; minutes(1); coughing.weather.raining = () => false;
+    minutes(6); assert.ok(wet(), 'still air takes longer');
+  });
+  check('the chill wears you down to a floor and no further, and rest mends at half speed (2026-10-29)', () => {
+    const { z, me } = coughWorld();
+    let t = Date.now();
+    const minutes = (n) => { for (let i = 0; i < n; i++) { t += 60_000; coughing.resetForTest(z); coughing.tick(z, t); } };
+    me.maxHp = 100; me.hp = 40; z.sendStatus = () => {};
+    coughing.weather.coldBites = () => true; coughing.weather.raining = () => true; coughing.weather.windy = () => false; coughing.weather.inWater = () => false;
+    minutes(10); assert.ok(me.chilled);
+    minutes(10); assert.equal(me.hp, 35, 'a point every two minutes out in it');
+    minutes(200); assert.equal(me.hp, 25, 'never below a quarter');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /const chillMult = session\.chilled && !byFire && !indoors \? CHILL_MEND_MULT : 1;/, 'the chill slows the rest, by a fire it does not');
+    assert.match(zone, /healingDue \* feverMult \* chillMult/, 'and the heal reads it');
+  });
+  function fireWorld(room) {
+    const said = [];
+    const z = { campfires: new Map(), events: new Map(), env: { DB: { prepare: () => ({ bind: () => ({ run: async () => ({}), first: async () => null }) }) } },
+      outOfWorld: () => false, inCombat: () => false, regionOf: () => 'road', carriesLight: (s) => (s.litUntil ?? 0) > Date.now(),
+      send: (s, m) => said.push(m), roomFeed: () => {}, refreshRoomCtx: () => {}, markSimDirty: () => {}, ensureAlarm: async () => {},
+      sessions: new Map(), inDen: new Map(), dens: new Map(), sendStatus: () => {}, sendCtx: () => {}, findCarried: () => null,
+      grantItem: async () => true, world: { itemTemplates: new Map() } };
+    campfire.sky.raining = () => false; campfire.sky.windy = () => false;
+    return { z, said };
+  }
+  await checkAsync('a campfire takes split wood and a spark, keeps the torch, and the rain puts it out (2026-10-29)', async () => {
+    const room = [...OUTDOOR_ROOMS].find((r) => r === 'the-last-paving') ?? [...OUTDOOR_ROOMS][0];
+    const { z, said } = fireWorld(room);
+    const me = { pubkey: 'me', name: 'Rome', roomId: room, items: [{ rowId: 'w1', itemId: 'split-wood', serial: null }] };
+    await campfire.cmdCampfire(z, me);
+    assert.ok(!campfire.burning(z, room), 'no spark, no fire'); assert.match(said.at(-1), /nothing to light it with/);
+    me.items.push({ rowId: 'k1', itemId: 'loose-rock', serial: null }, { rowId: 's1', itemId: 'scrap-iron', serial: null });
+    for (let i = 0; i < 60 && !campfire.burning(z, room); i++) await campfire.cmdCampfire(z, me);
+    assert.ok(campfire.burning(z, room), 'a rock struck on scrap iron lights it in the end');
+    assert.deepEqual(me.items.map((c) => c.itemId), ['loose-rock', 'scrap-iron'], 'the wood is spent, the rock and the iron are not');
+    z.campfires.clear();
+    me.items = [{ rowId: 'w2', itemId: 'split-wood', serial: null }, { rowId: 't1', itemId: 'torch', serial: null }, { rowId: 'w3', itemId: 'split-wood', serial: null }];
+    await campfire.cmdCampfire(z, me);
+    assert.ok(campfire.burning(z, room), 'a torch lights it first time');
+    assert.ok(me.items.some((c) => c.itemId === 'torch'), 'and the torch is still in the pack');
+    const before = z.campfires.get(room);
+    await campfire.cmdCampfire(z, me);
+    assert.equal(z.campfires.get(room) - before, CAMPFIRE_MS, 'another bundle feeds it');
+    campfire.sky.raining = () => true;
+    campfire.tickCampfires(z, Date.now());
+    assert.ok(!campfire.burning(z, room), 'the rain puts it out');
+    me.items.push({ rowId: 'w4', itemId: 'split-wood', serial: null });
+    await campfire.cmdCampfire(z, me);
+    assert.ok(!campfire.burning(z, room), 'and will not let one be lit');
+  });
+  await checkAsync('a torch no longer cooks; a campfire does (2026-10-29)', async () => {
+    const room = [...OUTDOOR_ROOMS][0];
+    const { z, said } = fireWorld(room);
+    const raw = Object.keys(COOK_RECIPES)[0];
+    z.world.itemTemplates = new Map([[raw, { id: raw, name: 'a raw catch' }], [COOK_RECIPES[raw], { id: COOK_RECIPES[raw], name: 'a cooked catch' }], ['torch', { id: 'torch', name: 'a torch' }]]);
+    const me = { pubkey: 'me', name: 'Rome', roomId: room, litUntil: Date.now() + 60_000, litSource: 'torch',
+      items: [{ rowId: 'c1', itemId: raw, serial: null }, { rowId: 't1', itemId: 'torch', serial: null }] };
+    z.findCarried = (s, a) => s.items.find((c) => c.itemId === raw);
+    await cmdCook(z, me, 'catch');
+    assert.ok(me.items.some((c) => c.itemId === raw), 'a lit torch and a spare cook nothing'); assert.match(said.at(-1), /no fire here/);
+    assert.ok(me.items.some((c) => c.itemId === 'torch') && me.litSource === 'torch', 'and neither torch is touched');
+    z.campfires.set(room, Date.now() + 60_000);
+    await cmdCook(z, me, 'catch');
+    assert.ok(!me.items.some((c) => c.itemId === raw), 'over a campfire it cooks');
+  });
+  check('walking tires you: the heaviest kit is empty in about 100 rooms (2026-10-29, it never did)', () => {
+    assert.equal(Math.round(1000 / walkCost(41)), 100, 'the heaviest kit');
+    assert.equal(Math.round(1000 / walkCost(34)), 113, 'plate and shield');
+    assert.equal(Math.round(1000 / walkCost(0)), 325, 'bare hands');
+  });
+  check('deep snow adds to your load on the move, not in the fight (2026-10-29)', () => {
+    const room = [...OUTDOOR_ROOMS][0];
+    const z = { loadOf: () => 5, snowUntil: Date.now() + 60_000, world: { rooms: new Map([[room, { region: 'mountain' }]]) } };
+    const s = { roomId: room };
+    assert.equal(moveLoad(z, s), 5 + SNOW_LOAD_KG, 'the snow holds your feet');
+    z.snowUntil = 0; assert.equal(moveLoad(z, s), 5, 'and lets them go when it melts');
+    const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(verbs, /partingOdds = Math\.min\(PARTING_CAP, moveLoad\(z, session\)/, 'the parting blow reads it');
+    assert.match(verbs, /stealthMult = Math\.max\(ENTRY_STEALTH_MIN, Math\.min\(1, moveLoad\(z, session\)/, 'and the crash into a room');
   });
   check('smoke and a falling wall set you coughing', () => {
     const { z, noise, minutes } = coughWorld();

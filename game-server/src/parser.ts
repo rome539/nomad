@@ -64,6 +64,7 @@ export type Verb =
   | "smoke"
   | "cure"
   | "cook"
+  | "campfire"
   | "squink"
   | "enter"
   | "exit"
@@ -264,6 +265,9 @@ const VERB_ALIASES: Record<string, Verb> = {
   // (that word is the cigarette's, and the racks' when you stand in them) and
   // NOT 'burn' (which is destroying a thing, and means it elsewhere).
   cook: "cook", roast: "cook", grill: "cook", fry: "cook",
+  // Make a fire in the open, or feed the one burning ('light fire' and 'feed
+  // fire' reach it too, through light and feed).
+  campfire: "campfire", bonfire: "campfire", stoke: "campfire",
 
   squink: "squink", // means anything. not documented. never will be.
   xyzzy: "xyzzy", plugh: "xyzzy", frotz: "xyzzy", plover: "xyzzy", // the old words.
@@ -592,11 +596,15 @@ export const HELP_TEXT = [
   "                    racks are safe; the old smokehouse deep below the larder",
   "                    works too, if you bring a torch and can hold the room.",
   "  cook <catch>      (roast, grill) — a fish, an eel, a crab, an egg, over a",
-  "                    fire on the stone. It heals a good deal more and it will",
-  "                    NOT keep, which is the racks' job and not the fire's. Any",
-  "                    gate's brazier does it free; out in the world it takes a",
-  "                    torch set burning on the ground, and everything there can",
-  "                    see the flame and smell the cooking.",
+  "                    fire. It heals a good deal more and it will NOT keep,",
+  "                    which is the racks' job and not the fire's. Any gate's",
+  "                    brazier does it free; out in the world it takes a",
+  "                    campfire, and everything there can see the flame and",
+  "                    smell the cooking.",
+  "  campfire          (bonfire, stoke) — lay a bundle of split wood on open",
+  "                    ground and light it: from a torch, or a rock struck on",
+  "                    scrap iron. It warms and dries whoever stands at it and",
+  "                    burns a while; 'campfire' again feeds it another bundle.",
   "  smoke             light a cigarette. It steadies you for a breath. Out in the",
   "                    world the room sees the ember and so does the dark — inside",
   "                    a gatehouse it is only company.",

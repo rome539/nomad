@@ -28,6 +28,8 @@ import * as pvp from "./pvp";
 import * as lore from "./lore";
 import * as conditions from "./conditions";
 import * as den from "./den";
+import * as campfire from "./campfire";
+import { isWet } from "./cough";
 import * as detail from "./detail";
 import * as wanderer from "./wanderer";
 import * as styles from "./styles";
@@ -42,7 +44,7 @@ import {
   REST,
   PACK_CAP, LOCKBOX_CAP, VAULT_CAP, SEIZE_BREAK_ODDS, SLICK_BREAK_BONUS, MOB_WEAKGRIP_MULT, GEAR_WORN_AT, GEAR_FAILING_AT,
   PARTING_PER_WEIGHT, PARTING_CAP, NOISE_FLOOR, NOISE_PER_WEIGHT, NOISE_CAP, LOUD_SELF_COOLDOWN_MS, ENTRY_STEALTH_MIN, DODGE_ZERO_AT, FISHING_ROOMS, FISHING_SURFACE, FISHING_BECK, FISHING_CROSSING, CROSSING_TRAPS, SEA_EEL_ODDS, CROSSING_TRAP_EEL, BECK_EEL_ODDS, TRAP_EEL_ODDS, FISH_ODDS, PALE_EEL_ODDS, FISH_COOLDOWN_MS,
-  RAIN_BITE_MULT, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, EEL_RUN_FLOOD_MULT, SNOW_NOISE_MULT,
+  RAIN_BITE_MULT, SNOW_LOAD_KG, LAMPREY_ODDS, EEL_SURFACE_ODDS, JUNK_SNAG_ODDS, FISH_POOL_CATCHES, FISH_POOL_REST_MS, EEL_RUN_FISH_MULT, EEL_RUN_FLOOD_MULT, SNOW_NOISE_MULT,
   FOUL_KEY_ODDS, FOUL_TIN_ODDS, RIDDLE_DOOR_KEY, MOON_DOOR_KEY, TIDE_DOOR_KEY, BELL_DOOR_KEY, RIDDLE_ROTATE_MS, RIDDLES, RIDDLE_ASK, RIDDLE_OPEN_LINE, RIDDLE_WRONG, RIDDLE_MOCK, RIDDLE_MOCK_AFTER, RIDDLE_WINDOW_MS,
   tideSiltLine, RING_CD_MS,
   DREAM_ODDS, DREAMS,
@@ -264,6 +266,13 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
   await z.ensureAlarm();
 }
 
+// THE LOAD ON THE MOVE: your load, and the deep snow's hold on your feet while
+// it lies on the mountain (SNOW_LOAD_KG). Read by the parts of moving the load
+// law prices — the parting blow, the crash into a room — never the dodge.
+export function moveLoad(z: ZoneDO, session: Session): number {
+  return z.loadOf(session) + (events.snowed(z, session.roomId) ? SNOW_LOAD_KG : 0);
+}
+
 // ---- cook: a catch, a fire, and no waiting -------------------------------
 //
 // The racks' opposite (COOK_RECIPES holds the argument in full). Curing is a
@@ -271,12 +280,12 @@ export async function cmdCure(z: ZoneDO, session: Session, arg: string): Promise
 // it is done by the time you have finished crouching down. What you get is
 // HEAL and no keeping — the reverse of the smokehouse's trade.
 //
-// THE FIRE IS THE COST, and it is the same open flame the world already knows:
-// groundTorch, a torch burning on the stone. It lights the room for EVERYONE in
-// it, fire-fearing things break off from it, and lurkers cannot spring in it —
-// which cuts both ways, because a fire in a dark region is the most visible
-// thing a wanderer can do. There is no cooking in the dark, and no cooking
-// without spending your light or setting it down.
+// THE FIRE IS THE COST, and out in the world it is a CAMPFIRE (rome,
+// 2026-10-29: a torch is a light, not a stove — it used to be spent or set on
+// the stone to cook on, and no longer can be). Split wood and a spark make one
+// (campfire.ts). It lights the room for EVERYONE in it, fire-fearing things
+// break off from it, and lurkers cannot spring in it — which cuts both ways,
+// because a fire in a dark region is the most visible thing a wanderer can do.
 export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
   if (z.outOfWorld(session)) return cookAtGate(z, session, arg);
@@ -287,21 +296,15 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
   if (z.inCombat(session)) return z.send(session, "Not with something trying to kill you. Bolt it cold if you have to ('eat').");
 
   const cookable = session.items.filter((c) => COOK_RECIPES[c.itemId] && c.serial === null);
-  const held = light.carriesLight(session) && session.litSource === "torch";
-  const lit = Date.now() < (z.groundTorch.get(session.roomId) ?? 0);
-  const spare = session.items.find((c) => c.itemId === TORCH_ITEM && c.serial === null);
+  const lit = campfire.burning(z, session.roomId);
 
   if (!arg) {
     const what = cookable.length
       ? `You carry ${cookable.map((c) => world.itemTemplates.get(c.itemId)!.name).join(", ")}.`
       : "You carry nothing a fire would improve.";
     return z.send(session, (lit
-      ? `A fire burns on the stone here, low and steady. Anything raw out of water goes on it — 'cook trout', 'cook crab' — and comes off in a moment, worth more to a starving man and worth nothing to a keeper. ${what}`
-      : held
-      ? `You have the flame in your hand. Set it down and it becomes a fire — 'cook <catch>' will do it for you, since this wants both hands. ${what}`
-      : spare
-      ? `There is no fire here. You have a torch: 'cook <catch>' spends it, and the flame stays on the stone and burns for anyone. ${what}`
-      : `There is no fire here and nothing to make one with. A catch wants a flame on the stone. ${what}`), "evt");
+      ? `A fire burns here, low and steady. Anything raw out of water goes on it — 'cook trout', 'cook crab' — and comes off in a moment, worth more to a starving man and worth nothing to a keeper. ${what}`
+      : `There is no fire here. A catch wants a real fire under it — wood, and a spark to light it ('campfire'). ${what}`), "evt");
   }
 
   // Prefer a COOKABLE match, the same resolution the racks use: "cook fish"
@@ -334,20 +337,9 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
     return z.send(session, `${cap(rawT.name)} has gone. The fire will not take the rot back out of it — it would only make it hot and rotten.`);
   }
 
-  // THE FLAME, in the three ways you can have one. A fire already on the stone
-  // is free and keeps burning for whoever else is here; a torch in your hand
-  // goes down onto the stone (this wants both hands, and a set-down torch is
-  // the same shared fire); with neither, one out of the pack is spent to make
-  // one, exactly as the smoke-racks spend theirs. DECIDED first, APPLIED after
-  // the catch leaves the pack below — a refusal here must never cost the catch.
-  let how: "fire" | "setdown" | "spent";
-  if (lit) {
-    how = "fire";
-  } else if (held) {
-    how = "setdown";
-  } else if (spare) {
-    how = "spent";
-  } else {
+  // THE FLAME: a campfire burning here, or nothing. Checked before the catch
+  // leaves the pack below — a refusal here must never cost the catch.
+  if (!lit) {
     return z.send(session, `You turn ${rawT.name} over in your hands with nowhere to put it. Raw is raw without a fire, and there is no fire here.`);
   }
 
@@ -360,17 +352,6 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
   const carriedIdx = session.items.indexOf(carried);
   if (carriedIdx === -1) return z.send(session, "That's already left your pack.");
   session.items.splice(carriedIdx, 1);
-
-  // ...and now the flame, applied for real.
-  if (how === "setdown") {
-    z.groundTorch.set(session.roomId, Math.max(z.groundTorch.get(session.roomId) ?? 0, session.litUntil!));
-    session.litUntil = undefined; session.litSource = undefined; session.litRow = undefined; session.torchWarned = false;
-  } else if (how === "spent") {
-    const spareIdx = session.items.indexOf(spare!);
-    if (spareIdx !== -1) session.items.splice(spareIdx, 1);
-    await removeItemRow(z.env.DB, spare!.rowId);
-    z.groundTorch.set(session.roomId, Date.now() + TORCH_BURN_MS);
-  }
 
   await removeItemRow(z.env.DB, carried.rowId);
   const got = await z.grantItem(session, outId);
@@ -389,11 +370,7 @@ export async function cmdCook(z: ZoneDO, session: Session, arg: string): Promise
     z.markSimDirty();
     return;
   }
-  z.send(session, (how === "spent"
-    ? `You strike a torch down onto the stone and crouch over it. `
-    : how === "setdown"
-    ? `You set your torch on the stone — this wants both hands — and crouch over the flame. `
-    : `You crouch over the fire. `)
+  z.send(session, `You crouch over the fire. `
     + `${cap(rawT.name)} goes on, and it does not take long. ${pick([
       "The smell of it goes further than you would like.",
       "Fat runs and catches and the light jumps with it.",
@@ -994,6 +971,8 @@ export function selfExamine(z: ZoneDO, session: Session): string {
   if (session.stunned) parts.push("Your head still rings; the next moment won't quite be yours.");
   if (session.seizedBy) parts.push("Something has hold of you and won't let go.");
   if (session.resting) parts.push("You're at rest, catching your breath.");
+  if (session.chilled) parts.push("The chill is in your chest: you shake, you cough, and you are slow to mend until you are warm.");
+  else if (isWet(session)) parts.push("You are soaked through.");
   const weapon = z.equippedItem(session, "weapon");
   const armor = z.equippedItem(session, "armor");
   parts.push(weapon ? `You hold ${weapon.tmpl.name}.` : "Your hands are empty.");
@@ -1322,7 +1301,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // clean. (Armor still soaks it — that's what it's for.) A pack full of
   // loose iron drags the same — stripping down buys nothing while you're
   // still hauling the armory. `drop` it, or pay the toll.
-  const partingOdds = Math.min(PARTING_CAP, z.loadOf(session) * PARTING_PER_WEIGHT);
+  const partingOdds = Math.min(PARTING_CAP, moveLoad(z, session) * PARTING_PER_WEIGHT);
   const dragLine = z.wornWeight(session) > 0 ? "The mail drags at you" : "The pack's iron drags at you";
   if (wasFighting && partingOdds > 0 && chance(partingOdds)) {
     const striker = [...z.creatures.values()].find(
@@ -1376,7 +1355,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // ends of the step, so slipping out obeys the same law as slipping in
   // (rome, 2026-07-30: the exit roll used to ignore load entirely, so light
   // gear bought you a quiet arrival and nothing at all on the way out).
-  const stealthMult = Math.max(ENTRY_STEALTH_MIN, Math.min(1, z.loadOf(session) / DODGE_ZERO_AT));
+  const stealthMult = Math.max(ENTRY_STEALTH_MIN, Math.min(1, moveLoad(z, session) / DODGE_ZERO_AT));
   // Before you slip out, a dormant listener may hear you move for the door
   // and swing as you go — you still leave (if you live), but not always clean.
   if (await ai.wakeListeners(z, session, session.roomId, WAKE_EXIT * stealthMult, "hears you move — and swings as you slip past!")) {

@@ -54,9 +54,16 @@ export function swingCost(weight: number): number {
 export function exert(e: Exhaustion, weight: number): void {
   e.units = Math.min(FATIGUE_CAP, e.units + swingCost(weight));
 }
+// WALKING TIRES YOU (rome, 2026-10-29): the heaviest kit there is (41 kg)
+// walks itself empty in about 100 rooms, and every other load is scaled by the
+// same amount from the old (20 + 1.1 kg) / 10 step.
+export const WALK_SCALE = 1000 / (100 * (20 + 1.1 * 41) / 10);
+export function walkCost(weight: number): number {
+  return WALK_SCALE * (20 + 1.1 * Math.max(0, weight)) / 10;
+}
 export function walk(e: Exhaustion, weight: number, now: number): void {
   recover(e, now);
-  e.units = Math.min(FATIGUE_CAP, Math.round((e.units + (20 + 1.1 * Math.max(0, weight)) / 10) * 100) / 100);
+  e.units = Math.min(FATIGUE_CAP, Math.round((e.units + walkCost(weight)) * 100) / 100);
   e.walkingUntil = e.at + WALK_RECOVERY_DELAY_MS;
 }
 // THREE STEPS, NOT FIVE (rome, 2026-10-12): a quarter of the way down, at half,
