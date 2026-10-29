@@ -6965,6 +6965,10 @@ function benchItemNode(it, place) {
   if (it.heart) { var hw = document.createElement("span"); hw.className = "cond"; hw.textContent = " \\u2014 " + it.heart; nm.appendChild(hw); }
   // Perishable food shows its age once it's past fresh (flavor — it still feeds you).
   if (it.fresh) { var fw = document.createElement("span"); fw.className = "cond"; fw.textContent = " \\u2014 " + it.fresh; nm.appendChild(fw); }
+  // A light says when it is burning, as the typed list does (light.lightWords).
+  // A lantern counts the fat in its well, as the typed list does (light.wellCount).
+  if (it.well) { var wl = document.createElement("span"); wl.className = "cond"; wl.textContent = " \\u2014 " + it.well; nm.appendChild(wl); }
+  if (it.lit) { var lw = document.createElement("span"); lw.className = "cond"; lw.textContent = (it.well ? ", " : " \\u2014 ") + "lit"; nm.appendChild(lw); }
   wrap.appendChild(nm);
   var acts = document.createElement("div");
   acts.className = "acts";
@@ -7029,6 +7033,8 @@ function benchItemNode(it, place) {
     });
     acts.appendChild(b);
   }
+  // The torch burning in your hand: putting it out is the only thing to do.
+  if (it.torchHand) { btn("douse", "douse"); wrap.appendChild(acts); return wrap; }
   if (place === "pack") {
     // Manage what's on: anything with a slot (weapon, armor, helm, feet, cloak,
     // shield) can be worn/wielded; plain carryables can't.
@@ -7036,6 +7042,10 @@ function benchItemNode(it, place) {
       if (it.equipped) btn("remove", "remove");
       else btn(it.slot === "weapon" ? "wield" : "wear", "equip");
     }
+    // A lantern, a torch or a brand lights from here, and a lit lantern goes
+    // out from here: the same 'light' and 'douse' the typed list names.
+    if (it.lite === "light") btn1("light", "light");
+    else if (it.lite === "douse") btn("douse", "douse");
     btnQ("\\u2192 box", "stash");
     // The shelf, when you're standing under your own roof. Sits next to the box
     // because it is the same act — putting a thing down somewhere it keeps.
@@ -7293,7 +7303,12 @@ function renderBench(state) {
   var storeUsed = function (items, used) { return typeof used === "number" ? used : (items || []).filter(function (it) { return !it.equipped; }).length; };
   var others = [["lockbox", storeUsed(state.lockbox, state.lockboxUsed), state.lockboxCap]];
   if (benchAtGate) others.push(["vault", storeUsed(state.vault, state.vaultUsed), state.vaultCap]);
-  fillBenchCol(bpack, "Your pack", state.pack || [], state.packCap || 0, "pack", state.packUsed, state.packFood, state.packFoodCap, others);
+  // A lit torch is spent into your hand and is no longer a pack row, but it can
+  // still be put out from here: it rides in the pack's list as a row of its own
+  // with one button (the typed list gives it a line the same way).
+  var packRows = (state.pack || []).slice();
+  if (state.torchInHand) packRows.unshift({ row: "", name: "a torch, burning in your hand", torchHand: true, lit: true, lite: "douse", slot: "", n: 1, rarity: "common", description: "" });
+  fillBenchCol(bpack, "Your pack", packRows, state.packCap || 0, "pack", state.packUsed, state.packFood, state.packFoodCap, others);
   fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox", state.lockboxUsed);
   if (benchAtGate) {
     bvault.style.display = "";
@@ -8082,7 +8097,7 @@ function mudRow(type,it,place,source){
  var row=document.createElement('div');row.className=(type==='trade'?'trow':'bitem')+' mud-row';row.tabIndex=0;row.setAttribute('role','button');if(type==='forge')row.dataset.canForge=String(!!it.can);
  var name=document.createElement('span');name.className='nm';var realName=source.querySelector('.nm>span');name.appendChild(realName?realName.cloneNode(true):document.createTextNode(it.name));
  var qty=document.createElement('span');qty.className='mud-qty';qty.textContent=it.n>1?'×'+it.n:'';
- var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(place==='goods'?goodsWorthText(it):it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
+ var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.well?(it.lit?it.well+', lit':it.well):it.lit?'lit':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(place==='goods'?goodsWorthText(it):it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
  if(it.equipped)state.classList.add('equipped');
  var search=document.createElement('span');search.className='tags mud-search';search.textContent=source.querySelector('.nm').textContent+' '+(it.stat||'');
  row.append(name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)+(typeof it.w==='number'?'|'+it.w:'')};mudRecords[type].push(record);

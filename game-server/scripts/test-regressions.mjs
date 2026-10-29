@@ -30,7 +30,8 @@ try {
         "export {cmdMap, copyCounts} from './lore';",
         "export {cmdGo} from './verbs';",
         "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, glutMult, tickGlut, offerCore, cmdOffer} from './gate';",
-        "export {cmdLook} from './verbs';",
+        "export {cmdLook, keepingLines} from './verbs';",
+        "export * as light from './light';",
         "export * as body from './body';",
         "export * as ratking from './ratking';",
         "export * as coughing from './cough';",
@@ -59,7 +60,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, body, ratking, coughing, reconcilePopulation, provokeGrudges, creatureTell, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, reconcilePopulation, provokeGrudges, creatureTell, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -725,6 +726,36 @@ try {
     const fresh = () => { for (const [id, c] of z.creatures) if (c.templateId === 'rat-king' && c !== king) z.creatures.delete(id); };
     for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.fell(z, t0 + 5 * H); ratking.roll(z, t0 + 5.2 * H); fresh(); }
     assert.ok(noise.length > 10, 'the dead king\'s air still sets people coughing: ' + noise.length);
+  });
+  check('a light in the pack says how to light it and put it out, in the window and the typed list alike (2026-10-29)', () => {
+    const T = { 'hooded-lantern': { id: 'hooded-lantern', name: 'a hooded lantern', rarity: 'common', slot: '' },
+                'torch': { id: 'torch', name: 'a pitch-soaked torch', rarity: 'common', slot: '' } };
+    const z = { world: { itemTemplates: new Map(Object.entries(T)) },
+      gearName: (id, n) => n, displayName: (c) => T[c.itemId].name, itemStat: () => '', conditionWord: () => '', carriesLight: () => false,
+      stackable: (id) => id === 'torch', isGear: () => false, isKey: () => false, isTrophy: () => false };
+    const lantern = { rowId: 'L1', itemId: 'hooded-lantern', serial: null, condition: 100 };
+    const torches = [{ rowId: 'T1', itemId: 'torch', serial: null }, { rowId: 'T2', itemId: 'torch', serial: null }];
+    const s = { items: [lantern, ...torches] };
+    const text = () => keepingLines(z, s.items, 'You carry:', s, 'pack').join('\n');
+    assert.deepEqual(light.lightOffer(z, s, lantern), { lit: false, verb: 'light', arg: 'lantern', well: 'fat 0/3' }, 'a dry well says 0');
+    lantern.fuel = 10 * 60_000;
+    assert.equal(light.lightOffer(z, s, lantern).well, 'fat ½/3', 'a scrape still reads as something');
+    lantern.fuel = 60 * 60_000;
+    assert.match(text(), /a hooded lantern \[common\] — fat 2\/3 \('light lantern'\)/, 'an unlit lantern counts its fat and says how to light it');
+    lantern.serial = 734;
+    assert.match(text(), /a hooded lantern \[common\] — sealed #734, fat 2\/3 \('light lantern'\)/, 'one dash, the fat after the seal');
+    lantern.serial = null;
+    assert.match(text(), /a pitch-soaked torch \(x2\).*\('light torch'\)/, 'and the torches too');
+    Object.assign(s, { litUntil: Date.now() + 60_000, litSource: 'lantern', litRow: 'L1' });
+    assert.equal(light.lightOffer(z, s, lantern).verb, 'douse', 'the window offers douse on the lit one');
+    assert.equal(light.lightOffer(z, s, lantern).well, 'fat ½/3', 'a burning lantern counts what the flame has left, not the fat it started with');
+    assert.match(text(), /a hooded lantern.* — fat ½\/3, lit \('douse' to put it out\)/, 'and the typed list says the same words');
+    Object.assign(s, { litSource: 'torch', litRow: undefined });
+    assert.ok(light.torchInHand(s));
+    assert.match(text(), /a torch, burning in your hand \('douse' to put it out\)/, 'a torch burning in your hand has its own line');
+    assert.doesNotMatch(text(), /\('light torch'\)/, 'and the pack stops offering to light another');
+    s.items = [];
+    assert.match(text(), /a torch, burning in your hand/, 'even with nothing else in the pack');
   });
   await checkAsync('the crab migration comes up, takes the crossing and the road, and goes back (2026-10-28)', async () => {
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');

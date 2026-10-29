@@ -58,6 +58,49 @@ export function wellWords(ms: number): string {
     : "There is a scrape of fat left in the bottom of the well.";
 }
 
+// WHAT A LIGHT IN THE PACK OFFERS (rome, 2026-10-29: light it and put it out
+// from the pack window, and the typed list says the words for it). One answer
+// for the window's button and the text line, so the two never disagree.
+// verb: what the button does and the word the list prints ("" for nothing - a
+// burning brand will not be put out). arg: what 'light' is told, so it lights
+// this kind and not whichever the pack finds first.
+export function lightOffer(z: ZoneDO, session: Session, c: CarriedItem): { lit: boolean; verb: "light" | "douse" | ""; arg: string; well?: string } | null {
+  const burning = carriesLight(session);
+  if (c.itemId === LANTERN_ITEM) {
+    const lit = burning && session.litSource === "lantern" && session.litRow === c.rowId;
+    return { lit, verb: lit ? "douse" : "light", arg: "lantern", well: wellCount(wellOf(session, c)) };
+  }
+  if (hasTrait(z.world!.itemTemplates.get(c.itemId), "burning")) {
+    const lit = burning && session.litSource === "brand" && session.litRow === c.rowId;
+    return { lit, verb: lit ? "" : "light", arg: "brand " + (z.world!.itemTemplates.get(c.itemId)?.name ?? "") };
+  }
+  // A lit torch is spent into your hand and is no longer in the pack, so the
+  // torches still in it only ever offer to be lit; the burning one has its own
+  // line (torchInHand).
+  if (c.itemId === TORCH_ITEM) return { lit: false, verb: burning && session.litSource === "torch" ? "" : "light", arg: "torch" };
+  return null;
+}
+export function torchInHand(session: Session): boolean {
+  return carriesLight(session) && session.litSource === "torch";
+}
+// The typed list's words for the same thing.
+// HOW MUCH IS IN THE WELL, COUNTED (rome, 2026-10-29: the lantern never said
+// how many lumps of fat it had left). In lumps, up to the next half so a scrape
+// still reads as something and only a dry well says 0, out of what the well
+// holds: "fat 1½/3". The window shows the same words.
+export function wellCount(ms: number): string {
+  const halves = Math.ceil((ms / LANTERN_FAT_MS) * 2);
+  const whole = Math.floor(halves / 2), half = halves % 2 ? "½" : "";
+  return `fat ${whole || !half ? whole : ""}${half}/${Math.round(LANTERN_WELL_MS / LANTERN_FAT_MS)}`;
+}
+export function lightWords(offer: ReturnType<typeof lightOffer>): string {
+  if (!offer) return "";
+  if (offer.well) return ` — ${offer.well}` + (offer.lit ? ", lit ('douse' to put it out)" : offer.verb === "light" ? ` ('light ${offer.arg}')` : "");
+  if (offer.lit) return offer.verb === "douse" ? " — lit ('douse' to put it out)" : " — burning, until it is done";
+  return offer.verb === "light" ? ` ('light ${offer.arg.split(" ")[0]}')` : "";
+}
+export const TORCH_IN_HAND_LINE = "a torch, burning in your hand";
+
 // A kindled light throws light until it gutters (litUntil). Read everywhere the
 // dark matters: seeing a lightless room, and waking the fire-fear.
 export function carriesLight(session: Session): boolean {

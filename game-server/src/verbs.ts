@@ -2453,6 +2453,9 @@ export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session, counts?: M
   // flaws especially, which a player has every right to see before they carry it.
   for (const tag of c.rolledMap?.keys() ?? []) tags.push(tag);
   if (tags.length) s += ` — ${tags.join(", ")}`;
+  // A light says whether it burns and the word that changes it, as the pack
+  // window's button does (light.lightOffer).
+  if (holder) { const w = light.lightWords(light.lightOffer(z, holder, c)); s += tags.length && w.startsWith(" — ") ? ", " + w.slice(3) : w; }
   return s;
 }
 
@@ -2462,7 +2465,10 @@ export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session, counts?: M
 export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, holder?: Session, kind?: "pack" | "vault", copies?: Map<string, string>): string[] {
   const world = z.world!;
   const lines = [header];
-  if (items.length === 0) { lines.push("  — empty —"); return lines; }
+  if (items.length === 0) {
+    if (kind === "pack" && holder && light.torchInHand(holder)) { lines.push(`  ${light.TORCH_IN_HAND_LINE} ('douse' to put it out)`); return lines; }
+    lines.push("  — empty —"); return lines;
+  }
   // One list, in the order it is shown: stacks of a kind collapse to a count,
   // everything else is its own line.
   const list = (group: CarriedItem[], pad: string): string[] => {
@@ -2479,10 +2485,15 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, ho
     }
     for (const [id, n] of counts) {
       const t = world.itemTemplates.get(id);
-      out.push(`${pad}  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""} [${t?.rarity ?? "?"}]${z.itemStat(t)}`);
+      const one = holder ? group.find((c) => c.itemId === id) : undefined;
+      out.push(`${pad}  ${t ? t.name : id}${n > 1 ? ` (x${n})` : ""} [${t?.rarity ?? "?"}]${z.itemStat(t)}${one ? light.lightWords(light.lightOffer(z, holder!, one)) : ""}`);
     }
     return out;
   };
+  // A lit torch is spent into your hand and is no longer in the pack, but it is
+  // still yours to put out: it gets its own line, as it does in the window.
+  const inHand = kind === "pack" && holder && light.torchInHand(holder)
+    ? [`  ${light.TORCH_IN_HAND_LINE} ('douse' to put it out)`] : [];
   // THE SAME SHELVES AS THE WINDOWS (rome, 2026-10-18): the pack reads Equipped /
   // In the pack / Food and the deep keep Gear / Supplies / Keys / Food / Trophies,
   // exactly as fillBenchCol in public.ts lays them out - change one, change both.
@@ -2501,12 +2512,14 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, ho
     ["TROPHIES", items.filter((c) => z.isTrophy(c.itemId))],
   ] : null;
   const worn = kind === "pack" && shelves![0][1].length > 0;
-  if (!shelves || (!worn && shelves.filter((sh) => sh[1].length).length < 2)) return [...lines, ...list(items, "")];
+  if (!shelves || (!worn && shelves.filter((sh) => sh[1].length).length < 2)) return [...lines, ...inHand, ...list(items, "")];
   for (const [name, group] of shelves) {
     if (!group.length) continue;
     lines.push(`  ${name}`);
+    if (name === "IN THE PACK") lines.push(...inHand.map((l) => "  " + l));
     lines.push(...list(group, "  "));
   }
+  if (!shelves[1][1].length && inHand.length) lines.push("  IN THE PACK", ...inHand.map((l) => "  " + l));
   return lines;
 }
 

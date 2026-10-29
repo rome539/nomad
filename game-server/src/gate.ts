@@ -31,6 +31,7 @@ import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STU
   POSES, COURTESIES, WAVE_ARMED, DANCE_ALONE, DANCE_ALONE_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM, SING_SELF, SING_ROOM,
   KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS, REGION_LABELS, HARD_FROST, MOON_FULL_EVERY } from "./zone-data";
 import * as den from "./den";
+import * as light from "./light";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
 import { MAP_QUARTERS } from "./detail";
@@ -1925,6 +1926,17 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
     // amount" drawing a stack out of the vault (2026-07-14). Now the whole pile
     // moves in THIS one handler, and we render ONCE at the end, from settled
     // state. (Legacy single-row `frame.row` still accepted, for safety.)
+    // A LIGHT, LIT OR PUT OUT FROM THE WINDOW: the same 'light' and 'douse' you
+    // can type, told which kind the row is (light.lightOffer), then the window
+    // redrawn with the flame's new state.
+    if (action === "douse") { await light.cmdDouse(z, session); return sendBench(z, session); }
+    if (action === "light") {
+      const c = typeof frame.rows?.[0] === "string" ? session.items.find((k) => k.rowId === frame.rows[0]) : undefined;
+      const offer = c ? light.lightOffer(z, session, c) : null;
+      if (!offer || offer.verb !== "light") return sendBench(z, session);
+      await light.cmdLight(z, session, offer.arg);
+      return sendBench(z, session);
+    }
     if (Array.isArray(frame.rows) && frame.rows.length > MAX_BATCH_ROWS) return;
     const rows = Array.isArray(frame.rows)
       ? [...new Set<string>(frame.rows.filter((r: unknown): r is string => typeof r === "string" && r.length <= 128))]
@@ -2299,6 +2311,9 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
         // an adjective — which asks a player to notice a word that was not there
         // before, and hides a second tag entirely. The modal names them plainly.
         traits: [...(c.rolledMap?.keys() ?? [])],
+        // A light in the pack can be lit or put out from the window, the same
+        // words the typed list prints (light.lightOffer). Pack only.
+        ...(() => { const o = session.items.includes(c) ? light.lightOffer(z, session, c) : null; return o ? { lite: o.verb, lit: o.lit, well: o.well ?? "" } : {}; })(),
       };
     };
     // Fungibles collapse to one entry with a count and the full list of rows —
@@ -2333,6 +2348,9 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
       shelfGear: shelf ? shelf.held.filter((c) => z.isGear(c.itemId)).length : 0,
       shelfRest, denCap: den.denCap(shelf?.den),
       pack: sortKit(group(session.items)),
+      // a lit torch is spent into your hand and is no longer a pack row, but it
+      // can still be put out from here
+      torchInHand: light.torchInHand(session),
       lockbox: sortKit(group(lockbox)),
       vault: sortKit(group(vault)),
       packCap: z.packCap(session), lockboxCap: LOCKBOX_CAP, vaultCap: VAULT_CAP,
