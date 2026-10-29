@@ -1352,9 +1352,10 @@ export const RELIABLE_GEAR = new Set(["loose-rock"]); // the starter tool: exemp
 // wolf-earth were take-wait-take faucets — exactly what the law was written to
 // kill (mig 180's own comment claimed the pelt rode the dice; the code never
 // gave it to it). These three are "sometimes there" now, like the gear.
-// The den's three materials ride it too (mig 343): the world gives them up
-// now and then, and the keeper's shelf stays the reliable place to buy them.
-export const DICE_REGROW = new Set(["wolf-pelt", "toll-token", "raven-feather", "split-wood", "leather-offcuts", "bone-offcuts"]);
+// The den's materials ride it too (mig 343, scrap from 344): the world gives
+// them up now and then, and the keeper's shelf stays the reliable place to buy
+// them. Scrap on the old 5-25 min clock was iron for free (mig 328's reason).
+export const DICE_REGROW = new Set(["wolf-pelt", "toll-token", "raven-feather", "split-wood", "leather-offcuts", "bone-offcuts", "scrap-iron"]);
 // ...but "always comes back" at the GATE has no drain out in the world: a rock
 // carried off and left where you die (or dropped in a room that doesn't grow
 // them) is net-new — the gate refills behind it, and a rock isn't edible, so
