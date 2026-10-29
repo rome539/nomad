@@ -929,19 +929,14 @@ function bunkList(z: ZoneDO, den: Den): string {
 
 export function container(roomId: string): string { return `den:${roomId}`; }
 
-// THE SHELF RUSTS, AND NEVER EATS ANYTHING (rome, 2026-08-03: "make gear rust
-// but never destory when stored int he ren").
-//
-// Worked out LAZILY, at the moment somebody looks, from the stamp the row got
-// when it was put down (container_at, mig 165). Ticking every stowed row of
-// every player every two seconds would be thousands of writes a beat to move a
-// number nobody is watching; this gives the identical answer with no clock, and
-// it is right across a deploy, a hibernation gap, or a month away.
-//
-// THE ONE HARD RULE: it floors. This never calls z.wear(), which deletes a
-// piece at zero — it does the arithmetic itself and stops at DEN_RUST_FLOOR.
-// What you put down is what you pick up: in worse condition, never in fewer
-// pieces, and always still mendable at a bench.
+// THE SHELF NO LONGER RUSTS (rome, 2026-10-29: a den is where you put a thing
+// so it is safe, and the shelf was the worst place in the world to keep sealed
+// or leather gear — it rusted both, which the pack never does). Gear comes off
+// the shelf exactly as it went on. (It used to rust, from 2026-08-03, floored
+// so it never broke.) What is left here is the larder: food keeps its own
+// clock at half speed, worked out LAZILY at the moment somebody looks, from
+// the stamp the row got when it was put down (container_at, mig 165), so it
+// is right across a deploy, a hibernation gap, or a month away.
 export async function rustShelf(z: ZoneDO, held: CarriedItem[], den?: Den): Promise<CarriedItem[]> {
   const now = Date.now();
   for (const c of held) {
@@ -960,19 +955,6 @@ export async function rustShelf(z: ZoneDO, held: CarriedItem[], den?: Den): Prom
       }
       continue;
     }
-    if (!z.isGear(c.itemId)) continue;          // cloth, food, rock and trophies keep their own clocks
-    const since = c.containerAt ?? now;
-    const hours = (now - since) / 3_600_000;
-    if (hours <= 0) continue;
-    let amount = hours * DEN_RUST_PER_HOUR;
-    if (den?.hides) amount *= DEN_HIDES_RUST_MULT; // oiled hides over the shelf: the damp finds its way under, slowly
-    if (c.serial !== null) amount *= SEALED_WEAR_MULT; // the gate's mark slows the damp; it does not stop it
-    const before = c.condition;
-    const after = Math.max(DEN_RUST_FLOOR, Math.round((before - amount) * 10) / 10);
-    if (after >= before) continue;
-    c.condition = after;
-    await z.env.DB.prepare("UPDATE player_items SET condition = ?, container_at = ? WHERE id = ?")
-      .bind(after, now, c.rowId).run();
   }
   return held;
 }
@@ -1263,11 +1245,9 @@ function shelfList(z: ZoneDO, den: Den | undefined, held: CarriedItem[]): string
   }
   if (den) {
     const worst = held.filter((c) => z.isGear(c.itemId)).reduce((n, c) => Math.min(n, c.condition), 100);
-    lines.push(worst <= DEN_RUST_FLOOR
-      ? "The damp has had its full go at the worst of that and can do no more to it — it is as far gone as this shelf can take a thing, and a bench will still bring it back."
-      : worst <= GEAR_FAILING_AT ? "Rust is well into that. A bench would have it back."
-      : worst <= GEAR_WORN_AT ? "The damp is getting at that. It always does, in here."
-      : "Nothing here is sealed against time — food ages on this shelf and iron rusts, though iron left here never rusts away to nothing.");
+    lines.push(worst <= GEAR_WORN_AT
+      ? "Some of that has seen hard use and the shelf will not mend it. A bench would have it back."
+      : "Food ages on this shelf like anywhere else. What you leave here otherwise is as you left it.");
   }
   return lines.join("\n");
 }

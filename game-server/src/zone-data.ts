@@ -7015,13 +7015,12 @@ export const CHILL_MEND_MULT = 0.5;                // rest mends at this rate wh
 // THE CAMPFIRE (rome, 2026-10-29). A bundle of split wood on open ground,
 // lit from a torch or struck from a rock on scrap iron. It burns
 // CAMPFIRE_MS a bundle, anyone may feed it to CAMPFIRE_MAX_MS, and the rain
-// puts it out. It is the only fire in the open: it cooks, it warms, it dries,
+// and the wind put it out. It is the only fire in the open: it cooks, it warms, it dries,
 // and it lights the room for everybody — the most visible thing a wanderer
 // can do. A torch is only ever the spark now, and is not spent.
 export const CAMPFIRE_MS = 15 * 60_000;
 export const CAMPFIRE_MAX_MS = 60 * 60_000;
 export const CAMPFIRE_STRIKE_ODDS = 0.35;  // a rock struck on scrap iron catches the wood this often
-export const CAMPFIRE_WIND_MULT = 0.5;     // ...and the wind halves every way of lighting it
 export const COUGH_WATER_LINES = [
   "You cough up black water, and more of it, and it will not stop coming.",
   "Your chest heaves and brings up a mouthful of the drowned's cold water, loud.",
@@ -7394,6 +7393,8 @@ export const DEN_WAKE_CHANCE = 0.125;
 // What a bar and its sockets cost. Iron is the deep's and the forge's currency,
 // which is the point: the thing that makes your house safe has to be carried out
 // of somewhere dangerous, so security is EARNED and never issued.
+// NO LONGER READ (rome, 2026-10-29): the den shelf does not rust any more
+// (den.rustShelf). Kept for the record of what it was.
 // WHAT THE SHELF COSTS (mig 165). Carried steel rusts at RUST_PER_TICK — about
 // 1.8 condition an hour, ~55 hours from new to nothing. A den is indoors and
 // put away, so it is a QUARTER of that: leave a plate on the shelf for a week

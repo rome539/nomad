@@ -1008,6 +1008,9 @@ const BIRD_SHEETS = {
 // cell. Restored, with hit gone instead.
 const REDRAW = {
   "the-woodward": ["idle","watch","alert","move-a","move-b","attack","sweep","death"],
+  // The carrier's sheet as cut on 2026-10-20 (output/.../road-carrier/sheet-order.json);
+  // the tool had no record and put death fifth.
+  "road-carrier": ["idle","check-the-satchel","set-down-the-load","alert","move-a","move-b","attack","death"],
   // ONE EATING FRAME FOR THE BEAR (rome, 2026-10-21). It hunts and forages, so it
   // was asked for feed AND graze - and with no carcass and no ground drawn the
   // two came back as the same head-down bear. Foraging shows the feed frame.

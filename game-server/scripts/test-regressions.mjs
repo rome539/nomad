@@ -968,6 +968,24 @@ try {
     me.items.push({ rowId: 'w4', itemId: 'split-wood', serial: null });
     await campfire.cmdCampfire(z, me);
     assert.ok(!campfire.burning(z, room), 'and will not let one be lit');
+    // ANYWHERE ON THE MAP (rome, 2026-10-29): a room under a roof takes one too.
+    const inside = 'the-cells';
+    assert.ok(!OUTDOOR_ROOMS.has(inside), 'the cells are under a roof');
+    campfire.sky.raining = () => false;
+    me.roomId = inside; await campfire.cmdCampfire(z, me);
+    assert.ok(campfire.burning(z, inside), 'a fire can be made indoors, in the fortress');
+    // THE WIND (rome, 2026-10-29): it blows out a fire it reaches; walls keep it off.
+    campfire.sky.windy = (zz, r) => r !== inside;
+    me.roomId = room; z.campfires.set(room, Date.now() + 60_000);
+    campfire.tickCampfires(z, Date.now());
+    assert.ok(!campfire.burning(z, room), 'the wind blows out a fire on open ground');
+    assert.ok(campfire.burning(z, inside), 'and leaves the one under a roof');
+    me.items.push({ rowId: 'w5', itemId: 'split-wood', serial: null });
+    await campfire.cmdCampfire(z, me);
+    assert.ok(!campfire.burning(z, room), 'and will not let one be lit there');
+    z.campfires.set('the-wayside-shelter', Date.now() + 60_000);
+    campfire.tickCampfires(z, Date.now());
+    assert.ok(campfire.burning(z, 'the-wayside-shelter'), 'a shelter\'s walls keep the wind off it');
   });
   await checkAsync('a torch no longer cooks; a campfire does (2026-10-29)', async () => {
     const room = [...OUTDOOR_ROOMS][0];
@@ -984,10 +1002,10 @@ try {
     await cmdCook(z, me, 'catch');
     assert.ok(!me.items.some((c) => c.itemId === raw), 'over a campfire it cooks');
   });
-  check('walking tires you: the heaviest kit is empty in about 100 rooms (2026-10-29, it never did)', () => {
-    assert.equal(Math.round(1000 / walkCost(41)), 100, 'the heaviest kit');
-    assert.equal(Math.round(1000 / walkCost(34)), 113, 'plate and shield');
-    assert.equal(Math.round(1000 / walkCost(0)), 325, 'bare hands');
+  check('walking tires you: the heaviest kit is empty in about 125 rooms (2026-10-29, it never did; 100 was too far)', () => {
+    assert.equal(Math.round(1000 / walkCost(41)), 125, 'the heaviest kit');
+    assert.equal(Math.round(1000 / walkCost(34)), 142, 'plate and shield');
+    assert.equal(Math.round(1000 / walkCost(0)), 407, 'bare hands');
   });
   check('deep snow adds to your load on the move, not in the fight (2026-10-29)', () => {
     const room = [...OUTDOOR_ROOMS][0];
@@ -998,6 +1016,17 @@ try {
     const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.match(verbs, /partingOdds = Math\.min\(PARTING_CAP, moveLoad\(z, session\)/, 'the parting blow reads it');
     assert.match(verbs, /stealthMult = Math\.max\(ENTRY_STEALTH_MIN, Math\.min\(1, moveLoad\(z, session\)/, 'and the crash into a room');
+  });
+  await checkAsync('gear on a den shelf does not rust (2026-10-29)', async () => {
+    const writes = [];
+    const z = { world: { itemTemplates: new Map([['iron-helm', { id: 'iron-helm', slot: 'helm' }]]) }, isGear: () => true,
+      env: { DB: { prepare: () => ({ bind: (...a) => ({ run: async () => { writes.push(a); } }) }) } } };
+    const week = Date.now() - 7 * 24 * 3_600_000;
+    const held = [{ rowId: 'h1', itemId: 'iron-helm', serial: null, condition: 90, containerAt: week },
+                  { rowId: 'h2', itemId: 'iron-helm', serial: 12, condition: 60, containerAt: week }];
+    await den.rustShelf(z, held, { hides: false });
+    assert.deepEqual(held.map((c) => c.condition), [90, 60], 'a week on the shelf and they come off as they went on');
+    assert.equal(writes.length, 0, 'and nothing is written');
   });
   check('smoke and a falling wall set you coughing', () => {
     const { z, noise, minutes } = coughWorld();
