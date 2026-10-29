@@ -10171,7 +10171,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "121";      // /mob/      strips and their eye layers
+var MOB_V  = "122";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "52";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
@@ -10546,6 +10546,27 @@ var ROOM_PLATE = {
   "the-briar-field":        "day night night-torch fog rain snow",
   "the-mass-grave":         "day night night-torch fog rain snow",
   "the-hanging-hill":       "day night night-torch fog rain snow",
+  // THE PITS (mig 345, rome 2026-10-29): twenty rooms of the same waste.
+  "the-dead-cart-track":    "day night night-torch fog rain snow",
+  "the-cart-tip":           "day night night-torch fog rain snow",
+  "the-lime-pits":          "day night night-torch fog rain snow",
+  "the-plague-trench":      "day night night-torch fog rain snow",
+  "the-tipping-edge":       "day night night-torch fog rain snow",
+  "the-bone-heaps":         "day night night-torch fog rain snow",
+  "the-sorting-ground":     "day night night-torch fog rain snow",
+  "the-gnawed-ground":      "day night night-torch fog rain snow",
+  "the-second-trench":      "day night night-torch fog rain snow",
+  "the-burning-ground":     "day night night-torch fog rain snow",
+  "the-trench-end":         "day night night-torch fog rain snow",
+  "the-ash-drifts":         "day night night-torch fog rain snow",
+  "the-wash-gully":         "day night night-torch fog rain snow",
+  "the-den-mouths":         "day night night-torch fog rain snow",
+  "the-wash-foot":          "day night night-torch fog rain snow",
+  "the-bone-fan":           "day night night-torch fog rain snow",
+  "the-laughing-ground":    "day night night-torch fog rain snow",
+  "the-dug-earth":          "day night night-torch fog rain snow",
+  "the-skull-mound":        "day night night-torch fog rain snow",
+  "the-last-pit":           "day night night-torch fog rain snow",
   "the-black-fen":          "day night night-torch fog rain snow",
   "the-drowned-orchard":    "day night night-torch fog rain snow",
   "the-burned-village":     "day night night-torch fog rain snow",
@@ -10564,6 +10585,15 @@ var ROOM_PLATE = {
   "the-forge-pit":          "day night night-torch fog rain snow",
   "the-camp-ground":        "day night night-torch fog rain snow",
   "the-suttlers-row":       "day night night-torch fog rain snow",
+  // the camp's tail (mig 347)
+  "the-camp-tail":          "day night night-torch fog rain snow",
+  "the-picket-ground":      "day night night-torch fog rain snow",
+  "the-forage-cut":         "day night night-torch fog rain snow",
+  "the-camp-midden":        "day night night-torch fog rain snow",
+  "the-horse-pits":         "day night night-torch fog rain snow",
+  "the-camp-graves":        "day night night-torch fog rain snow",
+  "the-deserters-ditch":    "day night night-torch fog rain snow",
+  "the-plague-tents":       "day night night-torch fog rain snow",
   "the-horse-lines":        "day night night-torch fog rain snow",
   "the-marshals-lodging":   "day night night-torch fog rain snow",
   "the-sap-head":           "day night night-torch fog rain snow",
@@ -10577,9 +10607,23 @@ var ROOM_PLATE = {
   "the-bell-pit":           "day night night-torch fog rain snow",
   "the-green":              "day night night-torch fog rain snow",
   "the-village-smithy":     "day night night-torch fog rain snow",
+  // the back lands (mig 347)
+  "the-toft-ends":          "day night night-torch fog rain snow",
+  "the-back-lane":          "day night night-torch fog rain snow",
+  "the-goose-green":        "day night night-torch fog rain snow",
+  "the-stray-pound":        "day night night-torch fog rain snow",
+  "the-crofts":             "day night night-torch fog rain snow",
+  "the-back-pond":          "day night night-torch fog rain snow",
   "the-fish-stew":          "day night night-torch fog rain snow",
   "the-orchard-rows":       "day night night-torch fog rain snow",
   "the-cider-house":        "day night night-torch fog rain snow",
+  // the waste fields (mig 347)
+  "the-windfall-bank":      "day night night-torch fog rain snow",
+  "the-field-gate":         "day night night-torch fog rain snow",
+  "the-dead-hedge":         "day night night-torch fog rain snow",
+  "the-waste-fields":       "day night night-torch fog rain snow",
+  "the-field-bank":         "day night night-torch fog rain snow",
+  "the-old-plough":         "day night night-torch fog rain snow",
   "the-gibbet-field":       "day night night-torch fog rain snow",
   "the-crossroads-grave":   "day night night-torch fog rain snow",
   "the-mine-gallery":       "day night night-torch",
@@ -10756,6 +10800,27 @@ var PLATE_OF = {
   "the-briar-field":        "fort-waste",
   "the-mass-grave":         "fort-waste",
   "the-hanging-hill":       "fort-waste",
+  // THE PITS (mig 345): bare earth, dead thorn and bones - the waste's own plate.
+  "the-dead-cart-track":    "fort-waste",
+  "the-cart-tip":           "fort-waste",
+  "the-lime-pits":          "fort-waste",
+  "the-plague-trench":      "fort-waste",
+  "the-tipping-edge":       "fort-waste",
+  "the-bone-heaps":         "fort-waste",
+  "the-sorting-ground":     "fort-waste",
+  "the-gnawed-ground":      "fort-waste",
+  "the-second-trench":      "fort-waste",
+  "the-burning-ground":     "fort-waste",
+  "the-trench-end":         "fort-waste",
+  "the-ash-drifts":         "fort-waste",
+  "the-wash-gully":         "fort-waste",
+  "the-den-mouths":         "fort-waste",
+  "the-wash-foot":          "fort-waste",
+  "the-bone-fan":           "fort-waste",
+  "the-laughing-ground":    "fort-waste",
+  "the-dug-earth":          "fort-waste",
+  "the-skull-mound":        "fort-waste",
+  "the-last-pit":           "fort-waste",
   "the-black-fen":          "fort-drowned",
   "the-drowned-orchard":    "fort-drowned",
   "the-wall-walk":          "fort-overworks",
@@ -10776,6 +10841,15 @@ var PLATE_OF = {
   "the-forge-pit":          "siege-lines",
   "the-camp-ground":        "siege-lines",
   "the-suttlers-row":       "siege-lines",
+  // THE CAMP'S TAIL (mig 347): the same grassed lines
+  "the-camp-tail":          "siege-lines",
+  "the-picket-ground":      "siege-lines",
+  "the-forage-cut":         "siege-lines",
+  "the-camp-midden":        "siege-lines",
+  "the-horse-pits":         "siege-lines",
+  "the-camp-graves":        "siege-lines",
+  "the-deserters-ditch":    "siege-lines",
+  "the-plague-tents":       "siege-lines",
   "the-horse-lines":        "siege-lines",
   "the-marshals-lodging":   "siege-lines",
   "the-sap-head":           "siege-lines",
@@ -10789,9 +10863,23 @@ var PLATE_OF = {
   "the-bell-pit":           "the-burned-village",
   "the-green":              "the-burned-village",
   "the-village-smithy":     "the-burned-village",
+  // THE BACK LANDS (mig 347): the same footings and burned posts
+  "the-toft-ends":          "the-burned-village",
+  "the-back-lane":          "the-burned-village",
+  "the-goose-green":        "the-burned-village",
+  "the-stray-pound":        "the-burned-village",
+  "the-crofts":             "the-burned-village",
+  "the-back-pond":          "the-burned-village",
   "the-fish-stew":          "fort-waste",
   "the-orchard-rows":       "fort-waste",
   "the-cider-house":        "fort-waste",
+  // THE WASTE FIELDS (mig 347): bare earth and dead thorn
+  "the-windfall-bank":      "fort-waste",
+  "the-field-gate":         "fort-waste",
+  "the-dead-hedge":         "fort-waste",
+  "the-waste-fields":       "fort-waste",
+  "the-field-bank":         "fort-waste",
+  "the-old-plough":         "fort-waste",
   "the-gibbet-field":       "fort-waste",
   "the-crossroads-grave":   "fort-waste",
   "the-camouflet":          "the-mine-gallery",
@@ -14236,8 +14324,8 @@ var MOB_ANIM = {
   "warden":           { n: 8, aspect: 0.941, f: {"idle":0,"hold-the-salute":1,"raise-the-lantern":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "cutthroat":   { n: 9, aspect: 0.946, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"alert":4,"move-a":5,"move-b":6,"attack":7,"death":8} },
   "cutpurse":   { n: 8, aspect: 1.243, f: {"idle":0,"rest":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "dire-hyena":   { n: 8, aspect: 1.063, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "grave-hyena":   { n: 8, aspect: 1.128, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "dire-hyena":   { n: 9, aspect: 1.156, f: {"idle":0,"alert":1,"feed":2,"guard-the-kill":3,"move-a":4,"move-b":5,"attack":6,"rest":7,"death":8} },
+  "grave-hyena":   { n: 9, aspect: 0.956, f: {"idle":0,"alert":1,"feed":2,"move-a":3,"move-b":4,"attack":5,"laugh":6,"rest":7,"death":8} },
   "forgotten-king":   { n: 8, aspect: 0.826, f: {"idle":0,"keep-the-seat":1,"stand-from-the-throne":2,"call-the-dark":3,"alert":4,"attack":5,"sweep":6,"death":7} },
   "two-hound":   { n: 6, aspect: 1.287, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
   "three-hound":   { n: 6, aspect: 1.219, f: {"idle":0,"hold-ground":1,"rest":2,"feed":3,"attack":4,"death":5} },
@@ -14266,7 +14354,7 @@ var MOB_ANIM = {
   "the-chain-breaker":   { n: 8, aspect: 1.107, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-baited-bear":     { n: 8, aspect: 1.284, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "roe-deer":            { n: 8, aspect: 1.113, f: {"idle":0,"alert-alarm":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "road-carrier":        { n: 8, aspect: 0.991, f: {"idle":0,"check-the-satchel":1,"set-down-the-load":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "road-carrier":        { n: 8, aspect: 0.983, f: {"idle":0,"check-the-satchel":1,"set-down-the-load":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat":                 { n: 8, aspect: 1.693, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "otter":               { n: 8, aspect: 1.618, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "masterless-dog":      { n: 8, aspect: 1.299, f: {"idle":0,"alert":1,"cast-about":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -14830,7 +14918,7 @@ function paintMobs(ids, doing, dead) {
     spec.acts = acts.length ? acts : ["idle"];
     var sleep = "idle", strike = "", recoil = "idle";
     for (var z2 = 0; z2 < SLEEP_POSES.length; z2++)
-      if (spec.f[SLEEP_POSES[z2]] !== undefined) { sleep = SLEEP_POSES[z2]; break; }
+      if (spec.f[SLEEP_POSES[z2]] !== undefined && !(SLEEP_POSES[z2] === "feed" && NO_FEED_SLEEP[id])) { sleep = SLEEP_POSES[z2]; break; }
     // EVERY BLOW IT WAS DRAWN WITH, not the first one found. This broke on the
     // first match and kept a single frame, which is right for forty-one of the
     // forty-three: they have "attack" and nothing else. The two drakes have
@@ -15256,6 +15344,10 @@ function poseAt(a, now) {
     // at meat rather than standing over it. A grazer does the same thing at the
     // ground, so the frame is whichever of the two this one was drawn with.
     name = a.eatAs || a.eat || "feed";   // whichever act the signal said this was
+    // ...AND IT LIFTS ITS HEAD (rome, 2026-10-29: an animal eating held the one
+    // frame the whole time). Partway through the bite it comes up and looks
+    // round, then goes back down to it.
+    if (t > FEED_S * 0.42 && t < FEED_S * 0.64) name = a.watch || "idle";
     x = Math.sin(t * 3.4) * SWAY * 0.10;
   } else if (a.state === "lurk" || a.state === "lurk-lit") {
     // LYING IN WAIT: the lurk frame, and nothing moving but a breath too slow to
@@ -15420,6 +15512,9 @@ var STAGGER_S = 0.75;     // how far apart blows in the same round are spread
 // slower, which is still the difference between a thing lying up and a thing
 // watching you.
 var SLEEP_POSES = ["rest", "bask", "hold-warm-ground", "hold-ground", "feed"];
+// (The two hyenas were kept off it here until their sheets were redrawn with a
+// sleeping frame, rome 2026-10-29. They have one now and it wins this list.)
+var NO_FEED_SLEEP = {};
 var STRIKE_POSES = ["attack", "bite", "sweep", "breath"];
 var HIT_POSES = ["hit"];
 // WHAT EATING LOOKS LIKE. Separate from CALM_POSES on purpose: this one answers

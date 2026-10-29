@@ -938,6 +938,7 @@ try {
     const said = [];
     const z = { campfires: new Map(), events: new Map(), env: { DB: { prepare: () => ({ bind: () => ({ run: async () => ({}), first: async () => null }) }) } },
       outOfWorld: () => false, inCombat: () => false, regionOf: () => 'road', carriesLight: (s) => (s.litUntil ?? 0) > Date.now(),
+      isDark: () => false, describeRoom: () => 'the room',
       send: (s, m) => said.push(m), roomFeed: () => {}, refreshRoomCtx: () => {}, markSimDirty: () => {}, ensureAlarm: async () => {},
       sessions: new Map(), inDen: new Map(), dens: new Map(), sendStatus: () => {}, sendCtx: () => {}, findCarried: () => null,
       grantItem: async () => true, world: { itemTemplates: new Map() } };
@@ -974,6 +975,15 @@ try {
     campfire.sky.raining = () => false;
     me.roomId = inside; await campfire.cmdCampfire(z, me);
     assert.ok(campfire.burning(z, inside), 'a fire can be made indoors, in the fortress');
+    // A DARK ROOM LIGHTS UP (rome, 2026-10-29: the picture stayed dark): the
+    // status flag reads the fire, and the room is shown again to the lightless.
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /torch: [^\n]*campfire\.warmsYou\(this, session\)/, 'the picture\'s lit flag counts the campfire');
+    z.campfires.clear(); z.isDark = () => true; z.sessions = new Map([['me', me]]); said.length = 0;
+    me.items.push({ rowId: 'w9', itemId: 'split-wood', serial: null });
+    await campfire.cmdCampfire(z, me);
+    assert.ok(said.includes('the room'), 'lighting it in the dark shows you the room');
+    z.isDark = () => false; z.sessions = new Map();
     // THE WIND (rome, 2026-10-29): it blows out a fire it reaches; walls keep it off.
     campfire.sky.windy = (zz, r) => r !== inside;
     me.roomId = room; z.campfires.set(room, Date.now() + 60_000);
@@ -1006,6 +1016,43 @@ try {
     assert.equal(Math.round(1000 / walkCost(41)), 125, 'the heaviest kit');
     assert.equal(Math.round(1000 / walkCost(34)), 142, 'plate and shield');
     assert.equal(Math.round(1000 / walkCost(0)), 407, 'bare hands');
+  });
+  check('a sleeping grave-hyena does not stand on its feed frame, and an eater looks up (2026-10-29)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    for (const id of ['grave-hyena', 'dire-hyena']) assert.match(pub, new RegExp(`"${id}":\\s*\\{ n: 9,[^}]*"rest":\\d`), id + ' has a sleeping frame of its own');
+    assert.doesNotMatch(pub, /"grave-hyena":\s*\{[^}]*"recover"/, 'and the grave-hyena has no recover frame');
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.equal((ai.match(/fxPose\(creature\.roomId, creature\.templateId, "laugh"\)/g) ?? []).length, 2, 'the laugh is shown at the dinner call and at the keening');
+    assert.match(pub, /SLEEP_POSES\[z2\] === "feed" && NO_FEED_SLEEP\[id\]/, 'and the sleep pick reads it');
+    assert.match(pub, /if \(t > FEED_S \* 0\.42 && t < FEED_S \* 0\.64\) name = a\.watch \|\| "idle";/, 'partway through a bite the head comes up');
+  });
+  check('the hyenas live mostly out in the pits, and the pits feed them and wear the waste plate (2026-10-29)', () => {
+    const pits = readFileSync(new URL('../regions/the-pits.rooms', import.meta.url), 'utf8');
+    const ids = [...pits.matchAll(/^## (the-[a-z-]+) \| (?!attachment)/gm)].map((m) => m[1]);
+    assert.equal(ids.length, 20, 'twenty rooms');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    for (const id of ids) assert.ok(pub.includes(`"${id}":`.padEnd(26) + '"fort-waste"'), id + ' wears the waste plate');
+    const mig = readFileSync(new URL('../migrations/346_the_hyenas_go_out_to_the_pits.sql', import.meta.url), 'utf8');
+    const moved = [...mig.matchAll(/room_id = '([a-z-]+)'\s+WHERE id = '(hyena-\d)'/g)];
+    assert.equal(moved.length, 4, 'four hyenas move out');
+    for (const [, room] of moved) assert.ok(ids.includes(room), room + ' is in the pits');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    for (const [, , id] of moved) assert.match(zd, new RegExp(`\\["${id}", "[a-z-]+"\\]`), id + ' is carried along on load (DEN_MOVES)');
+    assert.match(zd, /"the-cart-tip", "the-lime-pits", "the-plague-trench", "the-bone-heaps", "the-skull-mound", "the-last-pit"/, 'the pits are carrion ground');
+  });
+  check('the open ground spreads to three more places, each on its neighbours\' plate (2026-10-29)', () => {
+    const src = readFileSync(new URL('../regions/open-ground-2.rooms', import.meta.url), 'utf8');
+    const attach = [...src.matchAll(/^## (the-[a-z-]+) \| attachment/gm)].map((m) => m[1]);
+    assert.deepEqual(attach, ['the-suttlers-row', 'the-village-smithy', 'the-cider-house', 'the-culver-house'], 'four doors in three places, not one');
+    const ids = [...src.matchAll(/^## (the-[a-z-]+) \| (?!attachment)/gm)].map((m) => m[1]);
+    assert.equal(ids.length, 20, 'twenty rooms');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const want = (id) => ['the-camp-tail','the-picket-ground','the-forage-cut','the-camp-midden','the-horse-pits','the-camp-graves','the-deserters-ditch','the-plague-tents'].includes(id) ? 'siege-lines'
+      : ['the-toft-ends','the-back-lane','the-goose-green','the-stray-pound','the-crofts','the-back-pond'].includes(id) ? 'the-burned-village' : 'fort-waste';
+    for (const id of ids) assert.ok(pub.includes(`"${id}":`.padEnd(26) + `"${want(id)}"`), id + ' wears ' + want(id));
+    const mig = readFileSync(new URL('../migrations/348_hyenas_in_the_camp_and_the_fields.sql', import.meta.url), 'utf8');
+    assert.match(mig, /VALUES \('grave-hyena-camp', 'grave-hyena', 'the-camp-graves'\)/);
+    assert.match(mig, /VALUES \('grave-hyena-fields', 'grave-hyena', 'the-old-plough'\)/);
   });
   check('deep snow adds to your load on the move, not in the fight (2026-10-29)', () => {
     const room = [...OUTDOOR_ROOMS][0];

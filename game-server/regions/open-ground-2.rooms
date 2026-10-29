@@ -1,0 +1,150 @@
+# THE OPEN GROUND, spread wider (rome, 2026-10-29). Twenty rooms in three
+# places round the fortress, not one: the pits (the-pits.rooms) took the
+# churchyard's west side, and this file gives the rest of the open ground its
+# own back country, so the hyenas and everything else out here have room that
+# is not the halls.
+#
+#   THE CAMP'S TAIL (8)  - west off the Sutlers' Row: the far end of the siege
+#                          camp, where an army that sat a season kept what it
+#                          did not want to look at. Siege-lines plate.
+#   THE BACK LANDS (6)   - north off the Village Smithy: the tofts and the
+#                          pound behind the burned houses. Burned-village plate.
+#   THE WASTE FIELDS (6) - south off the Cider House and the Culver House: the
+#                          holding's fields, gone back to thorn. Fort-waste plate.
+#
+# Every one hangs off a spur room, so the ring under the walls is no longer by
+# a single step (open-ground.rooms: THE RING DOES NOT GET LONGER).
+
+!region out
+
+# ============================== THE CAMP'S TAIL ==============================
+
+## the-suttlers-row | attachment: the camp goes on west, past where it was sold to
+!existing
+> west the-camp-tail
+
+## the-camp-tail | The Camp's Tail
+The last of the hut hollows, set further apart than the ranks behind them and not in any rank at all, as if the camp ran out of order before it ran out of ground. The turf over them is rough and tussocked. Beyond the last one the bank of the lines bends away west and stops pretending to face the walls.
+> east the-suttlers-row
+> north the-picket-ground
+> west the-camp-midden
+
+## the-picket-ground | The Picket Ground
+A line of stake holes across the turf, still plain as a row of stitches, where the horses were tethered on the long ropes. The grass grows rank along the line and short between. A pair of wicker gabions left standing at the end of it have gone grey and rotten, and something has dug under one of them.
+> south the-camp-tail
+> west the-forage-cut
+> north the-horse-pits
+
+## the-forage-cut | The Forage Cut
+A broad strip of ground cut bare and never let grow back properly, where the camp scythed fodder for its horses for a season until there was nothing left to cut. The turf came back thin, in tussocks, with the chalk showing between. It runs west along the bank of the lines and gives out in rough grass.
+> east the-picket-ground
+> south the-camp-midden
+> north the-camp-graves
+> west the-plague-tents
+
+## the-camp-midden | The Camp Midden
+A long low mound grassed over at the back of the camp, where everything the army threw away went for a season. Bone and broken pot and black ash come up wherever the turf is torn, and the turf is torn all over it, dug at by things that know what a midden is.
+> north the-forage-cut
+> east the-camp-tail
+> west the-deserters-ditch
+
+## the-horse-pits | The Horse Pits
+Two long hollows side by side in the grass, slumped deeper than the hut hollows and longer than any of them, where the horses that died in the lines were dragged and covered. The ground sounds different underfoot. There are holes dug into both of them at the ends, old and new.
+> south the-picket-ground
+> west the-camp-graves
+
+## the-camp-graves | The Camp Graves
+The army's own dead, behind its own lines: rows of low turf mounds, close-set and short, with a few round stone shot laid at the heads of them for want of anything better to mark them with. The rows are straight. Some of the mounds have been opened from the side, low down, and not by a spade.
+> south the-forage-cut
+> east the-horse-pits
+
+## the-deserters-ditch | The Deserters' Ditch
+A short deep ditch cut across the end of the bank, grassed now, where the lines were closed off at the back to keep the army in. The ditch side is steep and the bottom wet. A stake still stands at one end of it with the iron of a collar rusted round its foot.
+> east the-camp-midden
+> north the-plague-tents
+
+## the-plague-tents | The Plague Tents
+A square of hut hollows set apart from all the others, a long throw from the camp, with a ditch round them and only one way across it. Whatever went into these did not come back out into the camp. The hollows are deeper than the rest, and the grass in them is greener than it has any right to be.
+
+# ============================== THE BACK LANDS ===============================
+> south the-deserters-ditch
+> east the-forage-cut
+
+## the-village-smithy | attachment: behind the forge, the backs of the houses
+!existing
+> north the-toft-ends
+
+## the-toft-ends | The Toft Ends
+The backs of the house-plots behind the smithy, each one marked off by a line of low stone footing, each with its own black stump of a post where a fence or a pen stood. The plots run back from the lane in narrow strips. Ash still lies in the corners of them where the wind cannot get it out.
+> south the-village-smithy
+> north the-back-lane
+> west the-stray-pound
+
+## the-back-lane | The Back Lane
+A narrow way behind the houses, between low stone footings on either side, where the carts came round to the yards. The ruts are filled with grass now. Charred posts stand along it at the yard gates, and every one of the gates is gone.
+> south the-toft-ends
+> west the-crofts
+> east the-goose-green
+
+## the-goose-green | The Goose Green
+A little triangle of open ground at the lane's end, cropped short, with a stone trough at one side of it gone green and a scatter of burned timbers along the other. The village kept its geese here. The grass is still cropped short, and the droppings in it are not a goose's.
+> west the-back-lane
+
+## the-stray-pound | The Stray Pound
+A square of low stone walling with a gap for a gate, where strays were penned until somebody paid to have them back. The walling has held where the houses did not. There are bones in the corner of it, and they are not old.
+> east the-toft-ends
+> north the-crofts
+> west the-back-pond
+
+## the-crofts | The Crofts
+The garden plots behind the last houses, laid out in low stone-kerbed beds, all of them gone to dock and nettle. A well stands among them with its sweep-arm fallen across the beds. Somebody grew the village's beans here, and the beds are still exactly as straight as they made them.
+> east the-back-lane
+> south the-stray-pound
+
+## the-back-pond | The Back Pond
+A round pond behind the pound, stone-edged on one side, where the village watered its beasts. The water is low and black and still, and the ground round it is trodden to mud by everything that comes to drink. Burned posts lean over it from the plot behind.
+> east the-stray-pound
+
+# ============================== THE WASTE FIELDS =============================
+
+## the-cider-house | attachment: the holding's fields lie south
+!existing
+> south the-windfall-bank
+
+## the-culver-house | attachment: the fields, round the back of the tower
+!existing
+> south the-field-gate
+
+## the-windfall-bank | The Windfall Bank
+A bank of bare earth below the orchard where the fruit rolled and rotted every autumn and nobody came to pick it up. The thorn has come up along the top of it in a dead hedge. The ground at its foot is churned and scraped and printed all over.
+> north the-cider-house
+> east the-field-gate
+> south the-waste-fields
+> west the-dead-hedge
+
+## the-field-gate | The Field Gate
+A gap in the old field hedge, which is dead thorn now, grey and leafless and higher than a man. The gap was a gate once. The track through it is worn down to bare earth by things that go the same way every night.
+> north the-culver-house
+> west the-windfall-bank
+> south the-field-bank
+
+## the-dead-hedge | The Dead Hedge
+The field's old boundary, a hedge laid by hand long ago and let go, grown out into a wall of dead thorn with bare earth at its foot. Bones have been dragged into the bottom of it and left where the thorn keeps everything else off them.
+> east the-windfall-bank
+> south the-old-plough
+
+## the-waste-fields | The Waste Fields
+What was ploughland, south of the holding: wide, bare and lumpy, the ridges of the old furrows still showing under thin grass and bare earth. Nothing has been sown here in two hundred years. The thorn has come in from every hedge and stands about the field in dead clumps.
+> north the-windfall-bank
+> east the-field-bank
+> west the-old-plough
+
+## the-field-bank | The Field Bank
+A low earth bank across the bottom of the fields, where the plough turned. A dead tree stands alone on it, bare and split. From the top of the bank the gibbet hill shows over the thorn to the east, and the ground in front of it is open the whole way.
+> north the-field-gate
+> west the-waste-fields
+
+## the-old-plough | The Old Plough
+A corner of the fields where the plough itself was left, an iron share and a rotted beam sunk into bare earth at the end of a furrow that was never finished. The furrow still runs straight from it across the field. Something lies up against the share by day; the earth there is pressed flat.
+> north the-dead-hedge
+> east the-waste-fields

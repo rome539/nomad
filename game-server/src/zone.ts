@@ -9166,7 +9166,9 @@ export class ZoneDO implements DurableObject {
           // ...AND A ROOM THAT IS LIT ANYWAY (rome, 2026-10-21): wherever the text
           // shows you the whole room after dark, the picture shows it lit too,
           // not the plain dark. See nightLitPicture.
-          torch: !seesArt(session.pubkey) ? undefined : (this.carriesLight(session) || den.hearthWarm(this, session) || this.nightLitPicture(session)) ? 1 : 0,
+          // ...and a campfire burning where you stand (rome, 2026-10-29: he lit
+          // one in a dark room and the picture stayed dark).
+          torch: !seesArt(session.pubkey) ? undefined : (this.carriesLight(session) || den.hearthWarm(this, session) || campfire.warmsYou(this, session) || this.nightLitPicture(session)) ? 1 : 0,
           // WHICH SKY, WHEN AN HOUR OWNS MORE THAN ONE. Not a choice made here:
           // just the day count, handed over so the client can index its own
           // table with it. The server stays out of the art the way it does with

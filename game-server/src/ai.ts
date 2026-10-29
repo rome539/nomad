@@ -2738,6 +2738,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
         );
         if (packmate) {
           z.roomFeed(creature.roomId, `${cap(tmpl.name)} throws back its head over the meal and laughs — short, carrying, summoning.`, undefined, false);
+          z.fxPose(creature.roomId, creature.templateId, "laugh"); // drawn on the redrawn sheet (rome, 2026-10-29)
           z.roomSound(creature.roomId, "A hyena's laugh rolls {dir} — short, and answered by footfalls.", undefined, undefined, false, { mob: creature.templateId, act: "call" });
           packmate.calledTo = creature.roomId;
           packmate.curious = creature.roomId;
@@ -2769,6 +2770,7 @@ export function mourns(z: ZoneDO, creature: Creature, now: number): void {
     creature.mournedAt = kin.at;
     creature.nextWanderAt = Math.max(creature.nextWanderAt, now + MOURN_VIGIL_MS); // holds its vigil
     const dead = tmpl.name.replace(/^(a|an|the)\s+/i, "");
+    z.fxPose(creature.roomId, creature.templateId, "laugh");
     z.roomFeed(creature.roomId, pick([
       `${cap(tmpl.name)} noses at the dead ${dead}, throws its head back, and laughs — a high, broken sound with no mirth anywhere in it.`,
       `${cap(tmpl.name)} circles the fallen ${dead} and keens, that awful laugh climbing and cracking apart.`,

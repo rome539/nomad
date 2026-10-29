@@ -33,6 +33,21 @@ import {
   CAMPFIRE_MS, CAMPFIRE_MAX_MS, CAMPFIRE_STRIKE_ODDS, SHELTER_ROOMS,
 } from "./zone-data";
 
+// Everyone standing here sees the room's light change: the status carries
+// the picture's lit flag, and the room text re-reads the light.
+// In a dark room the fire is the difference between seeing it and not, so
+// anyone without a light of their own is shown the room again — the way a
+// torch lit or a floor torch dying already does (light.ts).
+function repaint(z: ZoneDO, roomId: string): void {
+  const dark = z.isDark(roomId);
+  for (const s of z.sessions.values()) {
+    if (s.roomId !== roomId || z.outOfWorld(s)) continue;
+    z.sendStatus(s);
+    if (dark && !z.carriesLight(s)) z.send(s, z.describeRoom(s, false));
+  }
+  z.refreshRoomCtx(roomId);
+}
+
 /** Is a campfire burning in this room? */
 export function burning(z: ZoneDO, roomId: string, now = Date.now()): boolean {
   return now < (z.campfires.get(roomId) ?? 0);
@@ -123,7 +138,7 @@ export async function cmdCampfire(z: ZoneDO, session: Session): Promise<void> {
     : "You put the torch to the wood and hold it there until the bundle catches, then grind the torch out again. The fire takes, and the torch is still yours.")
     + " ('cook' a catch on it; 'campfire' again feeds it.)", "gain");
   z.roomFeed(roomId, `${session.name} gets a fire going, and the light of it comes up around you.`, session.pubkey, false);
-  z.refreshRoomCtx(roomId);
+  repaint(z, roomId);
   z.markSimDirty();
   await z.ensureAlarm();
 }
@@ -143,7 +158,7 @@ export function tickCampfires(z: ZoneDO, now: number): void {
         : drowned ? "The fire dies under the water with a long hiss, and the smoke goes flat along the ground."
         : "The fire burns down to embers and goes out.", "amb");
     }
-    z.refreshRoomCtx(roomId);
+    repaint(z, roomId);
     z.markSimDirty();
   }
 }

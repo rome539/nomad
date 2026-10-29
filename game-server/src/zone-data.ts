@@ -1513,6 +1513,11 @@ export const FENCE_LAST_ONE_ODDS = 0.2; // per item bought: that was his last (s
 export const FENCE_CHURN_MIN_MS = 20 * 60_000; // how often the shelf tops itself back up to the rotation target
 export const FENCE_CHURN_MAX_MS = 45 * 60_000;
 export const CARRION_ROOMS = new Set(["the-mass-grave", "the-bone-midden", "carrion-gallery",
+  // THE PITS (mig 345, rome 2026-10-29): where the fortress's dead were tipped,
+  // and where the hyenas went to live on them.
+  "the-cart-tip", "the-lime-pits", "the-plague-trench", "the-bone-heaps", "the-skull-mound", "the-last-pit",
+  // ...and the camp's own dead and its horses, behind the siege lines (mig 347)
+  "the-camp-graves", "the-horse-pits", "the-camp-midden",
   "the-bone-sift", // the carrion gallery's midden drains down into it (291)
   // THE BONE GROUND (mig 232). The fan under the whole face of the mountain,
   // where everything that comes off it arrives and is sorted by weight the way a
@@ -5430,6 +5435,8 @@ export const PRICK_LINES = [
   "The spines drive into your fist and stay there",
 ];
 export const DEN_MOVES = new Map<string, string>([
+  // mig 346: four grave-hyenas out of the halls and into the pits
+  ["hyena-1", "catacomb"], ["hyena-2", "kennels"], ["hyena-3", "kennels"], ["hyena-4", "larder"],
   ["wight-5", "drowned-barracks"], ["wight-4", "deep-ossuary"], ["wight-10", "bone-reliquary"],
   ["deep2-twice-drain-run", "the-drain-run"], ["deep2-twice-long-pews", "the-long-pews"],
   ["deep2-twice-feeling-wall", "the-feeling-wall"],

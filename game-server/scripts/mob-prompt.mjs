@@ -197,6 +197,14 @@ const LINES = {
   graze: "Crouched on his heels going through something on the ground with both hands, head down over it. What he is going through is NOT drawn",
   attack: "A fast slash with the thin knife, swung flat across at throat height, the body low",
 },
+"grave-hyena": {
+  laugh: "Head thrown right back, the jaws wide open on the laugh, the neck stretched up and the forefeet planted",
+  rest: "Asleep lying on its belly, legs folded under it, the head down flat on the forepaws and the eyes shut - NOT on its side, which is the death frame",
+},
+"dire-hyena": {
+  "guard-the-kill": "Standing square over the spot, legs planted wide and braced, head low and facing you, the mane up along the spine and the teeth showing",
+  rest: "Asleep lying on its belly, legs folded under it, the head down flat on the forepaws and the eyes shut - NOT on its side, which is the death frame",
+},
 "road-carrier": {
   alert: "Has seen you and squared up to you: weight forward on both feet, the head up and the eyes on you, ready to move, the satchel pushed back behind the hip",
   "check-the-satchel": "One hand come across to the buckles of the satchel at the hip, thumb on them, the head barely turned down to it and the stride not broken",
@@ -1011,6 +1019,13 @@ const REDRAW = {
   // The carrier's sheet as cut on 2026-10-20 (output/.../road-carrier/sheet-order.json);
   // the tool had no record and put death fifth.
   "road-carrier": ["idle","check-the-satchel","set-down-the-load","alert","move-a","move-b","attack","death"],
+  // THE TWO HYENAS SLEEP (rome, 2026-10-29: asleep after a meal they showed
+  // their feed frame, standing). Nine cells each, no recover: each keeps its
+  // shipped frames in their cut order and gains a sleeping frame before death;
+  // the grave-hyena's recover goes, and its ninth is the laugh it is known for
+  // (the dinner call and the keening over its own dead, ai.ts).
+  "grave-hyena": ["idle","alert","feed","move-a","move-b","attack","laugh","rest","death"],
+  "dire-hyena":  ["idle","alert","feed","guard-the-kill","move-a","move-b","attack","rest","death"],
   // ONE EATING FRAME FOR THE BEAR (rome, 2026-10-21). It hunts and forages, so it
   // was asked for feed AND graze - and with no carcass and no ground drawn the
   // two came back as the same head-down bear. Foraging shows the feed frame.
@@ -1603,12 +1618,15 @@ const LIVING_MEN = { has: (x) => PEOPLE.has(x) && !(x === id && inSet("HOLLOW"))
 // will not write one without it.
 const WOMEN = new Set(["the-milker", "the-butter-wife"]);
 // whose description puts them in their own clothes, so the strand rags are left off
-const OWN_CLOTHES = new Set(["the-wrecker"]);
-const COMES_AT_YOU = new Set(["cutthroat", "strand-thief", "road-carrier", "the-wrecker"]);
+// The carrier too (rome, 2026-10-29): his description puts him in a coat the
+// colour of the road, tall and walking upright, and the rags and the crouch
+// had drawn a different man.
+const OWN_CLOTHES = new Set(["the-wrecker", "road-carrier"]);
+const COMES_AT_YOU = new Set(["cutthroat", "strand-thief", "the-wrecker"]);
 const LIVING_LOOK = {
   "strand-thief": "A short ragged cape. A length of old fishing net slung over one shoulder and a bundle on his back; shells and beach-finds hung on the cords.",
   "cutthroat": "A strip of dark cloth wound over the mouth and nose under the hood. The rags bound in tight to a lean, narrow body, nothing loose to catch; a cord belt hung with small pouches and a knife sheath. A thin knife in one hand.",
-  "road-carrier": "A long ragged cape to the calf, the strips hanging longest of any of them. A heavy leather satchel on a long strap across the chest, riding at the hip, the one well-kept thing on him.",
+  "road-carrier": "Tall and upright, straight-backed, a long steady stride. A long coat to the calf gone the dull grey-brown of road dust, worn but whole. A FLAT leather satchel worn crosswise on a strap from one shoulder to the opposite hip, buckled shut, its buckles bright and polished with use, the one well-kept thing on him. Both hands free.",
   // HIS DESCRIPTION DRESSES HIM BETTER than the strand provides (rome, 2026-10-20:
   // follow it), so he is the one living man NOT in the strand rags - the same
   // weathered finish, his own clothes, and nothing invented on top.
@@ -1717,7 +1735,7 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward"]);
+const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")

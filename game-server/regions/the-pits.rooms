@@ -1,0 +1,142 @@
+# THE PITS (rome, 2026-10-29). Twenty rooms west of the Bell Pit, so that the
+# hyenas have somewhere of their own outside the halls - and are still met in
+# them, now and then, because they wander.
+#
+# The Mass-Grave says it plainly: "nobody dug graves one at a time in the end",
+# and the churchyard beside the Bell Pit is a foot higher than the field with a
+# thousand years of burials. This is where the rest went, once even the
+# churchyard had no room. The fortress's dead were carted out along
+# a track, tipped, limed, burned when there were too many, and left; and what
+# eats the dead came and stayed. Every room here is the one picture the open
+# waste already wears (fort-waste): bare churned earth, dead thorn, bones, the
+# gibbet on its hill to the south. No building stands anywhere in it.
+#
+# ONE ATTACHMENT, and the ring does not get longer (open-ground.rooms): the
+# whole spur hangs off the Bell Pit's west side and nowhere else. (It was
+# written off the Mass-Grave's north first; the siege lines and the mine hold
+# every square up there, and the map would have drawn the pits on top of them.)
+
+!region out
+
+## the-bell-pit | attachment: past the churchyard, where it sent what it had no room for
+!existing
+> west the-dead-cart-track
+
+## the-dead-cart-track | The Dead-Cart Track
+Two deep ruts run west from the churchyard's edge through the thorn, worn by wheels that went the one way loaded and came back light. Nothing else ever used this track, and nothing grows in the ruts even now. The thorn on either side leans away from it.
+> east the-bell-pit
+> west the-cart-tip
+> north the-lime-pits
+> south the-plague-trench
+
+## the-cart-tip | The Cart-Tip
+The track ends at a lip of bare earth where the carts were backed up and tipped, and the ground falls away beyond it in a long slope of soil and bone. A broken axle lies half-buried at the edge. The slope is gnawed over from top to bottom, and the gnawing is fresh.
+> east the-dead-cart-track
+> west the-tipping-edge
+> north the-bone-heaps
+> south the-second-trench
+
+## the-lime-pits | The Lime Pits
+Square pits cut into the earth in a row, each one filled to the brim with something pale and crusted that is not chalk. The lime was meant to make the dead go faster and to keep things off them. It has done the first. Paw prints go round the edges of every pit and down into one of them.
+> south the-dead-cart-track
+> west the-bone-heaps
+
+## the-plague-trench | The Plague Trench
+A long straight trench, dug in a hurry and filled in a worse one, the earth heaped back over it in a ridge that has slumped into the shape of what is under it. Somebody pushed stakes in along its length to mark it as a place not to dig. Most of the stakes are down, and the ridge has been dug into all along its line.
+> north the-dead-cart-track
+> west the-second-trench
+> south the-burning-ground
+
+## the-tipping-edge | The Tipping Edge
+The top of the long slope, where the ground breaks off into loose spill and you can see the whole of the pits laid out below and the gibbet on its hill beyond. The earth underfoot gives. Bones come up out of it after every rain, and something is always here first to take them.
+> east the-cart-tip
+> west the-wash-gully
+> north the-gnawed-ground
+> south the-trench-end
+
+## the-bone-heaps | The Bone Heaps
+Mounds of bone raked together and left, grey and white, taller than a man in places and sliding in others. Whoever raked them stopped sorting and simply heaped. The heaps are tunnelled at the foot, and the tunnels are the width of a big dog.
+> east the-lime-pits
+> south the-cart-tip
+> north the-sorting-ground
+> west the-gnawed-ground
+
+## the-sorting-ground | The Sorting Ground
+A stretch of trodden earth where somebody once laid the bones out in rows - long bones here, ribs there, skulls apart - before the numbers beat them. The rows are still faintly there under the scatter. The scatter is newer, and it has been dragged.
+> south the-bone-heaps
+> west the-skull-mound
+
+## the-gnawed-ground | The Gnawed Ground
+Bare earth trampled flat and littered end to end with split bone, cracked for the marrow and dropped. Everything here has been chewed, and the ground is printed over with the same broad, splayed tracks, crossing and recrossing. It smells of the pits and of something alive.
+> east the-bone-heaps
+> south the-tipping-edge
+> west the-den-mouths
+> north the-skull-mound
+
+## the-second-trench | The Second Trench
+A second trench beside the first, dug when the first was full, and never finished: it stops halfway along in a heap of thrown earth with a spade's worth of bones on top of it. They were still digging when they gave it up. The open end is a ditch full of thorn.
+> east the-plague-trench
+> north the-cart-tip
+> west the-trench-end
+> south the-ash-drifts
+
+## the-burning-ground | The Burning Ground
+A wide black scar in the earth where they burned the dead when there were too many even for the pits. Nothing has grown back on it. The ash has gone hard as a road, and charred ends of bone stand up out of it like stubble.
+> north the-plague-trench
+> west the-ash-drifts
+
+## the-trench-end | The Trench End
+Where the second trench runs out into the thorn, a low bank of spoil with the dead thorn grown down over it. The bank is hollowed underneath, and the hollow is lined with old fur and older bone. Something lies up here by day.
+> east the-second-trench
+> north the-tipping-edge
+> west the-bone-fan
+
+## the-ash-drifts | The Ash Drifts
+The edge of the burning, where the ash was raked off and left in grey drifts against the thorn. The drifts have set into a crust that breaks underfoot onto something softer. The wind takes the dust off the top of it and lays it over everything.
+> east the-burning-ground
+> north the-second-trench
+
+## the-wash-gully | The Wash Gully
+A gully cut by the rain down the face of the slope, bare-sided, with the water's work showing in every layer: soil, bone, soil, bone, ash. The bottom of it is a bed of washed bones, white and clean. Things come down here to drink when it runs, and to dig when it doesn't.
+> east the-tipping-edge
+> west the-wash-foot
+> south the-bone-fan
+> north the-den-mouths
+
+## the-den-mouths | The Den Mouths
+A bank of soft earth honeycombed with holes, each one big enough to take a hunched animal, each with a fan of spoil and gnawed bone spilling out of it. The ground in front of them is beaten bare. The holes are not empty. Some of them breathe.
+> east the-gnawed-ground
+> south the-wash-gully
+> north the-laughing-ground
+> west the-dug-earth
+
+## the-wash-foot | The Wash Foot
+The foot of the gully, where the rain drops what it carried in a broad fan of silt and bone spread out over the earth. The silt is printed thick with tracks going down to the wet and coming back. In the dry it cracks into plates, and the bones lie on top of the plates.
+> east the-wash-gully
+> north the-dug-earth
+
+## the-bone-fan | The Bone Fan
+A wide spill of bone and loose earth fanning out from the gully's side, as if the slope had let go of everything at once. Bones of every size lie tangled in it, the big ones wedged and the small ones washed into the gaps. It shifts when you cross it.
+> north the-wash-gully
+> east the-trench-end
+
+## the-laughing-ground | The Laughing Ground
+An open patch of trodden earth among the den mouths, flattened by bodies lying on it and scattered with the remains of a great many meals. At night the sound carries from here across the whole of the pits, a high broken laughing that the gibbet hill sends back. It is a long way from funny.
+> south the-den-mouths
+> east the-skull-mound
+
+## the-dug-earth | The Dug Earth
+Ground that has been dug over and over by claws, not spades, in hollows and scrapes that run into each other until there is no level ground at all. Bones turned up and dropped lie at the lip of every scrape. Whatever was buried shallow here has been found.
+> east the-den-mouths
+> south the-wash-foot
+> west the-last-pit
+
+## the-skull-mound | The Skull Mound
+A mound built entirely of skulls, set there by hand course on course by somebody who sorted the dead and could not bear to leave the heads in the heap. It has been undermined at the foot and the lower courses have rolled. The ones that rolled have been gnawed.
+> east the-sorting-ground
+> south the-gnawed-ground
+> west the-laughing-ground
+
+## the-last-pit | The Last Pit
+The last pit, at the far end of everything, dug and never filled. It is an open hole in the bare earth with the spoil thrown up round it, and in the bottom of it, among the thorn that has grown down into it, there are bones and fur and the leavings of meals. It is not a grave any more. It is a den.
+> east the-dug-earth
