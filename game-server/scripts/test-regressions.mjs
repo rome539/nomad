@@ -39,7 +39,7 @@ try {
         "export {cmdCook, moveLoad} from './verbs';",
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
-        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners} from './ai';",
+        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves} from './ai';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
@@ -64,7 +64,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2065,6 +2065,21 @@ try {
     me.roomId = 'the-gods-pool'; god.target = 'me'; god.rouseAt = 30000;
     beat(30000);
     assert.equal(god.rouseAt, undefined, 'a fight you started drops the wind-up, so the next visit gets its own');
+  });
+
+  await checkAsync('the surface warden crosses the sally port back to his round instead of circling the catacombs (2026-10-30)', async () => {
+    const z = new ZoneDO({}, {});
+    const ex = (pairs) => pairs.map(([dir, to_room]) => ({ dir, to_room, key_item: null }));
+    const rooms = ['crypt-steps', 'catacomb', 'sally-port', 'the-sally-ditch', ...PATROLS['warden-surface']];
+    z.world = { mobTemplates: new Map([['warden-surface', { id: 'warden-surface', name: 'a hollow warden', max_hp: 30, is_boss: 0 }]]), mobSpawns: [], itemTemplates: new Map(),
+      rooms: new Map(rooms.map((r) => [r, { id: r }])), entryRooms: new Set(['sally-port']), safeRooms: new Set(),
+      exits: new Map([['crypt-steps', ex([['up', 'sally-port'], ['north', 'catacomb']])], ['catacomb', ex([['south', 'crypt-steps']])],
+        ['sally-port', ex([['down', 'crypt-steps'], ['west', 'the-sally-ditch']])], ['the-sally-ditch', ex([['east', 'sally-port']])]]) };
+    z.send = () => {}; z.roomFeed = () => {}; z.refreshRoomCtx = () => {}; z.noteCreaturesChanged = () => {};
+    const w = { id: 'w', templateId: 'warden-surface', roomId: 'crypt-steps', hp: 30, target: null, grudges: [], home: 'muster' };
+    z.creatures = new Map([['w', w]]);
+    await creatureMoves(z, w, Date.now(), 'wander', true);
+    assert.equal(w.roomId, 'the-sally-ditch', 'through the gate in one beat and out onto his round, not back into the catacombs');
   });
 
   await checkAsync('a crawler you can plainly see does not drop out of the dark as you leave (2026-10-30)', async () => {

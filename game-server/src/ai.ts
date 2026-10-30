@@ -1416,6 +1416,15 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         }
         const closer = exits.filter((e) => z.roomDist(e.to_room, near) < best);
         if (closer.length) exits = closer;
+        // WALLED IN BY A GATE (rome, 2026-10-30): the surface warden stood in the
+        // Crypt Steps for good, because the one way up to his round is through
+        // the Collapsed Sally Port and no creature stands in a gate. Every step
+        // left led back into the catacombs. He crosses it in one beat instead,
+        // the way a homeward animal does (thresholdStep): never resident there.
+        else {
+          const t = thresholdStep(z, creature, creature.roomId, near, allWays);
+          if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
+        }
       }
     }
     // THE NOSE: fresh blood next door pulls an idle scavenger. A drip trail (a
