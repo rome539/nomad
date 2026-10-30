@@ -847,7 +847,12 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
     }
     for (const c of z.creatures.values()) {
       if (c.roomId !== roomId || c.target) continue;
-      const lurker = LURKERS.has(c.templateId);
+      // ONLY A HIDDEN LURKER DROPS OUT OF THE DARK (rome, 2026-10-30). One out
+      // in the open - drawn by a noise, or already revealed - was listed in the
+      // room plain as day, and still got the ambush and its free blow as you
+      // walked out past it. The room shows a lurker only while it is hidden
+      // (lurkerUnseen); the strike asks the same question now.
+      const lurker = LURKERS.has(c.templateId) && !!c.hidden;
       if (!LISTENERS.has(c.templateId) && !lurker) continue;
       // A torch spoils the ambush: a lurker caught in your light can't drop from
       // the dark (it shows in the room instead, revealed — see describeRoom).
