@@ -14199,7 +14199,8 @@ var MOB_SPRITE = {
   "pale-stalker": 7,      // the bigger blood of the same thing
   "three-hound": 33,       // a heavy hound - taller than a wolf, three heads up
   "two-hound": 28,         // "a head short and without the bulk to make up the difference"
-  "grave-hyena": 13,       // a hyena stands under a wolf and slopes away behind (13, not 12: the redrawn sheet draws him 4% smaller in his frame)
+  "grave-hyena": 16,       // a hyena stands under a wolf and slopes away behind. 16, not 12: the redrawn sheet (2026-10-29) draws
+                           // his body 10% smaller in its frame than the old one, measured on idle and both strides; 16 puts it back
   "dire-hyena": 15,        // the mean one, and bigger with it
   "cutpurse": 13,          // "HALF THE SIZE OF A PERSON and twice as quick"
   "cutthroat": 32,         // the same build with a knife in it

@@ -1068,6 +1068,22 @@ try {
     }
     for (const g of ['the-pits', 'camp-tail', 'back-lands', 'waste-fields']) assert.match(pub, new RegExp(`^  "${g}": 6\\d,$`, 'm'), g + ' has its mob line');
   });
+  check('the redrawn grave-hyena stands at the size the old one did, not 10% smaller (2026-10-30)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const n = Number(pub.match(/^  "grave-hyena": (\d+),/m)?.[1]);
+    // at 13 the new sheet's body measured 0.898 of the old strip's at 12; on-screen size goes as n^0.45
+    const body = 0.898 * Math.pow(n / 13, 0.45);
+    assert.ok(Math.abs(body - 1) < 0.02, 'grave-hyena ' + n + ' draws ' + body.toFixed(3) + ' of his old body');
+  });
+  check('every room with a picture in the client is one the server sends its place for (2026-10-30)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const plates = pub.match(/var ROOM_PLATE = \{([\s\S]*?)\n\};/)[1];
+    const rooms = [...plates.matchAll(/^\s+"?([a-z][a-z0-9-]*)"?\s*:\s*"/gm)].map((m) => m[1]).filter((r) => r !== 'den');
+    const art = new Set([...zd.match(/export const ART_ROOMS = new Set<string>\(\[([\s\S]*?)\]\);/)[1].matchAll(/"([a-z0-9-]+)"/g)].map((m) => m[1]));
+    assert.ok(rooms.length > 250, 'read the room plates');
+    assert.deepEqual(rooms.filter((r) => !art.has(r)), [], 'these paint black: the server never names their place');
+  });
   check('deep snow adds to your load on the move, not in the fight (2026-10-29)', () => {
     const room = [...OUTDOOR_ROOMS][0];
     const z = { loadOf: () => 5, snowUntil: Date.now() + 60_000, world: { rooms: new Map([[room, { region: 'mountain' }]]) } };
