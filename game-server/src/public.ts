@@ -10181,7 +10181,7 @@ var BG_V   = "52";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "12";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "29";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "30";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -13276,6 +13276,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // its night plate's ground and takes that mask.
   var fogName = veil && scene ? scene.slice(9, -5).replace("-night-torch", "-night") : "";
   var fogMask = fogName && typeof fogMasks !== "undefined" && fogMasks && fogMasks[fogName] ? "/room-fog/" + fogName + ".webp?v=" + FOG_V : "";
+  fxSnowGlint = !!(lastTorch && wxKind === "snow" && wxHour === "night" && !roofedWx && !lastCovered && scene && scene.slice(-10) === "-snow.webp");
   // A TORCH IN THE SNOW after dark, out under the sky: the snow plate's light map.
   var snowName = lastTorch && wxKind === "snow" && wxHour && !roofedWx && !lastCovered && scene && scene.slice(-10) === "-snow.webp" ? scene.slice(9, -10) + "-snowlight"
     : dawnTorch ? dawnTorch + "-snowlight" : "";   // ...and at dawn, through the same map
@@ -13459,6 +13460,15 @@ var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("
 var fxGl = null, fxProg = null, fxU = {}, fxIndex = null, fxIndexAsked = false;
 var fxName = "", fxEntry = null, fxFrame = null, fxStamp = 0, fxT = 0, fxReady = false, fxSeq = 0;
 var fxTex = {}, fxMobTex = {}, fxEmbers = [], fxDust = [];
+// YOUR TORCH ON A SNOWY NIGHT (rome, 2026-10-30): the snow plate's floor glints
+// in it. Set where the scene is painted, on the same terms as the snow's torch
+// light map, but at night only.
+var fxSnowGlint = false;
+// ...AND ALL OF YOUR TORCH'S LIGHT, NOT ONLY THE GLINT (rome, 2026-10-30: the
+// creatures threw no shadow on a snowy night with a torch). A snow plate under
+// your torch is lit the way a torch plate is: the pool sways, the floor glints,
+// and what stands in front of you throws its shadow.
+function fxHandLit(e) { return !!e && (!!e.hand || (!!e.snow && fxSnowGlint)); }
 // HOW MANY CREATURE STRIPS STAY ON THE GRAPHICS CARD (2026-10-27). Every strip a
 // lit room ever showed used to stay uploaded for the life of the tab, never
 // deleted: walk the world for an evening and it held most of the bestiary,
@@ -13480,7 +13490,7 @@ function fxInit() {
     "#endif",
     "varying vec2 v;",
     "uniform sampler2D plate, depth, mob0, mob1, mob2, mob3;",
-    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, handOn, handFlick, cloud;",
+    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, handOn, handFlick, cloud, glintOn;",
     "uniform vec2 sway;",
     "uniform vec3 torch[" + FX_TORCHES + "];",
     "uniform float flick[" + FX_TORCHES + "];",
@@ -13535,14 +13545,23 @@ function fxInit() {
     "  k *= 1. + flickOn * clamp(pulse, -1., 1.) * hot * .28;",
     "  vec3 add = flickOn * glow * vec3(.015, .007, 0.);",
     // The light in your hand: where it is now against where it was painted.
+    "  float rel = 1.;",
     "  if (handOn > .5){",
     "    vec3 p = P(v, d), L0 = vec3(.15, -.35, .05), L = L0 + vec3(sway, 0.);",
-    "    float rel = clamp(I(p, L) / I(p, L0), .55, 1.6);",
+    "    rel = clamp(I(p, L) / I(p, L0), .55, 1.6);",
     "    k *= mix(1., rel * handFlick, .25 + .75 * d);",
+    "  }",
+    // THE FLOOR GLINTS IN YOUR LIGHT - on a torch plate, and on a snow plate on
+    // a snowy night while your torch is lit (rome, 2026-10-30; glintOn).
+    "  if (handOn > .5 || glintOn > .5){",
     "    vec2 cell = floor(v * vec2(362., 271.));",
     "    float g = h(cell), b = h(cell + 17.3), sp = h(cell + 41.9);",
     "    float tw = pow(.5 + .5 * sin(t * (.8 + sp * 5.) + g * 60. + sway.x * 40.), 6. + sp * 14.);",
+    // The same glint on snow as on a torch plate, point for point (rome,
+    // 2026-10-30: a brighter, whiter one on snow did not match the torch).
     "    add += vec3(1., .82, .55) * step(.979, g) * tw * floorY * d * rel * (.08 + .29 * b * b);",
+    "  }",
+    "  if (handOn > .5){",
     "    float sh = shade(mob0, mobRect[0], mobFrame[0]);",
     "    sh = max(sh, shade(mob1, mobRect[1], mobFrame[1]));",
     "    sh = max(sh, shade(mob2, mobRect[2], mobFrame[2]));",
@@ -13577,7 +13596,7 @@ function fxInit() {
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   var ap = gl.getAttribLocation(fxProg, "p"); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
-  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "handOn", "handFlick", "cloud",
+  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "handOn", "handFlick", "cloud", "glintOn",
    "sway", "torch", "flick", "mobRect", "mobFrame"].forEach(function (k) { fxU[k] = gl.getUniformLocation(fxProg, k); });
   gl.uniform1i(fxU.plate, 0); gl.uniform1i(fxU.depth, 1);
   gl.uniform1i(fxU.mob0, 2); gl.uniform1i(fxU.mob1, 3); gl.uniform1i(fxU.mob2, 4); gl.uniform1i(fxU.mob3, 5);
@@ -13618,6 +13637,7 @@ function fxPrepare(scene, tint, done) {
   }
   var entry = fxIndex[name];
   if (!entry) { done(null); return; }
+  if (entry.snow && !entry.t && !fxSnowGlint) { done(null); return; } // nothing to show on it right now
   var cache = fxPrepare.cache || (fxPrepare.cache = new Map());
   var pending = cache.get(name);
   if (pending) {
@@ -13648,7 +13668,7 @@ function fxScene(scene, tint, prepared, cloud) {
   if (!prepared || stillness || viewMode !== "image" || !fxInit()) { fxStop(); return false; }
   fxCloud = cloud || 1;
   var name = prepared.name, entry = prepared.entry, im = prepared.images;
-  if (name === fxName && fxReady) { fxRun(); return true; }
+  if (name === fxName && fxReady) { fxGl.useProgram(fxProg); fxGl.uniform1f(fxU.glintOn, entry.snow && fxSnowGlint ? 1 : 0); fxGl.uniform1f(fxU.handOn, fxHandLit(entry) ? 1 : 0); fxRun(); return true; }
   fxStop();
   fxName = name; fxEntry = entry;
   try {
@@ -13664,7 +13684,8 @@ function fxScene(scene, tint, prepared, cloud) {
     // Mist in the halls underground; not at the doors, which are out of doors,
     // and not in the gatehouse, which has a fire going and a roof on.
     fxGl.uniform1f(fxU.mistOn, t.length && name.indexOf("gate") !== 0 ? 1 : 0);
-    fxGl.uniform1f(fxU.handOn, entry.hand ? 1 : 0);
+    fxGl.uniform1f(fxU.handOn, fxHandLit(entry) ? 1 : 0);
+    fxGl.uniform1f(fxU.glintOn, entry.snow && fxSnowGlint ? 1 : 0);
     if (t.length) for (var k = 0; k < 60; k++) fxDust.push({ x: Math.random(), y: .05 + Math.random() * .7,
       vx: (Math.random() - .5) * .008, vy: (Math.random() - .6) * .005, s: .6 + Math.random(), ph: Math.random() * 6.3 });
     fxReady = true;
@@ -13763,7 +13784,7 @@ function fxDraw(now) {
   gl.uniform1f(fxU.t, t); gl.uniform1f(fxU.aspect, fxTex.aspect || 1.6); gl.uniform1f(fxU.cloud, fxCloud);
   gl.uniform1fv(fxU.flick, fl); gl.uniform2f(fxU.sway, sx, sy);
   gl.uniform1f(fxU.handFlick, 1 + .06 * Math.sin(t * 2.3) + .04 * Math.sin(t * 6.1 + 1.3) + .03 * Math.sin(t * 15.7 + .4));
-  var mobs = e && e.hand ? fxMobs(box) : [];
+  var mobs = fxHandLit(e) ? fxMobs(box) : [];
   var rects = new Float32Array(FX_MOBS * 4), frames = new Float32Array(FX_MOBS * 2);
   for (var m = 0; m < FX_MOBS; m++) {
     gl.activeTexture(gl.TEXTURE2 + m);

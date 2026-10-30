@@ -4308,6 +4308,66 @@ export const SUMMER_DANCE_SOUNDS = [
 // you. That rarity is not a bug: the lion marks its ground when it believes it
 // is alone.
 export const WITNESSED_ODDS = 0.02; // per idle tick
+// WHAT IT IS DOING WHILE YOU STAND THERE (rome, 2026-10-30: a text player in a
+// room with a hyena got the one line on the way in, and then nothing until it
+// ate or left; the picture was posing the whole time). An idle creature with
+// somebody there now and then shows what it is about, in a line, from what is
+// true of it: hungry, hurt, or only keeping an eye on you. {A} is its name.
+// The animal lines are written to fit any body (a crab, a heron and a deer all
+// read them); a family with its own lines (PRESENCE_OWN) uses those instead.
+export const PRESENCE_ODDS = 0.025;          // per idle 2s beat: about one a minute and a half
+export const PRESENCE_ROOM_MS = 30_000;      // one line in a room at a time, at most every half minute
+export const PRESENCE_LINES: Record<"animal" | "folk" | "hollow", { calm: string[]; hungry?: string[]; hurt?: string[] }> = {
+  animal: {
+    calm: [
+      "{A} goes still, and looks at you for a long moment, and then looks away.",
+      "{A} shifts where it stands and settles again, keeping you at the edge of its eye.",
+      "{A} turns its head at some sound you did not hear, and holds there, listening.",
+      "{A} moves a few paces off and stops, putting a little more room between you.",
+      "{A} keeps half an eye on you and the other half on everything else.",
+    ],
+    hungry: [
+      "{A} cannot settle. It moves, and stops, and moves again, looking for something to eat.",
+      "{A} works the ground over where it stands, finds nothing, and keeps on at it anyway.",
+    ],
+    hurt: [
+      "{A} favours its hurt side, and keeps it turned away from you.",
+      "{A} stands carefully, the way a thing does when moving costs it something.",
+    ],
+  },
+  folk: {
+    calm: [
+      "{A} glances your way, and goes back to minding their own.",
+      "{A} shifts their weight and says nothing, and waits for you to be gone.",
+      "{A} looks you over the way you would look over a stranger on a lonely road.",
+    ],
+    hungry: ["{A} is pinched about the face and short-tempered with nothing, the way the hungry are."],
+    hurt: ["{A} holds themselves stiffly round a hurt, and does not mean you to see it."],
+  },
+  hollow: {
+    calm: [
+      "{A} stands where it is and does not breathe. Something in it creaks, and stops.",
+      "{A} turns its head toward you, slowly, all the way, and leaves it there.",
+      "{A} goes on standing. The stillness of it is not the stillness of anything that rests.",
+    ],
+  },
+};
+// ...and the families that have their own (the picture's poses, said out loud).
+export const PRESENCE_OWN: Record<string, string[]> = {
+  "grave-hyena": [
+    "{A} puts its nose to the ground and works it back and forth, over and over, as if the stones still had something in them.",
+    "{A} throws its head back and laughs — that high, broken, no-mirth laugh — at nothing at all, and goes quiet again.",
+    "{A} lies down where it stands, chin on its paws, and watches you from there.",
+    "{A} gets up again, stiff in the haunches, and turns a slow circle before it settles.",
+    "{A} lifts its nose to the air and tests it, and its eyes come back to you.",
+  ],
+  "dire-hyena": [
+    "{A} puts its big head down and noses the ground, slow and heavy, and does not take its eyes off you while it does.",
+    "{A} lets out a low whooping call that ends in a cough, and listens for an answer.",
+    "{A} lies down across the way, between you and the rest of the room, and watches.",
+    "{A} stands and stretches, all the length of it, and yawns, and every tooth shows.",
+  ],
+};
 const GULL_LINES = [
   "The great gull climbs the air and lets the mussel fall, and it breaks open on the shingle below, and the gull comes down after it to the pieces.",
   "The black-backed gull drops its shell from a height and the stone does the work — the coast's oldest trick, older than the coast's people, and it still works.",

@@ -31,7 +31,7 @@ import {
   PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, MILKER_GOATS, MILKING_ODDS, MILKING_LINES, MILKED_GOAT_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
-  SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
+  SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES, PRESENCE_ODDS, PRESENCE_ROOM_MS, PRESENCE_LINES, PRESENCE_OWN, FOLK, CUTTHROATS,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
   MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, MEAL_SMALL, SMALL_PREY, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
@@ -3311,6 +3311,37 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
     if (!playerPresent(z, creature.roomId)) return;
     if (!chance(WITNESSED_ODDS)) return;
     z.roomFeed(creature.roomId, pick(lines), undefined, false, "amb");
+  }
+
+  // WHAT IT IS DOING WHILE YOU STAND THERE (PRESENCE_LINES, zone-data). Only
+  // with somebody to see it, awake, idle, not eating, not in a fight; one line
+  // in a room at a time. The text a player reading the room would otherwise
+  // never get: the picture poses all along, the log said nothing.
+  const presenceRoomAt = new WeakMap<ZoneDO, Map<string, number>>();
+  export function presenceLine(creature: Creature, tmpl: MobTemplate, hungry: boolean): string | null {
+    const own = PRESENCE_OWN[creature.templateId];
+    const kind = HOLLOW.has(creature.templateId) ? "hollow" : FOLK.has(creature.templateId) || CUTTHROATS.has(creature.templateId) ? "folk" : "animal";
+    const set = PRESENCE_LINES[kind];
+    let lines: string[];
+    if (creature.hp < tmpl.max_hp * 0.5 && set.hurt) lines = set.hurt;
+    else if (hungry && set.hungry && chance(0.5)) lines = set.hungry;
+    else lines = own ?? set.calm;
+    return pick(lines).replace("{A}", cap(tmpl.name));
+  }
+  export function mobPresence(z: ZoneDO, creature: Creature, now: number): void {
+    if (creature.asleep || creature.target || creature.hidden || creature.heldBy || creature.holding || creature.rouseAt) return;
+    if ((creature.eatingUntil ?? 0) > now) return;
+    if (!playerPresent(z, creature.roomId)) return;
+    if (!chance(PRESENCE_ODDS)) return;
+    let rooms = presenceRoomAt.get(z);
+    if (!rooms) { rooms = new Map(); presenceRoomAt.set(z, rooms); }
+    if (now - (rooms.get(creature.roomId) ?? 0) < PRESENCE_ROOM_MS) return;
+    const tmpl = z.world!.mobTemplates.get(creature.templateId);
+    if (!tmpl || tmpl.is_boss) return;
+    const line = presenceLine(creature, tmpl, hungers(creature.templateId) && creature.hunger >= HUNGRY_AT);
+    if (!line) return;
+    rooms.set(creature.roomId, now);
+    z.roomFeed(creature.roomId, line, undefined, false, "amb");
   }
 
 /**

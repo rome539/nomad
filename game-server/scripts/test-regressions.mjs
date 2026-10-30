@@ -8,7 +8,7 @@
 // A new fix gets a new block here, in the same change.
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -39,7 +39,7 @@ try {
         "export {cmdCook, moveLoad} from './verbs';",
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
-        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds} from './ai';",
+        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine} from './ai';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
@@ -64,7 +64,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, PATROLS, patrolRoute, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, PATROLS, patrolRoute, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2079,6 +2079,48 @@ try {
     assert.ok(eat('carrion-vulture').hunger < 80, 'a vulture on the same ground still eats it');
     assert.equal(herds.feedsAt('grave-hyena', 'the-cart-tip'), false, 'the pits are not its feeding ground');
     assert.equal(herds.feedsAt('carrion-vulture', 'the-cart-tip'), true);
+  });
+
+  check('a text player standing with an idle creature hears what it is about, now and then (2026-10-30)', () => {
+    const z = new ZoneDO({}, {});
+    const T = (id, name, max_hp) => [id, { id, name, max_hp, is_boss: 0 }];
+    z.world = { mobTemplates: new Map([T('grave-hyena', 'a grave-hyena', 30), T('warden', 'a hollow warden', 30), T('roe-deer', 'a roe deer', 16)]), mobSpawns: [], itemTemplates: new Map(), rooms: new Map(), exits: new Map() };
+    const me = { pubkey: 'me', roomId: 'r' };
+    z.sessions = new Map([['me', me]]); z.reachable = () => true;
+    const said = []; z.roomFeed = (_r, t) => said.push(t);
+    const hy = { id: 'h', templateId: 'grave-hyena', roomId: 'r', hp: 30, hunger: 10, target: null };
+    const beats = (n, at) => { const out = []; for (let i = 0; i < n; i++) { const before = said.length; mobPresence(z, hy, at + i * 2000); if (said.length > before) out.push(at + i * 2000); } return out; };
+    const heard = beats(600, 1_000_000); // twenty minutes beside it
+    assert.ok(heard.length >= 3, 'twenty minutes with an idle hyena brings a few lines, not silence: ' + heard.length);
+    assert.ok(said.every((l) => /^A grave-hyena /.test(l)), 'by name, in its own lines');
+    assert.ok(heard.every((at, i) => i === 0 || at - heard[i - 1] >= 30_000), 'and never two in the same half minute');
+    const n = said.length;
+    hy.target = 'me'; beats(300, 5_000_000); assert.equal(said.length, n, 'never in a fight');
+    hy.target = null; hy.eatingUntil = 9_000_000; beats(300, 6_000_000); assert.equal(said.length, n, 'never while it eats');
+    hy.eatingUntil = undefined; me.roomId = 'elsewhere'; beats(300, 7_000_000); assert.equal(said.length, n, 'never to an empty room');
+    const tm = (id) => z.world.mobTemplates.get(id);
+    assert.match(presenceLine({ templateId: 'roe-deer', hp: 4 }, tm('roe-deer'), false), /hurt|carefully|costs/, 'a hurt animal shows it');
+    assert.match(presenceLine({ templateId: 'warden', hp: 30 }, tm('warden'), false), /^A hollow warden /, 'the hollow get their own');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /ai\.mobHabit\(this, creature, now\);[\s\S]{0,120}ai\.mobPresence\(this, creature, now\);/, 'and it runs every beat, beside the habits');
+  });
+
+  check('every snow plate glints, and its creatures throw shadows, under your torch on a snowy night (2026-10-30)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const fx = JSON.parse(readFileSync(new URL('../public/room-fx/fx.json', import.meta.url), 'utf8'));
+    const ship = new Set(JSON.parse(readFileSync(new URL('./deploy-artwork.json', import.meta.url), 'utf8')));
+    const snows = readdirSync(new URL('../public/room-bg/', import.meta.url)).filter((f) => f.endsWith('-snow.webp')).map((f) => f.slice(0, -5));
+    assert.ok(snows.length > 80, 'the snow plates are there to check');
+    for (const p of snows) {
+      assert.equal(fx[p]?.snow, 1, p + ' is marked for the glint');
+      assert.ok(existsSync(new URL('../public/room-fx/' + p + '.png', import.meta.url)), p + ' has its depth map');
+      assert.ok(ship.has('room-fx/' + p + '.png'), p + ' depth map ships');
+    }
+    assert.match(pub, /fxSnowGlint = !!\(lastTorch && wxKind === "snow" && wxHour === "night" && !roofedWx && !lastCovered/, 'only with your torch lit, snowing, at night, out under the sky');
+    assert.match(pub, /"  if \(handOn > \.5 \|\| glintOn > \.5\)\{",/, 'the glint runs on its own switch, not only on torch plates');
+    assert.match(pub, /fxU\.glintOn, entry\.snow && fxSnowGlint \? 1 : 0\); fxGl\.uniform1f\(fxU\.handOn, fxHandLit\(entry\) \? 1 : 0\); fxRun\(\)/, 'and is set again when the same plate is shown again (the torch lit or put out)');
+    assert.match(pub, /function fxHandLit\(e\) \{ return !!e && \(!!e\.hand \|\| \(!!e\.snow && fxSnowGlint\)\); \}/, 'a snow plate under your torch is lit like a torch plate');
+    assert.match(pub, /var mobs = fxHandLit\(e\) \? fxMobs\(box\) : \[\];/, 'so the creatures throw their shadows on it (2026-10-30)');
   });
 
   check('small prey is a mouthful: a dead rat or hare fills a hunter less than a dead goat (2026-10-30)', () => {

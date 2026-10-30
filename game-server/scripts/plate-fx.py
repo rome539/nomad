@@ -95,9 +95,14 @@ def main():
         # ...and any plate whose flames are written down, whatever its condition:
         # the gatehouse is one warm room at every hour, lit by its own hearth.
         night_plate = night_plate or (name in TORCHES and not torch_plate)
-        if not (torch_plate or night_plate): continue          # daylight has no flame to carry
+        # EVERY SNOW PLATE (rome, 2026-10-30): a snow night is shown on the snow
+        # plate, darkened, and your torch makes its floor glint the way it does
+        # on a torch plate. The glint needs the depth map; the client turns it on
+        # only while your torch is lit on a snowy night ("snow" in fx.json).
+        snow_plate = name.endswith("-snow")
+        if not (torch_plate or night_plate or snow_plate): continue          # daylight has no flame to carry
         dpath = os.path.join(OUT, name + ".png")
-        if night_plate and name not in TORCHES: continue       # no flame painted in it
+        if night_plate and name not in TORCHES and not snow_plate: continue       # no flame painted in it
         if os.path.exists(dpath) and not force:
             dep = Image.open(dpath)                             # the slow half is already done
         else:
@@ -110,6 +115,7 @@ def main():
                 entry["t"] = t
                 if name in WET: entry["w"] = 1
         if torch_plate: entry["hand"] = 1
+        if snow_plate: entry["snow"] = 1
         if not entry: continue                                  # a dark plate with nothing burning in it
         dep.save(dpath, optimize=True)
         idx[name] = entry
