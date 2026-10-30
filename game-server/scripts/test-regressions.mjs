@@ -39,7 +39,7 @@ try {
         "export {cmdCook, moveLoad} from './verbs';",
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
-        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves} from './ai';",
+        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds} from './ai';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
@@ -51,7 +51,7 @@ try {
         "export {loadLeaderboard} from './world';",
         "export {handleBench} from './gate';",
         "export {sendCtx} from './chips';",
-        "export {PATROLS, WARRENS_ROOMS, GATEHOUSE_NOARG, MOUTHS} from './zone-data';",
+        "export {PATROLS, patrolRoute, WARRENS_ROOMS, GATEHOUSE_NOARG, MOUTHS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon, terrainOf} from './zone-util';",
@@ -64,7 +64,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, PATROLS, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, PATROLS, patrolRoute, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2065,6 +2065,76 @@ try {
     me.roomId = 'the-gods-pool'; god.target = 'me'; god.rouseAt = 30000;
     beat(30000);
     assert.equal(god.rouseAt, undefined, 'a fight you started drops the wind-up, so the next visit gets its own');
+  });
+
+  check('the hyenas hunt: a hungry one in the pits does not eat the ground, a vulture still does (2026-10-30)', () => {
+    const z = new ZoneDO({}, {});
+    z.world = { mobTemplates: new Map([['grave-hyena', { id: 'grave-hyena', name: 'a grave-hyena', max_hp: 20 }], ['carrion-vulture', { id: 'carrion-vulture', name: 'a carrion vulture', max_hp: 20 }]]),
+      itemTemplates: new Map(), rooms: new Map([['the-cart-tip', { id: 'the-cart-tip' }]]), exits: new Map(), mobSpawns: [] };
+    z.ground = new Map(); z.roomFeed = () => {}; z.roomSound = () => {}; z.refreshRoomCtx = () => {}; z.addTrace = () => {};
+    const t = 1_000_000_000_000;
+    const eat = (templateId) => { const c = { id: templateId, templateId, roomId: 'the-cart-tip', hp: 10, hunger: 80, forageFrom: t - 24 * 3600_000 }; creatureEatsHere(z, c, true, t); return c; };
+    assert.equal(eat('grave-hyena').hunger, 80, 'the hyena goes hungry on carrion ground, so it hunts');
+    assert.equal(eat('dire-hyena').hunger, 80, 'and so does the dire');
+    assert.ok(eat('carrion-vulture').hunger < 80, 'a vulture on the same ground still eats it');
+    assert.equal(herds.feedsAt('grave-hyena', 'the-cart-tip'), false, 'the pits are not its feeding ground');
+    assert.equal(herds.feedsAt('carrion-vulture', 'the-cart-tip'), true);
+  });
+
+  check('small prey is a mouthful: a dead rat or hare fills a hunter less than a dead goat (2026-10-30)', () => {
+    const z = new ZoneDO({}, {});
+    z.world = { mobTemplates: new Map([['grave-hyena', { id: 'grave-hyena', name: 'a grave-hyena', max_hp: 20 }]]), itemTemplates: new Map(), rooms: new Map(), exits: new Map(), mobSpawns: [] };
+    z.roomFeed = () => {}; z.roomSound = () => {}; z.refreshRoomCtx = () => {}; z.fxFed = () => {};
+    const eats = (prey) => {
+      z.traces = new Map([['r', [{ kind: 'blood', at: Date.now(), label: 'a body', prey }]]]);
+      const h = { id: 'h', templateId: 'grave-hyena', roomId: 'r', hp: 20, hunger: 90, fed: 9 };
+      scavengerFeeds(z, h, true);
+      return 90 - h.hunger;
+    };
+    assert.equal(eats('rat'), 25, 'a dead rat takes the edge off');
+    assert.equal(eats('fleet-rat'), 25, 'and so does a scary one');
+    assert.equal(eats('mountain-hare'), 25, 'all the small prey, not only rats');
+    assert.equal(eats('roe-deer'), 75, 'a deer is not small, whatever its hit points');
+    assert.equal(eats('feral-goat'), 75, 'a goat is a real meal');
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.equal((ai.match(/creature\.hunger = SMALL_PREY\.has\(victim\.templateId\) \? Math\.max\(0, creature\.hunger - MEAL_SMALL\) : 0;/g) ?? []).length, 2, 'both kill sites: killed small prey is a mouthful, anything else fills');
+  });
+
+  check('the hyenas hunt goats on the open ground, alone and with the pack (2026-10-30)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /\["grave-hyena", new Map\(\[[^\n]*\["feral-goat", 2\], \["old-billy", 3\]/, 'a pair of grave-hyenas brings down a goat, three the billy');
+    assert.match(zd.match(/\n  \["grave-hyena", new Set\([^\n]*/)[0], /"feral-goat", "old-billy"/, 'and one alone goes for one too');
+    assert.match(zd.match(/\n  \["dire-hyena", new Set\([^\n]*/)[0], /"feral-goat", "old-billy"/, 'the dire takes one alone');
+    const mig = readFileSync(new URL('../migrations/351_goats_on_the_open_ground.sql', import.meta.url), 'utf8');
+    const rows = [...mig.matchAll(/VALUES \('(open-goat-\d+)', 'feral-goat', '([a-z-]+)'\)/g)];
+    assert.equal(rows.length, 7, 'seven goats, the mountain density of goat-sized grazers');
+    assert.equal(new Set(rows.map((r) => r[1])).size, 7, 'each with its own id (mig 309)');
+  });
+
+  await checkAsync('two surface wardens walk two rounds: the one set in the churchyard keeps the west side (2026-10-30)', async () => {
+    const z = new ZoneDO({}, {});
+    const ex = (pairs) => pairs.map(([dir, to_room]) => ({ dir, to_room, key_item: null }));
+    const rooms = ['the-village-street', 'the-well-head', 'the-burned-village', 'the-causeway', 'the-gatefall'];
+    z.world = { mobTemplates: new Map([['warden-surface', { id: 'warden-surface', name: 'a hollow warden', max_hp: 30, is_boss: 0 }]]), mobSpawns: [], itemTemplates: new Map(),
+      rooms: new Map(rooms.map((r) => [r, { id: r }])), entryRooms: new Set(), safeRooms: new Set(),
+      exits: new Map([['the-village-street', ex([['west', 'the-well-head'], ['east', 'the-burned-village']])],
+        ['the-causeway', ex([['north', 'the-gatefall'], ['south', 'the-burned-village']])]]) };
+    z.send = () => {}; z.roomFeed = () => {}; z.refreshRoomCtx = () => {}; z.noteCreaturesChanged = () => {};
+    const west = { id: 'w', templateId: 'warden-surface', roomId: 'the-village-street', hp: 30, target: null, grudges: [], home: 'the-churchyard', patrolIdx: 0, nextWanderAt: 0 };
+    const east = { id: 'e', templateId: 'warden-surface', roomId: 'the-causeway', hp: 30, target: null, grudges: [], home: 'muster', patrolIdx: 0, nextWanderAt: 0 };
+    assert.equal(patrolRoute('warden-surface', 'the-churchyard')[0], 'the-village-street', 'set in the churchyard: the west round');
+    assert.equal(patrolRoute('warden-surface', 'muster'), PATROLS['warden-surface'], 'set at the muster: the east round, as before');
+    z.creatures = new Map([['w', west], ['e', east]]);
+    for (let i = 0; i < 8; i++) { // off its round a step is a coin toss, so one lucky step proves nothing
+      west.roomId = 'the-village-street'; west.patrolIdx = 0; west.nextWanderAt = 0;
+      east.roomId = 'the-causeway'; east.patrolIdx = 0; east.nextWanderAt = 0;
+      await creatureMoves(z, west, Date.now(), 'wander', true);
+      await creatureMoves(z, east, Date.now(), 'wander', true);
+      assert.equal(west.roomId, 'the-well-head', 'the churchyard warden walks the west round');
+      assert.equal(east.roomId, 'the-gatefall', 'the muster warden still walks the east one');
+    }
+    const mig = readFileSync(new URL('../migrations/352_a_second_warden_on_the_open_ground.sql', import.meta.url), 'utf8');
+    assert.match(mig, /VALUES \('ward-6', 'warden-surface', 'the-churchyard'\)/, 'set in the churchyard, with an id');
   });
 
   await checkAsync('the surface warden crosses the sally port back to his round instead of circling the catacombs (2026-10-30)', async () => {

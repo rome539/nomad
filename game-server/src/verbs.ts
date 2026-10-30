@@ -60,7 +60,7 @@ import {
   MILESTONES,
   groundWord, carveMedium, footfall, HEARD_EMPTY,
   LANTERN_ITEM, LANTERN_FAT_MS, SLOT_WORD,
-  RANGERS, HUNGRY_AT, PATROLS,
+  RANGERS, HUNGRY_AT, PATROLS, patrolRoute,
 } from "./zone-data";
 import { gatehouseFeed, inStock, throughTheDoor, worksBar } from "./gate";
 
@@ -2757,11 +2757,11 @@ export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {
   // the census caught him in the halls with no way to say where. This says the
   // room he stands in, its band, and the post he is walking to next.
   {
-    const route = PATROLS["warden-surface"] ?? [];
     const ws = [...z.creatures.values()].filter((c) => c.templateId === "warden-surface");
-    lines.push("", `The surface warden (${ws.length}):`);
+    lines.push("", `The surface wardens (${ws.length}):`);
     if (!ws.length) lines.push("  (none alive)");
     for (const c of ws) {
+      const route = patrolRoute(c.templateId, c.home) ?? [];
       const on = route.includes(c.roomId);
       const next = route[(c.patrolIdx ?? 0) % Math.max(1, route.length)];
       lines.push(`  ${world.rooms.get(c.roomId)?.name ?? c.roomId} (${band(c.roomId)}) — ${on ? "on his round" : "OFF his round"}; next post ${world.rooms.get(next ?? "")?.name ?? next ?? "?"}${c.target ? "; fighting" : ""}`);

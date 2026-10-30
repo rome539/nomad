@@ -1018,6 +1018,20 @@ export const LB_ACCOUNT_PTS = 10; // a full journal account, once per kind (rome
 export const MEAL_GRAZE = 25;   // gnawed ground, carrion floor — the food web's floor, and it barely counts
 export const MEAL_ITEM = 50;    // a dropped meal off the stones
 export const MEAL_CORPSE = 75;  // a whole body, and it still isn't a kill
+// SMALL PREY IS A MOUTHFUL (rome, 2026-10-30). The fortress's hunters were
+// living on rats, and a rat emptied their hunger the same as a goat; then the
+// same for every small animal in the world. Killed or found lying, one takes the
+// edge off and no more, the same as scraps. Chosen by the animal, not by its
+// health: a roe deer has a snow hare's hit points and is not a mouthful.
+export const MEAL_SMALL = 25;
+export const SMALL_PREY = new Set([
+  "rat", "fleet-rat", "albino-rat", "brood-rat",                  // the rats
+  "mountain-hare", "snow-hare",                                   // the hares
+  "ptarmigan", "mountain-chough", "oystercatcher", "gibbet-crow", // the small birds
+  "hedgehog", "ermine",                                           // the small biters
+  "gill-adder", "fen-viper", "stone-adder",                       // the snakes
+  "wrack-crab",                                                   // the little crab
+]);
 // (a kill zeroes it outright — see worryPrey/predation)
 
 // SCRAPS HAVE TO BE FOUND (rome, 2026-10-11: you should be able to meet a hungry
@@ -2177,6 +2191,26 @@ export const PATROLS: Record<string, string[]> = {
     "the-listening-stand", "the-turned-ground", "the-same-tree",
   ],
 };
+// A ROUND THAT BELONGS TO WHERE ONE WAS SET (rome, 2026-10-30). PATROLS is one
+// round per kind, so every surface warden walked the east grounds. The second
+// one, set in the churchyard (mig 352), walks the west side instead: the village
+// and the churchyard, the edge of the pits out to the den mouths and back, then
+// the holding as far as the green (the smithy past it is a gate). Keyed
+// "<kind>@<the room its spawn row names>"; anything not named here walks its
+// kind's round. Every leg is a real adjacent exit.
+export const PATROLS_BY_HOME: Record<string, string[]> = {
+  "warden-surface@the-churchyard": [
+    "the-village-street", "the-well-head", "the-church-shell", "the-churchyard", "the-bell-pit",
+    "the-dead-cart-track", "the-cart-tip", "the-tipping-edge", "the-gnawed-ground", "the-den-mouths",
+    "the-gnawed-ground", "the-tipping-edge", "the-cart-tip", "the-dead-cart-track", "the-bell-pit",
+    "the-churchyard", "the-church-shell", "the-well-head", "the-village-street", "the-pound",
+    "the-tithe-barn", "the-green", "the-tithe-barn", "the-pound",
+  ],
+};
+/** The round this one walks: its own, if where it was set has one, else its kind's. */
+export function patrolRoute(templateId: string, home?: string): string[] | undefined {
+  return (home && PATROLS_BY_HOME[templateId + "@" + home]) || PATROLS[templateId];
+}
 
 // Creatures with nothing inside. They do not bleed (broken remains, not blood),
 // do not hunger, and no smell of food moves them. The rat is the only thing
@@ -2515,6 +2549,13 @@ export const SCAVENGERS = new Set([
   // reason anything comes to this room"). 245 wrote it as an animal cornered in
   // its own larder. This is the larder.
   "cave-lion"]);
+// THE HYENAS HUNT (rome, 2026-10-30). They live in the pits and the camp
+// graves, and those are carrion ground, so every time they got hungry they ate
+// the room and were never hungry enough to go after anything. They are not
+// carrion eaters of the floor: they eat what they kill (PREYS_ON) and what they
+// take off another animal's kill (still SCAVENGERS for that), and when their own
+// ground has nothing alive on it the hunger walks them to where there is.
+export const HUNTS_NOT_CARRION = new Set(["grave-hyena", "dire-hyena"]);
 // VERMIN eat the dead too — but only to SURVIVE, none of the hyena's package.
 // Rats had no food at all (not predators, not scavengers), so they sat pinned at
 // max hunger, forever "restless with hunger" (rome, 2026-07-17: "what are rats
@@ -4687,8 +4728,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // eel, the bittern and the raven stay OFF every list — the eel and the
   // bittern already carry the crossing's own web, and a raven does not get
   // caught by a dog.
-  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena", "roe-deer", "white-roe", "grey-wolf", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // drives off the plain hyena AND the plain wolf: 45hp/armor against 26hp — and at that size the gull is no argument either
-  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe", "gibbet-crow", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])], // vermin when there is nothing better, deer when there is — and on the grave ground, what came for the carrion. A hyena on a strand is the least surprising animal in the world
+  ["dire-hyena", new Set(["rat", "fleet-rat", "grave-hyena", "roe-deer", "white-roe", "grey-wolf", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull", "feral-goat", "old-billy"])], // drives off the plain hyena AND the plain wolf: 45hp/armor against 26hp — and at that size the gull is no argument either
+  ["grave-hyena", new Set(["rat", "fleet-rat", "roe-deer", "white-roe", "gibbet-crow", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "feral-goat", "old-billy"])], // vermin when there is nothing better, deer when there is — and on the grave ground, what came for the carrion. A hyena on a strand is the least surprising animal in the world
   ["albino-rat", new Set(["rat", "fleet-rat"])],                              // apex vermin bullies its own kind
   // THE WOLF WORKS THE TIDELINE TOO (rome, 2026-08-12). Its list was three
   // animals, all of them wood animals, which is why the map has exactly one
@@ -4794,7 +4835,10 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3], ["grave-hyena", 2], ["feral-goat", 2], ["great-gull", 2], ["wood-stag", 3]])], // one wolf yields a carcass to a hyena; two do not — and the goat and the gull are both a fair match for one wolf, which is what the pack is FOR
   ["coyote", new Map([["feral-goat", 2], ["wildcat", 2], ["red-hind", 3]])], // a goat or a wildcat takes two of them, a hind the whole pack
   ["dire-wolf", new Map([["old-boar", 2]])],
-  ["grave-hyena", new Map([["roe-deer", 2], ["great-gull", 2]])],  // a lone hyena harries a roe; a pair brings it down — and the gull is the one shore animal it cannot bully alone
+  // THE GOATS ON THE OPEN GROUND (mig 351, rome 2026-10-30): the hyenas' real
+  // prey round the fortress. It goes for one alone and with its pack (rome:
+  // both); this row keeps the pair as the old floor if the solo row ever goes.
+  ["grave-hyena", new Map([["roe-deer", 2], ["great-gull", 2], ["feral-goat", 2], ["old-billy", 3]])],  // a lone hyena harries a roe; a pair brings it down — and the gull is the one shore animal it cannot bully alone
   ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
   ["masterless-dog", new Map([["feral-goat", 2], ["great-gull", 2]])], // one stray circles a goat; two bring it down — and the gull is bigger than either of them
   // THE MOUNTAIN, TIER THREE (mig 231). The whole point of putting a pack on

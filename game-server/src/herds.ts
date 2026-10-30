@@ -34,7 +34,7 @@ import {
   HERD_PACE_SECS, HERD_BIRTH_PER_H, HERD_BIRTH_MIN, HERD_BIRTH_MAX, HERD_STRAY_FRAC,
   HERD_FLOOR_FRAC, HERD_FLOOR_PER_HUNTER_PER_H, HERD_NO_PREY_SHARE,
   ROOTED, NOCTURNAL, SURFACE_FORAGE, ROUND_REGIONS, ROUND_RANGE, HUNT_RECHECK_MS,
-  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS, WARY_STAYS_IN,
+  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS, HUNTS_NOT_CARRION, WARY_STAYS_IN,
 } from "./zone-data";
 
 const AT = "_at"; // the clock, kept in the same saved map as what each herd is owed
@@ -240,7 +240,7 @@ export function keepsRound(z: ZoneDO, c: Creature): boolean {
 /** Whether this room is where this kind of animal feeds. */
 export function feedsAt(templateId: string, room: string): boolean {
   if (ROUND_BASKERS.has(templateId)) return WARM_GROUND.has(room);
-  if (SCAVENGERS.has(templateId) && CARRION_ROOMS.has(room)) return true;
+  if (SCAVENGERS.has(templateId) && !HUNTS_NOT_CARRION.has(templateId) && CARRION_ROOMS.has(room)) return true;
   return SURFACE_FORAGE.has(room);
 }
 

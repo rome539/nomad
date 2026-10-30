@@ -34,19 +34,19 @@ import {
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
-  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
+  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, MEAL_SMALL, SMALL_PREY, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
-  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS,
+  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS, HUNTS_NOT_CARRION,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
-  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
@@ -1407,7 +1407,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // Hall). Off its route, every idle step now closes on the nearest post —
     // the rounds always find the wall again. Never strands.
     if (mode === "wander" && PATROLS[tmpl.id]) {
-      const route = PATROLS[tmpl.id];
+      const route = patrolRoute(tmpl.id, creature.home)!;
       if (!route.includes(creature.roomId)) {
         let best = Infinity, near = route[0];
         for (const r of route) {
@@ -1590,7 +1590,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       creature.curious = null;
     } else {
       creature.curious = null;
-      const route = PATROLS[tmpl.id];
+      const route = patrolRoute(tmpl.id, creature.home);
       if (route) {
         let idx = creature.patrolIdx ?? 0;
         if (route[idx % route.length] === creature.roomId) idx++;
@@ -1909,7 +1909,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // world has now shipped three times (the crabs on the wrack, the west road's
     // strays, the outworks' rats). The bone ground is the answer the fiction was
     // already giving; this makes the code agree with it.
-    const carrionEater = SCAVENGERS.has(creature.templateId) && CARRION_ROOMS.has(creature.roomId);
+    const carrionEater = SCAVENGERS.has(creature.templateId) && !HUNTS_NOT_CARRION.has(creature.templateId) && CARRION_ROOMS.has(creature.roomId);
     const grazeHere = grazer && forageGround(z, creature.templateId, creature.roomId);
     // WEATHER KEYS THE FORAGE: a hard cold freezes the ground (nothing to
     // graze), and the mud after a good rain brings up more than the ground
@@ -2174,7 +2174,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     }
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt);
-      creature.hunger = 0;
+      creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0; // small prey is a mouthful
       ate(creature);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
@@ -2249,7 +2249,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     if (victim.hp > 0) return true;
     releaseHold(z, creature);
     preyFalls(z, victim, vt);
-    creature.hunger = 0;
+    creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0; // small prey is a mouthful
     ate(creature);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
@@ -2686,7 +2686,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const eaten = list[idx];
     list.splice(idx, 1);
     if (list.length === 0) z.traces.delete(creature.roomId);
-    creature.hunger = Math.max(0, creature.hunger - MEAL_CORPSE); // a whole body, and it still is not a kill
+    creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) ? MEAL_SMALL : MEAL_CORPSE)); // a whole body, and it still is not a kill (small prey is a mouthful)
     ate(creature, undefined, "carrion");
     // WHAT THE CORPSE IS WORTH TO THIS ONE. A bone-cracker gets through to the
     // marrow and takes double; a sour-gutted thing eats and is no better for it.
