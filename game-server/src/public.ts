@@ -2368,7 +2368,7 @@ export const PAGE = `<!doctype html>
 :is(#bench,#trade,#forge) .mud-row .nm{font:inherit!important;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 :is(#bench,#trade,#forge) .mud-row:hover{background:#ffffff04}
 :is(#bench,#trade,#forge) .mud-row.chosen{background:#ffffff08;box-shadow:inset 2px 0 var(--gold)}
-.mud-qty,.mud-state{color:var(--dim);font-size:10px;font-variant-numeric:tabular-nums}.mud-qty,.mud-state{text-align:right}.mud-state.equipped{color:var(--heal)}
+.mud-qty,.mud-state{color:var(--dim);font-size:10px;font-variant-numeric:tabular-nums}.mud-qty,.mud-state{text-align:right}.mud-state.equipped{color:var(--heal)}.mud-state.wear-mid{color:var(--wear)}.mud-state.wear-bad{color:var(--blood)}
 :is(#bench,#trade,#forge) .mud-row.list-filtered{display:none!important}.mud-search{display:none!important}
 .mud-reader{border-top:1px solid var(--border);padding:12px 0;flex:0 0 auto;max-height:42%;overflow-y:auto;font:12px/1.5 ui-monospace,monospace;color:var(--dim)}
 .mud-reader>.bitem,.mud-reader>.trow{display:block!important;padding:0!important;border:0!important}.mud-reader .nm{font-size:12px;color:var(--cream)}.mud-reader .nm .tag,.mud-reader .nm .stat{font-size:11px;color:var(--bone)}
@@ -8097,8 +8097,12 @@ function mudRow(type,it,place,source){
  var row=document.createElement('div');row.className=(type==='trade'?'trow':'bitem')+' mud-row';row.tabIndex=0;row.setAttribute('role','button');if(type==='forge')row.dataset.canForge=String(!!it.can);
  var name=document.createElement('span');name.className='nm';var realName=source.querySelector('.nm>span');name.appendChild(realName?realName.cloneNode(true):document.createTextNode(it.name));
  var qty=document.createElement('span');qty.className='mud-qty';qty.textContent=it.n>1?'×'+it.n:'';
- var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?'equipped':it.well?(it.lit?it.well+', lit':it.well):it.lit?'lit':it.sealed?'sealed':it.condWord==='sound'?'':it.condWord||''):type==='trade'?(place==='goods'?goodsWorthText(it):it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
+ // THE CONDITION ON THE ROW (rome, 2026-10-29): worn and sealed gear says how
+ // it is wearing without being opened - "worn, equipped", "sealed, battered".
+ var cond=it.condWord&&it.condWord!=='sound'?it.condWord:'';
+ var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?(cond?cond+', ':'')+'equipped':it.well?(it.lit?it.well+', lit':it.well):it.lit?'lit':it.sealed?'sealed'+(cond?', '+cond:''):cond):type==='trade'?(place==='goods'?goodsWorthText(it):it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
  if(it.equipped)state.classList.add('equipped');
+ if(type==='bench'&&COND_CLS[cond])state.classList.add(COND_CLS[cond]);
  var search=document.createElement('span');search.className='tags mud-search';search.textContent=source.querySelector('.nm').textContent+' '+(it.stat||'');
  row.append(name,qty,state,search);var record={row:row,source:source,key:place+':'+String(it.row??it.id)+(typeof it.w==='number'?'|'+it.w:'')};mudRecords[type].push(record);
  row.setAttribute('aria-label',it.name+(state.textContent?', '+state.textContent:''));function choose(){mudSelected[type]=record.key;mudReader(type)}row.onclick=choose;row.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();choose()}};return row;
@@ -10171,13 +10175,13 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "122";      // /mob/      strips and their eye layers
+var MOB_V  = "123";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "52";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "11";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "28";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "12";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "29";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10547,26 +10551,26 @@ var ROOM_PLATE = {
   "the-mass-grave":         "day night night-torch fog rain snow",
   "the-hanging-hill":       "day night night-torch fog rain snow",
   // THE PITS (mig 345, rome 2026-10-29): twenty rooms of the same waste.
-  "the-dead-cart-track":    "day night night-torch fog rain snow",
-  "the-cart-tip":           "day night night-torch fog rain snow",
-  "the-lime-pits":          "day night night-torch fog rain snow",
-  "the-plague-trench":      "day night night-torch fog rain snow",
-  "the-tipping-edge":       "day night night-torch fog rain snow",
-  "the-bone-heaps":         "day night night-torch fog rain snow",
-  "the-sorting-ground":     "day night night-torch fog rain snow",
-  "the-gnawed-ground":      "day night night-torch fog rain snow",
-  "the-second-trench":      "day night night-torch fog rain snow",
-  "the-burning-ground":     "day night night-torch fog rain snow",
-  "the-trench-end":         "day night night-torch fog rain snow",
-  "the-ash-drifts":         "day night night-torch fog rain snow",
-  "the-wash-gully":         "day night night-torch fog rain snow",
-  "the-den-mouths":         "day night night-torch fog rain snow",
-  "the-wash-foot":          "day night night-torch fog rain snow",
-  "the-bone-fan":           "day night night-torch fog rain snow",
-  "the-laughing-ground":    "day night night-torch fog rain snow",
-  "the-dug-earth":          "day night night-torch fog rain snow",
-  "the-skull-mound":        "day night night-torch fog rain snow",
-  "the-last-pit":           "day night night-torch fog rain snow",
+  "the-dead-cart-track":    "day night night-torch snow",
+  "the-cart-tip":           "day night night-torch snow",
+  "the-lime-pits":          "day night night-torch snow",
+  "the-plague-trench":      "day night night-torch snow",
+  "the-tipping-edge":       "day night night-torch snow",
+  "the-bone-heaps":         "day night night-torch snow",
+  "the-sorting-ground":     "day night night-torch snow",
+  "the-gnawed-ground":      "day night night-torch snow",
+  "the-second-trench":      "day night night-torch snow",
+  "the-burning-ground":     "day night night-torch snow",
+  "the-trench-end":         "day night night-torch snow",
+  "the-ash-drifts":         "day night night-torch snow",
+  "the-wash-gully":         "day night night-torch snow",
+  "the-den-mouths":         "day night night-torch snow",
+  "the-wash-foot":          "day night night-torch snow",
+  "the-bone-fan":           "day night night-torch snow",
+  "the-laughing-ground":    "day night night-torch snow",
+  "the-dug-earth":          "day night night-torch snow",
+  "the-skull-mound":        "day night night-torch snow",
+  "the-last-pit":           "day night night-torch snow",
   "the-black-fen":          "day night night-torch fog rain snow",
   "the-drowned-orchard":    "day night night-torch fog rain snow",
   "the-burned-village":     "day night night-torch fog rain snow",
@@ -10586,14 +10590,14 @@ var ROOM_PLATE = {
   "the-camp-ground":        "day night night-torch fog rain snow",
   "the-suttlers-row":       "day night night-torch fog rain snow",
   // the camp's tail (mig 347)
-  "the-camp-tail":          "day night night-torch fog rain snow",
-  "the-picket-ground":      "day night night-torch fog rain snow",
-  "the-forage-cut":         "day night night-torch fog rain snow",
-  "the-camp-midden":        "day night night-torch fog rain snow",
-  "the-horse-pits":         "day night night-torch fog rain snow",
-  "the-camp-graves":        "day night night-torch fog rain snow",
-  "the-deserters-ditch":    "day night night-torch fog rain snow",
-  "the-plague-tents":       "day night night-torch fog rain snow",
+  "the-camp-tail":          "day night night-torch snow",
+  "the-picket-ground":      "day night night-torch snow",
+  "the-forage-cut":         "day night night-torch snow",
+  "the-camp-midden":        "day night night-torch snow",
+  "the-horse-pits":         "day night night-torch snow",
+  "the-camp-graves":        "day night night-torch snow",
+  "the-deserters-ditch":    "day night night-torch snow",
+  "the-plague-tents":       "day night night-torch snow",
   "the-horse-lines":        "day night night-torch fog rain snow",
   "the-marshals-lodging":   "day night night-torch fog rain snow",
   "the-sap-head":           "day night night-torch fog rain snow",
@@ -10608,22 +10612,22 @@ var ROOM_PLATE = {
   "the-green":              "day night night-torch fog rain snow",
   "the-village-smithy":     "day night night-torch fog rain snow",
   // the back lands (mig 347)
-  "the-toft-ends":          "day night night-torch fog rain snow",
-  "the-back-lane":          "day night night-torch fog rain snow",
-  "the-goose-green":        "day night night-torch fog rain snow",
-  "the-stray-pound":        "day night night-torch fog rain snow",
-  "the-crofts":             "day night night-torch fog rain snow",
-  "the-back-pond":          "day night night-torch fog rain snow",
+  "the-toft-ends":          "day night night-torch snow",
+  "the-back-lane":          "day night night-torch snow",
+  "the-goose-green":        "day night night-torch snow",
+  "the-stray-pound":        "day night night-torch snow",
+  "the-crofts":             "day night night-torch snow",
+  "the-back-pond":          "day night night-torch snow",
   "the-fish-stew":          "day night night-torch fog rain snow",
   "the-orchard-rows":       "day night night-torch fog rain snow",
   "the-cider-house":        "day night night-torch fog rain snow",
   // the waste fields (mig 347)
-  "the-windfall-bank":      "day night night-torch fog rain snow",
-  "the-field-gate":         "day night night-torch fog rain snow",
-  "the-dead-hedge":         "day night night-torch fog rain snow",
-  "the-waste-fields":       "day night night-torch fog rain snow",
-  "the-field-bank":         "day night night-torch fog rain snow",
-  "the-old-plough":         "day night night-torch fog rain snow",
+  "the-windfall-bank":      "day night night-torch snow",
+  "the-field-gate":         "day night night-torch snow",
+  "the-dead-hedge":         "day night night-torch snow",
+  "the-waste-fields":       "day night night-torch snow",
+  "the-field-bank":         "day night night-torch snow",
+  "the-old-plough":         "day night night-torch snow",
   "the-gibbet-field":       "day night night-torch fog rain snow",
   "the-crossroads-grave":   "day night night-torch fog rain snow",
   "the-mine-gallery":       "day night night-torch",
@@ -10800,27 +10804,28 @@ var PLATE_OF = {
   "the-briar-field":        "fort-waste",
   "the-mass-grave":         "fort-waste",
   "the-hanging-hill":       "fort-waste",
-  // THE PITS (mig 345): bare earth, dead thorn and bones - the waste's own plate.
-  "the-dead-cart-track":    "fort-waste",
-  "the-cart-tip":           "fort-waste",
-  "the-lime-pits":          "fort-waste",
-  "the-plague-trench":      "fort-waste",
-  "the-tipping-edge":       "fort-waste",
-  "the-bone-heaps":         "fort-waste",
-  "the-sorting-ground":     "fort-waste",
-  "the-gnawed-ground":      "fort-waste",
-  "the-second-trench":      "fort-waste",
-  "the-burning-ground":     "fort-waste",
-  "the-trench-end":         "fort-waste",
-  "the-ash-drifts":         "fort-waste",
-  "the-wash-gully":         "fort-waste",
-  "the-den-mouths":         "fort-waste",
-  "the-wash-foot":          "fort-waste",
-  "the-bone-fan":           "fort-waste",
-  "the-laughing-ground":    "fort-waste",
-  "the-dug-earth":          "fort-waste",
-  "the-skull-mound":        "fort-waste",
-  "the-last-pit":           "fort-waste",
+  // THE PITS (mig 345): bare earth, dead thorn and bones - their own plate
+  // since 2026-10-29, one picture for all twenty.
+  "the-dead-cart-track":    "the-pits",
+  "the-cart-tip":           "the-pits",
+  "the-lime-pits":          "the-pits",
+  "the-plague-trench":      "the-pits",
+  "the-tipping-edge":       "the-pits",
+  "the-bone-heaps":         "the-pits",
+  "the-sorting-ground":     "the-pits",
+  "the-gnawed-ground":      "the-pits",
+  "the-second-trench":      "the-pits",
+  "the-burning-ground":     "the-pits",
+  "the-trench-end":         "the-pits",
+  "the-ash-drifts":         "the-pits",
+  "the-wash-gully":         "the-pits",
+  "the-den-mouths":         "the-pits",
+  "the-wash-foot":          "the-pits",
+  "the-bone-fan":           "the-pits",
+  "the-laughing-ground":    "the-pits",
+  "the-dug-earth":          "the-pits",
+  "the-skull-mound":        "the-pits",
+  "the-last-pit":           "the-pits",
   "the-black-fen":          "fort-drowned",
   "the-drowned-orchard":    "fort-drowned",
   "the-wall-walk":          "fort-overworks",
@@ -10841,15 +10846,15 @@ var PLATE_OF = {
   "the-forge-pit":          "siege-lines",
   "the-camp-ground":        "siege-lines",
   "the-suttlers-row":       "siege-lines",
-  // THE CAMP'S TAIL (mig 347): the same grassed lines
-  "the-camp-tail":          "siege-lines",
-  "the-picket-ground":      "siege-lines",
-  "the-forage-cut":         "siege-lines",
-  "the-camp-midden":        "siege-lines",
-  "the-horse-pits":         "siege-lines",
-  "the-camp-graves":        "siege-lines",
-  "the-deserters-ditch":    "siege-lines",
-  "the-plague-tents":       "siege-lines",
+  // THE CAMP'S TAIL (mig 347): the grassed lines' far end, its own plate (2026-10-29)
+  "the-camp-tail":          "camp-tail",
+  "the-picket-ground":      "camp-tail",
+  "the-forage-cut":         "camp-tail",
+  "the-camp-midden":        "camp-tail",
+  "the-horse-pits":         "camp-tail",
+  "the-camp-graves":        "camp-tail",
+  "the-deserters-ditch":    "camp-tail",
+  "the-plague-tents":       "camp-tail",
   "the-horse-lines":        "siege-lines",
   "the-marshals-lodging":   "siege-lines",
   "the-sap-head":           "siege-lines",
@@ -10863,23 +10868,24 @@ var PLATE_OF = {
   "the-bell-pit":           "the-burned-village",
   "the-green":              "the-burned-village",
   "the-village-smithy":     "the-burned-village",
-  // THE BACK LANDS (mig 347): the same footings and burned posts
-  "the-toft-ends":          "the-burned-village",
-  "the-back-lane":          "the-burned-village",
-  "the-goose-green":        "the-burned-village",
-  "the-stray-pound":        "the-burned-village",
-  "the-crofts":             "the-burned-village",
-  "the-back-pond":          "the-burned-village",
+  // THE BACK LANDS (mig 347): the footings and burned posts behind the houses,
+  // its own plate (2026-10-29)
+  "the-toft-ends":          "back-lands",
+  "the-back-lane":          "back-lands",
+  "the-goose-green":        "back-lands",
+  "the-stray-pound":        "back-lands",
+  "the-crofts":             "back-lands",
+  "the-back-pond":          "back-lands",
   "the-fish-stew":          "fort-waste",
   "the-orchard-rows":       "fort-waste",
   "the-cider-house":        "fort-waste",
-  // THE WASTE FIELDS (mig 347): bare earth and dead thorn
-  "the-windfall-bank":      "fort-waste",
-  "the-field-gate":         "fort-waste",
-  "the-dead-hedge":         "fort-waste",
-  "the-waste-fields":       "fort-waste",
-  "the-field-bank":         "fort-waste",
-  "the-old-plough":         "fort-waste",
+  // THE WASTE FIELDS (mig 347): the old fields gone back to thorn, its own plate (2026-10-29)
+  "the-windfall-bank":      "waste-fields",
+  "the-field-gate":         "waste-fields",
+  "the-dead-hedge":         "waste-fields",
+  "the-waste-fields":       "waste-fields",
+  "the-field-bank":         "waste-fields",
+  "the-old-plough":         "waste-fields",
   "the-gibbet-field":       "fort-waste",
   "the-crossroads-grave":   "fort-waste",
   "the-camouflet":          "the-mine-gallery",
@@ -11812,6 +11818,13 @@ var MOB_LINE = {
   "fort-approach": 55,
   "fort-wall": 55,
   "fort-waste": 55,
+  // THE FOUR NEW GROUNDS (2026-10-29), read off their day plates: the line
+  // sits where each one's open floor begins - below the wall footings in the
+  // back lands.
+  "the-pits": 62,
+  "camp-tail": 62,
+  "back-lands": 66,
+  "waste-fields": 62,
   "fort-drowned": 55,
   "the-burned-village": 55,
   "fort-overworks": 55,
@@ -14367,9 +14380,9 @@ var MOB_ANIM = {
   "brood-rat":           { n: 8, aspect: 1.475, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "albino-rat":          { n: 8, aspect: 1.454, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-tide-warden":        { n: 8, aspect: 0.992, f: {"idle":0,"cut-the-stick":1,"look-at-the-water":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-scaffold-hand":      { n: 8, aspect: 0.972, f: {"idle":0,"work-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
+  "the-scaffold-hand":      { n: 8, aspect: 1.101, f: {"idle":0,"work-the-stone":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"reach-for-the-span":6,"death":7} },
   "the-salt-widow":         { n: 9, aspect: 0.951, f: {"idle":0,"feed-the-flue":1,"work-the-pan":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "the-refuge-man":         { n: 9, aspect: 0.904, f: {"idle":0,"turn-from-the-wall":1,"hold-the-door":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "the-refuge-man":         { n: 9, aspect: 0.941, f: {"idle":0,"turn-from-the-wall":1,"hold-the-door":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-reed-walker":        { n: 9, aspect: 0.968, f: {"idle":0,"part-the-reed":1,"keep-pace":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "the-pilot":              { n: 8, aspect: 0.991, f: {"idle":0,"read-the-water":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"recover":6,"death":7} },
   "the-great-devil-crab":   { n: 8, aspect: 1.254, f: {"idle":0,"alert":1,"attack":2,"recover":3,"death":4,"rest":5,"bite":6,"sweep":7} },
@@ -14515,6 +14528,7 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   "part-the-reed",      // the reed walker, one cut over and keeping pace
   "turn-from-the-wall", // the refuge man, coming off the stone he waited at
   "work-the-stone",     // the scaffold hand, upside down, working the underside
+  "reach-for-the-span", // ...and reaching up for a span that is not there (2026-10-29)
   "feed-the-flue",      // the salt widow, feeding a fire that went out
   "work-the-pan",       // ...and drawing the rake across a pan that is cold
   // THE LAST THREE OF THE TWELVE, NAMED HERE BEFORE THEY ARE DRAWN. The note

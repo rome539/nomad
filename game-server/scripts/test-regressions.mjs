@@ -8,7 +8,7 @@
 // A new fix gets a new block here, in the same change.
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -1026,12 +1026,12 @@ try {
     assert.match(pub, /SLEEP_POSES\[z2\] === "feed" && NO_FEED_SLEEP\[id\]/, 'and the sleep pick reads it');
     assert.match(pub, /if \(t > FEED_S \* 0\.42 && t < FEED_S \* 0\.64\) name = a\.watch \|\| "idle";/, 'partway through a bite the head comes up');
   });
-  check('the hyenas live mostly out in the pits, and the pits feed them and wear the waste plate (2026-10-29)', () => {
+  check('the hyenas live mostly out in the pits, and the pits feed them and wear their own plate (2026-10-29)', () => {
     const pits = readFileSync(new URL('../regions/the-pits.rooms', import.meta.url), 'utf8');
     const ids = [...pits.matchAll(/^## (the-[a-z-]+) \| (?!attachment)/gm)].map((m) => m[1]);
     assert.equal(ids.length, 20, 'twenty rooms');
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    for (const id of ids) assert.ok(pub.includes(`"${id}":`.padEnd(26) + '"fort-waste"'), id + ' wears the waste plate');
+    for (const id of ids) assert.ok(pub.includes(`"${id}":`.padEnd(26) + '"the-pits"'), id + ' wears the pits plate');
     const mig = readFileSync(new URL('../migrations/346_the_hyenas_go_out_to_the_pits.sql', import.meta.url), 'utf8');
     const moved = [...mig.matchAll(/room_id = '([a-z-]+)'\s+WHERE id = '(hyena-\d)'/g)];
     assert.equal(moved.length, 4, 'four hyenas move out');
@@ -1040,19 +1040,33 @@ try {
     for (const [, , id] of moved) assert.match(zd, new RegExp(`\\["${id}", "[a-z-]+"\\]`), id + ' is carried along on load (DEN_MOVES)');
     assert.match(zd, /"the-cart-tip", "the-lime-pits", "the-plague-trench", "the-bone-heaps", "the-skull-mound", "the-last-pit"/, 'the pits are carrion ground');
   });
-  check('the open ground spreads to three more places, each on its neighbours\' plate (2026-10-29)', () => {
+  check('the open ground spreads to three more places, each on a plate of its own (2026-10-29)', () => {
     const src = readFileSync(new URL('../regions/open-ground-2.rooms', import.meta.url), 'utf8');
     const attach = [...src.matchAll(/^## (the-[a-z-]+) \| attachment/gm)].map((m) => m[1]);
     assert.deepEqual(attach, ['the-suttlers-row', 'the-village-smithy', 'the-cider-house', 'the-culver-house'], 'four doors in three places, not one');
     const ids = [...src.matchAll(/^## (the-[a-z-]+) \| (?!attachment)/gm)].map((m) => m[1]);
     assert.equal(ids.length, 20, 'twenty rooms');
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    const want = (id) => ['the-camp-tail','the-picket-ground','the-forage-cut','the-camp-midden','the-horse-pits','the-camp-graves','the-deserters-ditch','the-plague-tents'].includes(id) ? 'siege-lines'
-      : ['the-toft-ends','the-back-lane','the-goose-green','the-stray-pound','the-crofts','the-back-pond'].includes(id) ? 'the-burned-village' : 'fort-waste';
+    const want = (id) => ['the-camp-tail','the-picket-ground','the-forage-cut','the-camp-midden','the-horse-pits','the-camp-graves','the-deserters-ditch','the-plague-tents'].includes(id) ? 'camp-tail'
+      : ['the-toft-ends','the-back-lane','the-goose-green','the-stray-pound','the-crofts','the-back-pond'].includes(id) ? 'back-lands' : 'waste-fields';
     for (const id of ids) assert.ok(pub.includes(`"${id}":`.padEnd(26) + `"${want(id)}"`), id + ' wears ' + want(id));
     const mig = readFileSync(new URL('../migrations/348_hyenas_in_the_camp_and_the_fields.sql', import.meta.url), 'utf8');
     assert.match(mig, /VALUES \('grave-hyena-camp', 'grave-hyena', 'the-camp-graves'\)/);
     assert.match(mig, /VALUES \('grave-hyena-fields', 'grave-hyena', 'the-old-plough'\)/);
+  });
+  check('the forty new rooms paint four pictures of their own, each one installed and shipped (2026-10-29)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const ship = JSON.parse(readFileSync(new URL('./deploy-artwork.json', import.meta.url), 'utf8'));
+    const rooms = [...pub.matchAll(/^  "(the-[a-z-]+)":\s+"(the-pits|camp-tail|back-lands|waste-fields)",$/gm)];
+    assert.equal(rooms.length, 40, 'forty rooms on the four plates');
+    for (const [, id, plate] of rooms) {
+      assert.ok(pub.includes(`"${id}":`.padEnd(26) + '"day night night-torch snow"'), id + ' asks for day, night, torch and snow only');
+      for (const s of ['day', 'night', 'night-torch', 'snow']) {
+        assert.ok(existsSync(new URL(`../public/room-bg/${plate}-${s}.webp`, import.meta.url)), `${plate}-${s} is installed`);
+        assert.ok(ship.includes(`room-bg/${plate}-${s}.webp`), `${plate}-${s} ships`);
+      }
+    }
+    for (const g of ['the-pits', 'camp-tail', 'back-lands', 'waste-fields']) assert.match(pub, new RegExp(`^  "${g}": 6\\d,$`, 'm'), g + ' has its mob line');
   });
   check('deep snow adds to your load on the move, not in the fight (2026-10-29)', () => {
     const room = [...OUTDOOR_ROOMS][0];
@@ -2162,6 +2176,18 @@ try {
       const ids = [...zd.match(new RegExp('export const ' + name + ' = new Set\\(\\[([\\s\\S]*?)\\]\\);'))[1].matchAll(/"([a-z-]+)"/g)].map((m) => m[1]);
       assert.deepEqual(ids.filter((id) => !hunted.has(id)), [], name + ' holds something nothing hunts');
     }
+  });
+
+  check('worn gear shows its condition on the pack row without opening it (2026-10-29)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const condLine = pub.match(/ var cond=([^;]*);/)[1];
+    const stateExpr = pub.match(/state\.className='mud-state';state\.textContent=([\s\S]*?);\n/)[1];
+    const show = new Function('type', 'it', 'place', 'goodsWorthText', 'var cond=' + condLine + '; return ' + stateExpr + ';');
+    const row = (it) => show('bench', it, 'pack', () => '');
+    assert.equal(row({ equipped: true, condWord: 'worn' }), 'worn, equipped');
+    assert.equal(row({ equipped: true, condWord: 'sound' }), 'equipped');
+    assert.equal(row({ sealed: true, condWord: 'battered' }), 'sealed, battered');
+    assert.equal(row({ condWord: 'failing' }), 'failing');
   });
 
   console.log(`\n${passed} regression checks pass`);

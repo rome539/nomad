@@ -1079,6 +1079,9 @@ const REDRAW = {
   "the-refuge-man": ["idle","turn-from-the-wall","hold-the-door","alert","move-a","move-b","attack","sweep","death"],
   "the-sapper": ["idle","work-the-face","listen","alert","move-a","move-b","attack","death"],
   "skeleton": ["idle","listen","alert","move-a","move-b","attack","sweep","death"],
+  // the scaffold hand, redone on a clear background (rome, 2026-10-29): its
+  // strip's order, the recover cell given to the reach it already had written
+  "the-scaffold-hand": ["idle","work-the-stone","alert","move-a","move-b","attack","reach-for-the-span","death"],
   "thrice-dead": ["idle","rise","alert","move-a","move-b","attack","sweep","death"],
   "wildcat": ["idle","alert","rest","feed","move-a","move-b","attack","death"],
 };
@@ -1735,14 +1738,14 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier"]);
+const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")
   .replace(/CLEAR EMPTY MAGENTA/g, "CLEAR EMPTY TRANSPARENT SPACE")
   .replace(/empty magenta/g, "empty transparent space")
   .replace(/exactly the way the magenta background is/g, "the same way the background is keyed")
-  .replace(/#FF00FF|magenta/gi, "transparent");
+  .replace(/#FF00FF|(?<!no )magenta/gi, "transparent");
 
 const THROWAWAY = poses.filter((p) => p[0] === "_");
 // THE WORD "OPAQUE" IS OUT OF THE MAGENTA LINE (rome, 2026-09-21: it kept
