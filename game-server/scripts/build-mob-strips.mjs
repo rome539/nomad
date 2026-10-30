@@ -102,7 +102,11 @@ const SAME_ART = { "warden": ["warden-surface"] };
 const POSE_GROW = { "brown-bear": { "inspect-upright": 1.3 },
   // the redrawn king's call-the-dark came out smaller than the man standing
   // in idle: 333 eye-to-feet against 387, both upright (rome, 2026-10-24)
-  "forgotten-king": { "call-the-dark": 1.16 } };
+  "forgotten-king": { "call-the-dark": 1.16 },
+  // and the other way: the barrow-dead's rise (the crawl up out of the ground)
+  // came out bigger than the man standing in idle (rome, 2026-10-30). Below 1
+  // shrinks the pose the same way, still from its feet.
+  "thrice-dead": { "rise": 0.85 }, "twice-dead": { "rise": 0.85 } };
 const BODY_SCALE = {
   "the-pilot": 0.933, "the-drove-master": 0.973, "wood-stag": 0.970,
   "the-old-glutton": 0.951, "snow-fox": 0.968, "lead-dog": 0.962,
@@ -468,7 +472,16 @@ function eyeCore(r, g, b, a) { return a >= 170 && r > 200 && g < 80 && b < 70; }
 async function blackenEyes(base, eyes) {
   const { data, info } = await sharp(base).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const e = await sharp(eyes).ensureAlpha().raw().toBuffer();
-  for (let o = 0; o < data.length; o += 4)
-    if (data[o + 3] && eyeCore(e[o], e[o + 1], e[o + 2], e[o + 3])) { data[o] = 0; data[o + 1] = 0; data[o + 2] = 0; }
+  for (let o = 0; o < data.length; o += 4) {
+    if (!data[o + 3]) continue;
+    if (eyeCore(e[o], e[o + 1], e[o + 2], e[o + 3])) { data[o] = 0; data[o + 1] = 0; data[o + 2] = 0; continue; }
+    // THE RIM KEEPS ITS PIXELS AND LOSES ITS CYAN (rome, 2026-10-30). The marker
+    // is drawn soft, so round the blackened core sits a ring of cyan blended into
+    // the socket and the bone, and the eye bled cyan into the face. Inside the
+    // eye layer's reach only, the tint comes off: green and blue drop by however
+    // far they stand over red. Nothing is erased and nothing changes shape.
+    const spill = Math.min(data[o + 1], data[o + 2]) - data[o];
+    if (e[o + 3] && spill > 0) { data[o + 1] -= spill; data[o + 2] -= spill; }
+  }
   return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
 }

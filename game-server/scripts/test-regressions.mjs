@@ -1075,6 +1075,21 @@ try {
     const body = 0.898 * Math.pow(n / 13, 0.45);
     assert.ok(Math.abs(body - 1) < 0.02, 'grave-hyena ' + n + ' draws ' + body.toFixed(3) + ' of his old body');
   });
+  check('the barrow-dead crawl up out of the ground no bigger than they stand (2026-10-30)', () => {
+    const src = readFileSync(new URL('./build-mob-strips.mjs', import.meta.url), 'utf8');
+    const grow = src.slice(src.indexOf('const POSE_GROW'), src.indexOf('const BODY_SCALE'));
+    for (const id of ['thrice-dead', 'twice-dead']) {
+      const k = Number(grow.match(new RegExp(`"${id}": \\{ "rise": ([\\d.]+) \\}`))?.[1]);
+      assert.ok(k > 0 && k < 1, id + "'s rise is shrunk, not left at the size the sheet drew it");
+    }
+  });
+  check('a hollow eye does not bleed its cyan rim onto the face (2026-10-30)', () => {
+    const src = readFileSync(new URL('./build-mob-strips.mjs', import.meta.url), 'utf8');
+    const fn = src.slice(src.indexOf('async function blackenEyes'));
+    const body = fn.slice(0, fn.indexOf('\n}\n'));
+    assert.match(body, /const spill = Math\.min\(data\[o \+ 1\], data\[o \+ 2\]\) - data\[o\]/, 'the rim measures its cyan');
+    assert.match(body, /if \(e\[o \+ 3\] && spill > 0\) \{ data\[o \+ 1\] -= spill; data\[o \+ 2\] -= spill; \}/, 'and loses it, inside the eye layer only');
+  });
   check('every room with a picture in the client is one the server sends its place for (2026-10-30)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');

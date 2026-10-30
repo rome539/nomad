@@ -10175,7 +10175,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "123";      // /mob/      strips and their eye layers
+var MOB_V  = "125";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "52";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
@@ -14362,8 +14362,8 @@ var MOB_ANIM = {
   "wayman":              { n: 8, aspect: 0.957, f: {"idle":0,"alert":1,"graze":2,"snatch-escape":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-toll-clerk":      { n: 8, aspect: 0.969, f: {"idle":0,"shift-the-weight":1,"alert":2,"count-it-out":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-mire-walker":     { n: 8, aspect: 1.024, f: {"idle":0,"stand-in-it":1,"alert":2,"let-it-settle":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "the-miller":          { n: 9, aspect: 1.017, f: {"idle":0,"work-the-water":1,"alert":2,"haul-it-up":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
-  "the-long-warden":     { n: 8, aspect: 1.04, f: {"idle":0,"turn-the-distance":1,"alert":2,"square-the-plates":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-miller":          { n: 9, aspect: 1.059, f: {"idle":0,"work-the-water":1,"alert":2,"haul-it-up":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "the-long-warden":     { n: 8, aspect: 1.032, f: {"idle":0,"turn-the-distance":1,"alert":2,"square-the-plates":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-drove-master":    { n: 8, aspect: 1.133, f: {"idle":0,"alert":1,"work-the-line":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-chain-breaker":   { n: 8, aspect: 1.107, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-baited-bear":     { n: 8, aspect: 1.284, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
