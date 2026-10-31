@@ -877,7 +877,7 @@ try {
     z.creatureNoise = (r) => noise.push(r);
     z.roomSound = () => {}; z.send = (s, t) => said.push(t);
     z.inGatehouse = new Set(); z.outOfWorld = () => false; z.wearsTrait = () => false;
-    z.roomHasFirekeeper = () => false; z.dens = new Map(); z.curingCount = () => ({});
+    z.roomHasFirekeeper = () => false; z.dens = new Map(); z.curingCount = () => ({}); z.sendStatus = () => {};
     const me = { pubkey: 'me', name: 'Rome', roomId: 'r', hp: 100, resting: false };
     z.sessions = new Map([['me', me]]);
     const minutes = (n) => { for (let i = 0; i < n; i++) { coughing.resetForTest(z); coughing.tick(z, Date.now()); } };
@@ -933,6 +933,41 @@ try {
     const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
     assert.match(zone, /const chillMult = session\.chilled && !byFire && !indoors \? CHILL_MEND_MULT : 1;/, 'the chill slows the rest, by a fire it does not');
     assert.match(zone, /healingDue \* feverMult \* chillMult/, 'and the heal reads it');
+  });
+  check('the bar says wet and chilled for as long as they last, not one line in the scroll (2026-10-31)', () => {
+    const { z, me } = coughWorld();
+    let t = Date.now(), sent = 0;
+    const minutes = (n) => { for (let i = 0; i < n; i++) { t += 60_000; coughing.resetForTest(z); coughing.tick(z, t); } };
+    me.maxHp = 100; me.hp = 100; z.sendStatus = () => { sent++; };
+    coughing.weather.coldBites = () => true; coughing.weather.windy = () => false; coughing.weather.inWater = () => false;
+    coughing.weather.raining = () => true; minutes(1);
+    assert.equal(sent, 1, 'soaked: the bar is told');
+    minutes(9); assert.ok(me.chilled); assert.equal(sent, 2, 'chilled: the bar is told');
+    z.inGatehouse.add('me'); const before = sent; minutes(1);
+    assert.ok(sent >= before + 2, 'dry and warm again: the bar is told both');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /if \(session\.chilled\) fx\.push\("chilled"\);\n    else if \(cough\.isWet\(session\)\) fx\.push\("wet"\);/, 'the status carries them');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /chilled: +\{ label: "chilled"/); assert.match(pub, /wet: +\{ label: "wet"/);
+  });
+  check('a player switched out of the arena feed is never handed a line for it, nor named in one (2026-10-31)', () => {
+    const z = new ZoneDO({}, {});
+    const sock = () => { const out = []; return { out, send: (m) => out.push(JSON.parse(m)), serializeAttachment: () => {}, deserializeAttachment: () => ({}) }; };
+    const a = { pubkey: 'a', name: 'Ash', roomId: 'r', ws: sock() }, b = { pubkey: 'b', name: 'Birch', roomId: 'r', ws: sock() };
+    z.sessions = new Map([['a', a], ['b', b]]); z.outOfWorld = () => false;
+    const fpubs = (s) => s.ws.out.filter((f) => f.t === 'fpub').length;
+    z.actorFeed(a, 'r', 'Ash goes north.');
+    assert.equal(fpubs(a), 1, 'on by default: the deed goes out');
+    a.arenaOff = true; z.actorFeed(a, 'r', 'Ash goes south.');
+    assert.equal(fpubs(a), 1, 'switched off: nothing more of theirs');
+    assert.equal(b.ws.out.filter((f) => f.kind === 24913).length, 2, 'the room still sees it live');
+    z.actorFeed(b, 'r', 'Birch turns on Ash!', 'fight', true, 'a');
+    assert.equal(fpubs(b), 0, 'a line naming them stays off the feed too');
+    a.arenaOff = false; z.actorFeed(b, 'r', 'Birch turns on Ash!', 'fight', true, 'a');
+    assert.equal(fpubs(b), 1, 'back on: it goes out again');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /"&tell=1&arena=" \+ \(typeof arenaWanted === "function" && !arenaWanted\(\) \? "0" : "1"\)/, 'the client says it when it dials, on unless switched off');
+    assert.match(pub, /if \(!text \|\| arenaOn === false \|\| !arenaWanted\(\)\) return;/, 'and posts nothing of yours while it is off');
   });
   function fireWorld(room) {
     const said = [];

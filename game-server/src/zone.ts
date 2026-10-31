@@ -1551,7 +1551,7 @@ export class ZoneDO implements DurableObject {
     // hibernation rebuild (hydrateSessions) doesn't read a parked socket as fresh.
     // pid/att ride the socket too, so the staleness guard above still works after
     // a hibernation wake, when the only thing left of a connection is its socket.
-    server.serializeAttachment({ pubkey, la: Date.now(), pid, att, sealedTell: qs.get("tell") === "1", cid: crypto.randomUUID() });
+    server.serializeAttachment({ pubkey, la: Date.now(), pid, att, sealedTell: qs.get("tell") === "1", arenaOff: qs.get("arena") === "0", cid: crypto.randomUUID() });
     // Answer pings without waking the DO — keeps parked sockets warm for cheap.
     this.state.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
 
@@ -1948,6 +1948,7 @@ export class ZoneDO implements DurableObject {
       ws,
       exhaustion: fatigue,
       sealedTell: this.wsAttachment(ws)?.sealedTell === true,
+      arenaOff: this.wsAttachment(ws)?.arenaOff === true,
       pubkey: row.pubkey,
       name: row.name,
       named: row.named === 1,
@@ -1981,9 +1982,9 @@ export class ZoneDO implements DurableObject {
 
   // The socket's attachment: the owner's key, stashed at accept-time, plus
   // `la` — the idle stamp (see Session.lastActiveAt).
-  private wsAttachment(ws: WebSocket): { pubkey?: string; la?: number; pid?: string | null; att?: number | null; cid?: string; sealedTell?: boolean } | null {
+  private wsAttachment(ws: WebSocket): { pubkey?: string; la?: number; pid?: string | null; att?: number | null; cid?: string; sealedTell?: boolean; arenaOff?: boolean } | null {
     try {
-      return ws.deserializeAttachment() as { pubkey?: string; la?: number; pid?: string | null; att?: number | null; cid?: string; sealedTell?: boolean } | null;
+      return ws.deserializeAttachment() as { pubkey?: string; la?: number; pid?: string | null; att?: number | null; cid?: string; sealedTell?: boolean; arenaOff?: boolean } | null;
     } catch { return null; }
   }
 
@@ -2196,6 +2197,17 @@ export class ZoneDO implements DurableObject {
     const isBounty = frame?.t === "bounty";
     const isSwap = frame?.t === "swap";
     const isJournal = frame?.t === "journal"; // the journal chip: the book opens as its modal
+    // THE ARENA SWITCH (rome, 2026-10-31): a player may take themselves out of
+    // the spectator feed. On by default; the setting rides the socket so a
+    // hibernation wake keeps it.
+    if (frame?.t === "arena") {
+      session.arenaOff = frame.on === false;
+      try {
+        const a = this.wsAttachment(session.ws);
+        session.ws.serializeAttachment({ ...(a ?? {}), pubkey: session.pubkey, arenaOff: session.arenaOff });
+      } catch {}
+      return;
+    }
     if (!isTell && !isBench && !isTrade && !isForge && !isBounty && !isSwap && !isJournal && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
 
     // Token bucket per pubkey — castr's daily-cast pattern, compressed.
@@ -2222,7 +2234,7 @@ export class ZoneDO implements DurableObject {
     // be blind again a second after it was armed.
     try {
       const a = this.wsAttachment(session.ws);
-      session.ws.serializeAttachment({ pubkey: session.pubkey, la: now, pid: a?.pid ?? null, att: a?.att ?? null, cid: a?.cid, sealedTell: a?.sealedTell });
+      session.ws.serializeAttachment({ pubkey: session.pubkey, la: now, pid: a?.pid ?? null, att: a?.att ?? null, cid: a?.cid, sealedTell: a?.sealedTell, arenaOff: !!session.arenaOff });
     } catch {}
 
     // The gatehouse bench (storage modal) and the keeper's hatch (trade
@@ -9006,6 +9018,10 @@ export class ZoneDO implements DurableObject {
     if (session.stunned) fx.push("stunned");
     if (session.hobbled) fx.push("hobbled");
     if (session.bleedTicks && session.bleedTicks > 0) fx.push("bleeding");
+    // THE COLD AND THE WET (rome, 2026-10-31): each was told once in the scroll
+    // and then said nothing. Chilled is the worse and says the wet with it.
+    if (session.chilled) fx.push("chilled");
+    else if (cough.isWet(session)) fx.push("wet");
     if (session.resting) fx.push("resting");
     if (session.pose) fx.push(session.pose === "point" ? "pointing" : session.pose);
     // A flame in the shield hand is a real debuff and it was the only invisible
@@ -9641,7 +9657,10 @@ export class ZoneDO implements DurableObject {
       if (this.outOfWorld(s)) continue;
       try { s.ws.send(frame); } catch {}
     }
-    if (toRelay) try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", room: roomId, text, fx: cls })); } catch {}
+    // Nobody who switched the arena off goes out on it: not their own deed, and
+    // not a line that names them (alsoSkip is the other player a line names).
+    const hidden = actor.arenaOff || (alsoSkip ? this.sessions.get(alsoSkip)?.arenaOff : false);
+    if (toRelay && !hidden) try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", room: roomId, text, fx: cls })); } catch {}
   }
 
   // The arena feed's third-person voice — a kill or a status proc retold for the

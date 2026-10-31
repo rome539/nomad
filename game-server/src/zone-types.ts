@@ -9,6 +9,7 @@ export type Stance = "reckless" | "steady" | "guarded";
 export interface Session {
   ws: WebSocket;
   sealedTell?: boolean; // client advertised encrypted private-message support
+  arenaOff?: boolean; // the player has switched themselves out of the arena feed (a setting; rides the socket)
   pubkey: string;
   name: string;
   named: boolean; // chose their name (or client adopted their profile name)

@@ -289,6 +289,7 @@ export const PAGE = `<!doctype html>
   /* The first step of wear: gold, from the theme's own wear amber rather than
      its accent — see --wear. */
   .fx-wear { color: var(--wear); }
+  .fx-cold { color: #8fb0c2; }
   #idpanel {
     position: absolute;
     top: 44px;
@@ -2450,6 +2451,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div class="setrow"><span>what is NOMAD</span><button id="aboutbtn">read</button></div>
     <div class="setrow"><span>sound</span><button id="sndbtn">off</button></div>
     <div class="setrow"><span>command chips</span><button id="chipbtn">on</button></div>
+    <div class="setrow"><span>seen in the arena feed</span><button id="arenabtn" type="button">on</button></div>
     <div class="setrow" id="fsrow"><span>fullscreen</span><button id="fsbtn" type="button">off</button></div>
     <div class="setrow"><span>inventory &amp; shop layout</span><button id="modallayoutbtn" type="button" aria-label="Inventory &amp; shop layout: Compact">Compact</button></div>
     <div class="setrow"><span>theme</span><button id="thbtn">door</button></div>
@@ -2758,6 +2760,9 @@ var FX_META = {
   bleeding: { label: "bleeding", cls: "fx-blood" },
   resting:  { label: "resting",  cls: "fx-heal" },
   "guard-down": { label: "guard down", cls: "fx-warn" },
+  // The cold and the wet: told once in the scroll, and held here until they pass.
+  chilled:  { label: "chilled",  cls: "fx-cold" },
+  wet:      { label: "wet",      cls: "fx-cold" },
   // Kit going. One pill for the worst piece you have on: gold, then blood.
   // The bench's figure names which piece; this only says to go and look.
   "kit-worn":    { label: "kit worn",    cls: "fx-wear" },
@@ -5150,7 +5155,7 @@ var FEED_KIND = 24913;
 var ARENA_TAG = "nomad-arena";
 var FEED_HOLD_MS = 15000;
 async function publishFeed(room, text, fx) {
-  if (!text) return;
+  if (!text || arenaOn === false || !arenaWanted()) return; // switched out of the arena feed: nothing of yours goes on it
   try {
     var tags = [["t", ARENA_TAG], ["t", "mudroom-" + (room || "door")], ["v", "0"]];
     // A combat deed carries how it landed (vital / bleed / stun / hobble / kill)
@@ -5681,7 +5686,7 @@ async function connect() {
   dialAttempt++;
   var sock = new WebSocket(proto + location.host + "/ws?" + wsAuth + (freshLoad ? "&fresh=1" : "")
     + (pendingInvite ? "&invite=" + encodeURIComponent(pendingInvite) : "")
-    + "&tell=1&pid=" + encodeURIComponent(pageId) + "&att=" + dialAttempt);
+    + "&tell=1&arena=" + (typeof arenaWanted === "function" && !arenaWanted() ? "0" : "1") + "&pid=" + encodeURIComponent(pageId) + "&att=" + dialAttempt);
   ws = sock;
   var mine = function () { return ws === sock && epoch === identityEpoch; };
   // A FIRST dial can hang in CONNECTING with no close event and nothing left
@@ -6438,6 +6443,10 @@ function logout() {
 // the real command (and shows it, so the vocabulary rubs off). A chip ending
 // in "…" only starts the command and leaves the rest to you.
 var chipsOn = localStorage.getItem("nomad_chips") !== "0"; // default on
+// Whether your deeds go out on the arena feed (rome, 2026-10-31). Default on.
+// A function, not a value: the socket can dial before this line has run.
+function arenaWanted() { try { return localStorage.getItem("nomad_arena") !== "0"; } catch (e) { return true; } }
+var arenaOn = arenaWanted();
 var lastSuggest = [];
 var lastCombat = false;
 // THE WORLD WAS REBUILT UNDER YOU. A deploy is state-safe and the socket
@@ -9602,6 +9611,21 @@ chipbtn.addEventListener("click", function () {
   localStorage.setItem("nomad_chips", chipsOn ? "1" : "0");
   renderChipBtn();
   renderChips(lastSuggest, lastCombat);
+});
+
+// THE ARENA SWITCH (rome, 2026-10-31): take yourself out of the spectator feed.
+// The server is told too, so a fight line that names you stays off it as well.
+var arenabtn = document.getElementById("arenabtn");
+function renderArenaBtn() {
+  arenabtn.textContent = arenaOn ? "on" : "off";
+  arenabtn.className = arenaOn ? "on" : "";
+}
+renderArenaBtn();
+arenabtn.addEventListener("click", function () {
+  arenaOn = !arenaOn;
+  try { localStorage.setItem("nomad_arena", arenaOn ? "1" : "0"); } catch (e) {}
+  renderArenaBtn();
+  try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ v: 0, t: "arena", on: arenaOn })); } catch (e) {}
 });
 
 // FULLSCREEN, BY CHOICE (rome, 2026-10-22): a toggle here and the word

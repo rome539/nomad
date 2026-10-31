@@ -87,15 +87,18 @@ function tickWet(z: ZoneDO, s: Session, now: number): void {
   const was = isWet(s, now);
   if (!z.outOfWorld(s) && wetting(z, s)) {
     soak(s, now);
-    if (!was) z.send(s, weather.inWater(z, s.roomId)
-      ? "The water is over your boots and through everything you have on."
-      : "The rain has soaked you through.");
+    if (!was) {
+      z.send(s, weather.inWater(z, s.roomId)
+        ? "The water is over your boots and through everything you have on."
+        : "The rain has soaked you through.");
+      z.sendStatus(s); // the bar says it until you are dry
+    }
     return;
   }
   if (!was) return;
   if (byAFire(z, s, now)) s.wetUntil = 0;
   else if (!z.outOfWorld(s) && weather.windy(z, s.roomId)) s.wetUntil = (s.wetUntil ?? 0) - 60_000; // the wind dries you twice as fast
-  if (!isWet(s, now)) z.send(s, "You are dry again.");
+  if (!isWet(s, now)) { z.send(s, "You are dry again."); z.sendStatus(s); }
 }
 
 export function smoky(z: ZoneDO, roomId: string): boolean {
@@ -118,14 +121,16 @@ export function tick(z: ZoneDO, now: number): void {
     // THE CHILL keeps its count whatever else is going on.
     const out = z.outOfWorld(s);
     if (warm(z, s, now)) {
-      if (s.chilled) z.send(s, "The warmth gets into your chest at last, and the cough lets go of you.");
+      const wasChilled = !!s.chilled;
       s.chilled = false; s.chillMs = 0;
+      if (wasChilled) { z.send(s, "The warmth gets into your chest at last, and the cough lets go of you."); z.sendStatus(s); }
     } else if (!out && weather.coldBites(z, s.roomId) && (isWet(s, now) || z.wearsTrait(s, "sodden"))) {
       s.chillMs = (s.chillMs ?? 0) + 60_000;
       if (!s.chilled && s.chillMs >= COUGH_CHILL_AFTER_MS) {
         s.chilled = true;
         s.chillBiteAt = now;
         z.send(s, "The cold and the wet have got into your chest. You will be coughing until you get warm.");
+        z.sendStatus(s);
       } else if (s.chilled && now - (s.chillBiteAt ?? 0) >= CHILL_BITE_MS) {
         // Still out in it with the chill in you: it takes a point, never the last of you.
         s.chillBiteAt = now;
