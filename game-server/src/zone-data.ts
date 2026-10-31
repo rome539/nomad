@@ -8956,8 +8956,8 @@ export const RAIN_SETTLED_ODDS = 0.25;
 // lets go, so it can sit over the world all afternoon, all night, or a day and
 // more. A shower that does not pass can thicken and set in.
 //   shower:  half end at each step   -> most are gone in 10-30 min
-//   settled: 2.85% end at each step  -> half last 4h, one in eight passes 12h,
-//                                        one in sixty is still falling at 24h
+//   settled: 1.85% end at each step  -> with storms holding it, half last
+//                                        ~6.5h; one rain in 33 lasts a day
 export const RAIN_STEP_MS = 10 * 60_000;
 // THE REST OF THE WEATHER WORKS THE SAME WAY (rome, 2026-10-15). Fog, the cold,
 // the wind and the mountain's cloud have no set length either: every
@@ -8983,7 +8983,13 @@ export const WX_RETREAT_ODDS = 0.2;
 export const WX_WORLDWIDE_ODDS = 0.1;
 export const RAIN_SHOWER_END_ODDS = 0.5;
 export const RAIN_SETS_IN_ODDS = 0.08;          // a shower that does not pass
-export const RAIN_SETTLED_END_ODDS = 0.0285; // half are over in 4h (rome, 2026-10-17: was 0.015, half lasting 7.7h)
+// THE DAY-LONG RAIN COMES BACK (rome, 2026-10-31). At 0.0285 a rain that sat a
+// whole day was 1 in 140; he wanted it back near the first ship's 1 in 33. The
+// first ship's own 0.015 overshoots now (1 in 23), because a thunderstorm holds
+// its rain, so this is the number that lands there with storms in: simulated
+// over 24,000 days, 1 in 33 rains last a day, 1 in 10 last 12h, settled rain's
+// half is over in ~6.5h, and rain still comes ~1.4 times a day.
+export const RAIN_SETTLED_END_ODDS = 0.0185;
 export const RAIN_AFTERMATH_MS = 15 * 60_000; // mud: deep tracks, quick forage
 // THE WET AFTER IS AS LONG AS THE RAIN EARNED (rome, 2026-10-15). Each ground
 // it fell on stays wet - mud underfoot, the grey cloud it left over it, day or
