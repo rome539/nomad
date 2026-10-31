@@ -7123,6 +7123,7 @@ export const DARK_ROOMS = new Set([
   "the-wolf-earth",
   "blackreach", "the-lightless-march", "the-gasping-dark", "black-threshold", "black-canal",
   "the-crawl-of-teeth", "the-earth-throat", // the warrens' lightless squeezes (058)
+  "the-blind-heading", // the old adit's dead end, where the air does not move (mig 355)
   "the-long-swallow", "the-tide-throat", "the-silt-chapel", "the-still-cradle", // the Tideways' drowned half (069)
   "the-blind-gallery", "the-scraped-hall", "the-wormcast-pit", "the-scavengers-shelf", "the-drag", // the dark floor (291)
   "the-lung-vent", // the vent the tideway breathes through (291)
@@ -7181,6 +7182,20 @@ export const WARRENS_ROOMS = new Set([
 ]);
 // THE RAT KING (ratking.ts, rome 2026-10-24): rolled into the warrens about
 // once a day while there is none, never more than one.
+// THE OLD ADIT'S OWN WAYS (rome, 2026-10-31), each the room's text made true.
+// THE HOARD-HOLE is "still being added to": a warren rat alone in a warren room
+// with something lying unwatched drags it off down the runs, and it lands on the
+// Hoard-Hole's floor, in plain sight, to be dug out by whoever gets there. It
+// carries until the pile holds HOARD_HOLE_CAP, and it never takes food (it eats
+// that), the free rock, or a room's own stock.
+export const HOARD_HOLE = "the-hoard-hole";
+export const HOARD_HOLE_CAP = 8;
+// THE LITTER CHAMBER is "warmer than earth has any business being": standing in
+// it is standing by a fire. It stops the chill and it dries you (cough.ts).
+export const WARM_ROOMS = new Set(["the-litter-chamber"]);
+// THE BLACK SUMP soaks only whoever goes into it: the bank is dry, and dive is
+// how you go in (verbs.cmdDive).
+export const WARREN_SUMP = "the-warren-sump";
 export const RAT_KING = "rat-king";
 export const RAT_KING_HOME = "the-rat-warren";
 export const RAT_KING_RATS = new Set(["rat", "fleet-rat", "brood-rat", "albino-rat"]);

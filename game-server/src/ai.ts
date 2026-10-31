@@ -61,7 +61,7 @@ import {
   PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, OWN_FORAGE_MEAL_LEFT,
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
-  RAT_KING,
+  RAT_KING, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
   EAT_SHOW_MS,
   RIVAL_LINES, DROWNED_GOD, KING_WORDS,
 } from "./zone-data";
@@ -3721,6 +3721,51 @@ export function scavengerScoops(z: ZoneDO, creature: Creature): void {
     if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} alights, snatches up ${g.name}, and bears it away toward its nest.`, undefined, false);
     z.roomSound(creature.roomId, "A wingbeat, {dir}, and something small being carried.", undefined, undefined, false, { mob: creature.templateId, act: "wings" });
     z.refreshRoomCtx(creature.roomId);
+  }
+
+  // THE HOARD-HOLE (rome, 2026-10-31). The raven's way, on the warren floor: a
+  // warren rat alone with something nobody is watching takes it, and the piece
+  // lands on the Hoard-Hole's floor the moment it is taken (the run down the
+  // tunnels is flavour; the pile is where it ends up). Unlike a nest it is in
+  // plain sight there, and anyone who gets to it can take it. Its wear and what
+  // it rolled go with it; an engraving goes silent, as in a hyena's jaws.
+  export function ratHoards(z: ZoneDO, creature: Creature): void {
+    if (!RAT_KING_RATS.has(creature.templateId) || creature.target || creature.asleep) return;
+    if (!WARRENS_ROOMS.has(creature.roomId) || creature.roomId === HOARD_HOLE) return;
+    const pile = z.ground.get(HOARD_HOLE) ?? [];
+    if (pile.length >= HOARD_HOLE_CAP) return;
+    if (playerPresent(z, creature.roomId)) return; // not with anyone watching
+    const floor = z.ground.get(creature.roomId);
+    if (!floor?.length) return;
+    const now = Date.now();
+    const idx = floor.findIndex((id) => {
+      const t = z.world!.itemTemplates.get(id);
+      if (!t || t.id === "loose-rock" || t.edible) return false; // food it eats; the rock it leaves
+      if (z.world!.groundSpawns.some((g) => g.room_id === creature.roomId && g.item_id === id)
+        || z.roamed.has(`${id}@${creature.roomId}`)) return false; // the room's own stock
+      const fell = z.groundFreshAt.get(`${id}@${creature.roomId}`);
+      if (fell !== undefined && now - fell < SCOOP_GRACE_MS) return false; // the kill site is hot
+      return true;
+    });
+    if (idx === -1) return;
+    const id = floor[idx];
+    const from = `${id}@${creature.roomId}`, to = `${id}@${HOARD_HOLE}`;
+    floor.splice(idx, 1);
+    z.ground.set(creature.roomId, floor);
+    const cond = z.groundCond.get(from), rolled = z.groundRolled.get(from);
+    z.groundCond.delete(from); z.groundRolled.delete(from);
+    z.groundLore.delete(from); z.groundFreshAt.delete(from); z.roamed.delete(from);
+    if (cond !== undefined) z.groundCond.set(to, cond);
+    if (rolled !== undefined) z.groundRolled.set(to, rolled);
+    z.ground.set(HOARD_HOLE, [...pile, id]);
+    z.stampFresh(HOARD_HOLE, id);
+    z.armStrayDecay(HOARD_HOLE);
+    const g = z.world!.itemTemplates.get(id);
+    const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
+    if (g) z.roomFeed(creature.roomId, `${cap(tmpl.name)} gets its teeth into ${g.name} and drags it off down the runs.`, undefined, false);
+    z.roomSound(creature.roomId, "Something small is dragged away {dir}, scraping, a long way down.", undefined, undefined, false, { mob: creature.templateId, act: "metal" });
+    z.refreshRoomCtx(creature.roomId);
+    z.refreshRoomCtx(HOARD_HOLE);
   }
 
   // The shed beat, in two flavors. Over the keep line it lets ONE piece go —

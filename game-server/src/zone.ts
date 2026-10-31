@@ -5849,6 +5849,7 @@ export class ZoneDO implements DurableObject {
         // function self-guards too, but it was the one call in this loop that
         // ran for every creature in the world, every tick).
         if (RAVEN_SCOOPERS.has(creature.templateId)) ai.ravenScoops(this, creature);
+        ai.ratHoards(this, creature); // the warren rats' pile (self-guards on the rat kinds)
         // (The drowned used to feed here too, added 2026-07-26 — removed
         // 2026-07-31 when they came off the hunger clock entirely: sessile, no
         // prey map, and a carrion supply ~200x too slow to ever satisfy them.

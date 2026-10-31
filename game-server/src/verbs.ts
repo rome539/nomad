@@ -29,7 +29,7 @@ import * as lore from "./lore";
 import * as conditions from "./conditions";
 import * as den from "./den";
 import * as campfire from "./campfire";
-import { isWet } from "./cough";
+import { isWet, soak } from "./cough";
 import * as detail from "./detail";
 import * as study from "./study";
 import * as wanderer from "./wanderer";
@@ -55,7 +55,7 @@ import {
   ARMOR_K, STANCE, WAKE_ENTER, WAKE_EXIT, PLAYER_DMG_MIN, PLAYER_DMG_MAX, REGROW_MIN_MS, REGROW_MAX_MS, ROT_MS,
   BURNER_NOD_ODDS, BURNER_NODS, DEAD_STOCK, CARRION_ROOMS, STOCK_REGROW_MIN_MS, STOCK_REGROW_MAX_MS, GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW,
   RAVEN_SCOOPERS, RAVEN_BARTER_ODDS, RAVEN_BARTER_WAIT_MS,
-  DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, NATURAL_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
+  WARREN_SUMP, DROWNERS, HOLLOW, THIEVES, LURKERS, STILL_SOUNDS, DIR_ORDER, LIGHTS_ROOMS, KIT_TELLS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, REFLECTION_LIE_ODDS, CIGARETTES, FOOD_KEEPS, NATURAL_KEEPS, FOOD_SPOIL_HEAL_MULT, FEVER_MEND_MULT, DETAILED_MAP, FEN_ROOMS, FEN_CARRY_CAP,
   JOURNAL_ITEM,
   SMOKEHOUSE_ROOM, SMOKEHOUSE_ROOMS, CURE_MS, GATE_CURE_MS, CURE_RECIPES, TORCH_BURN_MS, COOK_RECIPES,
   MILESTONES,
@@ -3314,6 +3314,17 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
 // the drowners' own hour.
 export async function cmdDive(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
+  // THE BLACK SUMP (rome, 2026-10-31): the bank is dry, and the water is a
+  // choice. Going in finds what the room says is there, and nothing else, and
+  // you come out of it soaked through.
+  if (session.roomId === WARREN_SUMP) {
+    z.roomFeed(session.roomId, `${session.name} wades out into the black water and goes under.`, session.pubkey, false);
+    z.roomSound(session.roomId, "Something goes into deep water {dir}, and the water closes over it.");
+    z.creatureNoise(session.roomId);
+    soak(session);
+    z.sendStatus(session);
+    return z.send(session, "You wade out off the bank and the bottom goes out from under you. The water is cold enough to stop your breath and it tastes of iron. Your hands find bones down there, big ones, long and smooth and laid together, and nothing else at all. You come up out of it and back onto the clay soaked to the skin.");
+  }
   // THE WRECK DIVES (2026-09-01): the ribs of the great boat and the
   // half-drowned cart sit at rank 1 — when the sea comes up over them, you
   // can go down through the frames after what they carried. A slow water,

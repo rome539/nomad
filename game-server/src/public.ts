@@ -10217,8 +10217,8 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "54";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "14";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "32";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "15";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "33";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10721,7 +10721,7 @@ var ROOM_PLATE = {
   "the-wet-run":            "night night-torch",
   "the-fallen-props":       "night night-torch",
   "the-hoard-hole":         "night",
-  "the-warren-sump":        "night night-torch",
+  "the-warren-sump":        "night",
   "sewer":                  "night",
   "the-root-gnawed-run":    "night night-torch",
   "a-dry-burrow":           "night night-torch",
@@ -10961,26 +10961,24 @@ var PLATE_OF = {
   "barracks":               "keep-quarters",
   "guardroom":              "keep-quarters",
   // THE KEEP GROWS (mig 355): the stores and the old adit borrow their kind's picture.
-  "the-five-ways":          "keep-passage",
-  "the-watch-passage":      "keep-passage",
+  "the-five-ways":          "keep-corridor",
+  "the-watch-passage":      "keep-corridor",
   "the-roll-room":          "keep-letters",
   "the-quartermasters-room":"keep-letters",
-  "the-long-store":         "keep-store",
-  "the-harness-room":       "keep-store",
-  "the-fletchery":          "keep-store",
-  "the-arming-passage":     "keep-passage",
+  "the-long-store":         "keep-stores",
+  "the-harness-room":       "keep-stores",
+  "the-fletchery":          "keep-stores",
+  "the-arming-passage":     "keep-corridor",
   "the-pay-table":          "keep-quarters",
   "the-sergeants-room":     "keep-quarters",
   "the-side-run":           "warren-run",
   "the-litter-chamber":     "warren-den",
-  "the-root-hall":          "warren-den",
   "the-scrape":             "warren-run",
   "the-old-adit":           "warren-mine",
   "the-blind-heading":      "warren-mine",
   "the-wet-run":            "warren-run",
   "the-fallen-props":       "warren-mine",
   "the-hoard-hole":         "warren-den",
-  "the-warren-sump":        "warren-mine",
   "warden-post":            "keep-quarters",
   "cells":                  "keep-holes",
   "debtors-pit":            "keep-holes",
@@ -11763,6 +11761,10 @@ var MOB_LINE = {
   // man whatever the creature is, so enlarging the roster pushed every short
   // thing DOWN toward that line and the error stopped hiding in the gap.
  "corrie-rim": 60, "corrie-floor": 60, "the-back-wall": 62, "the-kept-room": 65, "the-smithy": 65,
+  // THE KEEP GROWS' OWN PICTURES (2026-10-31), read off where each floor starts:
+  // the stores' bays come down to 70%, the root hall's floor starts at 66% and
+  // the sump's bank at 69%. The corridor runs away from the camera on the lock.
+  "keep-stores": 70, "the-root-hall": 66, "the-warren-sump": 69,
                  // The summit's drake stood too low on the new plate (rome,
                  // 2026-10-22); five points up from the default.
                  "the-summit": 50,

@@ -40,6 +40,8 @@ try {
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
         "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine} from './ai';",
+        "export {ratHoards} from './ai';",
+        "export {cmdDive} from './verbs';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
@@ -64,7 +66,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -649,6 +651,42 @@ try {
     assert.deepEqual([...(z.ground.get('moor') ?? [])].sort(), ['knife', 'tin']);
   });
 
+  // ---------------------------------------------------------------- the old adit
+  console.log('the old adit');
+  check('a warren rat drags unwatched litter to the Hoard-Hole, never food, the rock or room stock (2026-10-31)', () => {
+    const z = new ZoneDO({}, {});
+    z.world = { itemTemplates: new Map([['buckle', { id: 'buckle', name: 'a buckle', slot: '' }], ['salt-fish', { id: 'salt-fish', name: 'salt fish', slot: '', edible: 1 }], ['loose-rock', { id: 'loose-rock', name: 'a rock', slot: '' }], ['sword', { id: 'sword', name: 'a sword', slot: 'weapon' }]]),
+      mobTemplates: new Map([['rat', { id: 'rat', name: 'a scabby rat' }]]), groundSpawns: [{ room_id: 'the-scrape', item_id: 'sword' }] };
+    z.sessions = new Map();
+    for (const k of ['roomFeed', 'roomSound', 'refreshRoomCtx', 'stampFresh', 'armStrayDecay']) z[k] = () => {};
+    z.ground = new Map([['the-scrape', ['salt-fish', 'loose-rock', 'sword', 'buckle']]]);
+    z.groundCond = new Map([['buckle@the-scrape', 61]]);
+    const rat = { id: 'r', templateId: 'rat', roomId: 'the-scrape', hp: 11, target: null };
+    ratHoards(z, rat);
+    assert.deepEqual(z.ground.get('the-hoard-hole'), ['buckle'], 'the buckle went to the pile');
+    assert.deepEqual(z.ground.get('the-scrape'), ['salt-fish', 'loose-rock', 'sword'], 'food, the rock and the room stock stay');
+    assert.equal(z.groundCond.get('buckle@the-hoard-hole'), 61, 'its wear went with it');
+    ratHoards(z, rat);
+    assert.deepEqual(z.ground.get('the-hoard-hole'), ['buckle'], 'nothing else it will take');
+    z.ground.set('the-scrape', ['buckle']);
+    z.sessions = new Map([['me', { pubkey: 'me', roomId: 'the-scrape', hp: 10 }]]);
+    z.outOfWorld = () => false; z.reachable = () => true;
+    ratHoards(z, rat);
+    assert.deepEqual(z.ground.get('the-scrape'), ['buckle'], 'not with someone watching');
+  });
+  await checkAsync('diving the Black Sump soaks you; standing on its bank does not (2026-10-31)', async () => {
+    const z = new ZoneDO({}, {});
+    z.world = { itemTemplates: new Map(), mobTemplates: new Map() };
+    const said = [];
+    for (const k of ['roomFeed', 'roomSound', 'creatureNoise', 'sendStatus']) z[k] = () => {};
+    z.send = (_s, t) => { said.push(t); };
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'the-warren-sump', hp: 50 };
+    assert.ok(!coughing.isWet(me), 'dry on the bank');
+    await cmdDive(z, me, '');
+    assert.ok(coughing.isWet(me), 'soaked from the water');
+    assert.match(said.at(-1) ?? '', /bones/);
+  });
+
   // ---------------------------------------------------------------- the rat king
   console.log('the rat king');
   function kingWorld() {
@@ -921,6 +959,14 @@ try {
     minutes(30); assert.equal(noise.length, 0, 'nothing to cough about');
     coughing.swallowedWater(me);
     minutes(20); assert.ok(noise.length > 5, 'coughing after the dunk: ' + noise.length);
+  });
+  check('the Litter Chamber is warm: no chill sets in there, and it dries you (2026-10-31)', () => {
+    const { me, minutes } = coughWorld();
+    coughing.weather.coldBites = () => true; coughing.weather.raining = () => true;
+    me.roomId = 'the-litter-chamber';
+    minutes(20); assert.ok(!me.chilled, 'its heat keeps the chill off');
+    coughing.weather.raining = () => false; coughing.soak(me);
+    minutes(1); assert.ok(!coughing.isWet(me), 'and dries you like a fire');
   });
   check('cold and wet ten minutes with nothing warm sets in a chill; warmth lifts it', () => {
     const { z, me, said, minutes } = coughWorld();

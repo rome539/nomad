@@ -701,6 +701,465 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
     "racks|rack|spears|arms|weapons|dust":
       "Empty, and emptied fast — the pegs are bent where things were pulled off them sideways rather than lifted. Whatever the last issue was, it went out of this room at a run. The bones behind you did not get any of it.",
   },
+  // THE STORES (mig 355). The garrison's east wing, emptied in the same hurry
+  // that stripped the armory at the end of it. Every close read here is the
+  // evidence of that one morning, and none of it says what the morning was.
+  "the-watch-passage": {
+    "niche|niches|lamp|lamps|soot":
+      "Each niche is the size of a lamp and no bigger, cut square into the stone and blackened inside. The soot above them is old and even, the mark of lamps that burned there every night for years. In the last one before the guardroom the soot stops halfway up, as if that lamp was taken down while it was still being lit.",
+    "path|floor|round":
+      "A shallow trough worn down the middle of the flags, no wider than one man, smooth as a step. It runs the length of the passage and turns at each end without a break. Nobody ever walked this two abreast.",
+  },
+  "the-roll-room": {
+    "rolls|roll|pigeon-holes|holes|muster":
+      "Fat rolls of felted paper, one to a hole, each tied with a tape gone the colour of the paper. The ones on the floor were pulled from the same few holes, and the holes beside them are full and untouched. Whoever came in here wanted particular names, found them, and did not stop to put the rest back.",
+    "page|pages|names|ink":
+      "The last pages of the dropped rolls are the only ones you can read: a column of names in a clerk's hand, and against every name the same short word, written fast, in a different ink. The word has run in the damp past reading. It is the same length every time.",
+  },
+  "the-quartermasters-room": {
+    "ledger|binding|book|desk":
+      "The binding is still on the desk, boards and spine and a stub of thread, and the pages were cut out of it close to the stitching with a sharp knife and one long stroke. It was not torn and it was not burned. Somebody took the accounts carefully, and took all of them.",
+    "stool|chair":
+      "Pushed in square under the desk, the way a careful man leaves his place at the end of the day. Of everything in this wing, it is the one thing put away.",
+  },
+  "the-long-store": {
+    "bays|bay|boards|board|shelves":
+      "The boards over the bays are painted in a careful hand: blankets, boots, cloaks, tallow, rope, cord, needles, salt. The paint is good. Under every board the bay is bare to the stone, swept bare, the way a store looks after an inventory and not after a raid.",
+    "marks|drag|dust|grain":
+      "The drag marks all run one way, out, and they are deep where the sacks were heavy. In the dust beside them there is the print of one boot, toe toward the door, and nothing coming back.",
+  },
+  "the-harness-room": {
+    "stirrup|iron":
+      "A plain iron stirrup with its leather strap snapped off short, as if it was pulled loose from a saddle in passing. It lies where it fell, in the doorway's line, and the dust has filled it level.",
+    "pegs|saddle|saddles|hooks|bridles|tack":
+      "Twenty saddle-trees and every one empty, and the bridle-hooks above them bare in rows. Wherever the horses went, they went saddled.",
+  },
+  "the-fletchery": {
+    "outlines|wall|shafts|bundles|arrows":
+      "Pale shapes on the dark stone, tall and narrow, close together, where bundles of shafts leaned against the wall for so long the stone around them darkened and they did not. There are forty of them. There is nothing in the room that fits one.",
+    "benches|bench|shavings|down|feathers|floor":
+      "Work-benches with the vices still on them, and a floor gone soft with shavings and grey down underfoot. Half-fletched shafts would have lain on these benches. There is not one, finished or not.",
+  },
+  "the-arming-passage": {
+    "scrapes|scrape|walls|wall|marks":
+      "A band of pale scoring along both walls at hip height, where scabbards and shield-rims dragged along the stone. Look close and every scrape has the same slope, rising a little toward the stores. They were all made by men coming out of the armoury, loaded, in a hurry.",
+  },
+  "the-pay-table": {
+    "grille|table|box|coin-box|coin":
+      "The grille is whole and the table is bolted down, but the coin-box on the paymaster's side has been levered open and the lid bent back. There is no coin in it and none on the floor. Whoever opened it was in no hurry about it, and was the last man in the room.",
+    "stone|floor|dish":
+      "On the soldier's side the stone is dished a hand deep in front of the grille, the mark of men standing in one place to be paid, one at a time, for a very long time. On the paymaster's side it is flat.",
+  },
+  "the-sergeants-room": {
+    "cots|cot|blankets|beds":
+      "Four cots with the blankets squared and tucked tight, the corners folded the regulation way. There is dust on them, even and undisturbed. Nobody has sat on one since the morning they were made.",
+    "rack|kit":
+      "A rack for four sets of kit, and the pegs empty. Four men armed here, made their beds first, and went out. The beds are still waiting for them.",
+  },
+  // ---- THE FORTRESS, CLOSER (rome, 2026-10-31), batch one: the halls, the
+  // walls and the gates. The same law as the rest of this table: evidence about
+  // the people, never a rule, an hour or an answer. Read together they agree
+  // with the fortress's own story: a garrison that planned for a siege, walls
+  // taken from under, work stopped mid-week, and somebody going through after
+  // and taking the names off.
+  "sewer": {
+    "grate|drain|bars|iron":
+      "The grate was not rusted open. The stubs of the bars are cut square, bright-edged once, where a saw went through them from the outside. Somebody came in this way on purpose, long ago, and the fortress never mended it.",
+  },
+  "stair": {
+    "tallies|tally|marks|chalk|wall":
+      "Hundreds of strokes in fives, in one hand the whole way. The strokes get shorter toward the end, as if the hand was tiring, or the chalk was. The last group has four.",
+    "steps|treads|bowls|stairs":
+      "Each tread is worn deepest on its downward side, where a foot lands carrying weight. More went down this stair loaded than ever came back up it.",
+  },
+  "weeper-hall": {
+    "water|threads|walls|silver|channels":
+      "The water runs in channels a finger deep in the stone, and nobody cut them. It comes in from the arch and follows the same lines down the walls that it has always followed, and over the years the stone gave way to it.",
+  },
+  "crypt-steps": {
+    "treads|steps|stairs|centre|center|wear":
+      "Look close and the wear is two hollows a shoulder-width apart, not one: bearers walking in step with a weight between them. Coming back up, the feet went anywhere.",
+  },
+  "scullery": {
+    "pots|pot|copper|kitchen":
+      "Every pot is holed from below, and every hole is the same small round punch. Somebody went along the racks and made sure none of these would ever hold water again. The kitchen was spoiled on purpose, so whoever came after could not use it.",
+  },
+  "barracks": {
+    "bunks|bunk|shelves|shelf|sleepers|graves":
+      "Every bunk is the length of a man and cut into the wall, and that was not an accident of the mason's: a garrison that slept in the wall could be laid to rest in the same place without moving anybody. Some of them never needed moving.",
+  },
+  "cells": {
+    "cages|cage|doors|door|locks|bars|straw":
+      "None of the doors was forced. Every lock stands open and every key-plate is clean, so somebody walked this row with the keys and opened each one in turn. Whether there was anybody still inside to let out, the straw does not say.",
+  },
+  "cistern": {
+    "channel|ring|water|lead":
+      "The channel was lined with lead, and the lead has been prised up and carried off in long strips, leaving the stone scored where the bars bit. Water was the first thing this place ran out of. The lead it ran in was the last thing anybody took.",
+  },
+  "ossuary": {
+    "bones|bone|skulls|skull|courses|walls":
+      "Each course is one kind of bone laid to a line, and every skull is turned to face the room. It was done slowly, by people who had the time, long before the bad years. The top course is not finished. Nobody has added to it since.",
+  },
+  "catacomb": {
+    "niches|niche|shrouds|dead|burials":
+      "The niches near the steps are full, and the ones further in are empty and swept, waiting. They were cut ahead for a garrison's dead, generation by generation, and the generations stopped coming before the niches ran out.",
+  },
+  "kennels": {
+    "chains|chain|collars|collar|bowls|bone":
+      "Every chain ends in a collar, and every collar is open. The pins were drawn by hand, not snapped, one dog at a time. Whoever let them go did it carefully, and took the time. One of them is still on its stair.",
+  },
+  "gallery": {
+    "paintings|painting|portraits|portrait|faces|frames|smears":
+      "The faces were not lost to the damp. Up close the paint has been scraped off with a blade, face by face, and the frames left hanging straight. Somebody went through this fortress afterward taking the names off things, and here they took the faces too.",
+  },
+  "shrine": {
+    "altar|stone|block|carving":
+      "A plain block with nothing on it, and that is not wear. There was carving on the front, and it was cut away, smooth, with a chisel, the same as the names in the chapter house. Whoever this altar was for, it is for nobody now, and somebody made very sure of that.",
+  },
+  "library": {
+    "books|book|shelves|shelf|page|pages":
+      "One shelf near the floor stands empty, and the dust on it is thinner than on the rest. Those books were taken out late, when the damp had already started on everything else. Somebody came back for them, and only them.",
+  },
+  "warden-post": {
+    "helmet|helm|peg|stool|slot|window":
+      "The helmet hangs on its peg turned to face the slot, the way a man hangs it when he means to put it straight back on. The stool under the window is worn smooth on the side nearest the round, from someone leaning to look out, for years.",
+  },
+  "chapel": {
+    "altar|axe|pews|pew|kindling":
+      "The axe-marks on the altar run across it, not down, struck from behind it, from where a priest would stand. The pews were broken the same way, from the front. It was taken apart from the inside, by people who knew where to stand.",
+  },
+  "well": {
+    "shaft|lip|rope|well|stone":
+      "The lip is worn into a deep groove on one side only, where a rope ran for generations. There is no rope now and no bucket. Lean over it and the air coming up out of the dark is warmer than the room.",
+  },
+  "forge": {
+    "anvil|split|furnaces|furnace|fire":
+      "An anvil does not split from use. This one was struck once, very hard, with something heavier than any hammer in this room, straight down its middle, and the two halves have not moved an inch since.",
+  },
+  "refectory": {
+    "trenchers|trencher|tables|table|benches|bench|dust|meal":
+      "Every place is laid the same, and every bench is drawn out the width of a man sitting. Under the dust the trenchers are clean. The meal was put out and nobody was ever called in to it.",
+  },
+  "hall": {
+    "hatch|iron|floor|flagstones":
+      "The flagstones are laid up to the edge of the iron and cut to fit around it, so the hall was built around the hatch and not the other way about. It was here first. There is no ring and no handle on this side of it.",
+  },
+  "undercroft": {
+    "throne|seat|stones|pillars":
+      "Not built: heaped. River stones and broken ashlar piled into the shape of a seat, facing the hatch above. Nobody sat in it to rule anything. It was put there to face the way in.",
+  },
+  "hollow-crack": {
+    "slab|fissure|crack|stone|scratches":
+      "Low down inside the crack, where a sitting man's hand would fall, the stone is covered in small idle scratches: lines, crosses, a ship. Somebody sat in here a long time with a knife and nothing else to do, and then left.",
+  },
+  "chapter-house": {
+    "seats|seat|council|stones|names|floor":
+      "Twelve stone seats, each with a name-stone set in the wall above it, and every name-stone chiselled blank. The floor in the middle is worn in only one place, in front of the seat across from the door, where somebody stood to be answered.",
+  },
+  "scriptorium": {
+    "desks|desk|vellum|shelves|ash|fire":
+      "The fire started on the desks and the shelves caught after. It was set on the work, in the middle of the work. The flakes of vellum that lift when you move are all one black, with nothing left on any of them to read.",
+  },
+  "debtors-pit": {
+    "scratches|walls|counting|marks|tally":
+      "The marks are in groups, but not in fives. Each group is a different count, in a different hand, scratched as high as a man could reach from the floor. Some of the hands stop partway through a group.",
+  },
+  "muster": {
+    "flagstones|flags|ranks|floor|yard":
+      "The wear runs across the yard in straight lines a pace apart, deepest at the front rank and fading toward the back. Nobody wears a floor like this in less than a lifetime of mornings.",
+  },
+  "guardroom": {
+    "tally|doorframe|days|frame":
+      "Days, in strokes, crossed off in sevens down the doorframe. It stops partway through a week. Whoever kept it did not get to the end of that one.",
+    "brazier|table|pegs|kit":
+      "The brazier was put out with sand, not left to die, and the table went over the same moment, knocked sideways by somebody getting up fast. The pegs are bare. They went with their kit.",
+  },
+  "the-issue-room": {
+    "racks|rack|halberds|maces|shields|arms|weapons":
+      "Racked by kind and by size, every edge oiled before it went up, and the oil has kept them. This is a garrison's whole issue, ready, counted and waiting, and every one of them is still in its place.",
+    "bones|bone|scatter|door":
+      "Whoever sat against the door sat facing in, toward the racks, with their back to the way out. They were not waiting to leave.",
+  },
+  "the-five-ways": {
+    "dish|flags|floor|flagstones":
+      "The dish is deepest not in the middle but toward the gallery door, where the feet turned. Everybody cut the same corner, for generations, on their way somewhere else.",
+  },
+  "the-watch-turret": {
+    "slits|slit|arrow-slits|roof|turret":
+      "The slits look both ways, out over the grounds and in over the muster yard, and the inward ones are worn smoother at the sill. Whoever stood up here watched their own side more than they watched the road.",
+  },
+  "the-bell-cote": {
+    "bell|crack|note|rope":
+      "The crack runs from the lip almost to the crown, and the bell has been rung for years with the crack in it. The rope is newer than anything else up here by a long way. Somebody has kept replacing it.",
+  },
+  "the-broken-battlement": {
+    "crenels|crenel|merlons|gaps|gap|rubble|breach":
+      "The crenels were not snapped off by weather. They were pushed out, all of them in the one direction, when the wall under them dropped. It went the same morning as the breach below it, all at once.",
+  },
+  "the-leaning-spire": {
+    "spire|floor|slope|lean|foundations":
+      "It leans away from the wall's footings, out toward the chapel wing. Whatever dug under the wall dug under this as well, and stopped one prop short of bringing it down.",
+  },
+  "gate": {
+    "gates|gate|hinges|iron":
+      "The hinge-pins are bent inward, and the iron around them is torn from the outside. These gates were opened by something pushing to get in, and they have stood open ever since.",
+  },
+  "weeper-arch": {
+    "face|keystone|carving|water|tears":
+      "The water is not rain. It seeps out of the stone from somewhere higher in the wall and comes out exactly at the corners of the eyes. Whoever carved the face carved it where the water already ran.",
+  },
+  "sally-port": {
+    "rubble|ashlar|tower|stones":
+      "The tower came down outward, across its own door, and the ashlar fell squared, with the mortar still clean on it. Nothing wore this tower out. Something took it from under at the foot.",
+  },
+  // ---- THE FORTRESS, CLOSER (rome, 2026-10-31), batch two: the warrens. The
+  // same law as the rest of this table: evidence about
+  // the people, never a rule, an hour or an answer. Read together they agree
+  // with the fortress's own story: a garrison that planned for a siege, walls
+  // taken from under, work stopped mid-week, and somebody going through after
+  // and taking the names off.
+  "bone-nook": {
+    "femur|latch|bones|gap|hollow":
+      "The femur across the gap is worn smooth and dark in the middle, where hands have pulled it to and pushed it back more times than one person could have. Other people have hidden in here. Every one of them closed it the same way.",
+  },
+  "the-root-gnawed-run": {
+    "roots|root|ceiling|mat":
+      "The roots are gnawed pale only on the underside, up to the height a rat can reach standing on its hind legs, and the bark above that is untouched. Every mouthful on this ceiling was taken from below.",
+  },
+  "the-crawl-of-teeth": {
+    "marks|teeth|tooth-marks|walls|scores":
+      "Most of the marks are the small paired nicks of rats. Some are not. Those are four times the width, single, and set in the stone itself, not the earth, and they are all at the height of your face.",
+  },
+  "the-gnaw-hollow": {
+    "leather|droppings|burrow|daylight|scrape":
+      "The gnawed leather is boot-tops and belts, chewed for the salt, and some of it still has the buckles on. It was not dragged down here from anywhere far. People came through this hollow once, and some of them stopped in it.",
+  },
+  "a-dry-burrow": {
+    "earth|burrow|fox|walls|floor":
+      "The fox that dug this lined the back of it with dry grass and fur, and the lining is still there, flattened into the shape of something curled. It has been slept in since the fox, by something bigger, more than once.",
+  },
+  "the-dripping-gallery": {
+    "lichen|sheets|drip|drips|water|stone":
+      "The lichen grows only where the water runs, in long pale tongues reaching down the wall toward the floor. Where a sheet has been torn away there is a hand-mark under it, older than the lichen, pressed into the clay.",
+  },
+  "the-earth-throat": {
+    "throat|shaft|stone|dark|air":
+      "The edge of the throat is raw stone, not cut and not worn. The mine broke into it from the side and stopped dead. The sappers dug until the ground in front of them was air coming up out of nowhere, and that was as far as anybody dug.",
+  },
+  "the-sewer-slip": {
+    "muck|ledge|collection|things|run-off":
+      "Snagged in the muck along the edge: a comb, a spoon, a single boot, a seal-ring with the face filed off it. The sewer brings down whatever the fortress drops, and keeps it, and the oldest things are at the bottom.",
+  },
+  "the-side-run": {
+    "walls|band|grease|floor":
+      "The dark band along the walls is grease from fur, laid on a brush-stroke at a time by every body that ever went this way. It is thick enough to take a fingerprint. It has never once been dry.",
+  },
+  "the-litter-chamber": {
+    "nest|cloth|straw|hair|warmth":
+      "The cloth in the nest is cut cloth: shirt-linen, blanket-wool, a piece of a tabard with its colours still in the weave. It was all carried here from the fortress above, and the warmth comes up out of the middle of it like breath.",
+  },
+  "the-root-hall": {
+    "roots|root|ceiling|roof|ropes|things":
+      "The things wedged up in the roots are small and many: bright stones, a thimble, a bell from a harness, a spur. Carried a long way, every one of them, and put up out of reach. The floor beneath is what was eaten. The ceiling is what was kept.",
+  },
+  "the-scrape": {
+    "claw-marks|marks|claws|clay|floor":
+      "Most of the marks are small and fast and crossing each other everywhere. Under them, deeper and older and all going the same way, are a few that a rat did not make. Whatever made those went through here only once.",
+  },
+  "the-old-adit": {
+    "timbers|timber|props|cut|adit|walls":
+      "The timbers are squared with an adze and fitted without nails, the way sappers frame a gallery they mean to fire later. This one was never fired. The props are still standing, and the work stopped before the wall above it ever came down.",
+  },
+  "the-blind-heading": {
+    "face|pick|shovel|blade|marks":
+      "The last strokes of the pick on the face are short and close together, the work of somebody in a hurry or somebody tired. The shovel blade was left where it stood, still upright in the spoil. Whoever was digging here put down the shovel and walked away from it, and did not come back for it.",
+  },
+  "the-wet-run": {
+    "trench|prints|mud|channel":
+      "The trench runs down the middle of the run, a body-width across, and the small prints on either side of it are all hurrying the same way, away from whichever way it went. Whatever made it was being dragged, not walking.",
+  },
+  "the-fallen-props": {
+    "props|timbers|prop|roof":
+      "Every prop that fell went the same way, toward the fortress. The roof sagged first at the far end and the props went over one after another like a row of men knocked down by one blow. The rest are only holding because nobody has touched them.",
+  },
+  "the-hoard-hole": {
+    "hoard|buttons|spoon|buckle|key-ring|teeth|heap":
+      "Nothing in the heap is food and nothing is whole: a buckle with no strap, a ring of keys with no keys, a spoon bent double. Everything in it was carried here because it caught the light. At the bottom, under all of it, the oldest things are green.",
+  },
+  "the-warren-sump": {
+    "water|sump|bones|bank|clay":
+      "The bones under the water are long and smooth and laid side by side, not scattered: whatever went in, went in whole, and lay down there. The clay of the bank is printed right to the edge by small feet. None of the prints go in.",
+  },
+  // ---- THE FORTRESS, CLOSER (rome, 2026-10-31), batch three: the deep. The
+  // same law as the rest of this table: evidence about
+  // the people, never a rule, an hour or an answer. Read together they agree
+  // with the fortress's own story: a garrison that planned for a siege, walls
+  // taken from under, work stopped mid-week, and somebody going through after
+  // and taking the names off.
+  "the-descent": {
+    "stair|steps|walls|stone":
+      "Halfway down, the masonry changes: above, the fortress's squared ashlar; below, older stone, smaller, laid without mortar by people who did not build like the garrison did. The stair was cut down into something that was already here.",
+  },
+  "drowned-nave": {
+    "columns|column|pillars|water|ceiling":
+      "The columns are carved to the waterline and plain below it, so the water was here before the carvers were. Somebody built a great hall in a flooded place and decorated only the part they could reach.",
+  },
+  "black-canal": {
+    "channel|canal|water|walls|banks":
+      "The walls are cut straight and dressed, with iron mooring rings set at even intervals along both sides. Something was brought along this canal by boat, a long way, into the dark, often enough to need a ring every ten paces.",
+  },
+  "the-weir": {
+    "sluice|weir|gap|gate|stones":
+      "The sluice gate did not rot. Its iron frame is bent outward and its bar is snapped, so the water behind it was let go all at once, by force. The weir did not fail. Somebody broke it.",
+  },
+  "pocket-of-air": {
+    "shelf|stone|ledge|wall":
+      "The shelf is worn smooth along its edge where hands have hauled bodies up out of the water onto it, again and again. Above, scratched into the wall at sitting height, are the same few strokes over and over, the marks of people counting breaths.",
+  },
+  "sunken-gallery": {
+    "portraits|portrait|faces|frames|smears|arches":
+      "Like the gallery above, the faces were not rotted off: they were scraped, with a blade, before the water came. Somebody went down this arcade with a knife and took the faces off the King's people too, and then the flood put out what was left.",
+  },
+  "root-vault": {
+    "roots|root|dead|vault|bones":
+      "The roots have gone through the burial niches and out the other side, and where they passed through a body they grew around it, so the bones are held up in the wood at the height they were laid. Whatever tree this is, it is a very long way above, and it has been drinking down here a long time.",
+  },
+  "deep-ossuary": {
+    "bones|bone|skulls|masonry|wall":
+      "The courses here are laid by people who did it differently from the ossuary above: no single kind of bone to a course, but whole skeletons folded together, each one kept with itself. These people buried their dead whole. The ones above sorted them.",
+  },
+  "weeping-cells": {
+    "cells|doors|walls|water|oubliettes":
+      "The doors rusted open; nobody opened them. The hinge-side of each is corroded through where the water ran down it, and they sagged, one after another, over years. Whoever was in these went on being in them until the iron gave up.",
+  },
+  "silted-stair": {
+    "silt|steps|stair|muck|tracks":
+      "The silt holds tracks like snow: a broad dragging furrow up the middle of the stair, and at each step a wide splayed print on either side of it. It went up and came back down by the same line.",
+  },
+  "bone-processional": {
+    "skulls|skull|walls|road|dead":
+      "Every skull is fitted into the wall facing down the road, and every one has had its teeth pulled. It was done to all of them, carefully, before they were set. Whoever built this road wanted the dead to watch it, and not to say anything.",
+  },
+  "black-threshold": {
+    "doorway|lintel|warning|carving|stone|door":
+      "The carving on the lintel is the only writing anywhere in the deep that nobody chiselled off. Everything else down here had its names taken away. This was left, so somebody wanted it read, even by people who could not read it.",
+  },
+  "drowned-barracks": {
+    "bunks|bunk|heap|bedding|corner":
+      "The bunks are the same pattern as the Cold Barracks above, the same length, cut the same way. The garrison slept down here too, once, before the water. The heap in the corner is bedding from every bunk in the room, pulled together and packed down, and it is the shape of something that lies in it.",
+  },
+  "leech-pools": {
+    "pools|pool|basins|basin|water":
+      "The basins are cut, not natural, each one a step lower than the last, and their lips are worn by the water spilling over and by something else that comes and goes over the edge. The warmth is coming up from below the lowest one.",
+  },
+  "tide-vault": {
+    "door|iron|hinges|strongroom|vault":
+      "The bolts on the inside of the door are still shot home. Whoever locked this strongroom locked it from the inside, and the water came in anyway, from below, and then pressed the door out from within.",
+  },
+  "the-cistern": {
+    "walls|well|water|surface":
+      "The walls are banded with water-lines all the way up, thousands of them, each a little higher or lower than the next. This was a cistern that filled and emptied for centuries, and the highest line is out of sight above you.",
+  },
+  "blackreach": {
+    "stone|floor|dark|country|ground":
+      "The stone underfoot has never been cut. There are no marks on it of any tool, and no marks of any foot that wore a shoe. Whatever walks here, it has walked here since long before there was a fortress, and none of it came down from above.",
+  },
+  "the-lightless-march": {
+    "wall|gallery|stone|hand":
+      "Your hand on the wall finds a groove worn into it at about the height of a hip, running the whole length of the march, smooth and polished. Something has gone along here with its side to the wall for a very long time, the way a blind thing keeps to a wall.",
+  },
+  "worm-cloister": {
+    "holes|hole|cells|court|bores|stone":
+      "The holes are perfectly round and their insides are glassy, polished smoother than any tool could. There are no tool-marks, no spoil, no dust. The stone was not dug. It was passed through, and something carried the stone away with it.",
+  },
+  "the-undertow": {
+    "floor|grit|bone-chips|slope|pull":
+      "The grit on the floor lies in long ripples, all pointing one way, the way sand lies on a beach after the tide has gone out. Air does this, down here. The whole room is the bottom of a breath.",
+  },
+  "the-sump": {
+    "sediment|floor|silt|mud":
+      "The sediment is layered, fine and dark and then a band of pale, fine and dark and then pale, laid down over an unthinkable time. Things are pressed flat in it, between the layers. The deeper you look, the older the things, and the stranger.",
+  },
+  "carrion-gallery": {
+    "bones|bone|midden|floor|carrion":
+      "The bones at the top of the heap are fresh and the ones at the bottom are stone. Somewhere in between are the bones of men in garrison mail, mixed in with everything else that fell. This floor has been fed without stopping since before the Door was built.",
+  },
+  "the-marrow-road": {
+    "road|causeway|bone|bones|path":
+      "Packed bone, ground to a pale powder on top by feet and laid whole underneath. Dig a fingernail in and the bones under the road are all arm bones and leg bones, the long ones, laid crosswise like a corduroy road over a bog.",
+  },
+  "the-gasping-dark": {
+    "air|breath|breathing|dark":
+      "The air moves here, slow and regular, in and out, and the dust on the floor moves with it. It comes from one direction and goes back the same way. Whatever is breathing is not in this room. This room is in it.",
+  },
+  "sunless-well": {
+    "silt|dome|vault|floor|glint":
+      "The silt down here is the finest in the deep, and everything heavy that ever fell has sunk to the bottom of it: coin, plate, the pommel of a sword, a helm with its crest still on it. Nothing rusts at this depth. Nothing has come back up for any of it either.",
+  },
+  "drowned-court": {
+    "figures|figure|faces|court|throne":
+      "The kneeling figures are men, salted and silted into stone, and every one of them has had the device cut off his tabard where it lay across his chest. Their names were taken from them even here, on their knees, while they waited.",
+  },
+  "kings-oratory": {
+    "altar|chapel|oratory|wall":
+      "The altar is turned to face the wall that the throne room is on the other side of, and the wall there has been worn smooth, in a patch the size of a forehead, at a kneeling height. Whoever prayed here prayed toward the King.",
+  },
+  "bone-reliquary": {
+    "relics|relic|finger-bones|skull|teeth|silver|crowned":
+      "The silver cases are each stamped with a mark where a name went, and every mark has been filed flat. The crowned skull has no crown of its own: the circlet is wired on, and the wire is newer than the bone. Somebody put it there after.",
+  },
+  "the-death-cell": {
+    "rings|ring|drain|floor|iron":
+      "The rings are set deep and their insides are worn bright, by chain, recently. The floor slopes to the drain so that nothing has to be carried out of this room. It was built for exactly what it was used for, by somebody who planned to use it often.",
+  },
+  "the-cold-hearth": {
+    "fireplace|hearth|ash|bones|throat":
+      "The ash in the throat is packed solid, a thousand fires deep, and the bones in it are curled tight, the way a thing curls when it is cold and dying. It crawled up into the chimney after the last warmth, and the warmth went out first.",
+  },
+  "worm-bore": {
+    "tunnel|bore|stone|walls":
+      "The bore is the same glassy round as the cloister's holes, only narrower: something smaller came through here first, a long time before whatever made the big ones. It is still the right size for one person and nothing else.",
+  },
+  "the-tide-gate": {
+    "lines|water-lines|walls|stone|rings":
+      "The high-water lines are thickest near the floor and thin out toward the roof, like a tree's rings, close-packed where the years were hard. The highest one is above the door. Once, the whole of this was under.",
+  },
+  "the-under-weir": {
+    "sluice-slots|slots|weep-holes|crust|mussels":
+      "The mussels grow on the sluice in bands, each band dead and white under a living black one, so the water has come and gone and come back for longer than any shell lives. The weep-holes are cut at even heights, a ladder for water going down.",
+  },
+  "the-drowning-stair": {
+    "rings|ring|steps|rope|stair":
+      "Every fifth step has a ring, and every ring is worn on its upper side, from a rope pulling downward. People came down these steps on a rope, hand over hand, in a hurry, more than once. Nobody fits rings like this for a stair they mean to climb up.",
+  },
+  "the-eel-run": {
+    "bones|fish|shelf|channel|water":
+      "The fish bones on the shelf are picked clean and laid out in rows, heads one way, tails the other. Eels do not do that. Something sits on this shelf to eat what comes up the channel, and is tidy about it.",
+  },
+  "the-long-swallow": {
+    "walls|ribs|ribbing|corridor":
+      "The ribbing in the walls is natural rock, banded, not built, and the corridor narrows to a point you have to turn your shoulders for. The sweat on the walls is warm. It is the only warm stone in this part of the deep.",
+  },
+  "the-salt-vault": {
+    "shelves|shelf|salt|stores|jars":
+      "Stoneware jars on the shelves, sealed with wax and stamped with the garrison's mark: salt fish, salt pork, salt, salt. Most are cracked by the cold and spoiled through. The siege these were laid down for never got far enough for anybody to come down and eat them.",
+  },
+  "the-breathing-hall": {
+    "ledges|ledge|mark|high-water|wall":
+      "The high-water mark is a line of scum and small dead things a hand above your head, and below it the ledges are dry. The water was here, and went down, and it will be here again. The ledges are only dry because it is not yet.",
+  },
+  "the-tide-throat": {
+    "stone|walls|pipe|drips|polish":
+      "The polish is smoothest at chest height and duller toward the floor and roof. The water that runs through here fills it to the middle and moves fast, and it has done so long enough to wear the stone the shape of the water.",
+  },
+  "the-silt-chapel": {
+    "altar|offerings|offering|mouths|silt":
+      "The offerings in the silt are mostly the things people carry: a knife, a buckle, a coin, a key. Each one is set down in the same place relative to the altar, as if the water arranges them. None of it is rusted. The water keeps what it is given.",
+  },
+  "the-still-cradle": {
+    "water|midden|floor|leavings|chamber":
+      "Everything the tide carries comes to rest here in rings around the middle, sorted by weight: bone and iron at the bottom, cloth and wood at the top. The middle of the chamber is clear. Nothing that comes in ever settles there.",
+  },
   // THE BACK WALL — the riddle door's ground. The room says there is no way up
   // this; the close read says the one thing on the whole face that the water has
   // not touched. Evidence, not a rule: it names no riddle and no answer.

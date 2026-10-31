@@ -21,6 +21,7 @@ import * as den from "./den";
 import * as campfire from "./campfire";
 import { underCover } from "./detail";
 import {
+  WARM_ROOMS,
   WET_DRY_MS, CHILL_BITE_MS, CHILL_FLOOR,
   COUGH_WATER_MS, COUGH_WATER_PER_MIN, COUGH_CHILL_AFTER_MS, COUGH_CHILL_PER_MIN, COUGH_SMOKE_PER_MIN,
   COUGH_WATER_LINES, COUGH_CHILL_LINES, COUGH_SMOKE_LINES, COUGH_DUST_LINES,
@@ -73,12 +74,13 @@ function wetting(z: ZoneDO, s: Session): boolean {
 }
 
 function warm(z: ZoneDO, s: Session, now: number): boolean {
-  return z.inGatehouse.has(s.pubkey) || den.hearthWarm(z, s) || (s.warmUntil ?? 0) > now || campfire.warmsYou(z, s, now);
+  return z.inGatehouse.has(s.pubkey) || den.hearthWarm(z, s) || (s.warmUntil ?? 0) > now || campfire.warmsYou(z, s, now)
+    || WARM_ROOMS.has(s.roomId); // the Litter Chamber's own heat (mig 355)
 }
 // A fire dries you: the gatehouse's, a den's hearth, a campfire. (Soup warms
 // you from the inside; it does not dry your coat.)
 function byAFire(z: ZoneDO, s: Session, now: number): boolean {
-  return z.inGatehouse.has(s.pubkey) || den.hearthWarm(z, s) || campfire.warmsYou(z, s, now);
+  return z.inGatehouse.has(s.pubkey) || den.hearthWarm(z, s) || campfire.warmsYou(z, s, now) || WARM_ROOMS.has(s.roomId);
 }
 
 // THE WET, once a minute: soaked by the water, dried by a fire or by time (the
