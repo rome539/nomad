@@ -5,7 +5,7 @@ import * as exhaustion from "./exhaustion";
 // lands here (attack/throw stay with the spine — they're where fights begin).
 // Same shape as gate.ts: free functions taking the ZoneDO.
 import type { ZoneDO } from "./zone";
-import type { Session, Stance, GroundInstance, Creature } from "./zone-types";
+import type { Session, Stance, GroundInstance, Creature, Trace } from "./zone-types";
 import type { CarriedItem, ItemTemplate } from "./world";
 import { BEAST_PATH_KEY } from "./world";
 import * as paths from "./paths";
@@ -31,6 +31,7 @@ import * as den from "./den";
 import * as campfire from "./campfire";
 import { isWet } from "./cough";
 import * as detail from "./detail";
+import * as study from "./study";
 import * as wanderer from "./wanderer";
 import * as styles from "./styles";
 import {
@@ -687,7 +688,9 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     return lore.milestoneRead(z, session);
   }
 
-  const spotted = blind ? null : z.findCreatureIn(session.roomId, arg);
+  // "look dead rat" asks for the body, so a living rat here never answers it.
+  const askDead = study.asksForDead(arg);
+  const spotted = blind || askDead.dead ? null : z.findCreatureIn(session.roomId, arg);
   // An unseen lurker is not in the room yet — naming it must not find it.
   const creature = spotted && z.lurkerUnseen(spotted, session) ? null : spotted;
   if (creature) {
@@ -695,6 +698,14 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     // must never drift apart.
     return z.send(session, ai.creatureRead(z, creature, session.pubkey));
   }
+  // THE DEAD ON THE FLOOR (rome, 2026-10-31). The picture draws the bodies and
+  // study reads them, but look walked straight past them to a trophy in the
+  // pack. A body answers to its name after the living and before anything
+  // carried: the one at your feet is the one you mean. The room text still
+  // never names a death; looking at the body is how you learn whose it was.
+  const body = blind || events.tideFlooded(z, session.roomId) ? null
+    : study.findCorpse(z, session.roomId, askDead.dead ? askDead.rest : arg);
+  if (body) return z.send(session, bodyRead(z, session.roomId, body.tr, body.tmpl.id, body.tmpl.name), "study");
   // A chest is a FIXTURE of the room, and 'look' could never see one (rome,
   // 2026-07-26) — every cache carries real description prose in D1 that nothing
   // ever showed. Resolved room-scoped by name, exactly as 'unlock' does, and
@@ -3812,3 +3823,20 @@ export function findPlayerIn(z: ZoneDO, roomId: string, arg: string): Session | 
 }
 
 // ---- messages out ----
+
+// A body on the floor, by what it is and how long it has lain: the remains of
+// a hollow thing break apart, flesh goes cold, and a kill something ate where
+// it fell says so. Facts only; what the body can teach is for study to tell.
+function bodyRead(z: ZoneDO, roomId: string, tr: Trace, id: string, name: string): string {
+  const ground = groundWord(z.regionOf(roomId), roomId);
+  const it = name.replace(/^(a|an|the) /i, "");
+  const age = Date.now() - tr.at;
+  if (HOLLOW.has(id)) {
+    return age < 10 * 60_000 ? `What is left of the ${it} lies broken on ${ground}, still settling.`
+      : `What is left of the ${it} lies broken on ${ground}. Nothing in it will get up again.`;
+  }
+  const lay = `A dead ${it} lies on ${ground}`;
+  if (tr.sick) return `${lay}. There is no mark on it: it lay down here and died.`;
+  if (tr.prey && !tr.id) return `${lay}, torn open where it fell, and eaten from.`;
+  return age < 10 * 60_000 ? `${lay}, still warm.` : age < 3_600_000 ? `${lay}, gone cold.` : `${lay}, stiff and a while dead.`;
+}

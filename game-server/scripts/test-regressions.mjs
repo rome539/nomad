@@ -404,6 +404,20 @@ try {
     await cmdLook(z, me, 'sword');
     assert.match(said.at(-1) ?? '', /nicked at the edge/);
   });
+  await checkAsync('look finds the dead you killed before a trophy in the pack (2026-10-31)', async () => {
+    const { z, me, said } = shelfWorld();
+    z.world.mobTemplates = new Map([['rat-king', { id: 'rat-king', name: 'the rat king' }], ['rat', { id: 'rat', name: 'a scabby rat' }]]);
+    z.world.itemTemplates.set('rat-tail', { id: 'rat-tail', name: 'a rat tail', description: 'Proof of one small victory.', slot: '' });
+    me.items.push({ rowId: 'r1', itemId: 'rat-tail', condition: 100, serial: null, equipped: false });
+    z.findCreatureIn = () => null;
+    z.traces = new Map([['gate', [{ kind: 'blood', at: Date.now(), id: 'rat', label: 'a scabby rat' }, { kind: 'blood', at: Date.now(), id: 'rat-king', label: 'the rat king' }]]]);
+    await cmdLook(z, me, 'rat king');
+    assert.match(said.at(-1) ?? '', /A dead rat king lies on .*still warm/);
+    await cmdLook(z, me, 'scabby rat');
+    assert.match(said.at(-1) ?? '', /A dead scabby rat lies on/);
+    await cmdLook(z, me, 'dead rat');
+    assert.match(said.at(-1) ?? '', /A dead (rat king|scabby rat) lies on/, 'a body, never the tail in the pack');
+  });
 
   // ---------------------------------------------------------------- maps
   console.log('the crude map');

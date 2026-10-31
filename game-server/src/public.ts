@@ -10212,13 +10212,13 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "126";      // /mob/      strips and their eye layers
+var MOB_V  = "128";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "52";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "54";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "12";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "30";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "14";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "32";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11342,7 +11342,7 @@ var TERRAIN_SCENES = {
   // fail under them without being told.
   "the-kept-road":           "day night night-torch fog rain snow",
   "the-frost-heaved-paving": "day night night-torch fog rain snow",
-  "the-cart-ruts":           "day night night-torch fog rain snow",
+  "the-cart-ruts":           "day night night-torch snow",
   // TWO, AND THAT IS THE WHOLE SET IT WILL EVER HAVE. The sea cave is a black
   // interior lit by the torch in your hand: there is no weather in it, no sky
   // over it, and daylight does not reach it. Night is the cave without a torch
@@ -11701,7 +11701,7 @@ var MOB_LINE = {
   // It became visible now because the sprites grew. Feet sit at line + half a
   // man whatever the creature is, so enlarging the roster pushed every short
   // thing DOWN toward that line and the error stopped hiding in the gap.
- "corrie-rim": 60, "corrie-floor": 60, "the-back-wall": 62, "the-kept-room": 65,
+ "corrie-rim": 60, "corrie-floor": 60, "the-back-wall": 62, "the-kept-room": 65, "the-smithy": 65,
                  // The summit's drake stood too low on the new plate (rome,
                  // 2026-10-22); five points up from the default.
                  "the-summit": 50,
@@ -14369,7 +14369,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
-  "the-cook":   { n: 8, aspect: 0.916, f: {"idle":0,"hone-the-blade":1,"wipe-the-blade":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-cook":   { n: 8, aspect: 0.928, f: {"idle":0,"hone-the-blade":1,"wipe-the-blade":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-king":   { n: 9, aspect: 0.894, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"call-the-rats":6,"feed":7,"death":8} },
   "coyote":   { n: 8, aspect: 1.172, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-old-grey":   { n: 8, aspect: 1.036, f: {"idle":0,"alert":1,"rest":2,"hold-ground":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -14382,7 +14382,7 @@ var MOB_ANIM = {
   "wild-boar":                   { n: 8, aspect: 1.154, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-woodward":                { n: 8, aspect: 1.153, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":6,"sweep":6,"death":7,"swing":5} },
   "the-sapper":                  { n: 8, aspect: 1.076, f: {"idle":0,"work-the-face":1,"listen":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7,"recover":1} },
-  "the-keeper-of-the-holding":   { n: 8, aspect: 0.986, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-keeper-of-the-holding":   { n: 8, aspect: 0.968, f: {"idle":0,"hold-ground":1,"alert":2,"check-the-keys":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-gaunt":                   { n: 8, aspect: 1.005, f: {"idle":0,"alert":1,"cast-about":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "the-follower":                { n: 9, aspect: 1.158, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"lurk":7,"death":8} },
   "the-chainman":                { n: 9, aspect: 0.988, f: {"idle":0,"count-it-out":1,"mark-it-down":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"coil-the-chain":7,"death":8} },
