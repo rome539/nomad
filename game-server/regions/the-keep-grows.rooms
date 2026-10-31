@@ -1,0 +1,176 @@
+# THE KEEP GROWS (rome, 2026-10-31). Ten rooms on the halls and ten in the
+# warrens, and the Stripped Armory with its Issue Room moved to the far end of
+# the halls' new wing (mig 354 lifts them; this file builds the ground they
+# land in).
+#
+#   THE FIVE WAYS (1) - the armory's old square, keeping its five doors, so the
+#     wardens' and the cook's rounds still close.
+#   THE STORES (9)    - the garrison's east wing, off the Guardroom and the
+#     Sodden Library: everything in it carried off in the same hurry that
+#     stripped the armory. Two ways in, so it is never a single throat. The
+#     armory ends 8 steps from the nearest gate (via the library), 12 the
+#     long way round.
+#   THE OLD ADIT (10) - east of the Rat-Warren and the Dripping Gallery: a
+#     sapper's mine driven at the walls and given up, and the rats took it.
+#     These ten join WARRENS_ROOMS (zone-data.ts) so the rats in them eat.
+#
+# REGION: the original fortress rooms carry a BLANK region, and some code
+# compares regions directly (a fortress torch only wanders to rooms of its own
+# region). The builder cannot write a blank, so these build as `upper` - the
+# band a blank fortress room reads as anyway - and mig 356 blanks the column.
+# A regen of this file would write `upper` back: redo the blanking with it.
+!region upper
+
+## the-five-ways | The Five Ways
+A low crossing with a door on every side. The scullery's damp comes in from one of them and the kennels' smell from another, the gallery and the great hall open off two more, and a stair goes down to the forge. The flags are worn into a shallow dish in the middle by a garrison that went everywhere through here and never once stopped to stand in it.
+> east hall
+> west scullery
+> south kennels
+> north gallery
+> down forge
+
+## hall | (existing)
+!existing
+> west the-five-ways
+
+## scullery | (existing)
+!existing
+> east the-five-ways
+
+## kennels | (existing)
+!existing
+> north the-five-ways
+
+## gallery | (existing)
+!existing
+> south the-five-ways
+
+## forge | (existing)
+!existing
+> up the-five-ways
+
+# ---- THE STORES -------------------------------------------------------------
+
+## guardroom | (existing)
+!existing
+> east the-watch-passage
+
+## library | (existing)
+!existing
+> east the-roll-room
+
+## the-watch-passage | The Watch Passage
+A narrow passage behind the guardroom, built for one man walking his round. There is a lamp-niche at shoulder height every ten paces, each with a black tongue of soot up the stone above it, and not one lamp left in any of them. The round went this way so many times that the floor has a path worn down its middle.
+> west guardroom
+> north the-quartermasters-room
+> south the-roll-room
+
+## the-roll-room | The Roll Room
+A clerk's room off the library, lined floor to ceiling with pigeon-holes, each one holding a fat roll gone to felt in the damp. They are the muster rolls: who was on the strength, who was paid, who was issued what. Somebody pulled a handful out and dropped them, and they lie where they fell, every one unrolled to its last page.
+> west library
+> north the-watch-passage
+> east the-pay-table
+
+## the-quartermasters-room | The Quartermaster's Room
+A cramped office with a high desk and a stool still pushed in under it. The ledger on the desk has been cut out of its binding, every page of it, and taken. Whoever stood at this desk last took the accounts with them and left the room exactly as it was.
+> south the-watch-passage
+> east the-long-store
+
+## the-long-store | The Long Store
+A long, low store with bays down one wall, each bay under its painted board: blankets, boots, cloaks, tallow. The bays are empty to the stone. Grain dust lies in the corners where sacks were dragged out, and the drag marks all run the same way, toward the door.
+> west the-quartermasters-room
+> east the-harness-room
+
+## the-harness-room | The Harness Room
+Saddle-trees on wooden pegs, and bridle-hooks in rows above them, every hook bare. The smell of old leather hangs on with nothing left in the room to make it. One stirrup lies on the floor where it was dropped, and nobody came back for it.
+> west the-long-store
+> east the-fletchery
+
+## the-fletchery | The Fletchery
+Benches down both walls, and a floor gone soft underfoot with a century of feather-down and shavings. Bundles of shafts stood against the far wall; their outlines are still there, pale on the stone. There is no arrow in the room, not even a broken one. They were the first thing taken.
+> west the-harness-room
+> south the-arming-passage
+
+## the-arming-passage | The Arming Passage
+A wide passage made for men moving four abreast in kit, and both walls are scraped pale at hip height where scabbards and shield-rims dragged along the stone. It runs from the stores to the armoury door. Every scrape on it was made going the one way, out.
+> north the-fletchery
+> south armory
+
+## the-pay-table | The Pay Table
+A bare room with a long table bolted to the floor and an iron grille across the middle of it, the paymaster's side and the soldier's side. The coin-box on the paymaster's side is sprung and empty. On the soldier's side the stone is dished in front of the grille, from men standing to be paid, one at a time, for years.
+> west the-roll-room
+> east the-sergeants-room
+
+## the-sergeants-room | The Sergeants' Room
+Four cots, a table, and a rack for four sets of kit, all of it empty. The cots are made, the blankets squared and tucked, which is the only order left anywhere in this part of the fortress. Whoever made them expected to come back and sleep in them.
+> west the-pay-table
+> east armory
+
+## armory | (existing)
+!existing
+> north the-arming-passage
+> west the-sergeants-room
+
+# ---- THE OLD ADIT -----------------------------------------------------------
+
+## the-rat-warren | (existing)
+!existing
+> east the-side-run
+
+## the-dripping-gallery | (existing)
+!existing
+> east the-wet-run
+
+## the-side-run | The Side-Run
+A run off the Rat-Warren just high enough to go along bent double, its floor polished smooth by bodies. The walls are greasy at rat height, a dark band along both sides, and the band goes on ahead into the dark further than you can see.
+> west the-rat-warren
+> east the-litter-chamber
+
+## the-litter-chamber | The Litter Chamber
+A round hollow lined with shredded cloth, straw and hair, packed down into a nest the size of a cart. It is warm in here, warmer than earth has any business being, and the warmth is coming up out of the nest.
+> west the-side-run
+> east the-root-hall
+> south the-scrape
+
+## the-root-hall | The Root Hall
+The roof of the warren is roots here: a whole tree's worth come down through the earth from somewhere far above and spread out flat, a ceiling of ropes. Things have been carried up and wedged in among them, and the floor underneath is bones.
+> west the-litter-chamber
+> south the-old-adit
+
+## the-scrape | The Scrape
+A low stretch where the floor is all claw-marks, cut and recut into the clay until there is no flat left in it. Everything that goes deeper goes through here, and goes through fast.
+> north the-litter-chamber
+> east the-old-adit
+> south the-fallen-props
+
+## the-old-adit | The Old Adit
+Squared timbers, black and furred with mould, hold up a cut that men made: a sapper's adit driven toward the fortress walls and given up. The rats found it and took it over. Their runs come in through its sides at every height.
+> north the-root-hall
+> west the-scrape
+> east the-blind-heading
+> south the-hoard-hole
+
+## the-blind-heading | The Blind Heading
+The adit's last few yards, where the digging stopped. The face is still marked with the pick, and a shovel blade lies rusted into the floor at its foot. The air does not move here at all. Nobody finished this, and nobody will.
+> west the-old-adit
+
+## the-wet-run | The Wet Run
+A run off the Dripping Gallery where water comes down the walls in sheets and the floor is a channel of black mud. Small prints go along it both ways, hundreds of them, and something larger has dragged through them all and left a trench.
+> west the-dripping-gallery
+> east the-fallen-props
+
+## the-fallen-props | The Fallen Props
+The old mine timbers have given way here, and the props lie across the passage at every angle like a dropped bundle of sticks. You go through over and under them. The roof they were holding is mostly still up.
+> west the-wet-run
+> north the-scrape
+> east the-hoard-hole
+> south the-warren-sump
+
+## the-hoard-hole | The Hoard-Hole
+A pocket dug into the side of the run and packed with things carried here from somewhere else: buttons, a spoon, a buckle, a key-ring with no keys on it, teeth, a heap of whatever once shone. It has been added to for a very long time, and it is still being added to.
+> west the-fallen-props
+> north the-old-adit
+
+## the-warren-sump | The Black Sump
+The lowest point of the runs, where their water comes to stand. It is black and still and smells of iron, and it fills the floor wall to wall. Bones show white just under the surface, close enough to touch, and none of them are small.
+> north the-fallen-props

@@ -129,11 +129,47 @@ export function crown(z: ZoneDO, now: number): Creature | null {
     nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
   };
   z.creatures.set(c.id, c);
+  attend(z, c, now);
   z.noteCreaturesChanged();
   z.refreshRoomCtx(RAT_KING_HOME);
   // Its coming is heard through the whole fortress, though not by the gatehouse fire.
   z.roomFeedBands(FORTRESS_BANDS, "Somewhere under the fortress every rat in the walls goes quiet at once, and then starts up again, louder.", undefined, false);
   return c;
+}
+
+// TWO RATS BESIDE HIM (rome, 2026-10-31). He never comes alone: the two nearest
+// living rats come in with him. A body is only made when the world is short of
+// rats, because every rat belongs to a spawn row and one over the cap is culled
+// on the next load (reconcilePopulation). A rat in a fight, or in a room with
+// someone watching it, is never the one called: nobody sees a rat vanish.
+export const KING_ATTENDANTS = 2;
+const ATTENDANT = "rat";
+function attend(z: ZoneDO, king: Creature, now: number): void {
+  const watched = new Set([...z.sessions.values()].map((s) => s.roomId));
+  const free = [...z.creatures.values()].filter((c) =>
+    c.templateId === ATTENDANT && c.hp > 0 && !c.target && c.roomId !== king.roomId && !watched.has(c.roomId));
+  free.sort((a, b) => z.roomDist(a.roomId, king.roomId) - z.roomDist(b.roomId, king.roomId));
+  let left = KING_ATTENDANTS - [...z.creatures.values()].filter((c) => c.templateId === ATTENDANT && c.hp > 0 && c.roomId === king.roomId).length;
+  for (const c of free) {
+    if (left <= 0) break;
+    const from = c.roomId;
+    c.roomId = king.roomId;
+    z.refreshRoomCtx(from);
+    left--;
+  }
+  if (left <= 0) return;
+  const tmpl = z.world!.mobTemplates.get(ATTENDANT);
+  if (!tmpl) return;
+  const cap = z.world!.mobSpawns.filter((s) => s.template_id === ATTENDANT).length;
+  const alive = [...z.creatures.values()].filter((c) => c.templateId === ATTENDANT && c.hp > 0).length;
+  for (let i = 0; i < Math.min(left, cap - alive); i++) {
+    const rat: Creature = {
+      id: uuid(), templateId: ATTENDANT, roomId: king.roomId, home: king.roomId,
+      hp: tmpl.max_hp, hunger: randInt(20, 60), grudges: [], target: null,
+      nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
+    };
+    z.creatures.set(rat.id, rat);
+  }
 }
 
 export function resetForTest(z: ZoneDO): void { states.set(z, { lastRoll: 0, fellAt: 0 }); }

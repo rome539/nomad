@@ -1427,6 +1427,13 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         }
       }
     }
+    // THE RAT KING KEEPS TO THE WARRENS (rome, 2026-10-31). No round: any door
+    // he likes, so long as it opens on warren. Whatever moves him, he does not
+    // follow it up into the halls. Never strands (one stray outside walks back in).
+    if (creature.templateId === RAT_KING) {
+      const own = exits.filter((e) => WARRENS_ROOMS.has(e.to_room));
+      if (own.length) exits = own;
+    }
     // THE NOSE: fresh blood next door pulls an idle scavenger. A drip trail (a
     // wounded thing that walked through) or a kill's pool, younger than
     // SCENT_FRESH_MS, and the hyena drifts toward it instead of wandering blind

@@ -659,6 +659,7 @@ try {
     z.creatures = new Map(); z.variantBase = new Map();
     for (const k of ['noteCreaturesChanged', 'refreshRoomCtx', 'roomSound', 'roomFeedBands', 'roomFeed']) z[k] = () => {};
     z.roomDist = () => 0;
+    z.sessions = new Map();
     const rat = { id: 'r1', templateId: 'rat', roomId: 'the-gnaw-hollow', hp: 11 };
     z.creatures.set('r1', rat);
     return { z, rat };
@@ -692,11 +693,28 @@ try {
     ratking.fell(z);
     assert.equal(ratking.fleeMult(z, rat), 2, 'leaderless rats bolt sooner');
   });
-  check('its rounds stay in the warrens and close on themselves', () => {
-    const route = PATROLS['rat-king'];
-    assert.ok(route.every((r) => WARRENS_ROOMS.has(r)));
-    assert.ok(!route.includes('the-hyena-den'));
-    for (let i = 0; i < route.length; i++) assert.notEqual(route[i], route[(i + 1) % route.length], 'a step that goes nowhere');
+  check('the wardens and the rat king walk no round; the captain still does (2026-10-31)', () => {
+    assert.equal(PATROLS.warden, undefined, 'the wardens roam');
+    assert.equal(PATROLS['rat-king'], undefined, 'the king roams the warrens');
+    assert.ok(PATROLS['warden-captain']?.length, 'the captain keeps his ring');
+  });
+  check('the rat king comes with two rats beside him, never one taken from under a watcher (2026-10-31)', () => {
+    const { z, rat } = kingWorld();
+    z.world.mobSpawns = [1, 2, 3].map(() => ({ template_id: 'rat', room_id: 'the-rat-warren' }));
+    ratking.crown(z, Date.now());
+    const beside = [...z.creatures.values()].filter((c) => c.templateId === 'rat' && c.roomId === 'the-rat-warren');
+    assert.equal(beside.length, 2, 'two rats in his room');
+    assert.equal(rat.roomId, 'the-rat-warren', 'the nearest one came in with him');
+    const w = kingWorld();
+    w.z.world.mobSpawns = [1, 2, 3].map(() => ({ template_id: 'rat', room_id: 'the-rat-warren' }));
+    w.z.sessions = new Map([['me', { pubkey: 'me', roomId: 'the-gnaw-hollow' }]]);
+    ratking.crown(w.z, Date.now());
+    assert.equal(w.rat.roomId, 'the-gnaw-hollow', 'a rat someone is looking at stays put');
+    assert.equal([...w.z.creatures.values()].filter((c) => c.templateId === 'rat' && c.roomId === 'the-rat-warren').length, 2, 'and two come anyway');
+    const full = kingWorld();
+    full.z.sessions = new Map([['me', { pubkey: 'me', roomId: 'the-gnaw-hollow' }]]);
+    ratking.crown(full.z, Date.now());
+    assert.equal([...full.z.creatures.values()].filter((c) => c.templateId === 'rat').length, 1, 'never a rat over the cap');
   });
   check('while it lives the fortress coughs, and a cough is a noise (2026-10-24)', () => {
     const { z } = kingWorld();

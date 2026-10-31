@@ -2100,14 +2100,8 @@ export const MOUTHS = [
 // threshold rule bars that) and never resting on any one wanderer's path in.
 // Each step is to an adjacent room, so the rounds actually close.
 export const PATROLS: Record<string, string[]> = {
-  // THE RAT KING walks the warrens (ratking.ts): the rat-warren down the run to
-  // the midden and the sewer-slip, back up, and round by the crawl and the
-  // gnaw-hollow. Never the hyena den. Every step a real exit.
-  "rat-king": [
-    "the-rat-warren", "the-root-gnawed-run", "the-dripping-gallery", "the-bone-midden",
-    "the-sewer-slip", "the-bone-midden", "the-dripping-gallery", "the-root-gnawed-run",
-    "the-rat-warren", "the-crawl-of-teeth", "the-gnaw-hollow", "the-crawl-of-teeth",
-  ],
+  // THE RAT KING has no round any more (rome, 2026-10-31): he goes where he
+  // likes in the warrens, and only the warrens (ai.ts keeps him to them).
   // THE COOK (mig 353) keeps the deep's kitchens: the troughs in the Drowned
   // Kitchens and the bones he sorts in the Cold Pantry. The halls cook has his
   // own round (PATROLS_BY_HOME).
@@ -2126,8 +2120,10 @@ export const PATROLS: Record<string, string[]> = {
     "the-sixth-milestone", "the-cut-bank", "the-weighbridge", "the-relay-house",
     "the-elm-avenue", "the-broken-culvert", "the-carters-rest", "the-fifth-milestone",
   ],
-  warden: ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "armory", "gallery"],
-  "warden-captain": ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "armory", "gallery"],
+  // THE WARDENS ROAM (rome, 2026-10-31): no round, they go where they like,
+  // the new stores and the Five Ways included. The captain still walks the
+  // inner ring; the armory's old crossroads is the Five Ways now (mig 354).
+  "warden-captain": ["barracks", "cells", "cistern", "ossuary", "catacomb", "kennels", "the-five-ways", "gallery"],
   // The last watchman (076) walks the high circuit out-and-back — every leg
   // adjacent, so his rounds NEVER leave the walls (no off-route drift down a
   // stair). The bell-cote hangs above the turret, off his route: the one
@@ -2210,8 +2206,8 @@ export const PATROLS_BY_HOME: Record<string, string[]> = {
   // through the armory and the kennels with the meal, the trenchers in the
   // refectory, the hooks in the larder, the smokehouse at the bottom, and back.
   "the-cook@scullery": [
-    "scullery", "armory", "kennels", "refectory", "larder", "smokehouse",
-    "larder", "refectory", "kennels", "armory",
+    "scullery", "the-five-ways", "kennels", "refectory", "larder", "smokehouse",
+    "larder", "refectory", "kennels", "the-five-ways",
   ],
   "warden-surface@the-churchyard": [
     "the-village-street", "the-well-head", "the-church-shell", "the-churchyard", "the-bell-pit",
@@ -7178,6 +7174,9 @@ export const WARRENS_ROOMS = new Set([
   "the-root-gnawed-run", "the-rat-warren", "the-crawl-of-teeth", "the-gnaw-hollow",
   "a-dry-burrow", "the-dripping-gallery", "the-bone-midden", "the-hyena-den",
   "the-undermine", "the-earth-throat", "the-sewer-slip", "the-buried-chapel",
+  // THE OLD ADIT (mig 355): the sapper's mine the rats took over, east of the
+  // Rat-Warren and the Dripping Gallery. Warrens in every sense the sim reads.
+  "the-side-run", "the-litter-chamber", "the-root-hall", "the-scrape", "the-old-adit", "the-blind-heading", "the-wet-run", "the-fallen-props", "the-hoard-hole", "the-warren-sump",
   "bone-nook", // A Gap in the Bones — moved off the midden (079); safe rooms in this set are display/flavor only, every event actor filters safeRooms
 ]);
 // THE RAT KING (ratking.ts, rome 2026-10-24): rolled into the warrens about
@@ -8305,6 +8304,27 @@ export const ART_ROOMS = new Set<string>([
   "undercroft",
   "armory",
   "the-issue-room",
+  // THE KEEP GROWS (mig 355): ten on the halls, ten in the old adit.
+  "the-five-ways",
+  "the-watch-passage",
+  "the-roll-room",
+  "the-quartermasters-room",
+  "the-long-store",
+  "the-harness-room",
+  "the-fletchery",
+  "the-arming-passage",
+  "the-pay-table",
+  "the-sergeants-room",
+  "the-side-run",
+  "the-litter-chamber",
+  "the-root-hall",
+  "the-scrape",
+  "the-old-adit",
+  "the-blind-heading",
+  "the-wet-run",
+  "the-fallen-props",
+  "the-hoard-hole",
+  "the-warren-sump",
   "sewer",
   "the-root-gnawed-run",
   "a-dry-burrow",
