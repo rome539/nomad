@@ -7080,6 +7080,8 @@ function benchItemNode(it, place) {
     // vault, no round-trip through the pack. (Same rule as the pack: anything
     // vaults, unsealed gear is sealed on the way in, so no seal button.)
     if (place === "lockbox" && benchAtGate) btnQ("\\u2192 vault", "vault");
+    // ...and in your den, straight onto the shelf (rome, 2026-10-31).
+    if (place === "lockbox" && benchAtDen) btnQ("\\u2192 shelf", "stow");
     // The vice reaches the keeping too (rome, 2026-10-16): the box's steel can be
     // broken down where it rests, the same scrap button as the pack's.
     if (benchAtGate && it.fix && it.slot && it.salv && (place === "lockbox" || place === "vault")) armBtn("scrap", "salvage", "scrap");
@@ -7129,7 +7131,7 @@ function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, food
   // nothing about how full they were. Shown only in compact (the classic layout
   // has every column up with its own count).
   (others || []).forEach(function (o) {
-    var x = document.createElement("span"); x.className = "cnt other";
+    var x = document.createElement("span"); x.className = "cnt other" + (o[0] === "food" ? " food" : "");
     x.textContent = o[0] + " " + o[1] + (o[2] ? "/" + o[2] : "");
     right.appendChild(x);
   });
@@ -7312,10 +7314,15 @@ function renderBench(state) {
   var packRows = (state.pack || []).slice();
   if (state.torchInHand) packRows.unshift({ row: "", name: "a torch, burning in your hand", torchHand: true, lit: true, lite: "douse", slot: "", n: 1, rarity: "common", description: "" });
   fillBenchCol(bpack, "Your pack", packRows, state.packCap || 0, "pack", state.packUsed, state.packFood, state.packFoodCap, others);
-  fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox", state.lockboxUsed);
+  // ...and every store's line carries the others, so the box and the vault say
+  // how full the pack is too (rome, 2026-10-31).
+  var packCnt = ["pack", typeof state.packUsed === "number" ? state.packUsed : packRows.length, state.packCap || 0];
+  var foodCnt = state.packFoodCap ? [["food", state.packFood || 0, state.packFoodCap]] : [];
+  var vaultCnt = benchAtGate ? [["vault", storeUsed(state.vault, state.vaultUsed), state.vaultCap]] : [];
+  fillBenchCol(block, "Lockbox", state.lockbox || [], state.lockboxCap, "lockbox", state.lockboxUsed, undefined, undefined, [packCnt].concat(foodCnt, vaultCnt));
   if (benchAtGate) {
     bvault.style.display = "";
-    fillBenchCol(bvault, "Vault \\u00b7 the deep keep", state.vault || [], state.vaultCap, "vault", state.vaultUsed);
+    fillBenchCol(bvault, "Vault \\u00b7 the deep keep", state.vault || [], state.vaultCap, "vault", state.vaultUsed, undefined, undefined, [packCnt].concat(foodCnt, [others[0]]));
   } else {
     bvault.style.display = "none";
     bvault.textContent = "";

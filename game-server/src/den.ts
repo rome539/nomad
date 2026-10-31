@@ -1189,18 +1189,27 @@ export async function shelfHere(z: ZoneDO, session: Session): Promise<{ den: Den
 export async function benchStow(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
   const den = keepingDen(z, session);
   if (!den) return "There is no shelf of yours here.";
-  const carried = session.items.find((c) => c.rowId === row);
+  // The row may be in the pack, or in the lockbox: straight from the box onto
+  // the shelf, no round-trip through the pack (rome, 2026-10-31).
+  let carried = session.items.find((c) => c.rowId === row);
+  let fromBox = false;
+  if (!carried) {
+    carried = (await loadContainer(z.env.DB, session.pubkey, "lockbox")).find((c) => c.rowId === row);
+    fromBox = !!carried;
+  }
   if (!carried) return "You aren't carrying that.";
   const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)), den);
   if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= denCap(den)) {
     return `Your shelf here holds ${denCap(den)} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`;
   }
-  // Guarded splice (2026-08-20): the shelf read and the condition write above
-  // awaited D1, so a racing double frame could both resolve the same row and
-  // the loser's splice(-1,1) would eat an unrelated pack item.
-  const idx = session.items.indexOf(carried);
-  if (idx === -1) return "You aren't carrying that.";
-  session.items.splice(idx, 1);
+  if (!fromBox) {
+    // Guarded splice (2026-08-20): the shelf read and the condition write above
+    // awaited D1, so a racing double frame could both resolve the same row and
+    // the loser's splice(-1,1) would eat an unrelated pack item.
+    const idx = session.items.indexOf(carried);
+    if (idx === -1) return "You aren't carrying that.";
+    session.items.splice(idx, 1);
+  }
   carried.equipped = false;
   if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
   await setContainer(z.env.DB, carried.rowId, container(den.roomId));

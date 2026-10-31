@@ -2398,6 +2398,23 @@ try {
     assert.equal(row({ condWord: 'failing' }), 'failing');
   });
 
+  check('in your den a lockbox piece goes straight onto the shelf (2026-10-31)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /if \(place === "lockbox" && benchAtDen\) btnQ\("\\\\u2192 shelf", "stow"\);/, 'the box row has a shelf button in a den');
+    const den = readFileSync(new URL('../src/den.ts', import.meta.url), 'utf8');
+    const fn = den.slice(den.indexOf('export async function benchStow'));
+    const body = fn.slice(0, fn.indexOf('\n}\n'));
+    assert.match(body, /carried = \(await loadContainer\(z\.env\.DB, session\.pubkey, "lockbox"\)\)\.find\(\(c\) => c\.rowId === row\);/, 'the server finds the row in the box');
+    assert.match(body, /if \(!fromBox\) \{[\s\S]*session\.items\.splice\(idx, 1\);\n  \}/, 'and only splices the pack for a pack row');
+  });
+  check('the lockbox and vault tabs carry every store count, as the pack tab does (2026-10-31)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const box = pub.match(/fillBenchCol\(block, "Lockbox"[^\n]*/)[0];
+    const vault = pub.match(/fillBenchCol\(bvault, "Vault[^\n]*/)[0];
+    assert.match(box, /\[packCnt\]\.concat\(foodCnt, vaultCnt\)\);$/, 'the lockbox line says the pack, the food and the vault');
+    assert.match(vault, /\[packCnt\]\.concat\(foodCnt, \[others\[0\]\]\)\);$/, 'the vault line says the pack, the food and the lockbox');
+    assert.match(pub, /var packCnt = \["pack", /, 'the pack count is labelled');
+  });
   check('a lantern and gear put away in the lockbox say their fat and their wear (2026-10-31)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const condLine = pub.match(/ var cond=([^;]*);/)[1];
