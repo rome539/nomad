@@ -10214,11 +10214,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "128";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "54";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "55";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "15";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "33";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "16";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "35";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11762,9 +11762,9 @@ var MOB_LINE = {
   // thing DOWN toward that line and the error stopped hiding in the gap.
  "corrie-rim": 60, "corrie-floor": 60, "the-back-wall": 62, "the-kept-room": 65, "the-smithy": 65,
   // THE KEEP GROWS' OWN PICTURES (2026-10-31), read off where each floor starts:
-  // the stores' bays come down to 70%, the root hall's floor starts at 66% and
-  // the sump's bank at 69%. The corridor runs away from the camera on the lock.
-  "keep-stores": 70, "the-root-hall": 66, "the-warren-sump": 69,
+  // the stores' floor starts at 65%, the root hall's at 64% and the sump's
+  // bank at 66% (the redrawn three, 2026-10-31). The corridor runs away from the camera on the lock.
+  "keep-stores": 65, "the-root-hall": 64, "the-warren-sump": 66,
                  // The summit's drake stood too low on the new plate (rome,
                  // 2026-10-22); five points up from the default.
                  "the-summit": 50,
