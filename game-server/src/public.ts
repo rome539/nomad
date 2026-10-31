@@ -10104,7 +10104,7 @@ aboutbtn.addEventListener("click", function () {
   setpanel.classList.remove("open");
   print([
     "NOMAD \u2014 Nostr Open Multi-user Adventure Dungeon \u2014 is a live",
-    "extraction MUD over Nostr.",
+    "extraction MUD.",
     "",
     "A MUD (Multi-User Dungeon) is the oldest kind of online world: one",
     "shared place, real people inside, told in text. NOMAD paints its",
