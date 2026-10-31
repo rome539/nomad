@@ -21,8 +21,8 @@ export const PAGE = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>NOMAD — Multiplayer Text Dungeon on Nostr</title>
 <link rel="canonical" href="https://nomadmud.com/">
-<meta name="description" content="NOMAD is a free multiplayer text dungeon, a MUD, played in the browser over Nostr. A living world where creatures hunt and remember you, wounds stay, and the dead stay dead.">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"NOMAD","url":"https://nomadmud.com/","description":"A free multiplayer text dungeon (MUD) played in the browser over Nostr: a living world where creatures hunt and remember you, wounds stay, and the dead stay dead.","genre":["MUD","Text adventure","Roguelike","Extraction"],"playMode":"MultiPlayer","gamePlatform":"Web browser","applicationCategory":"Game","operatingSystem":"Any","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"image":"https://nomadmud.com/og.jpg?v=4"}</script>
+<meta name="description" content="NOMAD is a free multiplayer text dungeon, a MUD, played in the browser over Nostr. A living world where creatures hunt and remember you, wounds do not heal on their own, and the dead stay dead.">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"NOMAD","url":"https://nomadmud.com/","description":"A free multiplayer text dungeon (MUD) played in the browser over Nostr: a living world where creatures hunt and remember you, wounds do not heal on their own, and the dead stay dead.","genre":["MUD","Text adventure","Roguelike","Extraction"],"playMode":"MultiPlayer","gamePlatform":"Web browser","applicationCategory":"Game","operatingSystem":"Any","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"image":"https://nomadmud.com/og.jpg?v=4"}</script>
 <link rel="icon" type="image/png" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
@@ -2434,7 +2434,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div id="thr-line">a shared dungeon, alive whether or not anyone is watching</div>
     <button id="thr-enter" type="button">enter</button>
     <button id="thr-reck" type="button">the reckoning</button>
-    <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser. The creatures hunt, sleep and remember you, wounds stay, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a></div>
+    <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser. The creatures hunt, sleep and remember you, wounds do not heal on their own, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a></div>
   </div>
   <div id="reckm" role="dialog" aria-modal="true" aria-labelledby="recktitle">
     <div class="lbox">
@@ -10122,8 +10122,9 @@ aboutbtn.addEventListener("click", function () {
     "",
     "It is a simulation, and it keeps going while you are gone. Creatures",
     "wander, hunt, starve, hold grudges, and remember you. Night falls and",
-    "the weather turns. Wounds stay, the dead stay dead, and what you",
-    "dropped is where it fell, if nothing carried it off.",
+    "the weather turns. Wounds do not heal on their own, the dead stay",
+    "dead, and what you dropped is where it fell, if nothing carried it",
+    "off.",
     "",
     "Everything you carry can be lost: fumbled, worn through, broken,",
     "scattered where you die. Reach a gate alive and it will seal your",
