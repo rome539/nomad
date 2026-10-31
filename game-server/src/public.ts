@@ -8100,10 +8100,13 @@ function mudRow(type,it,place,source){
  var row=document.createElement('div');row.className=(type==='trade'?'trow':'bitem')+' mud-row';row.tabIndex=0;row.setAttribute('role','button');if(type==='forge')row.dataset.canForge=String(!!it.can);
  var name=document.createElement('span');name.className='nm';var realName=source.querySelector('.nm>span');name.appendChild(realName?realName.cloneNode(true):document.createTextNode(it.name));
  var qty=document.createElement('span');qty.className='mud-qty';qty.textContent=it.n>1?'×'+it.n:'';
- // THE CONDITION ON THE ROW (rome, 2026-10-29): worn and sealed gear says how
- // it is wearing without being opened - "worn, equipped", "sealed, battered".
- var cond=it.condWord&&it.condWord!=='sound'?it.condWord:'';
- var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?(cond?cond+', ':'')+'equipped':it.well?(it.lit?it.well+', lit':it.well):it.lit?'lit':it.sealed?'sealed'+(cond?', '+cond:''):cond):type==='trade'?(place==='goods'?goodsWorthText(it):it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
+ // THE CONDITION ON THE ROW (rome, 2026-10-29): gear says how it is wearing
+ // without being opened - "worn, equipped", "battered". The wear only, never
+ // "sealed" (rome, 2026-10-31): "sealed, nearly broken" wrapped to three lines
+ // in the vault and ran over the row below. In the lockbox and the vault gear
+ // says "sound" too, as the typed list does, and a lantern its fat and its wear.
+ var cond=it.condWord&&(it.condWord!=='sound'||(type==='bench'&&place!=='pack'))?it.condWord:'';
+ var state=document.createElement('span');state.className='mud-state';state.textContent=type==='bench'?(it.equipped?(cond?cond+', ':'')+'equipped':it.well?(it.lit?it.well+', lit':it.well+(place!=='pack'&&cond?', '+cond:'')):it.lit?'lit':cond):type==='trade'?(place==='goods'?goodsWorthText(it):it.cost==null?'':String(it.cost)):place==='recipe'?[it.scrap?it.scrap+' iron':'',it.stuff?it.stuff.qty+' '+it.stuff.name:'',it.material?it.material.qty+' '+it.material.name:''].filter(Boolean).join(' + '):it.cond;
  if(it.equipped)state.classList.add('equipped');
  if(type==='bench'&&COND_CLS[cond])state.classList.add(COND_CLS[cond]);
  var search=document.createElement('span');search.className='tags mud-search';search.textContent=source.querySelector('.nm').textContent+' '+(it.stat||'');

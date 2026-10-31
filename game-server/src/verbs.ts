@@ -2431,6 +2431,9 @@ export function itemLine(z: ZoneDO, c: CarriedItem, holder?: Session, counts?: M
   // Naming them here costs one tag and makes the whole lottery legible: the
   // flaws especially, which a player has every right to see before they carry it.
   for (const tag of c.rolledMap?.keys() ?? []) tags.push(tag);
+  // A lantern put away in a keeping still says its fat, as the window does
+  // (rome, 2026-10-31); one in hand says it below with its light word.
+  if (!holder && c.itemId === LANTERN_ITEM) tags.push(light.wellCount(c.fuel ?? 0));
   if (tags.length) s += ` — ${tags.join(", ")}`;
   // A light says whether it burns and the word that changes it, as the pack
   // window's button does (light.lightOffer).

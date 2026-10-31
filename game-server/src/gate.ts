@@ -2312,8 +2312,9 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
         // before, and hides a second tag entirely. The modal names them plainly.
         traits: [...(c.rolledMap?.keys() ?? [])],
         // A light in the pack can be lit or put out from the window, the same
-        // words the typed list prints (light.lightOffer). Pack only.
-        ...(() => { const o = session.items.includes(c) ? light.lightOffer(z, session, c) : null; return o ? { lite: o.verb, lit: o.lit, well: o.well ?? "" } : {}; })(),
+        // words the typed list prints (light.lightOffer). Pack only. A lantern put
+        // away still says how much fat is in it (rome, 2026-10-31).
+        ...(() => { const o = session.items.includes(c) ? light.lightOffer(z, session, c) : null; return o ? { lite: o.verb, lit: o.lit, well: o.well ?? "" } : c.itemId === LANTERN_ITEM ? { well: light.wellCount(c.fuel ?? 0) } : {}; })(),
       };
     };
     // Fungibles collapse to one entry with a count and the full list of rows —

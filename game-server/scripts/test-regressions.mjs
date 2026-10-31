@@ -2391,8 +2391,25 @@ try {
     const row = (it) => show('bench', it, 'pack', () => '');
     assert.equal(row({ equipped: true, condWord: 'worn' }), 'worn, equipped');
     assert.equal(row({ equipped: true, condWord: 'sound' }), 'equipped');
-    assert.equal(row({ sealed: true, condWord: 'battered' }), 'sealed, battered');
+    // the wear only, never "sealed": it wrapped and ran over the next row in the vault (2026-10-31)
+    assert.equal(row({ sealed: true, condWord: 'battered' }), 'battered');
+    assert.equal(row({ sealed: true, condWord: 'nearly broken' }), 'nearly broken');
+    assert.equal(row({ sealed: true, condWord: 'sound' }), '');
     assert.equal(row({ condWord: 'failing' }), 'failing');
+  });
+
+  check('a lantern and gear put away in the lockbox say their fat and their wear (2026-10-31)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const condLine = pub.match(/ var cond=([^;]*);/)[1];
+    const stateExpr = pub.match(/state\.className='mud-state';state\.textContent=([\s\S]*?);\n/)[1];
+    const show = new Function('type', 'it', 'place', 'goodsWorthText', 'var cond=' + condLine + '; return ' + stateExpr + ';');
+    assert.equal(show('bench', { sealed: true, condWord: 'sound' }, 'lockbox', () => ''), 'sound', 'a sound chain in the box says so');
+    assert.equal(show('bench', { sealed: true, condWord: 'sound', well: 'fat 2/3' }, 'lockbox', () => ''), 'fat 2/3, sound', 'a lantern in the box: its fat and its wear');
+    assert.equal(show('bench', { condWord: 'sound' }, 'pack', () => ''), '', 'the pack is as it was');
+    const gate = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(gate, /: c\.itemId === LANTERN_ITEM \? \{ well: light\.wellCount\(c\.fuel \?\? 0\) \} : \{\}/, 'the server sends a put-away lantern its fat');
+    const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(verbs, /if \(!holder && c\.itemId === LANTERN_ITEM\) tags\.push\(light\.wellCount\(c\.fuel \?\? 0\)\);/, 'and the typed lockbox list says it too');
   });
 
   console.log(`\n${passed} regression checks pass`);
