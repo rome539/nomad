@@ -1296,7 +1296,9 @@ export const PAGE = `<!doctype html>
   /* THE ROOM'S OWN MOTION: the plate's torches, water and the light in your
      hand. Placed over the scene box by script, like the weather, and under the
      creatures so nothing burns in front of them. See fxScene. */
-  #scene-fx, #scene-sparks { display: none; position: fixed; z-index: 0; pointer-events: none; }
+  #scene-fx, #scene-sparks, #scene-mist { display: none; position: fixed; z-index: 0; pointer-events: none; }
+  /* ...EXCEPT THE MIST (rome, 2026-10-31): the halls' low mist lies on the floor
+     in front of whatever stands in it, so it is its own layer over the creatures. */
   /* THE FOG IS LAID OVER THE GROUND, NOT PAINTED INTO IT (rome, 2026-10-25).
      The scene's own box, so the thick band sits on the horizon line (55%) where
      the far ground is, thinning to almost nothing at your feet. One veil per
@@ -2459,7 +2461,6 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div class="setrow"><span>ornate artwork</span><button id="ornatebtn" type="button" aria-label="Ornate artwork: off">off</button></div>
     <div class="setrow"><span>nostr themes</span><button id="thbrowse">browse</button></div>
     <div id="thlist"></div>
-    <div class="setrow"><span>source</span><a class="abtn" href="https://github.com/rome539/nomad" target="_blank" rel="noopener">github &#8599;</a></div>
   </div>
   <div id="idpanel">
     <div class="sect">
@@ -2651,6 +2652,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   <div id="fogveil" aria-hidden="true"></div>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fogmix" color-interpolation-filters="sRGB"><feColorMatrix id="fogmixm" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><filter id="torchwarm" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1.4 0 0 0 0 0 .83 0 0 0 0 0 .16 0 0 0 0 0 1 0"/></filter></svg>
   <div id="mobs" aria-hidden="true"></div>
+  <canvas id="scene-mist" aria-hidden="true"></canvas>
   <canvas id="weather-particles" aria-hidden="true"></canvas>
   <button id="loggrip" type="button" aria-expanded="false" title="more of the log">▲</button>
   <div id="logbox"><div id="log"></div></div>
@@ -10101,26 +10103,34 @@ var aboutbtn = document.getElementById("aboutbtn");
 aboutbtn.addEventListener("click", function () {
   setpanel.classList.remove("open");
   print([
-    "NOMAD is a live extraction MUD over Nostr.",
+    "NOMAD \u2014 Nostr Open Multi-user Adventure Dungeon \u2014 is a live",
+    "extraction MUD over Nostr.",
     "",
-    "A MUD \u2014 Multi-User Dungeon \u2014 is the oldest kind of online world:",
-    "all text, one shared dungeon, real people inside. Extraction means",
-    "getting your loot OUT alive is the whole game.",
+    "A MUD (Multi-User Dungeon) is the oldest kind of online world: one",
+    "shared place, real people inside, told in text. NOMAD paints its",
+    "rooms too, and you can switch the pictures off; the words are the game.",
+    "Extraction means what you find is only yours if you get it OUT alive.",
     "",
-    "And a nomad is what you are down here: someone who carries",
-    "everything they own. Your character is a key in your pocket, not an",
-    "account on a server. Save it once and you can return from any",
-    "device, forever. Lose it, and nobody can give it back.",
+    "The world is over fifteen hundred rooms and still growing: a ruined",
+    "fortress and the deep beneath it, the wood, the old road, the",
+    "crossing, the mountain, and the dens where people make a home.",
     "",
-    "The dungeon is a simulation. Creatures wander, get hungry, hold",
-    "grudges \u2014 and remember you. It keeps living while you are gone:",
-    "wounds stay, the dead stay dead, and what you dropped is where it",
-    "fell, if nothing carried it off.",
+    "And a nomad is what you are: someone who carries everything they",
+    "own. Your character is a Nostr key, not an account on a server. Save",
+    "it once and you can come back from any device, forever. Lose it, and",
+    "nobody can give it back.",
     "",
-    "Everything you carry can be lost \u2014 fumbled, shattered, scattered",
-    "where you die. Walk it out to the Broken Gate alive and the dungeon",
-    "seals your claim on it, provable to anyone; the gate lockbox is the",
-    "only place death cannot reach. Getting treasure OUT is the game.",
+    "It is a simulation, and it keeps going while you are gone. Creatures",
+    "wander, hunt, starve, hold grudges, and remember you. Night falls and",
+    "the weather turns. Wounds stay, the dead stay dead, and what you",
+    "dropped is where it fell, if nothing carried it off.",
+    "",
+    "Everything you carry can be lost: fumbled, worn through, broken,",
+    "scattered where you die. Reach a gate alive and it will seal your",
+    "claim on a piece, provable to anyone, but a seal is not armour: die",
+    "with it and it drops like the rest. Death only misses what you left",
+    "behind, in the lockbox and the vault at the gates, or on the shelf",
+    "in your own den.",
     "",
     "Type 'help' for commands. Free and open source (MIT):",
     "github.com/rome539/nomad",
@@ -10577,6 +10587,11 @@ var ROOM_PLATE = {
   // DARK_ROOMS take a second plate, NIGHT-TORCH, and those two are the same
   // photograph lit twice - the room as your own flame shows it, and the room
   // with no light in it at all, which is very nearly a black frame.
+  // ONLY DARK_ROOMS TAKE BOTH (rome, 2026-10-31: the Old Adit and the Scrape
+  // showed the black frame and played lit). The page is never told a room is
+  // dark; it takes the black NIGHT whenever no torch is in your hand. So a room
+  // the server keeps lit that shares one of these pictures lists NIGHT-TORCH
+  // alone, and shows the room lit, torch or none.
   "the-causeway":           "day night night-torch fog rain snow",
   "the-old-road":           "day night night-torch fog rain snow",
   "the-sally-ditch":        "day night night-torch fog rain snow",
@@ -10712,38 +10727,38 @@ var ROOM_PLATE = {
   "the-arming-passage":     "night",
   "the-pay-table":          "night",
   "the-sergeants-room":     "night",
-  "the-side-run":           "night night-torch",
+  "the-side-run":           "night-torch",
   "the-litter-chamber":     "night",
   "the-root-hall":          "night",
-  "the-scrape":             "night night-torch",
-  "the-old-adit":           "night night-torch",
+  "the-scrape":             "night-torch",
+  "the-old-adit":           "night-torch",
   "the-blind-heading":      "night night-torch",
-  "the-wet-run":            "night night-torch",
-  "the-fallen-props":       "night night-torch",
+  "the-wet-run":            "night-torch",
+  "the-fallen-props":       "night-torch",
   "the-hoard-hole":         "night",
   "the-warren-sump":        "night",
   "sewer":                  "night",
-  "the-root-gnawed-run":    "night night-torch",
-  "a-dry-burrow":           "night night-torch",
-  "bone-nook":              "night night-torch",
+  "the-root-gnawed-run":    "night-torch",
+  "a-dry-burrow":           "night-torch",
+  "bone-nook":              "night-torch",
   "the-crawl-of-teeth":     "night night-torch",
   "the-rat-warren":         "night",
   "the-gnaw-hollow":        "night",
   "the-hyena-den":          "night",
   "the-bone-midden":        "night",
-  "the-undermine":          "night night-torch",
-  "the-dripping-gallery":   "night night-torch",
-  "the-sewer-slip":         "night night-torch",
+  "the-undermine":          "night-torch",
+  "the-dripping-gallery":   "night-torch",
+  "the-sewer-slip":         "night-torch",
   "the-earth-throat":       "night night-torch",
   "the-buried-chapel":      "night",
-  "the-descent":            "night night-torch",
-  "silted-stair":           "night night-torch",
-  "the-marrow-road":        "night night-torch",
+  "the-descent":            "night-torch",
+  "silted-stair":           "night-torch",
+  "the-marrow-road":        "night-torch",
   "the-lightless-march":    "night night-torch",
-  "bone-processional":      "night night-torch",
-  "worm-cloister":          "night night-torch",
-  "worm-bore":              "night night-torch",
-  "the-undertow":           "night night-torch",
+  "bone-processional":      "night-torch",
+  "worm-cloister":          "night-torch",
+  "worm-bore":              "night-torch",
+  "the-undertow":           "night-torch",
   "black-canal":            "night night-torch",
   "drowned-court":          "night",
   "drowned-nave":           "night",
@@ -10769,27 +10784,27 @@ var ROOM_PLATE = {
   "black-threshold":        "night night-torch",
   "sunken-throne":          "night",
   "kings-hoard":            "night",
-  "the-tide-gate":          "night night-torch",
+  "the-tide-gate":          "night-torch",
   "the-tide-throat":        "night night-torch",
   "the-long-swallow":       "night night-torch",
   "the-still-cradle":       "night night-torch",
-  "the-under-weir":         "night night-torch",
-  "the-drowning-stair":     "night night-torch",
-  "the-eel-run":            "night night-torch",
-  "the-salt-vault":         "night night-torch",
+  "the-under-weir":         "night-torch",
+  "the-drowning-stair":     "night-torch",
+  "the-eel-run":            "night-torch",
+  "the-salt-vault":         "night-torch",
   "the-silt-chapel":        "night night-torch",
   "the-breathing-hall":     "night",
   // the deep, slab 2 (mig 291)
-  "the-sluice-walk":        "night night-torch",
-  "the-charnel-chute":      "night night-torch",
-  "the-feeling-wall":       "night night-torch",
-  "the-bored-passage":      "night night-torch",
-  "the-gnawed-arch":        "night night-torch",
-  "the-root-shaft":         "night night-torch",
-  "the-crawlway":           "night night-torch",
-  "the-choir-stair":        "night night-torch",
-  "the-cantors-door":       "night night-torch",
-  "the-kings-stair":        "night night-torch",
+  "the-sluice-walk":        "night-torch",
+  "the-charnel-chute":      "night-torch",
+  "the-feeling-wall":       "night-torch",
+  "the-bored-passage":      "night-torch",
+  "the-gnawed-arch":        "night-torch",
+  "the-root-shaft":         "night-torch",
+  "the-crawlway":           "night-torch",
+  "the-choir-stair":        "night-torch",
+  "the-cantors-door":       "night-torch",
+  "the-kings-stair":        "night-torch",
   "the-chain-well":         "night",
   "the-sunk-bell":          "night",
   "the-silt-bank":          "night",
@@ -10818,10 +10833,10 @@ var ROOM_PLATE = {
   "the-wormcast-pit":       "night night-torch",
   "the-scavengers-shelf":   "night night-torch",
   "the-drag":               "night night-torch",
-  "the-sluice-gear":        "night night-torch",
-  "the-cooperage":          "night night-torch",
-  "the-cable-walk":         "night night-torch",
-  "the-brine-cellar":       "night night-torch",
+  "the-sluice-gear":        "night-torch",
+  "the-cooperage":          "night-torch",
+  "the-cable-walk":         "night-torch",
+  "the-brine-cellar":       "night-torch",
   "the-lung-vent":          "night night-torch",
   "the-waiting-hall":       "night",
   "the-marrow-seat":        "night",
@@ -13557,6 +13572,9 @@ var FX_UNDER_TINT = { moon: 1, eclipse: 1, dawn: 1, "wet-dawn": 1, "after-rain":
 var fxCanvas = document.getElementById("scene-fx");
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");
+var mistCanvas = document.getElementById("scene-mist");
+var mistCtx = mistCanvas && mistCanvas.getContext && mistCanvas.getContext("2d");
+var fxMist = false;
 var fxGl = null, fxProg = null, fxU = {}, fxIndex = null, fxIndexAsked = false;
 var fxName = "", fxEntry = null, fxFrame = null, fxStamp = 0, fxT = 0, fxReady = false, fxSeq = 0;
 var fxTex = {}, fxMobTex = {}, fxEmbers = [], fxDust = [];
@@ -13590,7 +13608,7 @@ function fxInit() {
     "#endif",
     "varying vec2 v;",
     "uniform sampler2D plate, depth, mob0, mob1, mob2, mob3;",
-    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, handOn, handFlick, cloud, glintOn;",
+    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, mistPass, handOn, handFlick, cloud, glintOn;",
     "uniform vec2 sway;",
     "uniform vec3 torch[" + FX_TORCHES + "];",
     "uniform float flick[" + FX_TORCHES + "];",
@@ -13677,6 +13695,10 @@ function fxInit() {
     "    m = smoothstep(.02, .32, m) * band * (.5 + .5 * (1. - d)) * .8;",
     "    mc = vec3(.27, .23, .19) + vec3(.4, .23, .09) * min(glow, 1.5);",
     "  }",
+    // The mist on its own, for the layer over the creatures; the room's own
+    // pass leaves it out, so laid over that it comes to the same picture.
+    "  if (mistPass > .5){ gl_FragColor = vec4(m * mc, m) * pl.a; return; }",
+    "  m = 0.;",
     // Written as what to lay over the plate: rest + plate * (1 - a).
     "  float c = (1. - m) * (1. - w) * k;",
     "  vec3 rest = (1. - m) * (w * D * k + add) + m * mc;",
@@ -13696,7 +13718,7 @@ function fxInit() {
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   var ap = gl.getAttribLocation(fxProg, "p"); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
-  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "handOn", "handFlick", "cloud", "glintOn",
+  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "mistPass", "handOn", "handFlick", "cloud", "glintOn",
    "sway", "torch", "flick", "mobRect", "mobFrame"].forEach(function (k) { fxU[k] = gl.getUniformLocation(fxProg, k); });
   gl.uniform1i(fxU.plate, 0); gl.uniform1i(fxU.depth, 1);
   gl.uniform1i(fxU.mob0, 2); gl.uniform1i(fxU.mob1, 3); gl.uniform1i(fxU.mob2, 4); gl.uniform1i(fxU.mob3, 5);
@@ -13783,7 +13805,8 @@ function fxScene(scene, tint, prepared, cloud) {
     fxGl.uniform1f(fxU.flickOn, t.length ? 1 : 0); fxGl.uniform1f(fxU.wetOn, entry.w ? 1 : 0);
     // Mist in the halls underground; not at the doors, which are out of doors,
     // and not in the gatehouse, which has a fire going and a roof on.
-    fxGl.uniform1f(fxU.mistOn, t.length && name.indexOf("gate") !== 0 ? 1 : 0);
+    fxMist = !!(t.length && name.indexOf("gate") !== 0);
+    fxGl.uniform1f(fxU.mistOn, fxMist ? 1 : 0);
     fxGl.uniform1f(fxU.handOn, fxHandLit(entry) ? 1 : 0);
     fxGl.uniform1f(fxU.glintOn, entry.snow && fxSnowGlint ? 1 : 0);
     if (t.length) for (var k = 0; k < 60; k++) fxDust.push({ x: Math.random(), y: .05 + Math.random() * .7,
@@ -13800,6 +13823,8 @@ function fxStop() {
   fxFrame = null; fxStamp = 0;
   if (fxCanvas) fxCanvas.style.display = "none";
   if (sparkCanvas) sparkCanvas.style.display = "none";
+  if (mistCanvas) mistCanvas.style.display = "none";
+  fxMist = false;
   if (fxGl) { fxGl.clearColor(0, 0, 0, 0); fxGl.clear(fxGl.COLOR_BUFFER_BIT); }
   if (sparkCtx) sparkCtx.clearRect(0, 0, sparkCanvas.width, sparkCanvas.height);
   fxEmbers.length = 0; fxDust.length = 0;
@@ -13810,6 +13835,7 @@ function fxRun() {
     fxFrame = null;
     if (fxCanvas) fxCanvas.style.display = "none";
     if (sparkCanvas) sparkCanvas.style.display = "none";
+    if (mistCanvas) mistCanvas.style.display = "none";
     return;
   }
   if (fxFrame === null) fxFrame = requestAnimationFrame(fxDraw);
@@ -13866,7 +13892,7 @@ function fxDraw(now) {
   var box = sceneEl.getBoundingClientRect(), w = Math.round(box.width), h = Math.round(box.height);
   if (!w || !h) { fxFrame = requestAnimationFrame(fxDraw); return; }
   var scale = Math.min(1, 1280 / w), rw = Math.max(1, Math.round(w * scale)), rh = Math.max(1, Math.round(h * scale));
-  [fxCanvas, sparkCanvas].forEach(function (c) {
+  [fxCanvas, sparkCanvas, mistCanvas].forEach(function (c) {
     if (!c) return;
     c.style.left = box.left + "px"; c.style.top = box.top + "px"; c.style.width = w + "px"; c.style.height = h + "px";
     if (c.width !== rw || c.height !== rh) { c.width = rw; c.height = rh; }
@@ -13896,7 +13922,16 @@ function fxDraw(now) {
   gl.uniform4fv(fxU.mobRect, rects); gl.uniform2fv(fxU.mobFrame, frames);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, fxTex.plate);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fxTex.depth);
-  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.clearColor(0, 0, 0, 0);
+  // The mist first, copied up to its own layer over the creatures (in the same
+  // frame, before the buffer is shown), then the room without it.
+  if (fxMist && mistCtx) {
+    gl.uniform1f(fxU.mistPass, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    mistCtx.clearRect(0, 0, rw, rh); mistCtx.drawImage(fxCanvas, 0, 0);
+  }
+  gl.uniform1f(fxU.mistPass, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   // Embers off the painted flames, and dust that only shows where they light it.
   if (sparkCtx && tl.length) {
@@ -13935,6 +13970,7 @@ function fxDraw(now) {
   // Reveal only after drawing this room's first frame, never an old buffer.
   fxCanvas.style.display = "block";
   if (sparkCanvas) sparkCanvas.style.display = tl.length ? "block" : "none";
+  if (mistCanvas) mistCanvas.style.display = fxMist && mistCtx ? "block" : "none";
   fxFrame = requestAnimationFrame(fxDraw);
 }
 if (document.addEventListener) document.addEventListener("visibilitychange", fxRun);
