@@ -3621,7 +3621,7 @@ var VOICE_FAMILY = {
   drover: "the-drover",
   eelcutter: "the-eel-cutter",
   fowler: "the-fowler",
-  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk the-sapper",
+  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk the-sapper the-cook",
   boneknight: "bone-knight",
   hulk: "drowned-hulk",
   drownedgod: "drowned-god",
@@ -3673,7 +3673,10 @@ var VOICE_PITCH_SET = { "cutpurse": 1, "the-drove-master": 1, "the-milker": 1.3,
   "cutthroat": 1, "strand-thief": 1, "road-carrier": 0.966,
   // ...and the voices that would have moved when the wrecker went to 30 and the
   // bellfounder to 31 to hold their redraws at their live height.
-  "footpad": 1, "wayman": 1, "the-herd": 1, "the-bellfounder": 1, "the-sapper": 1.103 };
+  "footpad": 1, "wayman": 1, "the-herd": 1, "the-bellfounder": 1, "the-sapper": 1.103,
+  // ...and the salt widow hers when the cook (30) joined the working dead and
+  // took their middle from 29 to 30 (2026-10-30).
+  "the-salt-widow": 0.983 };
 var VOICE_PITCH = null;
 // Worked out on first use: MOB_SPRITE is further down the page than this.
 function voicePitch(id) {
@@ -10175,7 +10178,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "125";      // /mob/      strips and their eye layers
+var MOB_V  = "126";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "52";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
@@ -14299,6 +14302,7 @@ var MOB_SPRITE = {
   "gibbet-crow": 6,
   "the-bellfounder": 31,
   "the-sapper": 23,
+  "the-cook": 30,           // a man standing: his idle at 29.2, the nomad's at 29.5
   "the-chainman": 31,      // 28 until his redraw came out smaller
   "the-gaunt": 34,
 };
@@ -14331,6 +14335,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "the-cook":   { n: 8, aspect: 0.916, f: {"idle":0,"hone-the-blade":1,"wipe-the-blade":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-king":   { n: 9, aspect: 0.894, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"call-the-rats":6,"feed":7,"death":8} },
   "coyote":   { n: 8, aspect: 1.172, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-old-grey":   { n: 8, aspect: 1.036, f: {"idle":0,"alert":1,"rest":2,"hold-ground":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -14611,6 +14616,8 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   "check-the-keys",     // the keeper of the holding, the ring it never puts down
   "rake-the-melt",      // the bellfounder, drawing the rake through metal long set
   "work-the-face",      // the sapper, a handful of chalk at a time, still going east
+  "hone-the-blade",     // the cook, the cleaver down the steel before the meal goes out
+  "wipe-the-blade",     // ...and wiped flat on the apron, and back to work
   // THE TEN REDRAWN (2026-10-17), named here before the sheets come back - a
   // second piece of their own work, so the idle has two things in it:
   "test-the-joint",     // the bridge mason, tapping a joint that closed two centuries ago
@@ -14718,7 +14725,9 @@ var MOB_EYES = {
   // the picture to key. Those two frames simply have nothing laid over them.
   "the-miller": 1, "the-toll-clerk": 1, "the-long-warden": 1,
   // The sapper joined the dead on 2026-10-27 and his redraw carries the marker.
-  "the-sapper": 1
+  "the-sapper": 1,
+  // ...and the cook (2026-10-30), drawn with it from the start.
+  "the-cook": 1
 };
 
 var IDLE_MS = 1400;      // how long one idle frame is held...

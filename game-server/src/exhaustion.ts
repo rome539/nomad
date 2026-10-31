@@ -208,6 +208,7 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "the-refuge-man": [0, 0, 0, 0],
   "the-salt-widow": [0, 0, 0, 0],
   "the-sapper": [0, 0, 0, 0],
+  "the-cook": [0, 0, 0, 0],
   "the-scaffold-hand": [0, 0, 0, 0],
   "the-tide-warden": [0, 0, 0, 0],
   "the-toll-clerk": [0, 0, 0, 0],

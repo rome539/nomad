@@ -1729,6 +1729,8 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "black-backed-gull": "A shadow crosses {dir} and the whole colony goes silent instead of loud.",
   // ---- THE OPEN GROUND (mig 194)
   "the-sapper": "A pick goes into chalk {dir}, under you, at a working rhythm that does not vary.",
+  // ---- THE KITCHENS (mig 353)
+  "the-cook": "An iron pot knocks on a doorframe {dir}, carried, and slow feet go on with it without stopping.",
   "the-bellfounder": "An iron rake drags over fired clay {dir}, slow, and then again.",
   "gibbet-crow": "A crow goes {dir} in three unhurried beats and says one thing on the way.",
   "oystercatcher": "A shrill piping goes up {dir} and runs away along the water, and other birds take it up.",
@@ -1803,6 +1805,7 @@ export const STILL_SOUNDS: Record<string, string> = {
   "old-billy": "jaws working somewhere above you, and a smell like a shut room",
   "scarp-raven": "the wind through stiff feathers, holding station",
   "the-sapper": "chalk being worked, from under the ground, at the pace of a man who has all century",
+  "the-cook": "a pot set down on stone, and a blade going through something on a board, in no hurry",
   "the-bellfounder": "metal ticking as it cools, which it finished doing two hundred years ago",
   "gibbet-crow": "a crow shifting its feet on iron, twice, and settling",
   "the-tide-warden": "a knife cutting a notch into wood, once, and then a long wait",
@@ -2105,6 +2108,10 @@ export const PATROLS: Record<string, string[]> = {
     "the-sewer-slip", "the-bone-midden", "the-dripping-gallery", "the-root-gnawed-run",
     "the-rat-warren", "the-crawl-of-teeth", "the-gnaw-hollow", "the-crawl-of-teeth",
   ],
+  // THE COOK (mig 353) keeps the deep's kitchens: the troughs in the Drowned
+  // Kitchens and the bones he sorts in the Cold Pantry. The halls cook has his
+  // own round (PATROLS_BY_HOME).
+  "the-cook": ["the-drowned-kitchens", "the-cold-pantry"],
   // THE LONG WARDEN (mig 188) is the first patrol that is not a circuit. The
   // watchman walks a ring round the walls; this one walks a LINE — out along
   // the paving and back down it, every leg adjacent, so the route never leaves
@@ -2199,6 +2206,13 @@ export const PATROLS: Record<string, string[]> = {
 // "<kind>@<the room its spawn row names>"; anything not named here walks its
 // kind's round. Every leg is a real adjacent exit.
 export const PATROLS_BY_HOME: Record<string, string[]> = {
+  // THE HALLS COOK (mig 353) walks the kitchen line: the pots in the scullery,
+  // through the armory and the kennels with the meal, the trenchers in the
+  // refectory, the hooks in the larder, the smokehouse at the bottom, and back.
+  "the-cook@scullery": [
+    "scullery", "armory", "kennels", "refectory", "larder", "smokehouse",
+    "larder", "refectory", "kennels", "armory",
+  ],
   "warden-surface@the-churchyard": [
     "the-village-street", "the-well-head", "the-church-shell", "the-churchyard", "the-bell-pit",
     "the-dead-cart-track", "the-cart-tip", "the-tipping-edge", "the-gnawed-ground", "the-den-mouths",
@@ -2246,7 +2260,9 @@ export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surf
   // the gallery at it (rome, 2026-10-27): one of the dead at work, like these.
   // He is bare bone in his coat, so he stays out of GRAVE_FLESH: only a blunt
   // blow finds his vitals.
-  "the-sapper"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
+  "the-sapper",
+  // The cook (mig 353) is still getting a garrison its dinner: the same.
+  "the-cook"]); // the wights joined 066: dry grave-flesh — nothing pumps, nothing spills, and nothing in them knows how to run; the watchman (076) kept his post past all of it
 // THE WOOD'S OWN (rome, 2026-09-27): the woodward and the charcoal burner are
 // things of timber and char, not men, and a blade that opens a wound in them
 // finds no blood. Bleeding only - they are not HOLLOW, and keep everything else
@@ -2265,7 +2281,9 @@ export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"
   "the-fowler", "the-reed-walker", "the-salt-widow",
   // the five that hold water, same argument: a drowned man is the wettest body
   // there is, so every weapon keeps its killing spot on them
-  "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller"]); // the watchman is a dried MAN in kit, not bare bone — every weapon finds him
+  "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller",
+  // the cook (mig 353) is a dried man in an apron, not bare bone: every weapon finds him
+  "the-cook"]); // the watchman is a dried MAN in kit, not bare bone — every weapon finds him
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
@@ -3065,6 +3083,7 @@ export const GUARD_SPOIL = [
 export const GREET_ANSWER: Record<string, string> = {
   "charcoal-burner": "He nods back without stopping what he is doing, which is the whole of what a nod is for.",
   "the-sapper": "He lifts his chin an inch, which from a man with both hands full is a great deal.",
+  "the-cook": "The cleaver stops for one beat on the board, and then goes on. It is as much as a cook gives anyone before the meal is out.",
   "road-carrier": "He shifts the load on his shoulder and gives you the road's own greeting back — brief, and meant.",
   "rag-and-bone": "He looks you over once, decides you are carrying nothing he wants, and nods anyway.",
   "the-drove-master": "He returns it the way a man returns a greeting from someone he will pass again — properly, and without slowing.",
@@ -4477,6 +4496,11 @@ const SAPPER_LINES = [
   "The sapper walks his line and taps the ground ahead with the pick-butt, listening, the way a man listens for a mine. There is no mine. The war is over. The listening is not.",
   "The sapper probes the ground ahead, one tap at a time, reading the ground by its sound. The ground says nothing. He has never once taken its word for it.",
 ];
+const COOK_LINES = [
+  "The cook ladles nothing out of a cold pot into a trencher, one careful measure, and moves along to the next place. Every place gets the same. That is the rule of a garrison kitchen, and he still keeps it.",
+  "The cook scrubs out a pot that is already clean, turns it over, and scrubs it again. The garrison will want it by the bell. The bell has not rung in two hundred years, and the pot is ready.",
+  "The cook takes something down off a hook, looks it over, and hangs it back a hand's width along. He is turning the stores. Nothing in them has been food for a very long time.",
+];
 const VERDIGRIS_LINES = [
   "The verdigris-thing runs one finger down the stone and the stone greens behind it, slow as rust, slow as breath. It is not writing anything. It is only touching, and the stone keeps the touch.",
   "The verdigris-thing touches the iron and the green follows its hand like a stain following water. It has been doing this since before the iron was iron.",
@@ -4639,6 +4663,7 @@ export const WITNESSED_LINES: Record<string, string[]> = {
   "road-carrier": ROAD_CARRIER_LINES,
   "the-bellfounder": BELLFOUNDER_LINES,
   "the-sapper": SAPPER_LINES,
+  "the-cook": COOK_LINES,
   "verdigris-thing": VERDIGRIS_LINES,
   // THE LAST TWO WITH A MECHANIC AND NO HABIT. Swept for creatures that owned
   // nothing performed: the collier's fire is a property of the ground he stands
@@ -5430,7 +5455,7 @@ export const CUTTHROATS = new Set(["cutpurse", "footpad", "cutthroat", "wayman",
 export const FEINT_ODDS = 0.25;
 // FOLK fight the way you do: steady, then guarded once hurt, then reckless at
 // the end. A guard turns edge and point; weight goes through it.
-export const FOLK = new Set(["the-sapper", "the-bellfounder", "the-chainman", "road-carrier", "the-herd", "the-milker",
+export const FOLK = new Set(["the-sapper", "the-cook", "the-bellfounder", "the-chainman", "road-carrier", "the-herd", "the-milker",
   "the-one-who-stayed", "the-butter-wife", "charcoal-burner", "the-eel-cutter", "the-fowler", "the-reed-walker",
   "the-salt-widow", "the-drove-master", "rag-and-bone"]);
 export const FOLK_GUARD_AT = 0.5;       // share of its health
@@ -5696,7 +5721,7 @@ export const PROVISIONED = new Set([
   // stands where it lives, so it has no way to eat of its own and must not bank
   // hunger it can never spend.
   "the-old-grey",
-  "road-carrier", "the-sapper", "the-bellfounder",
+  "road-carrier", "the-sapper", "the-bellfounder", "the-cook",
   // THE SUMMER PEOPLE (mig 244). The mountain's first people, and the first
   // bodies on it that are not a mouth: the herd and the milker keep a flock that
   // is not there, so neither of them grazes, hunts or scavenges and neither has
@@ -5752,6 +5777,7 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "dog-otter": { out: "goes off the bank {dir} and the beck closes over it.", in_: "hauls out onto the stone {dir}, broad-headed, and shakes once." },
   "gibbet-crow": { out: "drops off the arm {dir} and rows away without hurrying.", in_: "comes down onto the iron {dir}, folds up, and watches." },
   "the-sapper": { out: "crawls away {dir} down the gallery, still working.", in_: "comes backward out of the dark {dir}, dragging the spoil with him." },
+  "the-cook": { out: "goes {dir} with an iron pot held out in front of him, careful not to spill what is not in it.", in_: "comes in {dir} with an iron pot in both hands, and sets it down where a table used to be." },
   "oystercatcher": { out: "goes up {dir} screaming and takes the whole flat with it.", in_: "drops onto the gravel, runs four steps, and stops dead." },
   "great-gull": { out: "tips off the stone {dir} and is gone downwind in one beat.", in_: "lands heavily on the parapet and looks at you with no give in it at all." },
   "black-backed-gull": { out: "drops off the stone {dir} and the wind has it in one beat.", in_: "lands on the parapet {dir} heavily enough to be heard, and stays." },
@@ -9472,6 +9498,7 @@ export const BLEED_ODDS = new Map<string, number>([
   ["devil-crab", 0.12],
   ["gibbet-crow", 0.10],
   ["the-sapper", 0.10],
+  ["the-cook", 0.15],      // a cleaver
   ["bittern", 0.10],
   ["the-scaffold-hand", 0.10],
   ["grave-hyena", 0.15],

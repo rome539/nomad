@@ -1090,6 +1090,25 @@ try {
     assert.match(body, /const spill = Math\.min\(data\[o \+ 1\], data\[o \+ 2\]\) - data\[o\]/, 'the rim measures its cyan');
     assert.match(body, /if \(e\[o \+ 3\] && spill > 0\) \{ data\[o \+ 1\] -= spill; data\[o \+ 2\] -= spill; \}/, 'and loses it, inside the eye layer only');
   });
+  await checkAsync('a creature with an eye layer ships with no cyan marker left in its strip (2026-10-30)', async () => {
+    // The cook was built before he was in MOB_EYES, so the builder never blackened
+    // his eyes and the #00D0D0 key went out in the strip itself.
+    const sharp = (await import('sharp')).default;
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const block = pub.slice(pub.indexOf('var MOB_EYES = {'), pub.indexOf('\n};', pub.indexOf('var MOB_EYES = {')));
+    const ids = [...block.replace(/\/\/.*$/gm, '').matchAll(/"([a-z0-9-]+)":\s*1/g)].map((m) => m[1]);
+    assert.ok(ids.includes('the-cook'), 'read the eye list');
+    const strip = (id) => fileURLToPath(new URL('../public/mob/' + id + '.webp', import.meta.url));
+    const cyan = [];
+    for (const id of ids) {
+      if (!existsSync(strip(id))) continue;
+      const data = await sharp(strip(id)).ensureAlpha().raw().toBuffer();
+      let n = 0;
+      for (let o = 0; o < data.length; o += 4) if (data[o + 3] > 100 && data[o] < 90 && data[o + 1] > 150 && data[o + 2] > 150) n++;
+      if (n) cyan.push(id + ' ' + n);
+    }
+    assert.deepEqual(cyan, [], 'the marker went out in the picture');
+  });
   check('every room with a picture in the client is one the server sends its place for (2026-10-30)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');

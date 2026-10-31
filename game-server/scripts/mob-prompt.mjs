@@ -237,6 +237,13 @@ const LINES = {
   alert: "Has seen you and come up off his knees: crouched low the way a man walks in four feet of headroom, weight forward, the short pick held ready in both hands",
   attack: "A short hard overhand swing of the pick, brought down with both hands from a low crouch",
 },
+// The cook (rome, 2026-10-30): one of the dead at work in the fortress kitchens.
+"the-cook": {
+  "hone-the-blade": "Standing upright, the cleaver in one hand drawn down along a long sharpening steel held up in the other at chest height, the head bent a little to watch the edge",
+  "wipe-the-blade": "Standing upright, the cleaver drawn flat across the front of the apron in one hand to wipe it, the other hand holding the apron taut at the hip, the head down over it",
+  alert: "The cleaver raised above his head in one hand, at the top of the swing",
+  attack: "The cleaver brought down in a downward swing in front of him, in one hand"
+},
 "the-drowned": {
   "take-hold": "Both swollen hands closed on something at chest height and hauling it in, the weight thrown back. What it holds is NOT drawn",
   listen: "Standing still, the head lifted and turned a little to one side, listening",
@@ -1078,6 +1085,7 @@ const REDRAW = {
   // (rome, 2026-10-27): the orders of the strips they replace
   "the-refuge-man": ["idle","turn-from-the-wall","hold-the-door","alert","move-a","move-b","attack","sweep","death"],
   "the-sapper": ["idle","work-the-face","listen","alert","move-a","move-b","attack","death"],
+  "the-cook": ["idle","hone-the-blade","wipe-the-blade","alert","move-a","move-b","attack","death"],
   "skeleton": ["idle","listen","alert","move-a","move-b","attack","sweep","death"],
   // the scaffold hand, redone on a clear background (rome, 2026-10-29): its
   // strip's order, the recover cell given to the reach it already had written
@@ -1347,6 +1355,15 @@ const LAND_DEAD = {
     skin: "\nWHAT IS LEFT ON IT IS CURED, NOT ROTTEN AND NOT WET: dark hard meat over yellow bone, an old body dried out under a cairn, not one decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.",
     mood: "Unhurried and patient, not raging: it has been put down twice and got back up both times, and it will come on again.",
   },
+  // The cook (rome, 2026-10-30): two hundred years in the fortress kitchens,
+  // dry, a dried man in an apron, not bare bone.
+  "the-cook": {
+    decay: "- HE IS A DRIED MAN, NOT A SKELETON: dark hard cured skin drawn tight over the skull and the bones of the face, the lips gone back off the teeth, the eyes sunk to nothing.\n"
+      + "- THE FOREARMS ARE BARE AND WORKED: sleeves rolled to the elbow, the forearms gone down to dark cord and bone, the hands whole, because the hands are the job.",
+    cloth: "- A long cook's apron, once white, gone the colour of old tallow and stiff with two hundred years of grease, its strings knotted twice round a waist with nothing left in it, over a plain shirt and breeches gone brown.",
+    skin: "\nWHAT IS LEFT ON HIM IS CURED, NOT ROTTEN AND NOT WET: dark, hard, leathery, an old body dried out in a cold kitchen, not one decaying. It is NOT green, NOT grey-green, NOT the colour of a video-game zombie.",
+    mood: "Not menacing the viewer and not looking at the viewer: still getting a garrison its dinner, two hundred years late, and the viewer is not part of it.",
+  },
   // The sapper (rome, 2026-10-27: he is one of the dead). Two hundred years on
   // his knees in a dry chalk gallery, not in the sea: dry, chalk-white, worn.
   "the-sapper": {
@@ -1544,6 +1561,7 @@ const EYE_BLOCK = FACELESS[id] ? NO_EYES : HOLLOW_EYES;
 // one frame that matters most, the attack.
 const CARRIES = {
   "the-woodward": "HE IS ARMED WITH A FELLING AXE: a long ash haft and a broad, worn steel head. It is in his hands in every cell and MOVES WITH THE POSE - carried low at the trail at rest and on the move, taken up across the body when he has seen you, raised high overhead and brought down in the blow, swung flat at full reach in the sweep, and lying beside him in death.",
+  "the-cook": "HE IS ARMED WITH HIS CLEAVER. A heavy kitchen cleaver, square-bladed, the edge pitted with rust, is in one hand in every cell and MOVES WITH THE POSE - held low at his side at rest and on the move, drawn down a sharpening steel when he hones it, wiped flat across his apron, raised above his head at the top of the swing, brought down in the blow, lying beside him in death. A long butcher's sharpening steel hangs from his apron strings in every cell except the one where he hones the blade on it. He never punches.",
   "the-sapper": "HE IS ARMED WITH HIS PICK. A short-hafted sapper's pick, heavy in the head, is in his hands in every cell and MOVES WITH THE POSE - working at nothing in front of him while he works the face, held still while he listens, swung down overhand in the blow, lying beside him in death. He never punches.",
   "skeleton": "IT IS ARMED, AND THE SWORD IS WHAT IT FIGHTS WITH. A soldier's arming sword, the edge gone to orange rust-lace, in one bare-boned hand. The sword is PRESENT in every cell and MOVES WITH THE POSE - carried low at rest, up in the guard, swung through in the blow, and lying with the body in death. It is never held in one frozen carry position while the pose changes around it.",
   "bone-knight": "IT IS ARMED, AND IT KEPT ITS SHIELD. A rusted arming sword in one hand, an ancient kite-shield on the other arm, lacquer crazed over older bone. Both are PRESENT in every cell and BOTH MOVE WITH THE POSE - the sword cuts and the shield covers. This is the one that remembers how to use them, so it must never be drawn striking with anything but the sword.",
@@ -1738,7 +1756,7 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand", "the-long-warden", "the-miller"]);
+const CLEAR_BG = new Set(["twice-dead", "the-cook", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand", "the-long-warden", "the-miller"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")
