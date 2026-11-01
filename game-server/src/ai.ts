@@ -20,6 +20,7 @@ import * as ratking from "./ratking";
 import { cap, isNight, isFullMoon, isBloodMoon, morphOf } from "./zone-util";
 import * as events from "./events";
 import * as styles from "./styles";
+import * as whiteroe from "./whiteroe";
 import { underCover, MAP_QUARTERS } from "./detail";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
@@ -61,7 +62,7 @@ import {
   PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, OWN_FORAGE_MEAL_LEFT,
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
-  RAT_KING, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
+  RAT_KING, WHITE_ROE, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
   EAT_SHOW_MS,
   RIVAL_LINES, DROWNED_GOD, KING_WORDS,
 } from "./zone-data";
@@ -341,7 +342,9 @@ export function reconcilePopulation(z: ZoneDO, world: World): number {
       // Same own-row rule as scheduleArrivals: a variant with its own dens is
       // its own line here, so a warren that piled up seeded mothers sheds them
       // on the next load instead of hiding them inside the rat count.
-      const line = caps.has(c.templateId) ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
+      // The white roe is its own line too, whatever it is a variant of: it
+      // comes by its own roll (whiteroe.ts), and is never counted as a spare roe.
+      const line = caps.has(c.templateId) || c.templateId === WHITE_ROE ? c.templateId : (z.variantBase.get(c.templateId) ?? c.templateId);
       const list = byLine.get(line) ?? [];
       list.push(c);
       byLine.set(line, list);
@@ -364,7 +367,8 @@ export function reconcilePopulation(z: ZoneDO, world: World): number {
       }
       // THE RAT KING has no spawn row: it comes by a roll (ratking.ts). Without
       // this every deploy would cull it as an overstock of nothing. One, never more.
-      const cap = line === RAT_KING ? 1 : caps.get(line) ?? 0;
+      // The white roe is the same: no row, one at most.
+      const cap = line === RAT_KING || line === WHITE_ROE ? 1 : caps.get(line) ?? 0;
       if (list.length <= cap) continue;
       const homes = dens.get(line) ?? [];
       const distToDen = (c: Creature) => homes.length
@@ -883,7 +887,7 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // in the moment. It is honest (a real halving of a real roll), it just
       // lives on the world's side of the ledger, not the player's.
       const halfBlind = c.traits?.includes("half-blind") ? MOB_HALFBLIND_MULT : 1;
-      if (!chance(Math.min(1, odds * events.songWakeMult(z, c) * halfBlind))) continue;
+      if (!chance(Math.min(1, odds * events.songWakeMult(z, c) * halfBlind * whiteroe.wakeMult(z, c, session, now)))) continue;
       const tmpl = z.world!.mobTemplates.get(c.templateId)!;
       // TWITCHY breaks cover too early. The ambush in this game is not a damage
       // bonus, it is the free extra blow itself (creatureFirstStrike), so the
@@ -1301,6 +1305,11 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       const notHeld = exits.filter((e) => !SENTINEL_ROOMS.has(e.to_room));
       if (notHeld.length) exits = notHeld;
     }
+    // THE WHITE ROE'S ROOM is nobody else's (whiteroe.ts): nothing steps into
+    // it. Never strands. And the roe itself walks the wood's open ground.
+    const unshunned = exits.filter((e) => !whiteroe.shuns(z, creature, e.to_room, now));
+    if (unshunned.length) exits = unshunned;
+    if (whiteroe.roams(creature)) exits = whiteroe.woodSteps(z, exits);
     // ON A CHASE (chase.ts) it takes the way its quarry took, past every pull
     // below, or - the way barred to it, a gate or a safe room - it does not move.
     const chaseTo = mode === "wander" ? creature.chase?.to : undefined;
@@ -1357,7 +1366,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // carries a migrant from the mouth to its range. Fleeing ignores the edge
     // (survival first; the next calm step starts the walk back). Patrollers
     // are exempt — their route is their territory. Never strands.
-    if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id] && creature.drift === undefined && !chaseTo) {
+    if (mode === "wander" && !whiteroe.roams(creature) && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id] && creature.drift === undefined && !chaseTo) {
       // A HUNGRY THING LEAVES. Where the territory pull is anchored: normally
       // the den, but a hunter whose own ground has nothing left to eat walks to
       // where the food is instead (huntGround). Everything below is unchanged —

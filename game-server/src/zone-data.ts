@@ -1890,7 +1890,7 @@ export const HUNT_RECHECK_MS = 60_000;
 // are bound to what made them, and the surface trip they get is SURFACERS, a
 // different rule with a different meaning.
 export const MIGRANTS = new Set<string>([
-  "roe-deer", "white-roe", "wild-boar", "old-boar", "wood-stag", // the game
+  "roe-deer", "wild-boar", "old-boar", "wood-stag", // the game (the white roe keeps to the wood: WHITE_ROE)
   "grey-wolf", "dire-wolf", "grave-hyena", "dire-hyena",     // what follows the game
   "masterless-dog", "lead-dog",                              // the pack
   // (the two- and three-hound were listed here and never could be. A SENTINEL
@@ -7220,6 +7220,37 @@ export const WARREN_SUMP = "the-warren-sump";
 export const RAT_KING = "rat-king";
 export const RAT_KING_HOME = "the-rat-warren";
 export const RAT_KING_RATS = new Set(["rat", "fleet-rat", "brood-rat", "albino-rat"]);
+// THE WHITE ROE (rome, 2026-11-01). The wood's answer to the rat king, made of
+// what the wood already had: a roe the colour of bone, standing where "every
+// other living thing in this wood has somewhere it would rather be" (its own
+// description). It comes by a roll, about once a day while there is none, never
+// more than one, and stays in the wood until it is killed (whiteroe.ts). While
+// it walks there:
+//   - nothing else stays in a room with it, and nothing steps into one;
+//   - the followers come for whoever is near it, closer and quicker the nearer;
+//   - the keeper at the gate speaks of it.
+// Whoever kills it has the whole wood's animals against them for a while.
+// It still bolts and barks like its line (RUNNERS, ALARM_CALLERS, 2026-08-12):
+// a variant never behaves as a different animal. It is no MIGRANT: it keeps to
+// the wood (rome, 2026-11-01).
+export const WHITE_ROE = "white-roe";
+export const WHITE_ROE_ROLL_PER_MIN = 1 / 1440;   // a roll a minute: about once a day
+export const WHITE_ROE_NEAR = 4;                  // steps from it at which the followers come for you
+export const WHITE_ROE_FOLLOW_REACH = 8;          // how far off a follower will come from
+export const WHITE_ROE_FOLLOW_MS = 15_000;        // a follower's step: this, and this again per step you are from the roe
+export const WHITE_ROE_WAKE_PER_STEP = 0.5;       // a follower's drop on you: x(1 + this per step inside NEAR)
+export const WHITE_ROE_KEEPER_PER_MIN = 0.05;
+export const WHITE_ROE_KEEPER_GAP_MS = 30 * 60_000;
+export const WHITE_ROE_KEEPER_LINES = [
+  "The keeper leans on the hatch. \"Somebody came in off the wood today white as his own shirt. Says they saw a roe the colour of bone, standing in the open, and nothing else would come near it.\" He shrugs. \"My grandmother would have told you not to follow it.\"",
+  "\"There's a white one in the wood again.\" The keeper does not look up. \"Folk used to say you could walk beside it and come to no harm. Folk also used to say something walks beside you while you do.\"",
+  "The keeper is quiet a while, then: \"Don't you go killing that white roe. Last man who did, the wood had him inside a week.\"",
+];
+export const WHITE_ROE_COMES = "Somewhere in the wood everything that was moving stops at once, and then starts up again, further off from something.";
+export const WHITE_ROE_SLAIN_LINES = [
+  "The white roe goes down without a sound. All through the wood, everything that has eyes turns toward you.",
+  "The white roe folds onto its side and is still, and the wood goes on being quiet, but it is a different quiet now, and it is about you.",
+];
 export const RAT_KING_ROLL_PER_MIN = 1 / 1440;          // a roll a minute: about once a day
 export const RAT_KING_LEADERLESS_MS = 2 * 3_600_000;    // how long its rats stay rattled after it falls
 export const RAT_KING_LEADERLESS_FLEE_MULT = 2;         // ...bolting at twice the usual wound

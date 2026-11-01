@@ -43,6 +43,7 @@ try {
         "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine} from './ai';",
         "export {ratHoards} from './ai';",
         "export {starvingHunts, huntsAt} from './ai';",
+        "export * as whiteroe from './whiteroe';",
         "export {cmdDive} from './verbs';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
@@ -70,7 +71,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2688,6 +2689,76 @@ try {
     assert.equal(starvingHunts(z, { templateId: 'brown-bear', roomId: 'x', hunger: 55 }), true, 'a hungry bear hunts you');
     assert.equal(starvingHunts(z, { templateId: 'brown-bear', roomId: 'x', hunger: 40 }), false, 'a fed one does not');
     assert.equal(starvingHunts(z, { templateId: 'grey-wolf', roomId: 'x', hunger: 55 }), false, 'the others are as they were');
+  });
+
+  await checkAsync('the white roe: it comes to the wood, keeps its room empty, draws the followers, and its death turns the wood (2026-11-01)', async () => {
+    // a line of six rooms in the wood, a to f
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
+    const exits = new Map(ids.map((r, i) => [r, [i > 0 && { dir: 'w', to_room: ids[i - 1], key_item: null }, i < 5 && { dir: 'e', to_room: ids[i + 1], key_item: null }].filter(Boolean)]));
+    const dist = (x, y) => Math.abs(ids.indexOf(x) - ids.indexOf(y));
+    const z = {
+      world: { rooms: new Map(ids.map((r) => [r, { id: r, region: 'wood' }])), exits, entryRooms: new Set(), safeRooms: new Set(),
+        mobTemplates: new Map([['white-roe', { id: 'white-roe', name: 'a white roe', max_hp: 20 }], ['the-follower', { id: 'the-follower', name: 'the follower' }], ['grey-wolf', { id: 'grey-wolf', name: 'a grey wolf' }]]) },
+      creatures: new Map(), sessions: new Map(), inGatehouse: new Set(),
+      regionOf: () => 'wood', roomDist: dist, reachable: () => true,
+      noteCreaturesChanged() {}, refreshRoomCtx() {}, roomFeed() {}, said: [], send(_s, t) { this.said.push(t); }, bands: [], roomFeedBands(_b, t) { this.bands.push(t); },
+    };
+    const now = Date.now();
+    const roe = whiteroe.comes(z, now);
+    assert.ok(roe && ids.includes(roe.roomId), 'one comes, into the wood');
+    assert.match(z.bands[0], /everything that was moving stops/);
+    assert.equal(whiteroe.comes(z, now + 1), null, 'never two');
+    roe.roomId = 'a';
+    // nothing steps into its room, and what is in it goes
+    const wolf = { id: 'w', templateId: 'grey-wolf', roomId: 'b', grudges: [], target: null };
+    z.creatures.set('w', wolf);
+    assert.equal(whiteroe.shuns(z, wolf, 'a', now + 2), true, 'a wolf will not step into its room');
+    assert.equal(whiteroe.shuns(z, roe, 'a', now + 2), false);
+    wolf.roomId = 'a'; let moved = 0;
+    await whiteroe.makesWay(z, wolf, now + 3, async () => { moved++; });
+    assert.equal(moved, 1, 'one in its room leaves it');
+    wolf.target = 'someone'; moved = 0;
+    await whiteroe.makesWay(z, wolf, now + 4, async () => { moved++; });
+    assert.equal(moved, 0, 'but not out of a fight');
+    wolf.target = null; wolf.roomId = 'f'; moved = 0;
+    await whiteroe.makesWay(z, wolf, now + 4, async () => { moved++; });
+    assert.equal(moved, 0, 'and nothing elsewhere is moved by it');
+    // the followers come for whoever is near it, and never into its room
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'b', away: false };
+    z.sessions.set('me', me);
+    const f = { id: 'f1', templateId: 'the-follower', roomId: 'e', hidden: true, grudges: [], target: null };
+    z.creatures.set('f1', f);
+    await whiteroe.follows(z, f, now + 5);
+    assert.equal(f.roomId, 'd', 'it closes on you a room at a time');
+    assert.equal(f.followAt, now + 5 + 15_000 * 2, 'quicker the nearer you are to the roe (one step off: 30s)');
+    await whiteroe.follows(z, f, now + 6);
+    assert.equal(f.roomId, 'd', 'on its own clock');
+    me.roomId = 'a'; f.roomId = 'b'; f.followAt = 0;
+    await whiteroe.follows(z, f, now + 7);
+    assert.equal(f.roomId, 'b', 'it never steps into the roe\'s room');
+    me.roomId = 'f'; f.roomId = 'b'; f.followAt = 0; roe.roomId = 'a';
+    await whiteroe.follows(z, f, now + 8);
+    assert.equal(f.roomId, 'b', 'five steps from the roe and you are nobody it follows');
+    // it drops on you more readily the nearer the roe
+    me.roomId = 'b';
+    assert.equal(whiteroe.wakeMult(z, f, me, now + 9), 3, 'a step off it: three times');
+    me.roomId = 'e';
+    assert.equal(whiteroe.wakeMult(z, f, me, now + 10), 1.5, 'four off: half again');
+    me.roomId = 'f';
+    assert.equal(whiteroe.wakeMult(z, f, me, now + 11), 1, 'further: as ever');
+    assert.equal(whiteroe.wakeMult(z, wolf, { ...me, roomId: 'a' }, now + 12), 1, 'only the follower');
+    // whoever kills it has the wood against them
+    whiteroe.slain(z, me);
+    assert.deepEqual(wolf.grudges.map((g) => g.pk), ['me'], 'every animal in the wood holds it against you');
+    assert.deepEqual(f.grudges.map((g) => g.pk), ['me']);
+    assert.match(z.said.join(' '), /turns toward you|about you/);
+    // and the world's census never culls it as a spare roe
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /const cap = line === RAT_KING \|\| line === WHITE_ROE \? 1/, 'one, kept through a deploy');
+    assert.match(ai, /if \(whiteroe\.roams\(creature\)\) exits = whiteroe\.woodSteps\(z, exits\);/, 'it walks the wood');
+    assert.match(ai, /halfBlind \* whiteroe\.wakeMult\(z, c, session, now\)/, 'the drop reads the roe');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.doesNotMatch(zd.match(/export const MIGRANTS = new Set<string>\(\[[\s\S]*?\]\);/)[0], /"white-roe"/, 'it keeps to the wood');
   });
 
   check('the log keeps a day of text and lets the rest go (2026-10-27)', () => {

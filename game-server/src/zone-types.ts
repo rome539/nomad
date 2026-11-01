@@ -239,6 +239,7 @@ export interface Creature {
   danceUntil?: number; // ms the summer dance runs to; the household on the summer ground holds the circle until it ends
   heldUntil?: number; // ms a hollow thing stands frozen to that note (cleared early only by the singer dying — then it just... stays)
   repositionAt?: number; // lurkers: next time it re-reads the traffic and shifts its ambush
+  followAt?: number; // a follower near the white roe: its next step toward whoever it is following (whiteroe.ts)
   breathAt?: number;      // THE SUMMIT: ms the drawn breath lands. Set = the room has been told and the clock is running (ai.drakeBeat)
   nextBreathAt?: number;  // ...and the soonest it may draw another
   airborneUntil?: number; // THE SUMMIT: ms it is off the ground. Nothing swung can reach it while this holds; a thrown weapon still can

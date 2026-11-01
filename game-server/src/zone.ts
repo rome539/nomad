@@ -84,6 +84,7 @@ import * as carving from "./carving";
 import * as campfire from "./campfire";
 import * as body from "./body";
 import * as ratking from "./ratking";
+import * as whiteroe from "./whiteroe";
 import * as rising from "./rising";
 import * as cough from "./cough";
 import * as dice from "./dice";
@@ -137,7 +138,7 @@ import { FORGE_STOCK,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  STARVING_AT, SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  STARVING_AT, WHITE_ROE, SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -5873,6 +5874,10 @@ export class ZoneDO implements DurableObject {
         ai.waters(this, creature, now);
         // ...and the unseen things shift their ambushes to where the feet go.
         ai.lurkerDrifts(this, creature, now);
+        // Near the white roe the followers come for you, and nothing stays in
+        // its room (whiteroe.ts).
+        await whiteroe.follows(this, creature, now);
+        await whiteroe.makesWay(this, creature, now, (c) => ai.creatureMoves(this, c, now, "flee", !!c.hidden));
         // The cantor opens its jaw and the dead stop where they stand.
         ai.cantorSings(this, creature, now);
         // Two crawlers in one room fight for it (RAT_RIVALS).
@@ -6201,6 +6206,7 @@ export class ZoneDO implements DurableObject {
     await body.sweep(this, now); // a stiffened body past its hold lets go (body.ts)
     rising.tick(this, now);      // the dead that only seemed to fall get up (rising.ts)
     ratking.roll(this, now);     // about once a day, a rat king comes to the warrens (ratking.ts)
+    whiteroe.roll(this, now);    // about once a day, a white roe comes into the wood (whiteroe.ts)
     cough.tick(this, now);       // the drowned's water, a chill, smoke: what sets you coughing (cough.ts)
     this.applyRot(now, false);
     this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches
@@ -7078,6 +7084,7 @@ export class ZoneDO implements DurableObject {
     this.fxDied(creature.roomId, creature.templateId);
     this.creatures.delete(creature.id);
     if (creature.templateId === RAT_KING) ratking.fell(this); // its rats go leaderless (ratking.ts)
+    if (creature.templateId === WHITE_ROE) whiteroe.slain(this, killer); // the wood turns on its killer (whiteroe.ts)
     this.noteCreaturesChanged(); // a throw can kill between beats
     for (const s of this.sessions.values()) {
       if (s.target === creature.id) s.target = null;
