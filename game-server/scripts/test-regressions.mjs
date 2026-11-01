@@ -610,6 +610,18 @@ try {
     assert.equal(carving.roomLines(z, me).length, 1, 'it stands in the gatehouse');
     assert.equal(carving.roomLines(z, { pubkey: 'outside', roomId: 'gate' }).length, 0, 'not out on the ground');
     assert.match(carving.lookPlaced(z, me, made.itemId.slice(8)), /Cut into the base: Rome/);
+    // only its carver can take it up again (2026-11-01)
+    const kind = made.itemId.slice(8);
+    Object.assign(z, { packRoom: () => true, inGatehouse: new Set(['me', 'you']) });
+    said.length = heard.length = 0;
+    await handleGatehouse(z, other, 'get ' + kind);
+    assert.match(heard.join(' '), /Not from in here/, 'someone else cannot take it');
+    assert.equal(carving.roomLines(z, me).length, 1, 'and it still stands');
+    await handleGatehouse(z, me, 'pick up stone ' + kind);
+    assert.match(said.join(' '), /You take up a stone .* again/, 'its carver takes it back');
+    assert.equal(carving.roomLines(z, me).length, 0, 'gone from the spot');
+    const back = me.items.find((c) => c.itemId === made.itemId);
+    assert.ok(back && back.loreId, 'back in the pack with its record');
     assert.match(readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8'), /lines\.push\(\.\.\.carving\.roomLines\(z, session\)\);/, 'the gatehouse look lists them');
     said.length = 0;
     await handleGatehouse(z, me, 'carve');
@@ -623,6 +635,8 @@ try {
     assert.equal(isSpeech('carve rock'), false, 'the client echoes it as a command');
     assert.equal(isSpeech('carve my name'), true);
     assert.equal(isSpeech('pvp on'), false, 'and pvp, which is done at a gate');
+    assert.equal(isSpeech('get stone owl'), false, 'and taking up a carving');
+    assert.equal(isSpeech('get me a drink'), true);
   });
   await checkAsync('a smoke in the lockbox can be lit; one in the vault cannot (2026-11-01)', async () => {
     const { db, D1 } = sqliteD1();
@@ -2480,11 +2494,14 @@ try {
     assert.deepEqual(carving.roomLines(z, s), ['A weathered stone shape sits here, almost past knowing.'], 'two days and it is almost gone');
     placed.placedAt = Date.now() - 3.1 * day;
     assert.deepEqual(carving.roomLines(z, s), [], 'three days and it is gone');
-    // Three to a spot: a fourth puts the most weathered out.
+    // Three to a spot, and a full spot refuses a fourth: nothing standing is destroyed (2026-11-01).
     z.carvings.set('the-green', [0, 1, 2].map((i) => ({ id: 'c' + i, kind: 'owl', quality: 1, carver: 'X', roomId: 'the-green', inside: '', lasting: false, placedAt: Date.now() - i * day * 0.5 })));
-    s.items.push(Object.assign(item('carving-hare'), { loreId: 'h1' })); rows.set('h1', { kind: 'hare', quality: 0, carver: 'Rome' });
+    const hare = Object.assign(item('carving-hare'), { loreId: 'h1' });
+    s.items.push(hare); rows.set('h1', { kind: 'hare', quality: 0, carver: 'Rome' });
     await carving.cmdPlace(z, s, 'hare');
-    assert.deepEqual(z.carvings.get('the-green').map((c) => c.id).sort(), ['c0', 'c1', 'h1'], 'three to a spot, and the oldest-weathered went');
+    assert.deepEqual(z.carvings.get('the-green').map((c) => c.id).sort(), ['c0', 'c1', 'c2'], 'the three standing all stay');
+    assert.ok(s.items.includes(hare), 'and the fourth stays in the pack');
+    s.items.splice(s.items.indexOf(hare), 1);
     // In your own den it lasts.
     z.inDen = new Map([['pk', 'pk']]); z.dens = new Map([['pk', { roomId: 'the-green', holder: 'pk' }]]);
     s.items.push(Object.assign(item('carving-crow'), { loreId: 'k1' })); rows.set('k1', { kind: 'crow', quality: 4, carver: 'Rome' });

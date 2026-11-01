@@ -1991,6 +1991,9 @@ export function cmdRing(z: ZoneDO, session: Session, arg: string): void {
 
 export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive = false): Promise<void> {
   if (!arg) return z.send(session, "Get what?");
+  // Your own carving, set down here, comes back up first; inside your den it
+  // stands on your side of the bar, so it is in reach where the street is not.
+  if (!fromDive && await carving.pickUp(z, session, arg)) return;
   // The street's floor is not in reach from behind your own bar.
   const barred = z.behindTheDoor(session);
   if (barred) return z.send(session, barred);

@@ -3271,6 +3271,9 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     gatehouseFeed(z, SING_ROOM.replace("{name}", session.name), session.pubkey);
     return;
   }
+  // Your own carving, set down by this fire, can be taken up again. Anything
+  // else `get` names is still out on the floor beyond the door.
+  if (v === "get" && await carving.pickUp(z, session, cmd.arg)) return z.sendGateCtx(session);
   if (GATEHOUSE_BARRED.has(v)) {
     return z.send(session, "Not from in here — the dungeon is on the other side of that door. ('out' to step back into it.)");
   }

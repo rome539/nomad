@@ -2,8 +2,8 @@
 // can cut stone, comes out as a small stone carving: a random one, with no
 // worth to anybody. How well it is cut is the best tool in the pack (the
 // chisels, and the stone tools the world already had, CARVE_TOOLS). `place`
-// sets it down where you stand, and there it stays: nobody can pick it up.
-// Inside its carver's own den it lasts; anywhere else it weathers - worn, then
+// sets it down where you stand, and there it stays: only its carver can take
+// it up again, and a spot that already holds three takes no more. Inside its carver's own den it lasts; anywhere else it weathers - worn, then
 // almost past knowing, then gone - over CARVE_WEATHER_MS.
 //
 // A carried carving is an ordinary pack row whose lore_id is its key in the
@@ -26,6 +26,7 @@ export interface PlacedCarving {
   kind: string;
   quality: number;
   carver: string;
+  carverPk: string; // only the hand that cut it can take it up again
   roomId: string;
   inside: string;   // the holder of the den it stands inside, "" out on the ground
   lasting: boolean; // set down inside its carver's own den
@@ -47,10 +48,10 @@ export async function loadCarvings(z: ZoneDO): Promise<Map<string, PlacedCarving
   // What has weathered away while the world slept goes for good.
   await z.env.DB.prepare("DELETE FROM carvings WHERE room_id != '' AND lasting = 0 AND placed_at < ?")
     .bind(Date.now() - CARVE_WEATHER_MS).run();
-  const rows = await z.env.DB.prepare("SELECT id, kind, quality, carver, room_id, inside, lasting, placed_at FROM carvings WHERE room_id != ''")
-    .all<{ id: string; kind: string; quality: number; carver: string; room_id: string; inside: string; lasting: number; placed_at: number }>();
+  const rows = await z.env.DB.prepare("SELECT id, kind, quality, carver, carver_pk, room_id, inside, lasting, placed_at FROM carvings WHERE room_id != ''")
+    .all<{ id: string; kind: string; quality: number; carver: string; carver_pk: string; room_id: string; inside: string; lasting: number; placed_at: number }>();
   for (const r of rows.results ?? []) {
-    const c: PlacedCarving = { id: r.id, kind: r.kind, quality: r.quality, carver: r.carver, roomId: r.room_id, inside: r.inside, lasting: !!r.lasting, placedAt: r.placed_at };
+    const c: PlacedCarving = { id: r.id, kind: r.kind, quality: r.quality, carver: r.carver, carverPk: r.carver_pk, roomId: r.room_id, inside: r.inside, lasting: !!r.lasting, placedAt: r.placed_at };
     out.set(c.roomId, [...(out.get(c.roomId) ?? []), c]);
   }
   return out;
@@ -128,21 +129,19 @@ export async function cmdPlace(z: ZoneDO, session: Session, arg: string): Promis
   const now = Date.now();
   const side = sideOf(z, session);
   const lasting = side !== "" && side === session.pubkey;
-  // Three to a spot: a fourth puts the most weathered of them out of its place.
-  const standing = here(z, session, now);
-  if (standing.length >= CARVE_ROOM_CAP) {
-    const gone = [...standing].sort((a, b) => (stage(b, now) - stage(a, now)) || (a.placedAt - b.placedAt))[0];
-    z.carvings.set(session.roomId, (z.carvings.get(session.roomId) ?? []).filter((c) => c.id !== gone.id));
-    await z.env.DB.prepare("DELETE FROM carvings WHERE id = ?").bind(gone.id).run();
+  // Three to a spot, and a full spot takes no more: nothing already standing is
+  // ever put out to make room for another (rome, 2026-11-01).
+  if (here(z, session, now).length >= CARVE_ROOM_CAP) {
+    return z.send(session, "There is no room left here for another. You keep it.");
   }
   // A carving carried since before its record (or one that lost it) is made
   // whole here with what can be known: a crude cut, by whoever sets it down.
   let rec = carried.loreId
-    ? await z.env.DB.prepare("SELECT quality, carver FROM carvings WHERE id = ?").bind(carried.loreId).first<{ quality: number; carver: string }>()
+    ? await z.env.DB.prepare("SELECT quality, carver, carver_pk FROM carvings WHERE id = ?").bind(carried.loreId).first<{ quality: number; carver: string; carver_pk: string }>()
     : null;
   const id = carried.loreId ?? uuid();
   if (!rec) {
-    rec = { quality: 0, carver: session.name };
+    rec = { quality: 0, carver: session.name, carver_pk: session.pubkey };
     await z.env.DB.prepare("INSERT INTO carvings (id, kind, quality, carver, carver_pk, carved_at) VALUES (?, ?, ?, ?, ?, ?)")
       .bind(id, kind, 0, session.name, session.pubkey, now).run();
   }
@@ -150,7 +149,7 @@ export async function cmdPlace(z: ZoneDO, session: Session, arg: string): Promis
     .bind(session.roomId, side, lasting ? 1 : 0, now, id).run();
   session.items.splice(session.items.indexOf(carried), 1);
   await removeItemRow(z.env.DB, carried.rowId);
-  const placed: PlacedCarving = { id, kind, quality: rec.quality, carver: rec.carver, roomId: session.roomId, inside: side, lasting, placedAt: now };
+  const placed: PlacedCarving = { id, kind, quality: rec.quality, carver: rec.carver, carverPk: rec.carver_pk, roomId: session.roomId, inside: side, lasting, placedAt: now };
   z.carvings.set(session.roomId, [...(z.carvings.get(session.roomId) ?? []), placed]);
   const name = z.world!.itemTemplates.get(carried.itemId)?.name ?? `a stone ${kind}`;
   z.send(session, `You set ${name} down, and leave it where it stands.`);
@@ -162,6 +161,36 @@ export async function cmdPlace(z: ZoneDO, session: Session, arg: string): Promis
   }
   z.sendStatus(session);
   z.markSimDirty();
+}
+
+// `get <carving>`: its carver takes it up again, and it goes back in the pack
+// whole, with its cut and its name. Anyone else's stays where it was put.
+// Returns false when nothing of the carver's own here answers to the words, so
+// the ordinary floor (or the gatehouse's refusal) answers instead.
+export async function pickUp(z: ZoneDO, session: Session, arg: string): Promise<boolean> {
+  const now = Date.now();
+  const words = arg.trim().toLowerCase().replace(/^up\s+/, "").replace(/^(the|a|an|my)\s+/, "").replace(/^stone\s+/, "").trim();
+  const found = here(z, session, now).find((c) => c.carverPk === session.pubkey && (words === c.kind || words === "carving"));
+  if (!found) return false;
+  const itemId = CARVING_ITEM(found.kind);
+  if (!z.packRoom(session, itemId)) { z.send(session, "You have no room for it."); return true; }
+  const got = await z.grantItem(session, itemId);
+  if (!got) { z.send(session, "You have no room for it."); return true; }
+  got.loreId = found.id;
+  await setItemLoreId(z.env.DB, got.rowId, found.id);
+  await z.env.DB.prepare("UPDATE carvings SET room_id = '', inside = '', lasting = 0, placed_at = 0 WHERE id = ?").bind(found.id).run();
+  z.carvings.set(found.roomId, (z.carvings.get(found.roomId) ?? []).filter((c) => c.id !== found.id));
+  const name = z.world!.itemTemplates.get(itemId)?.name ?? `a stone ${found.kind}`;
+  z.send(session, `You take up ${name} again.`, "gain");
+  const line = `${session.name} takes up ${name}.`;
+  if (found.inside === GATEHOUSE_SIDE) gatehouseFeed(z, line, session.pubkey);
+  else {
+    z.roomFeed(session.roomId, line, session.pubkey, false);
+    z.refreshRoomCtx(session.roomId);
+  }
+  z.sendStatus(session);
+  z.markSimDirty();
+  return true;
 }
 
 // What the room says of them.
