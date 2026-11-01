@@ -28,6 +28,7 @@ import * as pvp from "./pvp";
 import * as lore from "./lore";
 import * as conditions from "./conditions";
 import * as den from "./den";
+import * as carving from "./carving";
 import * as campfire from "./campfire";
 import { isWet, soak } from "./cough";
 import * as detail from "./detail";
@@ -512,6 +513,7 @@ export function describePlayer(z: ZoneDO, session: Session, other: Session): str
     : other.hp > other.maxHp * 0.33 ? "badly hurt"
     : "at the very edge of it";
   const out = [`${other.name}, a fellow wanderer (${cond}).`];
+  if (pvp.isPvp(other)) out.push(pvp.PVP_TELL); // they chose to fight other wanderers (mig 359)
 
   // WHAT THEY ARE DOING, before what they are carrying. A posture outranks the
   // loadout in a close look for the same reason it does in the room line: it is
@@ -890,6 +892,8 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     // the warrens the halls' dressed-ashlar answer about their walls when the
     // warrens are dug, not built. The map's reading is the finer one and it is
     // the honest one to describe ground with.
+    const placed = carving.lookPlaced(z, session, arg);
+    if (placed) return z.send(session, placed, "study");
     const feature = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
     if (feature) return z.send(session, feature, "study");
   }
@@ -966,6 +970,7 @@ export function ledgerLines(session: Session, withAge: boolean): string[] {
 
 export function cmdSheet(z: ZoneDO, session: Session): void {
   const lines = ledgerLines(session, true);
+  lines.push(pvp.pvpLine(session)); // not in the ledger: the published sheet is the record, this is your standing
   lines.push(`('publish sheet' speaks this ledger to the relays under the dungeon's hand; 'publish kind 1' posts it to your OWN feed, in your own name, for your followers to see. Until then it is yours alone.)`);
   z.send(session, lines.join("\n"));
 }
@@ -1338,7 +1343,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   // the exchange ends both ways — the chase is a walk, and re-engaging in the
   // next room is a fresh deliberate act, ambush rules and all.
   const hunter = [...z.sessions.values()].find(
-    (s) => s.pvpTarget === session.pubkey && s.roomId === session.roomId && s.hp > 0,
+    (s) => s.pvpTarget === session.pubkey && s.roomId === session.roomId && s.hp > 0 && pvp.isPvp(s) && pvp.isPvp(session),
   );
   if (hunter && partingOdds > 0 && chance(partingOdds)) {
     const hw = z.equippedItem(hunter, "weapon");
@@ -3482,8 +3487,10 @@ export function cmdWash(z: ZoneDO, session: Session): void {
     : `${session.name} stands with their hands up to the rain, scrubbing at them.`, session.pubkey, false); // LOCAL: washing man-blood is a killer covering tracks — never a broadcast tell
 }
 
-export function cmdCarve(z: ZoneDO, session: Session, arg: string): void {
+export async function cmdCarve(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const words = arg.replace(/[\r\n\t]+/g, " ").replace(/"/g, "'").trim();
+  // `carve rock`: work a loose rock into a small carving (carving.ts, mig 358).
+  if (await carving.carveRock(z, session, words)) return;
   // Bare `carve` at a milestone cuts your NAME into the road's register — the
   // same shape as bare `carve` inside the gatehouse setting down halls on the
   // wall chart. `carve <words>` still works here and is still just graffiti

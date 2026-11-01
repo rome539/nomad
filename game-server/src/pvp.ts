@@ -14,7 +14,7 @@ import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { chance, randInt, pick } from "./rng";
 import * as den from "./den";
-import { recordPvpKill, deedsBump, trait, hasTrait } from "./world";
+import { recordPvpKill, deedsBump, trait, hasTrait, setPvpAt } from "./world";
 import {
   STANCE, RECKLESS_MISS, PLAYER_DMG_MIN, PLAYER_DMG_MAX, CRIT_CHANCE, FUMBLE_CHANCE,
   WOUNDED_FRACTION, WOUNDED_DMG_MULT, WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS,
@@ -24,8 +24,58 @@ import {
   BLOOD_FRESH_MS, BLOOD_DRY_MS, BLOOD_FADE_MS,
   FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_HIT, FEED_REST_CAUGHT,
   playerBleedOdds,
-  groundWord, drownGround,
+  groundWord, drownGround, PVP_LOCK_MS,
 } from "./zone-data";
+
+// ---- PVP BY CHOICE (rome, 2026-11-01, mig 359) ----
+// Steel between wanderers only where BOTH have chosen it. Everyone starts out
+// of it; the choice is gate business, and once on it holds PVP_LOCK_MS.
+export function isPvp(s: Session): boolean {
+  return (s.pvpAt ?? 0) > 0;
+}
+function lockLeft(s: Session, now: number): number {
+  return Math.max(0, (s.pvpAt ?? 0) + PVP_LOCK_MS - now);
+}
+function hoursWord(ms: number): string {
+  const h = Math.ceil(ms / 3_600_000);
+  return h <= 1 ? "within the hour" : `in about ${h} hours`;
+}
+// The wanderer's own standing, for the sheet.
+export function pvpLine(s: Session, now = Date.now()): string {
+  if (!isPvp(s)) return "You do not fight other wanderers. (that choice is made at a gate: 'pvp on')";
+  const left = lockLeft(s, now);
+  return left > 0
+    ? `You fight other wanderers who fight. The choice holds; it can be taken back at a gate ${hoursWord(left)}.`
+    : "You fight other wanderers who fight. It can be taken back at any gate ('pvp off').";
+}
+// How it shows on them, to anyone who looks.
+export const PVP_TELL = "They carry themselves like someone ready to fight another wanderer.";
+
+// `pvp`, `pvp on`, `pvp off` - at a gate, and not in a fight.
+export async function cmdPvp(z: ZoneDO, session: Session, arg: string): Promise<void> {
+  const want = arg.trim().toLowerCase();
+  if (!want) return z.send(session, pvpLine(session));
+  if (want !== "on" && want !== "off") return z.send(session, "pvp on, or pvp off.");
+  if (!z.world!.entryRooms.has(session.roomId)) {
+    return z.send(session, "That is decided at a gate, not out here.");
+  }
+  if (z.inCombat(session) || session.pvpTarget) return z.send(session, "Not with a fight on.");
+  const now = Date.now();
+  if (want === "on") {
+    if (isPvp(session)) return z.send(session, pvpLine(session, now));
+    session.pvpAt = now;
+    await setPvpAt(z.env.DB, session.pubkey, now);
+    z.send(session, "So be it. From here on, any wanderer who has made the same choice may come for you, and you for them. It holds for a day before you can take it back.");
+  } else {
+    if (!isPvp(session)) return z.send(session, pvpLine(session, now));
+    const left = lockLeft(session, now);
+    if (left > 0) return z.send(session, `Not yet. The choice holds; it can be taken back ${hoursWord(left)}.`);
+    session.pvpAt = 0;
+    await setPvpAt(z.env.DB, session.pubkey, 0);
+    z.send(session, "Done. You are out of it: no wanderer can come for you, and you come for none.");
+  }
+  z.refreshRoomCtx(session.roomId);
+}
 
 // How hurt the other one looks — the same buckets as selfExamine, because
 // you never see a stranger's numbers, only how they carry themselves.
@@ -47,6 +97,9 @@ export async function attackPlayer(z: ZoneDO, session: Session, other: Session):
   if (z.outOfWorld(other)) {
     return z.send(session, `${other.name} has stepped out of the world — nothing can reach them at the gate's bench.`);
   }
+  // BOTH HAVE TO HAVE CHOSEN IT (mig 359).
+  if (!isPvp(session)) return z.send(session, "You do not fight other wanderers. (that choice is made at a gate: 'pvp on')");
+  if (!isPvp(other)) return z.send(session, `${other.name} does not fight other wanderers.`);
   // A BARRED DOOR STOPS PEOPLE (mig 172). Either side of it: you cannot reach
   // in, and you cannot reach out — the bar is a piece of oak, not a shooting
   // slit. Steel between two people inside the SAME den is another matter, and
@@ -99,7 +152,7 @@ export async function tickPvp(z: ZoneDO): Promise<void> {
   for (const attacker of [...z.sessions.values()]) {
     if (!attacker.pvpTarget) continue;
     const prey = z.sessions.get(attacker.pvpTarget);
-    if (!prey || prey.hp <= 0 || attacker.hp <= 0
+    if (!prey || prey.hp <= 0 || attacker.hp <= 0 || !isPvp(prey) || !isPvp(attacker)
       || prey.roomId !== attacker.roomId || z.outOfWorld(prey) || z.outOfWorld(attacker)
       || !z.reachable(prey) || !z.reachable(attacker)) {
       attacker.pvpTarget = null;

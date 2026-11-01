@@ -73,6 +73,7 @@ try {
   const player = name => ({
     pubkey: name, name, roomId: 'hall', hp: 60, maxHp: 60,
     stance: 'steady', items: [], pvpTarget: null, target: null, staggered: false,
+    pvpAt: 1, // these fighters have chosen to fight other wanderers (mig 359)
   });
   function fixture() {
     const z = new ZoneDO({}, {});

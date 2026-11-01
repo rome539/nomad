@@ -334,6 +334,12 @@ export interface PlayerRow {
   stance: string; // "reckless" | "steady" | "guarded" — persisted play-style
   exhaustion?: string;
   keeper_told: string; // how far through each keeper's telling you are: "muster-clerk:4,the-roadwarden:9"
+  pvp_at?: number; // ms the wanderer chose to fight other wanderers; 0 = out of it (mig 359)
+}
+
+// The choice to fight other wanderers, made at a gate (pvp.cmdPvp).
+export async function setPvpAt(db: D1Database, pubkey: string, at: number): Promise<void> {
+  await db.prepare("UPDATE players SET pvp_at = ? WHERE pubkey = ?").bind(at, pubkey).run();
 }
 
 // How far you have got through each region keeper's story (zone-data.KEEPERS).

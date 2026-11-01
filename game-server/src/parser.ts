@@ -83,6 +83,8 @@ export type Verb =
   | "den"
   | "stow"
   | "fetch"
+  | "place"
+  | "pvp"
   // ---- THE GESTURES (rome, 2026-08-30) ----------------------------------
   // Three postures the room keeps, and three signals that cost something.
   // There is deliberately no free-text emote here and there never will be: in
@@ -231,6 +233,8 @@ const VERB_ALIASES: Record<string, Verb> = {
   den: "den", home: "den", holding: "den", hearth: "den",
   stow: "stow", shelve: "stow",
   fetch: "fetch", unstow: "fetch",
+  place: "place",
+  pvp: "pvp",
   unstash: "unstash", unbox: "unstash",
   vault: "vault", bank: "vault", deposit: "vault",
   unvault: "unvault", withdraw: "unvault", retrieve: "unvault",
@@ -685,6 +689,10 @@ export const HELP_TEXT = [
   "                    time; a torch is ground out and spent. 'equip shield' does",
   "                    it too, trading the light for your guard.",
   "  carve <words>     scratch up to 40 characters into the stone; it weathers within a day",
+  "  carve rock        work a loose rock into a small carving",
+  "  place <carving>   set a carving down where you stand, and leave it there",
+  "  pvp on|off        at a gate — choose to fight other wanderers, or not. Everyone",
+  "                    starts out of it; once on, it holds a day before it comes off",
   "  claim [item]      at any gate — the dungeon seals your claim on what you carry",
   "  stash <item>      at any gate — the lockbox (8 slots) holds ANYTHING you",
   "                    don't want to lose on the run. 'stash' alone looks inside.",

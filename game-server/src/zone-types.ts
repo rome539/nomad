@@ -106,6 +106,7 @@ export interface Session {
   studied?: Map<string, Set<string>>; // templateId -> the behaviours already written down across every carried journal (study.ts) — cache over journal_logs so the SYNC chip builder can hide a redundant `study` (sendCtx runs every combat round; it can't read D1). undefined = not hydrated yet, and the chip shows, same as before the cache existed
   lastAmbientAt: number; // ms of the last atmosphere line (rate-limits the dungeon's breathing)
   lastAmbientLine?: string; // the last one said — never said twice running, however small the pool
+  pvpAt?: number; // ms this wanderer chose to fight other wanderers; 0/unset = out of it (players.pvp_at, mig 359)
   keeperTold: Map<string, number>; // template id -> how many lines of that keeper's story you have heard (persisted, players.keeper_told)
   keeperDueAt?: number; // ms the keeper gets round to saying his one line this visit; 0/unset = already said it, or you aren't behind a door
   lastFishAt?: number; // ms of the last fishing cast (a short patience between casts)

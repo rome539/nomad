@@ -2,6 +2,7 @@
 // journal (study + blood fill the bestiary). zone.ts keeps the instanced-floor
 // plumbing (journals dropping/lifting rides the get/drop/death paths); this
 // file owns what the knowledge SAYS and how it reaches the client.
+import * as carving from "./carving";
 import type { ZoneDO } from "./zone";
 import type { Region, World, Exit } from "./world";
 import type { Session } from "./zone-types";
@@ -926,6 +927,9 @@ export function journalPageText(e: any): string {
 // warning. ("This notched greatsword has 214 kills, went past the black door
 // twice, and its last three owners died holding it.")
 export async function gearLedger(z: ZoneDO, loreId: string): Promise<string> {
+  // A carving rides the same key, and says how it was cut and by whom (358).
+  const cut = await carving.carriedLine(z, loreId);
+  if (cut !== null) return cut;
   const d = await deedsLoad(z.env.DB, loreId);
   if (!d) return "";
   const bits: string[] = [];

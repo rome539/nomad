@@ -80,6 +80,7 @@ import * as verbs from "./verbs";
 import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
+import * as carving from "./carving";
 import * as campfire from "./campfire";
 import * as body from "./body";
 import * as ratking from "./ratking";
@@ -294,6 +295,7 @@ export class ZoneDO implements DurableObject {
   // load and written through to D1 on every change — six rows today, a few
   // hundred at the arc's full size, and every read of it is a room lookup.
   public dens = new Map<string, den.Den>();
+  public carvings = new Map<string, carving.PlacedCarving[]>(); // set down, by room (carving.ts, mig 358)
   // Who has spilled blood under which roof, and is barred from it for good
   // (mig 171). Outlives the hold that was standing at the time, so it is kept
   // apart from `dens` and never cleared by a lapse or an abandon.
@@ -713,6 +715,7 @@ export class ZoneDO implements DurableObject {
     this.world = world;
     this.spawnKeptMemo = undefined; // the world's spawn rows just changed under it (reset + reload takes this path too)
     this.dens = await den.loadDens(this);
+    this.carvings = await carving.loadCarvings(this);
     this.denBlood = await den.loadDenBlood(this);
     this.buildWorldMaps(world);
     // LURKERS THAT PREDATE THEIR OWN LAW. `hidden` is stamped at CREATION, so a
@@ -1968,6 +1971,7 @@ export class ZoneDO implements DurableObject {
       bossKills: row.boss_kills ?? 0,
       accounts: row.accounts ?? 0,
       pvpKills: row.pvp_kills ?? 0,
+      pvpAt: row.pvp_at ?? 0,
       tokens: RATE_CAPACITY,
       tokensAt: Date.now(),
       nextThrowAt: 0,
@@ -2413,6 +2417,8 @@ export class ZoneDO implements DurableObject {
       case "sheet": return verbs.cmdSheet(this, session);
       case "leaderboard": return verbs.cmdLeaderboard(this, session);
       case "carve": return verbs.cmdCarve(this, session, cmd.arg);
+      case "place": return carving.cmdPlace(this, session, cmd.arg);
+      case "pvp": return pvp.cmdPvp(this, session, cmd.arg);
       // The board hangs in the gatehouse and nowhere else. Out here these three
       // point at the door rather than failing silently — a player who learned
       // 'post' inside will try it outside exactly once.
@@ -7929,6 +7935,8 @@ export class ZoneDO implements DurableObject {
     // signpost in the black, and the dark is the one thing that beats it.
     const sign = full && !indoors ? SIGNPOSTS[room.id] : undefined;
     if (sign) lines.push(`${sign.post} (look at the sign)`);
+    // What wanderers have carved and set down here (carving.ts).
+    if (full) lines.push(...carving.roomLines(this, session));
     // THE WAYSTONES (rome, 2026-08-15). The fingerpost above says where the
     // ROADS go; this says where the DOOR is, which is the thing a person who is
     // lost actually needs and the one question the world could never answer.

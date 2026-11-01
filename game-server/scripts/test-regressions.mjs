@@ -53,6 +53,8 @@ try {
         "export {loadLeaderboard} from './world';",
         "export {handleBench} from './gate';",
         "export {sendCtx} from './chips';",
+        "export * as carving from './carving';",
+        "export * as pvp from './pvp';",
         "export {PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, GATEHOUSE_NOARG, MOUTHS, WITNESSED_LINES} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
@@ -66,7 +68,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2329,6 +2331,113 @@ try {
     }
     const mig = readFileSync(new URL('../migrations/352_a_second_warden_on_the_open_ground.sql', import.meta.url), 'utf8');
     assert.match(mig, /VALUES \('ward-6', 'warden-surface', 'the-churchyard'\)/, 'set in the churchyard, with an id');
+  });
+
+  await checkAsync('pvp by choice: only two wanderers who both chose it fight, the choice is made at a gate, and it holds a day (2026-11-01)', async () => {
+    const said = [];
+    const writes = [];
+    const z = new ZoneDO({}, {});
+    z.env = { DB: { prepare: (sql) => ({ bind: (...a) => ({ run: async () => { writes.push([sql, ...a]); return {}; } }) }) } };
+    z.world = { entryRooms: new Set(['gate']), rooms: new Map(), exits: new Map(), mobTemplates: new Map(), itemTemplates: new Map(), mobSpawns: [], safeRooms: new Set() };
+    z.send = (s, m) => said.push(m); z.refreshRoomCtx = () => {}; z.outOfWorld = () => false; z.inCombat = () => false;
+    const mk = (pk, name, pvpAt) => ({ pubkey: pk, name, roomId: 'the-green', hp: 100, maxHp: 100, items: [], pvpAt, pvpTarget: null });
+    const a = mk('a', 'Ash', 0), b = mk('b', 'Bree', 0);
+    await pvp.attackPlayer(z, a, b);
+    assert.match(said.pop(), /You do not fight other wanderers/, 'out of it, you cannot start one');
+    assert.equal(b.pvpTarget, null);
+    a.pvpAt = Date.now();
+    await pvp.attackPlayer(z, a, b);
+    assert.match(said.pop(), /Bree does not fight other wanderers/, 'and you cannot fall on someone out of it');
+    assert.equal(a.pvpTarget, null, 'no fight starts');
+    // The choice is gate business.
+    const c = mk('c', 'Cole', 0);
+    await pvp.cmdPvp(z, c, 'on');
+    assert.match(said.pop(), /decided at a gate/, 'not out on the green');
+    c.roomId = 'gate';
+    await pvp.cmdPvp(z, c, 'on');
+    assert.ok(pvp.isPvp(c) && writes.some((w) => w[0].includes('pvp_at') && w[1] > 0 && w[2] === 'c'), 'on, and saved');
+    await pvp.cmdPvp(z, c, 'off');
+    assert.match(said.pop(), /Not yet.*about 24 hours/, 'it holds a day');
+    assert.ok(pvp.isPvp(c), 'still on');
+    c.pvpAt = Date.now() - 24 * 3600_000 - 1000;
+    await pvp.cmdPvp(z, c, 'off');
+    assert.ok(!pvp.isPvp(c) && writes.some((w) => w[0].includes('pvp_at') && w[1] === 0 && w[2] === 'c'), 'after a day it comes off, and is saved');
+    // A fight between two who chose it stops the round one of them is out of it.
+    const d = mk('d', 'Dun', Date.now()), e = mk('e', 'Eve', 0);
+    d.pvpTarget = 'e';
+    z.sessions = new Map([['d', d], ['e', e]]);
+    z.reachable = () => true;
+    await pvp.tickPvp(z);
+    assert.equal(d.pvpTarget, null, 'no round is fought against someone out of it');
+    assert.match(pvp.pvpLine(d), /You fight other wanderers/, 'the sheet says where you stand');
+  });
+
+  await checkAsync('carving: a rock and the right tool make a random carving cut as fine as the tool, and a placed one stays, three to a spot, weathering except in your own den (2026-11-01)', async () => {
+    assert.deepEqual(parse('place stone hare'), { verb: 'place', arg: 'stone hare' }, 'place reads its carving');
+    assert.deepEqual(parse('carve rock'), { verb: 'carve', arg: 'rock' }, 'and carve its rock');
+    const rows = new Map(); // the carvings table
+    const db = { prepare: (sql) => ({ bind: (...a) => ({
+      run: async () => {
+        if (sql.startsWith('INSERT INTO carvings')) rows.set(a[0], { kind: a[1], quality: a[2], carver: a[3] });
+        else if (sql.startsWith('UPDATE carvings')) Object.assign(rows.get(a[4]) ?? {}, { room_id: a[0] });
+        else if (sql.startsWith('DELETE FROM carvings WHERE id')) rows.delete(a[0]);
+        return {};
+      },
+      first: async () => (sql.includes('FROM carvings WHERE id') ? rows.get(a[0]) ?? null : null),
+    }) }) };
+    const z = new ZoneDO({}, {});
+    z.env = { DB: db };
+    const tpl = (id, name, rarity, slot = '') => [id, { id, name, rarity, slot, description: name + '.', weight: 0, barter: 0 }];
+    z.world = { itemTemplates: new Map([tpl('loose-rock', 'a loose rock', 'common', 'weapon'), tpl('rusted-chisel', 'a rusted chisel', 'common'),
+      tpl('keep-masons-chisel', "the keep-mason's chisel", 'epic'), tpl('hammerstone', 'a hammerstone', 'rare', 'weapon'), tpl('oyster-knife', 'an oyster knife', 'uncommon', 'weapon'),
+      ...['hare', 'crow', 'rat', 'deer', 'hyena', 'goat', 'owl', 'hound', 'hand', 'face', 'crown', 'figure', 'tower', 'drake'].map((k) => tpl('carving-' + k, 'a stone ' + k, 'common'))]),
+      mobTemplates: new Map(), rooms: new Map([['the-green', { id: 'the-green' }]]), exits: new Map(), mobSpawns: [], entryRooms: new Set(), safeRooms: new Set() };
+    z.send = (s, m) => said.push(m); z.roomFeed = () => {}; z.creatureNoise = () => {}; z.sendStatus = () => {}; z.refreshRoomCtx = () => {}; z.markSimDirty = () => {};
+    z.packRoom = () => true;
+    const said = [];
+    const item = (itemId) => ({ rowId: itemId + Math.random(), itemId, serial: null, equipped: false, condition: 100 });
+    const s = { pubkey: 'pk', name: 'Rome', roomId: 'the-green', items: [item('loose-rock'), item('oyster-knife')] };
+    await carving.carveRock(z, s, 'rock');
+    assert.match(said.pop(), /Nothing you carry will cut it/, 'a knife is no tool for stone');
+    assert.ok(s.items.some((c) => c.itemId === 'loose-rock'), 'and the rock is not spent on it');
+    s.items.push(item('rusted-chisel'), item('hammerstone'), item('keep-masons-chisel'));
+    assert.equal(await carving.carveRock(z, s, 'hello world'), false, 'carve <words> is still graffiti');
+    assert.equal(await carving.carveRock(z, s, 'rock'), true);
+    assert.ok(!s.items.some((c) => c.itemId === 'loose-rock'), 'the rock goes into the carving');
+    const got = s.items.find((c) => c.itemId.startsWith('carving-'));
+    assert.ok(got && got.loreId && rows.get(got.loreId), 'a carving, keyed to its record');
+    assert.equal(rows.get(got.loreId).quality, 3, 'cut by the best tool carried: the epic chisel, finely');
+    assert.match(said.pop(), /with the keep-mason's chisel.*Finely cut\./, 'the tool and the cut are said');
+    assert.equal(await carving.carriedLine(z, got.loreId), ' It is finely cut. Cut into the base: Rome.', 'a look at it in the pack');
+    // Set down out on the ground: it stays, and weathers.
+    const kind = got.itemId.slice(8);
+    await carving.cmdPlace(z, s, kind);
+    assert.ok(!s.items.includes(got), 'it leaves the pack');
+    assert.deepEqual(carving.roomLines(z, s), ['A stone ' + kind + ' sits here, finely cut.'], 'the room shows it');
+    assert.match(carving.lookPlaced(z, s, kind), /Cut into the base: Rome\./, 'a close look names its carver');
+    const placed = z.carvings.get('the-green')[0];
+    const day = 24 * 3600 * 1000;
+    placed.placedAt = Date.now() - 1.2 * day;
+    assert.deepEqual(carving.roomLines(z, s), ['A stone ' + kind + ' sits here, worn soft.'], 'a day out and it is worn');
+    placed.placedAt = Date.now() - 2.2 * day;
+    assert.deepEqual(carving.roomLines(z, s), ['A weathered stone shape sits here, almost past knowing.'], 'two days and it is almost gone');
+    placed.placedAt = Date.now() - 3.1 * day;
+    assert.deepEqual(carving.roomLines(z, s), [], 'three days and it is gone');
+    // Three to a spot: a fourth puts the most weathered out.
+    z.carvings.set('the-green', [0, 1, 2].map((i) => ({ id: 'c' + i, kind: 'owl', quality: 1, carver: 'X', roomId: 'the-green', inside: '', lasting: false, placedAt: Date.now() - i * day * 0.5 })));
+    s.items.push(Object.assign(item('carving-hare'), { loreId: 'h1' })); rows.set('h1', { kind: 'hare', quality: 0, carver: 'Rome' });
+    await carving.cmdPlace(z, s, 'hare');
+    assert.deepEqual(z.carvings.get('the-green').map((c) => c.id).sort(), ['c0', 'c1', 'h1'], 'three to a spot, and the oldest-weathered went');
+    // In your own den it lasts.
+    z.inDen = new Map([['pk', 'pk']]); z.dens = new Map([['pk', { roomId: 'the-green', holder: 'pk' }]]);
+    s.items.push(Object.assign(item('carving-crow'), { loreId: 'k1' })); rows.set('k1', { kind: 'crow', quality: 4, carver: 'Rome' });
+    await carving.cmdPlace(z, s, 'crow');
+    const kept = z.carvings.get('the-green').find((c) => c.id === 'k1');
+    assert.ok(kept.lasting && kept.inside === 'pk', 'set down inside your own den');
+    kept.placedAt = Date.now() - 30 * day;
+    assert.deepEqual(carving.roomLines(z, s), ['A stone crow sits here, masterfully cut.'], 'a month on, it has not weathered, and only the den shows it inside');
+    z.inDen = new Map();
+    assert.ok(!carving.roomLines(z, s).some((l) => /crow/.test(l)), 'out in the street the den piece is not on the ground');
   });
 
   await checkAsync('a pit hyena lives in the pits: it never moves house for good, and a fed one walks home (2026-10-31)', async () => {

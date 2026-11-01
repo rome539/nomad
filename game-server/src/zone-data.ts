@@ -12547,3 +12547,29 @@ export const MORPHS: Record<string, string[]> = {
     "This one is glossy and fat and very unhurried, which on this ground tells you what it has been eating.",
   ],
 };
+
+// ---- CARVING (rome, 2026-11-01, mig 358) ----
+// A loose rock, worked with a tool that can cut stone, comes out as a random
+// small carving with no worth. The best tool in the pack sets how well it is
+// cut: the chisels in every rarity, and the stone tools the world already had.
+// Set down (`place`), a carving stays where it was put, CARVE_ROOM_CAP to a
+// spot; inside its carver's own den it lasts, and anywhere else it weathers
+// through CARVE_STAGES and is gone after CARVE_WEATHER_MS.
+export const CARVE_TOOLS: Record<string, number> = {
+  "rusted-chisel": 0, "rusted-pick": 0,
+  "masons-chisel": 1, "masons-mallet": 1, "horsemans-pick": 1, "sappers-pick": 1,
+  "lettering-chisel": 2, "hammerstone": 2, "crow-beak-pick": 2,
+  "keep-masons-chisel": 3,
+  "the-unnamer": 4,
+};
+export const CARVE_QUALITY = ["crude", "roughly cut", "plainly cut", "finely cut", "masterfully cut"];
+export const CARVINGS = ["hare", "crow", "rat", "deer", "hyena", "goat", "owl", "hound", "hand", "face", "crown", "figure", "tower", "drake"];
+export const CARVING_ITEM = (kind: string): string => `carving-${kind}`;
+export const CARVE_ROOM_CAP = 3;
+export const CARVE_WEATHER_MS = 3 * 24 * 3_600_000; // carved to gone, anywhere but its carver's den
+
+// ---- PVP BY CHOICE (rome, 2026-11-01, mig 359) ----
+// Only two wanderers who have both chosen it can fight each other. The choice
+// is made at a gate (`pvp on`), and once made it holds this long before `pvp
+// off` will take it back, so nobody can start a fight and step out of it.
+export const PVP_LOCK_MS = 24 * 3_600_000;
