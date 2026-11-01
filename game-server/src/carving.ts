@@ -65,11 +65,20 @@ function sideOf(z: ZoneDO, session: Session): string {
   return insideOf(z, session.pubkey)?.holder ?? (z.inGatehouse.has(session.pubkey) ? GATEHOUSE_SIDE : "");
 }
 
+// Where a carving set down by this wanderer is filed. The gatehouse is ONE
+// room behind every gate - whoever comes in at any of them sits by the same
+// fire - so what stands there is filed under the gatehouse itself, never under
+// the gate a wanderer happened to come in by (rome, 2026-11-01: filed by gate,
+// three carvings vanished for him on coming in at another).
+function spotOf(z: ZoneDO, session: Session): string {
+  return sideOf(z, session) === GATEHOUSE_SIDE ? GATEHOUSE_SIDE : session.roomId;
+}
+
 // The ones standing where this wanderer is: the same room, the same side of
 // the same door, and not weathered away.
 function here(z: ZoneDO, session: Session, now: number): PlacedCarving[] {
   const side = sideOf(z, session);
-  return (z.carvings.get(session.roomId) ?? []).filter((c) => c.inside === side && stage(c, now) < 3);
+  return (z.carvings.get(spotOf(z, session)) ?? []).filter((c) => c.inside === side && stage(c, now) < 3);
 }
 
 // The best cut the pack can make (-1: none), and the tool that makes it.
@@ -146,11 +155,11 @@ export async function cmdPlace(z: ZoneDO, session: Session, arg: string): Promis
       .bind(id, kind, 0, session.name, session.pubkey, now).run();
   }
   await z.env.DB.prepare("UPDATE carvings SET room_id = ?, inside = ?, lasting = ?, placed_at = ? WHERE id = ?")
-    .bind(session.roomId, side, lasting ? 1 : 0, now, id).run();
+    .bind(spotOf(z, session), side, lasting ? 1 : 0, now, id).run();
   session.items.splice(session.items.indexOf(carried), 1);
   await removeItemRow(z.env.DB, carried.rowId);
-  const placed: PlacedCarving = { id, kind, quality: rec.quality, carver: rec.carver, carverPk: rec.carver_pk, roomId: session.roomId, inside: side, lasting, placedAt: now };
-  z.carvings.set(session.roomId, [...(z.carvings.get(session.roomId) ?? []), placed]);
+  const placed: PlacedCarving = { id, kind, quality: rec.quality, carver: rec.carver, carverPk: rec.carver_pk, roomId: spotOf(z, session), inside: side, lasting, placedAt: now };
+  z.carvings.set(placed.roomId, [...(z.carvings.get(placed.roomId) ?? []), placed]);
   const name = z.world!.itemTemplates.get(carried.itemId)?.name ?? `a stone ${kind}`;
   z.send(session, `You set ${name} down, and leave it where it stands.`);
   const line = `${session.name} sets ${name} down and leaves it there.`;

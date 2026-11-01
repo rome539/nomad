@@ -609,6 +609,10 @@ try {
     assert.match(heard.join(' '), /Rome sets a stone .* down/, 'the fire sees it set down');
     assert.equal(carving.roomLines(z, me).length, 1, 'it stands in the gatehouse');
     assert.equal(carving.roomLines(z, { pubkey: 'outside', roomId: 'gate' }).length, 0, 'not out on the ground');
+    // the gatehouse is one room behind every gate: in at another gate, the same fire, the same carving
+    z.inGatehouse.add('far');
+    assert.equal(carving.roomLines(z, { pubkey: 'far', roomId: 'sally-port' }).length, 1, 'seen from the gatehouse by whoever came in at another gate');
+    assert.equal(carving.roomLines(z, { pubkey: 'outside', roomId: 'sally-port' }).length, 0, 'and not out on that gate\'s ground');
     assert.match(carving.lookPlaced(z, me, made.itemId.slice(8)), /Cut into the base: Rome/);
     // only its carver can take it up again (2026-11-01)
     const kind = made.itemId.slice(8);
@@ -652,6 +656,26 @@ try {
     assert.equal(back.dir, -1, 'and still the same way');
     assert.ok(first.t >= 0 && first.t < 600, 'a sky not seen yet starts anywhere');
     assert.match(pub, /var kept = skyHandover\(name, t, dir, next, performance\.now\(\)\);\n      name = next; geo = null; t = kept\.t; dir = kept\.dir;/, 'the drift uses it');
+  });
+  check('the fade between rooms carries the drifting sky where it is, not the still picture (2026-11-01)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const src = pub.match(/function skyCopy\(node\) \{[\s\S]*?\n\}\n/)[0];
+    const el = (tag, attrs = {}) => ({ tag, id: attrs.id || '', style: { display: 'block', ...(attrs.style || {}) }, children: attrs.children || [], width: attrs.width, height: attrs.height,
+      appendChild(c) { this.children.push(c); }, removeAttribute(k) { if (k === 'id') this.id = ''; },
+      cloneNode(deep) { return el(tag, { style: { ...this.style }, children: deep ? this.children.map((c) => c.cloneNode(true)) : [], width: this.width, height: this.height, id: this.id }); },
+      getContext: () => ({ drawImage() {} }) });
+    const drift = el('div', { id: 'sky-drift', style: { transform: 'translate3d(-412.50px,0,0)' }, children: [el('i'), el('i')] });
+    const stars = el('canvas', { id: 'sky-stars', width: 1280, height: 720 });
+    const document = { getElementById: (id) => ({ 'sky-drift': drift, 'sky-stars': stars })[id], createElement: (t) => el(t) };
+    const skyCopy = new Function('document', src + 'return skyCopy;')(document);
+    const copy = skyCopy(el('div'));
+    assert.equal(copy.children.length, 2, 'the strip and the stars go into the fade');
+    assert.equal(copy.children[0].style.transform, 'translate3d(-412.50px,0,0)', 'the strip where it has drifted to');
+    assert.equal(copy.children[0].id, '', 'with no second #sky-drift on the page');
+    assert.equal(copy.children[0].children[0].style.position, 'absolute');
+    drift.style.display = 'none'; stars.style.display = 'none';
+    assert.equal(skyCopy(el('div')).children.length, 0, 'an indoor sky with no strip copies nothing more');
+    assert.match(pub, /if \(skyEl\) cover\.appendChild\(skyCopy\(copy\(skyEl\)\)\);/, 'the fade uses it');
   });
   await checkAsync('a smoke in the lockbox can be lit; one in the vault cannot (2026-11-01)', async () => {
     const { db, D1 } = sqliteD1();

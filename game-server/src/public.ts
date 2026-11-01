@@ -13001,6 +13001,34 @@ function readySceneImage(url, done) {
 // Freeze only the departing scenery for a short dissolve. Controls and live
 // creatures stay interactive. Snapshot computed styles so the old hour/tint
 // stays with its own ground; there are no duplicate DOM IDs.
+// THE FADE CARRIES THE SKY AS IT IS (rome, 2026-11-01). The copy of #sky was
+// its own still picture, at the place it is first laid, without the drifting
+// strip and the stars over it: every step put the sky back where it started for
+// the length of the fade, and then it went on from where it really was. The
+// moving strip goes into the copy as it stands, and the stars as they are lit.
+function skyCopy(node) {
+  // Copied without their ids, so the live sky stays the only #sky-drift and
+  // #sky-stars on the page; what the id rules gave them is set on the copy.
+  var drift = document.getElementById("sky-drift");
+  if (drift && drift.style.display !== "none") {
+    var d = drift.cloneNode(true);
+    d.removeAttribute("id"); d.style.position = "absolute"; d.style.left = "0";
+    for (var i = 0; i < d.children.length; i++) {
+      var tile = d.children[i].style;
+      tile.position = "absolute"; tile.display = "block"; tile.backgroundSize = "100% 100%"; tile.backgroundRepeat = "no-repeat";
+    }
+    node.appendChild(d);
+  }
+  var stars = document.getElementById("sky-stars");
+  if (stars && stars.style.display !== "none" && stars.width && stars.height) {
+    var c = document.createElement("canvas"), x = c.getContext && c.getContext("2d");
+    c.width = stars.width; c.height = stars.height;
+    c.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transform:" + (stars.style.transform || "none");
+    if (x) x.drawImage(stars, 0, 0);
+    node.appendChild(c);
+  }
+  return node;
+}
 function fadeScene() {
   if (typeof document.createElement !== "function" || !scenePainted) return null;
   var old = document.getElementById("scene-fade");
@@ -13016,7 +13044,7 @@ function fadeScene() {
     node.style.pointerEvents = "none";
     return node;
   }
-  if (skyEl) cover.appendChild(copy(skyEl));
+  if (skyEl) cover.appendChild(skyCopy(copy(skyEl)));
   var ground = copy(sceneEl); ground.appendChild(copy(sceneEl, "::after"));
   cover.appendChild(ground);
   sceneEl.parentNode.insertBefore(cover, document.getElementById("mobs"));
