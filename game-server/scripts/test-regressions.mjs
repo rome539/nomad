@@ -29,8 +29,9 @@ try {
         "export * as den from './den';",
         "export {cmdMap, copyCounts} from './lore';",
         "export {cmdGo} from './verbs';",
+        "export {handleGatehouse} from './gate';",
         "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, glutMult, tickGlut, offerCore, cmdOffer} from './gate';",
-        "export {cmdLook, keepingLines} from './verbs';",
+        "export {cmdLook, keepingLines, cmdSmoke} from './verbs';",
         "export * as light from './light';",
         "export * as body from './body';",
         "export * as ratking from './ratking';",
@@ -68,7 +69,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -581,6 +582,60 @@ try {
     const where = () => db.prepare("SELECT container FROM player_items ORDER BY id").all().map((r) => r.container);
     return { z, me, db, wolf, said, where };
   }
+  await checkAsync('carve rock works by the gatehouse fire, and bare carve is still the wall (2026-11-01)', async () => {
+    const { D1 } = sqliteD1();
+    const said = [], heard = [];
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'gate', ws: { readyState: 1 },
+      items: [{ rowId: 'k1', itemId: 'loose-rock', serial: null, equipped: false, condition: 100 }, { rowId: 'k2', itemId: 'rusted-chisel', serial: null, equipped: false, condition: 100 }] };
+    const other = { pubkey: 'you', name: 'Pilgrim', roomId: 'gate', ws: { readyState: 1 }, items: [] };
+    const z = { env: { DB: D1 }, sessions: new Map([['me', me], ['you', other]]), outOfWorld: () => true,
+      send: (s, t) => (s === me ? said : heard).push(t), sendGateCtx: async () => {}, sendStatus() {}, markSimDirty() {},
+      roomFeed: () => { throw new Error('the dark outside heard it'); }, creatureNoise: () => { throw new Error('the dark outside heard it'); },
+      world: { itemTemplates: new Map([['rusted-chisel', { name: 'a rusted chisel' }]]), rooms: new Map(), regions: new Map() },
+      grantItem: async (s, id) => { const c = { rowId: 'n1', itemId: id, serial: null, equipped: false, condition: 100 }; s.items.push(c); return c; },
+      wallOf: () => new Set(), walkedOf: () => new Set() };
+    await handleGatehouse(z, me, 'carve rock');
+    assert.doesNotMatch(said.join(' '), /You say/, 'not said out loud');
+    assert.match(said.join(' '), /work at it with a rusted chisel/, 'the rock is carved');
+    assert.match(heard.join(' '), /Rome sits working at a rock/, 'the fire sees it');
+    const made = me.items.find((c) => c.itemId.startsWith('carving-'));
+    assert.ok(made);
+    // set down by the fire, it stands in the gatehouse and not on the ground outside
+    z.world.itemTemplates.set(made.itemId, { name: 'a stone ' + made.itemId.slice(8) });
+    Object.assign(z, { inGatehouse: new Set(['me']), inDen: new Map(), dens: new Map(), carvings: new Map(), findCarried: () => undefined,
+      refreshRoomCtx: () => { throw new Error('the room outside was told'); } });
+    heard.length = 0;
+    await carving.cmdPlace(z, me, 'stone ' + made.itemId.slice(8));
+    assert.match(heard.join(' '), /Rome sets a stone .* down/, 'the fire sees it set down');
+    assert.equal(carving.roomLines(z, me).length, 1, 'it stands in the gatehouse');
+    assert.equal(carving.roomLines(z, { pubkey: 'outside', roomId: 'gate' }).length, 0, 'not out on the ground');
+    assert.match(carving.lookPlaced(z, me, made.itemId.slice(8)), /Cut into the base: Rome/);
+    assert.match(readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8'), /lines\.push\(\.\.\.carving\.roomLines\(z, session\)\);/, 'the gatehouse look lists them');
+    said.length = 0;
+    await handleGatehouse(z, me, 'carve');
+    assert.match(said.join(' '), /Bare plaster/, 'bare carve is still the wall chart');
+    said.length = 0;
+    await handleGatehouse(z, me, 'carve my name in the bench');
+    assert.match(said.join(' '), /You say: carve my name/, 'other words after carve are still speech');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const isSpeech = new Function('inGatehouseNow', pub.match(/var SPEECH_VERBS = [^\n]*\n/)[0] + pub.match(/var GATEHOUSE_CMDS = \{[\s\S]*?\n\};\n/)[0]
+      + pub.match(/var GATEHOUSE_NOARG_CMDS = \{[\s\S]*?\n\};\n/)[0] + pub.match(/function isSpeech\(t\) \{[\s\S]*?\n\}\n/)[0].replace(/\\\\/g, '\\') + 'return isSpeech;')(true);
+    assert.equal(isSpeech('carve rock'), false, 'the client echoes it as a command');
+    assert.equal(isSpeech('carve my name'), true);
+    assert.equal(isSpeech('pvp on'), false, 'and pvp, which is done at a gate');
+  });
+  await checkAsync('a smoke in the lockbox can be lit; one in the vault cannot (2026-11-01)', async () => {
+    const { db, D1 } = sqliteD1();
+    const said = [];
+    const z = { env: { DB: D1 }, send: (_s, t) => said.push(t), outOfWorld: () => false, actorFeed() {}, roomSound() {}, creatureNoise() {} };
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'moor', items: [] };
+    db.prepare("INSERT INTO player_items(id, item_id, pubkey, container) VALUES ('v1', 'dry-cigarettes', 'me', 'vault')").run();
+    await cmdSmoke(z, me);
+    assert.match(said.pop(), /nothing but lint/, 'the vault stays at the gate');
+    db.prepare("INSERT INTO player_items(id, item_id, pubkey, container) VALUES ('b1', 'dry-cigarettes', 'me', 'lockbox')").run();
+    await cmdSmoke(z, me);
+    assert.match(said.pop(), /work one loose and light it/, 'the lockbox rides with you');
+  });
   await checkAsync("a creature's vital shot leaves the kit on a stiff body, the owner's alone (2026-10-23)", async () => {
     const { z, me, wolf, said, where } = bodyWorld();
     await z.onPlayerDeath(me, wolf, undefined, true);

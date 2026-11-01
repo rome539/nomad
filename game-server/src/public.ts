@@ -6001,6 +6001,8 @@ var GATEHOUSE_CMDS = {
   carve: 1, scratch: 1, etch: 1, inscribe: 1,
   // the lantern's well (2026-10-16): fat goes in by the fire as well as out in the dark
   fill: 1, refill: 1, refuel: 1,
+  // choosing to fight other wanderers is done at a gate, so by the fire too
+  pvp: 1,
 };
 // No-argument commands (aliases). Mirrors the server's GATEHOUSE_NOARG: bare
 // they command, but with words after them they were a sentence. Kept in sync so
@@ -6034,6 +6036,7 @@ function isSpeech(t) {
   if (SPEECH_VERBS[w]) return true;
   if (inGatehouseNow) {
     if (!GATEHOUSE_CMDS[w]) return true;                       // unknown word = speech
+    if (w === "carve" && /^carve\\s+(the\\s+|a\\s+)?(loose\\s+)?(rock|stone)\\s*$/i.test(t.trim())) return false; // the carving, not the wall
     if (GATEHOUSE_NOARG_CMDS[w] && /\\s/.test(t.trim())) return true; // "i am trying" = speech, bare "i" = command
   }
   return false;

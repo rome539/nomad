@@ -17,6 +17,7 @@ import type { Session } from "./zone-types";
 import { pick, uuid } from "./rng";
 import { removeItemRow, setItemLoreId } from "./world";
 import { insideOf } from "./den";
+import { gatehouseFeed } from "./gate";
 import { cap, nameMatches } from "./zone-util";
 import { CARVE_TOOLS, CARVE_QUALITY, CARVINGS, CARVING_ITEM, CARVE_ROOM_CAP, CARVE_WEATHER_MS } from "./zone-data";
 
@@ -55,10 +56,18 @@ export async function loadCarvings(z: ZoneDO): Promise<Map<string, PlacedCarving
   return out;
 }
 
+// Which side of a door this wanderer is on: inside a den (its holder), behind a
+// gate's door by the fire ("gatehouse"), or out on the ground (""). A carving
+// set down stands on that side, and is seen only from it.
+const GATEHOUSE_SIDE = "gatehouse";
+function sideOf(z: ZoneDO, session: Session): string {
+  return insideOf(z, session.pubkey)?.holder ?? (z.inGatehouse.has(session.pubkey) ? GATEHOUSE_SIDE : "");
+}
+
 // The ones standing where this wanderer is: the same room, the same side of
-// the same den door, and not weathered away.
+// the same door, and not weathered away.
 function here(z: ZoneDO, session: Session, now: number): PlacedCarving[] {
-  const side = insideOf(z, session.pubkey)?.holder ?? "";
+  const side = sideOf(z, session);
   return (z.carvings.get(session.roomId) ?? []).filter((c) => c.inside === side && stage(c, now) < 3);
 }
 
@@ -95,8 +104,14 @@ export async function carveRock(z: ZoneDO, session: Session, words: string): Pro
     .bind(id, kind, tier, session.name, session.pubkey, Date.now()).run();
   const tool = z.world!.itemTemplates.get(toolId!)?.name ?? "a chisel";
   z.send(session, `You turn the rock in your hand and work at it with ${tool}, chip by chip, until ${article(kind)} comes out of it. ${cap(CARVE_QUALITY[tier])}.`, "gain");
-  z.roomFeed(session.roomId, `${session.name} sits working at a rock with ${tool}.`, session.pubkey, false);
-  z.creatureNoise(session.roomId);
+  // By the fire it is company, as a smoke is: the gatehouse hears it, the dark
+  // outside the door does not.
+  const line = `${session.name} sits working at a rock with ${tool}.`;
+  if (z.outOfWorld(session)) gatehouseFeed(z, line, session.pubkey);
+  else {
+    z.roomFeed(session.roomId, line, session.pubkey, false);
+    z.creatureNoise(session.roomId);
+  }
   z.sendStatus(session);
   z.markSimDirty();
   return true;
@@ -111,7 +126,7 @@ export async function cmdPlace(z: ZoneDO, session: Session, arg: string): Promis
   }
   const kind = kindOf(carried.itemId)!;
   const now = Date.now();
-  const side = insideOf(z, session.pubkey)?.holder ?? "";
+  const side = sideOf(z, session);
   const lasting = side !== "" && side === session.pubkey;
   // Three to a spot: a fourth puts the most weathered of them out of its place.
   const standing = here(z, session, now);
@@ -139,9 +154,13 @@ export async function cmdPlace(z: ZoneDO, session: Session, arg: string): Promis
   z.carvings.set(session.roomId, [...(z.carvings.get(session.roomId) ?? []), placed]);
   const name = z.world!.itemTemplates.get(carried.itemId)?.name ?? `a stone ${kind}`;
   z.send(session, `You set ${name} down, and leave it where it stands.`);
-  z.roomFeed(session.roomId, `${session.name} sets ${name} down and leaves it there.`, session.pubkey, false);
+  const line = `${session.name} sets ${name} down and leaves it there.`;
+  if (side === GATEHOUSE_SIDE) gatehouseFeed(z, line, session.pubkey);
+  else {
+    z.roomFeed(session.roomId, line, session.pubkey, false);
+    z.refreshRoomCtx(session.roomId);
+  }
   z.sendStatus(session);
-  z.refreshRoomCtx(session.roomId);
   z.markSimDirty();
 }
 

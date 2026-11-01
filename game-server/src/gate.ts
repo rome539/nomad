@@ -31,6 +31,7 @@ import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STU
   POSES, COURTESIES, WAVE_ARMED, DANCE_ALONE, DANCE_ALONE_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM, SING_SELF, SING_ROOM,
   KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS, REGION_LABELS, HARD_FROST, MOON_FULL_EVERY } from "./zone-data";
 import * as den from "./den";
+import * as carving from "./carving";
 import * as light from "./light";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
@@ -2966,6 +2967,8 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
   if (want) {
     lines.push(`Chalked across the shut hatch: wanted tonight — ${want.name}, double in trade.`);
   }
+  // Carvings set down by the fire stand here, as they would anywhere.
+  lines.push(...carving.roomLines(z, session));
   if (others.length === 0) {
     lines.push("You have it to yourself. The fire ticks.");
   } else {
@@ -3037,6 +3040,10 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // bare `smoke` and light one when the player plainly meant to SAY "smoke this".
   // If ANY word follows the verb as typed, it's speech.
   const rawTail = text.trim().split(/\s+/).slice(1).join(" ");
+  // `carve` is bare-only in here (the wall chart), but `carve rock` is the
+  // carving, and a man can sit by the fire and work a stone as well as anywhere.
+  // Read before the sentence rule below, which would otherwise say it out loud.
+  if (v === "carve" && rawTail !== "" && await carving.carveRock(z, session, cmd.arg)) return z.sendGateCtx(session);
   if (GATEHOUSE_NOARG.has(v) && rawTail !== "") return gatehouseSay(z, session, text);
   // "fill me in" is a man talking; "fill lantern" is a man with fat and a lantern.
   if (v === "fill" && !/^(lantern|lamp|well)?$/i.test(cmd.arg.trim()) && !/lantern|lamp/i.test(cmd.arg)) return gatehouseSay(z, session, text);
@@ -3077,6 +3084,8 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     // of forge iron in the vault answers `look forge` before the brazier does.
     const fixture = gatehouseFixture(z, session, target);
     if (fixture) return z.send(session, fixture, "study");
+    const carved = carving.lookPlaced(z, session, target);
+    if (carved) return z.send(session, carved, "study");
     // "look at his hair" — extra words that name nobody and nothing here weren't
     // a command. Say them.
     return gatehouseSay(z, session, text);

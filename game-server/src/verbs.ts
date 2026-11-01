@@ -83,7 +83,10 @@ export async function cmdSmoke(z: ZoneDO, session: Session, arg = ""): Promise<v
     const c = z.findCarried(session, arg);
     if (c && CURE_RECIPES[c.itemId]) return cmdCure(z, session, arg);
   }
-  if (!session.items.some((c) => CIGARETTES.has(c.itemId))) {
+  // The lockbox rides with you, so a tin kept in it is still at hand; the vault
+  // stays behind at the gate and is not.
+  if (!session.items.some((c) => CIGARETTES.has(c.itemId))
+    && !(await loadContainer(z.env.DB, session.pubkey, "lockbox")).some((c) => CIGARETTES.has(c.itemId))) {
     return z.send(session, "You pat yourself down for a smoke and come up with nothing but lint.");
   }
   z.send(session, "You work one loose and light it. The first drag steadies your hands; for a breath, the dungeon is just a room you happen to be in.", "gain");
