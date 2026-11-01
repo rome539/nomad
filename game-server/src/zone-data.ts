@@ -1996,6 +1996,16 @@ export const MIGRATE_KEEP = 3; // a band never gives up its last this-many of a 
 // of animals should be something the world arrives at, not something I typed
 // into a migration file once.
 export const MIGRATE_ODDS = 0.00025;
+// THE PITS ARE THEIR HOME (rome, 2026-10-31). A grave-hyena whose den is in the
+// pits lives there: hungry, it goes out to wherever the food is (huntGround) and,
+// fed, walks back in (the territory pull). It never takes the migration roll, so
+// it never settles somewhere else for good. Every room of mig 345.
+export const PITS_ROOMS = new Set<string>([
+  "the-dead-cart-track", "the-cart-tip", "the-lime-pits", "the-plague-trench", "the-tipping-edge",
+  "the-bone-heaps", "the-sorting-ground", "the-second-trench", "the-burning-ground", "the-trench-end",
+  "the-ash-drifts", "the-wash-gully", "the-den-mouths", "the-wash-foot", "the-bone-fan",
+  "the-laughing-ground", "the-dug-earth", "the-gnawed-ground", "the-skull-mound", "the-last-pit",
+]);
 
 // The dark mouths: where migrants physically enter the world — a well shaft,
 // a forgotten hole, cracks the dungeon never sealed. A refill surfaces at the
@@ -5621,8 +5631,9 @@ export const PRICK_LINES = [
   "The spines drive into your fist and stay there",
 ];
 export const DEN_MOVES = new Map<string, string>([
-  // mig 346: four grave-hyenas out of the halls and into the pits
-  ["hyena-1", "catacomb"], ["hyena-2", "kennels"], ["hyena-3", "kennels"], ["hyena-4", "larder"],
+  // mig 346: four grave-hyenas out of the halls and into the pits; mig 357
+  // spread two of them across it (hyena-1 and hyena-3, from where 346 put them)
+  ["hyena-1", "the-den-mouths"], ["hyena-2", "kennels"], ["hyena-3", "the-laughing-ground"], ["hyena-4", "larder"],
   ["wight-5", "drowned-barracks"], ["wight-4", "deep-ossuary"], ["wight-10", "bone-reliquary"],
   ["deep2-twice-drain-run", "the-drain-run"], ["deep2-twice-long-pews", "the-long-pews"],
   ["deep2-twice-feeling-wall", "the-feeling-wall"],

@@ -53,7 +53,7 @@ try {
         "export {loadLeaderboard} from './world';",
         "export {handleBench} from './gate';",
         "export {sendCtx} from './chips';",
-        "export {PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, GATEHOUSE_NOARG, MOUTHS, WITNESSED_LINES} from './zone-data';",
+        "export {PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, GATEHOUSE_NOARG, MOUTHS, WITNESSED_LINES} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon, terrainOf} from './zone-util';",
@@ -66,7 +66,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2329,6 +2329,36 @@ try {
     }
     const mig = readFileSync(new URL('../migrations/352_a_second_warden_on_the_open_ground.sql', import.meta.url), 'utf8');
     assert.match(mig, /VALUES \('ward-6', 'warden-surface', 'the-churchyard'\)/, 'set in the churchyard, with an id');
+  });
+
+  await checkAsync('a pit hyena lives in the pits: it never moves house for good, and a fed one walks home (2026-10-31)', async () => {
+    const z = new ZoneDO({}, {});
+    const ex = (pairs) => pairs.map(([dir, to_room]) => ({ dir, to_room, key_item: null }));
+    const chain = ['the-bone-fan', 'the-wash-foot', 'the-dug-earth', 'the-last-pit', 'the-camp-tail', 'the-picket-ground'];
+    const exits = new Map(chain.map((r, i) => [r, ex([...(i ? [['east', chain[i - 1]]] : []), ...(i < chain.length - 1 ? [['west', chain[i + 1]]] : [])])]));
+    z.world = { mobTemplates: new Map([['grave-hyena', { id: 'grave-hyena', name: 'a grave-hyena', max_hp: 26, is_boss: 0 }]]), mobSpawns: [], itemTemplates: new Map(),
+      rooms: new Map(chain.map((r) => [r, { id: r, region: 'out' }])), exits, entryRooms: new Set(), safeRooms: new Set() };
+    z.send = () => {}; z.roomFeed = () => {}; z.roomSound = () => {}; z.refreshRoomCtx = () => {}; z.noteCreaturesChanged = () => {};
+    const rnd = crypto.getRandomValues;
+    try {
+      crypto.getRandomValues = (a) => { a.fill(0); return a; }; // every die lands: the migration roll included
+      const h = { id: 'h', templateId: 'grave-hyena', roomId: 'the-bone-fan', hp: 26, target: null, grudges: [], home: 'the-bone-fan', hunger: 0, nextWanderAt: 0 };
+      // enough hyenas on the open ground that a migration may take one (MIGRATE_KEEP)
+      const others = [1, 2, 3, 4, 5, 6].map((i) => ["o" + i, { id: "o" + i, templateId: 'grave-hyena', roomId: 'the-picket-ground', hp: 26, target: null, grudges: [], home: 'the-picket-ground' }]);
+      z.creatures = new Map([['h', h], ...others]);
+      await creatureMoves(z, h, Date.now(), 'wander', true);
+      assert.equal(h.drift, undefined, 'a pit hyena never sets off to settle somewhere else');
+      assert.equal(h.home, 'the-bone-fan', 'its home stays in the pits');
+      const away = { id: 'a', templateId: 'grave-hyena', roomId: 'the-picket-ground', hp: 26, target: null, grudges: [], home: 'the-bone-fan', hunger: 0, nextWanderAt: 0 };
+      z.creatures = new Map([['a', away]]);
+      crypto.getRandomValues = rnd;
+      await creatureMoves(z, away, Date.now(), 'wander', true);
+      assert.equal(away.roomId, 'the-camp-tail', 'fed and out on the open ground, it walks back toward the pits');
+    } finally { crypto.getRandomValues = rnd; }
+    assert.ok(PITS_ROOMS.size === 20 && PITS_ROOMS.has('the-bone-fan') && PITS_ROOMS.has('the-burning-ground'), 'the pits are the twenty rooms of mig 345');
+    const mig = readFileSync(new URL('../migrations/357_the_pit_hyenas_spread_out.sql', import.meta.url), 'utf8');
+    assert.match(mig, /SET room_id = 'the-bone-fan'\s+WHERE id = 'hyena-1'/, 'hyena-1 moves out to the Bone Fan');
+    assert.match(mig, /SET room_id = 'the-burning-ground' WHERE id = 'hyena-3'/, 'hyena-3 to the Burning Ground');
   });
 
   await checkAsync('the surface warden crosses the sally port back to his round instead of circling the catacombs (2026-10-30)', async () => {

@@ -51,7 +51,7 @@ import {
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
-  QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
+  QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, PITS_ROOMS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, SLOW_WALKERS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   HUNGER_PER_MIN, COLD_HUNGER_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
@@ -1309,7 +1309,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // surface, so nobody ever watches it happen, and the thing you notice is
     // that there are wolves on the road this month and there were not before.
     if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id]
-        && MIGRANTS.has(tmpl.id) && creature.drift === undefined && chance(MIGRATE_ODDS)) {
+        && MIGRANTS.has(tmpl.id) && !PITS_ROOMS.has(creature.home) && creature.drift === undefined && chance(MIGRATE_ODDS)) {
       beginDrift(z, creature, tmpl.id);
     }
     // WALKABOUT. An unmoored animal has no territory to be pulled back into: it
