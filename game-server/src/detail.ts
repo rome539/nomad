@@ -616,7 +616,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-fever-graves": {
     "graves|grave|pit|mounds|burials":
-      "Not laid out in rows and not aligned to anything, which is the mark of graves dug faster than the digging could be organised. The chapel's own ground is a hundred paces away and has room. These people were not carried that far.",
+      "In rows, but set close and shallow, each mound barely a body's length from the next: graves dug as fast as they were needed. The chapel's own ground is a hundred paces away and has room. These people were not carried that far.",
   },
   "the-shallow-well": {
     "well|slab|stone|water|cover":
@@ -625,6 +625,193 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   "the-warreners-lodge": {
     "lodge|building|walls|windows|tower":
       "Built solid, with sight lines, because the warrener's job was to keep rabbits in and everybody else out — the rabbits were the lord's, they were worth real money, and the people who wanted them lived two fields away and were hungry.",
+  },
+  // THE HAMLET (rome, 2026-11-01): the den ground as a story place. Read together,
+  // the close looks say how it emptied: the fever, the leaving in good order by
+  // people who meant to come back, and the long while after when nobody did.
+  "the-street": {
+    "doors|door|crofts|walls":
+      "Every door on the street is pinned from the outside, the peg dropped through the hasp the way you shut a byre when the stock is out. Nobody pins a door from outside on a house they are leaving for good. You pin it on a house you mean to come back to.",
+  },
+  "the-reeves-loft": {
+    "coat|peg|pegs":
+      "Five pegs, and four of them empty: the coats that hung there went on the backs of their owners. The small one was left. A family on the road does not leave a child's coat behind unless there is no child to put it on.",
+  },
+  "the-street-foot": {
+    "fire|scorch|gable":
+      "Small, and recent beside everything else here: a traveller's fire built against the gable for the shelter and kicked out in a hurry. Whoever lit it did not try the door of the house it was leaning on. The peg is still through the hasp.",
+  },
+  "the-burnt-croft": {
+    "walls|ash|hearth|croft":
+      "The black is on the inside faces of the walls and not the outside, so the fire started in the house and stayed in it. When every other empty plot on the street went for building stone, nobody took a stone from this one. Whatever happened here, nobody wanted to carry it home.",
+  },
+  "the-village-pound": {
+    "pound|pen|gate|walls":
+      "The top course is knocked out in one place on the far side, and the stones lie in the grass outside the wall, not in. Something was shut in here when the street was shut, and nobody came to pay for it.",
+  },
+  "the-north-house": {
+    "hearth|floor|thatch":
+      "Beside the hearth-stone, three small round dents in the earth floor where a cooking pot stood on its legs, and no pot. Of everything in this house, that was what went: the one thing that would cook a meal on the road.",
+  },
+  "the-croft-backs": {
+    "gaps|walls|gardens|trees":
+      "The gaps in the back walls are worn smooth on both sides at shoulder height, from a lifetime of people turning sideways through them. The paths beyond them, out to the field, have closed over completely. The apple trees go on fruiting for families who used those gaps every morning of their lives.",
+  },
+  "the-chapel-green": {
+    "green|ground|yews":
+      "The bare ground in the middle is beaten in a ring, not trodden across, the way grass goes where people stand round something and do not walk over it. Whatever was done here, everybody came to see it done.",
+  },
+  "the-dead-orchard": {
+    "trees|trunks|orchard|windfalls":
+      "Every dead trunk has a ring cut all the way round it a hand's width above the grass, through the bark and into the white wood, healed over now but plain. Nothing killed half this orchard. Somebody went down the rows with a blade and killed it tree by tree, and left the other half to bear.",
+  },
+  "the-squatters-row": {
+    "dwellings|row|gable|roofs":
+      "Six roofs raised by the old custom, each in a single night, all on the dry ground in plain sight of the street and its empty houses. Not one of the six households moved into a house on the street. They carried a stone gable here piece by piece instead.",
+  },
+  "the-hurdle-yard": {
+    "hurdle|hurdles|trestle":
+      "The half-made hurdle is woven to the same height all the way across, and the next rod lies on the trestle beside it, cut to length and gone grey. Whoever was making it put the rod down in the middle of a row, and walked away.",
+  },
+  "the-black-hut": {
+    "bedding|bracken|hut":
+      "The old bracken along the wall is flattened in the shape of one sleeper, and over it lies more, laid later and still a lighter brown. People have slept in here a long while after anyone lived here.",
+  },
+  "the-hurdle-gate": {
+    "hurdle|gate|posts|bank|ditch":
+      "The hurdle is dropped into its posts the right way round, woven face to the field, the way it was set every evening when the stock came in. The last person through closed it behind them. It has been closed ever since.",
+  },
+  "the-drift-lane": {
+    "lane|banks|track":
+      "The stones in the banks are polished dull at about knee height for the whole length of the lane, where fleeces rubbed past for generations. Nothing has rubbed them in a long time. The moss has started at the bottom and is working up.",
+  },
+  "the-lane-head": {
+    "mounting-block|block|steps":
+      "The top step of the block is worn into a dish on one side only, the side you mount from, by one foot going up into a stirrup a great many times. A place this size kept one horse that mattered. This is what is left of it.",
+  },
+  "the-cart-turn": {
+    "cart|frame|shafts":
+      "The cart was backed into the turn and left with its shafts pointing east down the lane, the way you leave a cart you will be putting the horse to in the morning. Nobody unloaded it first. Whatever was in it has gone to the same soft brown as the boards.",
+  },
+  "the-old-assart": {
+    "stumps|field|trees|grass":
+      "Round the edge of the field the stumps too big to grub out are still there, cut at knee height and burned black and hard. Everything the people here ever owned started with getting rid of those. The thorn coming in at the edges is taking the field back without any of the work.",
+  },
+  "the-cow-pasture": {
+    "post|rubbing-post|hollow|grass":
+      "The rubbing-post is worn to a waist on one side, polished at the height of a cow's neck by every beast the place ever had. Nothing has rubbed it since. There is lichen starting on the polish.",
+  },
+  "the-sunken-way": {
+    "banks|roots|track|walls":
+      "In the clay of the bank, at hand height, a run of shallow scoops where people steadied themselves on the steep part going up, the same holds used by every hand. The last of them dried with the shape of a palm still in them.",
+  },
+  "the-well-green": {
+    "well|slab|windlass|rope|ring":
+      "The slab was dragged onto the well from the street side; the scrape it left across the grass is still bare. Nobody caps a well they mean to draw from in the morning. Somebody covered it so nothing would fall in while they were gone.",
+  },
+  "the-thorn-hedge": {
+    "hedge|trees|stems|wounds":
+      "Every stem was cut most of the way through and laid over the same way, by one hand with one habit. At the east end the last stretch is cut and never laid: the stems were half-severed and left standing, and they have grown straight up out of their own wounds.",
+  },
+  "the-ridge-and-furrow": {
+    "ridges|furrows|ground|ploughing":
+      "The last furrow on the west side is shallower than the rest, barely turned, as if the plough was pulled by fewer than it was made for. It is the newest ploughing in the field. Nobody ploughed after it.",
+  },
+  "the-far-furlong": {
+    "saplings|birch|ridges|leaf-litter":
+      "The birches are all one age, the same height from end to end: they came in the first year nobody ploughed, and nothing since has got a hold under them. Every one of them is as old as the emptiness.",
+  },
+  "the-common-field": {
+    "field|meadow|strips|grass":
+      "Under the grass the strips still show as faint changes of colour, each a different green where a different family dunged it differently. Some go on to the edge of the wood. Others stop halfway, where whoever worked them stopped.",
+  },
+  "the-smithy-yard": {
+    "trough|clinker|yard":
+      "The trough is cracked straight through, the way a trough cracks when it is left full over a winter with nobody to break the ice or let the water out. It was full when the smith went. He did not expect to be away for the frosts.",
+  },
+  "the-headland-baulk": {
+    "baulk|strip|grass":
+      "The baulk is scored with the curves of a plough team swinging round, the same arc over and over, still deep enough to catch the low light. Toward the east end the curves get fewer, and then there are none.",
+  },
+  "the-reeves-yard": {
+    "barn|roof|yard|cobbles":
+      "The barn's roof came in by rot, not fire: the fallen beams are soft at the ends where they sat on the wall. The threshing floor under them was swept, the same as the floor in the house across the yard. The reeve's household left nothing undone that could be done before they went.",
+  },
+  "the-street-head": {
+    "gate|wall|roofs":
+      "The gate is shut and tied through the bar with a twist of withy, a knot meant to be undone from either side. It has rotted and held at the same time, and it is holding still.",
+  },
+  "the-north-croft": {
+    "channel|byre|yard|wall":
+      "The muck channel through the wall was sluiced out and left clean, the last job of the last morning. The poorest yard on the street was the one left in the best order.",
+  },
+  "the-mill-lane": {
+    "stones|lane|surface":
+      "The stones are rutted twice over: a deep pair of grooves from loaded carts going down to the mill for lifetimes, and over them one narrower pair, much fresher, of a handcart coming up. Somebody took something away from the mill once, after the carts had stopped.",
+  },
+  "the-waste-edge": {
+    "leavings|rush|thorn|ground":
+      "The leavings lie in layers, old under new: broken pot and bone down in the mud, a rag and a strap-end on top. People have been stopping here at the road's end for as long as the road has ended here, and leaving what the road had worn out.",
+  },
+  "the-turf-cutting": {
+    "cuts|turf|water":
+      "The cuts nearest the road are the narrowest, a single spade wide and a turf or two long. That is not cutting for a winter. That is somebody passing through taking enough for one night's fire.",
+  },
+  "the-broom-scrub": {
+    "broom|paths|path|pods":
+      "On the one path wide enough for a person the stems are snapped at waist height, healed, and snapped again, by people pushing through the same way. It runs one way only, and whoever walks it has always known where it goes.",
+  },
+  "the-marl-water": {
+    "clay|water|ledge|pit":
+      "Along the old waterline in the blue clay lie the bones of what fell in and could not climb the sheer sides out. Nothing has been taken out of here. Nobody came down to look.",
+  },
+  "the-drying-green": {
+    "posts|lines|grass":
+      "One line still has rope on it, rotted to a brown thread and tied off round the post in the knot you use for something you will be back to untie. The grass under it was the last ground here to be shaded by anything hung up to dry.",
+  },
+  "the-withy-rows": {
+    "willow|stools|rows|rods":
+      "Every stool was cut in the same season; the old cut faces are all the same grey under the new growth. The last harvest was taken in and carried off, and nobody came back the next winter to cut again.",
+  },
+  "the-kiln-track": {
+    "causeway|stone|clinker|surface":
+      "The clinker in the causeway is the same black glassy waste as the heap in the smithy yard. The smith's leavings went to building the road across the wet. Everything here was used for something else once it was done being what it was.",
+  },
+  "the-scrub-end": {
+    "thorn|bramble|water":
+      "At the edge the bramble is pushed back in one place, a trodden shelf where somebody stood and looked out over the scrub for a long time. There is nothing out there to look at. They came and looked anyway, more than once.",
+  },
+  "the-bark-heap": {
+    "bark|heap|curls":
+      "The top of the heap is still stacked in neat courses, curl laid into curl, ready for the cart. The tanners never sent for it. Bark that was worth more than the timber it came off is going to soil where it was stacked.",
+  },
+  "the-peelers-camp": {
+    "shelters|pit|rack|trunk|tools":
+      "The rack still carries the shapes of the tools, pale outlines in the weathered wood where blades hung all summer. The tools went. The camp was left standing for next year's peelers, as the custom was, and next year nobody came.",
+  },
+  "the-thorn-corner": {
+    "path|thorn|blackthorn":
+      "The path into the thorn is kept open to knee height and no higher; above that the blackthorn meets. Whatever keeps it open walks low, and walks it often.",
+  },
+  "the-gorse-common": {
+    "gorse|tunnels|rise":
+      "Under the gorse the soil is black with old charcoal, the rise burned every few years to keep it grazing. The last burn is the deepest black and the nearest the surface. Nobody burned it after.",
+  },
+  "the-warren-bank": {
+    "bank|burrows|sand":
+      "The burrow mouths low on the bank are lined with set stones, put there so the rabbits would dig where the warrener wanted them. Further up, past the stones, the burrows go wherever they like. Nobody has told them otherwise in a long time.",
+  },
+  "the-lodge-loft": {
+    "window|windows|ladder|loft":
+      "The sill of each slit window is worn in two smooth places a forearm apart, where elbows rested through long nights of watching. The west window is worn the deepest. That is the side the wood is on.",
+  },
+  "the-lodge-yard": {
+    "nets|traps|slab|drain|yard":
+      "The drain in the slab is stained dark by everything that was cleaned on it, and the stain has outlasted the nets. The last nets were hung up mended. Whoever mended them meant to set them again.",
+  },
+  "the-far-waste": {
+    "thorn|tree|rush":
+      "There is a rag tied in the lone thorn's lowest branch, gone the colour of the bark, and under it a ring of trodden ground. People came all this way out to one tree to tie something to it. Nobody has come to untie it.",
   },
   "the-pillow-mounds": {
     "mounds|mound|banks|burrows|warren":

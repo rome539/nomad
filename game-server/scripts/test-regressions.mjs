@@ -2761,6 +2761,17 @@ try {
     assert.doesNotMatch(zd.match(/export const MIGRANTS = new Set<string>\(\[[\s\S]*?\]\);/)[0], /"white-roe"/, 'it keeps to the wood');
   });
 
+  check('every room of the hamlet has its close look, and the fever graves agree with their room (2026-11-01)', () => {
+    const detail = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    const feats = detail.slice(detail.indexOf('export const ROOM_FEATURES'));
+    const ids = ['the-dens-1', 'the-dens-2'].flatMap((f) => readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8')
+      .split('\n').filter((l) => /^## [a-z-]+ \| /.test(l) && !/\| attachment/.test(l)).map((l) => l.slice(3).split(' | ')[0]));
+    assert.equal(ids.length, 60, 'the sixty rooms of the den ground');
+    const missing = ids.filter((id) => !feats.includes(`  "${id}": {`));
+    assert.deepEqual(missing, [], 'each one answers a close look');
+    assert.doesNotMatch(feats, /Not laid out in rows/, 'the room says the graves are in rows, so the close look does too');
+  });
+
   check('the log keeps a day of text and lets the rest go (2026-10-27)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const keep = eval(pub.match(/var LOG_KEEP_MS = ([^;]+);/)[1]);
