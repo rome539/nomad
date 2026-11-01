@@ -18,7 +18,7 @@ import { pick, uuid } from "./rng";
 import { removeItemRow, setItemLoreId } from "./world";
 import { insideOf } from "./den";
 import { gatehouseFeed } from "./gate";
-import { cap, nameMatches } from "./zone-util";
+import { cap, nameMatches, parseOrdinal } from "./zone-util";
 import { CARVE_TOOLS, CARVE_QUALITY, CARVINGS, CARVING_ITEM, CARVE_ROOM_CAP, CARVE_WEATHER_MS } from "./zone-data";
 
 export interface PlacedCarving {
@@ -163,15 +163,27 @@ export async function cmdPlace(z: ZoneDO, session: Session, arg: string): Promis
   z.markSimDirty();
 }
 
+// Which standing carving the words name. Two of a kind are told apart the way
+// two hyenas are ("second face", "face 2", "2.face"), counted in the order the
+// room lists them; plain "face" is the first.
+function named(z: ZoneDO, session: Session, arg: string, now: number): PlacedCarving | undefined {
+  const clean = arg.trim().toLowerCase().replace(/^up\s+/, "").replace(/^(the|a|an|my)\s+/, "");
+  const { nth, rest } = parseOrdinal(clean);
+  const words = rest.replace(/^(the|a|an|my)\s+/, "").replace(/^stone\s+/, "").trim();
+  const hits = here(z, session, now).filter((c) => stage(c, now) === 2
+    ? /^(stone|shape|carving|weathered.*)$/.test(words)
+    : words === c.kind || words === "carving");
+  return hits[nth - 1];
+}
+
 // `get <carving>`: its carver takes it up again, and it goes back in the pack
 // whole, with its cut and its name. Anyone else's stays where it was put.
 // Returns false when nothing of the carver's own here answers to the words, so
 // the ordinary floor (or the gatehouse's refusal) answers instead.
 export async function pickUp(z: ZoneDO, session: Session, arg: string): Promise<boolean> {
   const now = Date.now();
-  const words = arg.trim().toLowerCase().replace(/^up\s+/, "").replace(/^(the|a|an|my)\s+/, "").replace(/^stone\s+/, "").trim();
-  const found = here(z, session, now).find((c) => c.carverPk === session.pubkey && (words === c.kind || words === "carving"));
-  if (!found) return false;
+  const found = named(z, session, arg, now);
+  if (!found || found.carverPk !== session.pubkey) return false;
   const itemId = CARVING_ITEM(found.kind);
   if (!z.packRoom(session, itemId)) { z.send(session, "You have no room for it."); return true; }
   const got = await z.grantItem(session, itemId);
@@ -206,11 +218,7 @@ export function roomLines(z: ZoneDO, session: Session): string[] {
 // The close look at one standing here.
 export function lookPlaced(z: ZoneDO, session: Session, arg: string): string | null {
   const now = Date.now();
-  const words = arg.replace(/^(the|a|an)\s+/i, "").replace(/^stone\s+/i, "").trim().toLowerCase();
-  const found = here(z, session, now).find((c) => {
-    if (stage(c, now) === 2) return /^(stone|shape|carving|weathered.*)$/.test(words);
-    return words === c.kind || words === "carving";
-  });
+  const found = named(z, session, arg, now);
   if (!found) return null;
   const s = stage(found, now);
   const base = z.world!.itemTemplates.get(CARVING_ITEM(found.kind))?.description ?? `A ${found.kind} cut out of a lump of rock.`;

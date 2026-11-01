@@ -6035,7 +6035,7 @@ function isSpeech(t) {
   var w = t.split(/\\s+/)[0].toLowerCase();
   if (SPEECH_VERBS[w]) return true;
   if (inGatehouseNow) {
-    if (/^(get|take|grab|pick)\\s+(up\\s+)?(the\\s+|a\\s+|my\\s+)?(stone\\s+)?(carving|hare|crow|rat|deer|hyena|goat|owl|hound|hand|face|crown|figure|tower|drake)\\s*$/i.test(t.trim())) return false; // your own carving, taken up again
+    if (/^(get|take|grab|pick)\\s+(up\\s+)?(the\\s+|a\\s+|my\\s+)?((first|second|third|fourth|fifth|sixth)\\s+|\\d+(st|nd|rd|th)?[. ]\\s*)?(stone\\s+)?(carving|hare|crow|rat|deer|hyena|goat|owl|hound|hand|face|crown|figure|tower|drake)(\\s+\\d+)?\\s*$/i.test(t.trim())) return false; // your own carving, taken up again
     if (!GATEHOUSE_CMDS[w]) return true;                       // unknown word = speech
     if (w === "carve" && /^carve\\s+(the\\s+|a\\s+)?(loose\\s+)?(rock|stone)\\s*$/i.test(t.trim())) return false; // the carving, not the wall
     if (GATEHOUSE_NOARG_CMDS[w] && /\\s/.test(t.trim())) return true; // "i am trying" = speech, bare "i" = command

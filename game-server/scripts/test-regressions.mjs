@@ -637,6 +637,8 @@ try {
     assert.equal(isSpeech('pvp on'), false, 'and pvp, which is done at a gate');
     assert.equal(isSpeech('get stone owl'), false, 'and taking up a carving');
     assert.equal(isSpeech('get me a drink'), true);
+    assert.equal(isSpeech('get face 2'), false);
+    assert.equal(isSpeech('take second stone face'), false);
   });
   await checkAsync('a smoke in the lockbox can be lit; one in the vault cannot (2026-11-01)', async () => {
     const { db, D1 } = sqliteD1();
@@ -2502,6 +2504,19 @@ try {
     assert.deepEqual(z.carvings.get('the-green').map((c) => c.id).sort(), ['c0', 'c1', 'c2'], 'the three standing all stay');
     assert.ok(s.items.includes(hare), 'and the fourth stays in the pack');
     s.items.splice(s.items.indexOf(hare), 1);
+    // Two of a kind are told apart as two hyenas are, in the order the room lists them (2026-11-01).
+    const owls = z.carvings.get('the-green');
+    owls[1].carver = 'Mira'; owls[1].carverPk = s.pubkey; owls[2].carver = 'Tam';
+    assert.match(carving.lookPlaced(z, s, 'stone owl'), /base: X\./, 'plain is the first');
+    assert.match(carving.lookPlaced(z, s, 'stone owl 2'), /base: Mira\./);
+    assert.match(carving.lookPlaced(z, s, 'second owl'), /base: Mira\./);
+    assert.match(carving.lookPlaced(z, s, '3.owl'), /base: Tam\./);
+    assert.equal(carving.lookPlaced(z, s, 'owl 4'), null, 'there is no fourth');
+    Object.assign(z, { packRoom: () => true, refreshRoomCtx() {}, roomFeed() {}, sendStatus() {}, markSimDirty() {} });
+    assert.equal(await carving.pickUp(z, s, 'owl'), false, 'the first is not yours to take');
+    assert.equal(await carving.pickUp(z, s, 'owl 2'), true, 'the second is');
+    assert.deepEqual(z.carvings.get('the-green').map((c) => c.id), ['c0', 'c2'], 'and only that one comes up');
+    s.items.splice(s.items.findIndex((c) => c.itemId === 'carving-owl'), 1);
     // In your own den it lasts.
     z.inDen = new Map([['pk', 'pk']]); z.dens = new Map([['pk', { roomId: 'the-green', holder: 'pk' }]]);
     s.items.push(Object.assign(item('carving-crow'), { loreId: 'k1' })); rows.set('k1', { kind: 'crow', quality: 4, carver: 'Rome' });
