@@ -44,7 +44,7 @@ import {
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
-  WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
+  WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
   RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
@@ -796,7 +796,9 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
       // Nothing weaker in the room. Past STARVING_AT that hunger has nowhere to
       // go but you — the louder tell, the warning before it might spring (see
       // starvingHunts + the wind-up in the tick loop).
-      if (creature.hunger >= STARVING_AT && starvingHunts(z, creature)) return "gaunt and ravenous, its eyes fixed on you";
+      if (creature.hunger >= huntsAt(creature.templateId) && starvingHunts(z, creature)) {
+        return creature.hunger >= STARVING_AT ? "gaunt and ravenous, its eyes fixed on you" : "hungry, and its eyes fixed on you";
+      }
       return "restless with hunger";
     }
     if (scavengerBold(z, creature)) return "bold and unafraid, fat on the dead";
@@ -955,8 +957,10 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       const bloodWake = isBloodMoon() && BLOOD_MOON_WAKERS.has(creature.templateId);
       // THE RAT KING'S RATS go for anyone on sight while it lives (ratking.ts),
       // and no rat comes for the one who wears its crown, whatever it remembers.
+      // A bear awake in one of its own caves comes at whoever walks in (DEFENDS_CAVE).
+      const cave = defendsCave(creature);
       if (ratking.spares(z, creature, session)) continue;
-      const hostile = AGGRESSIVE.has(creature.templateId) || bloodWake || ratking.bold(z, creature) || events.crabMarching(z, creature); // a crab on the march goes for whoever is in its way
+      const hostile = AGGRESSIVE.has(creature.templateId) || bloodWake || ratking.bold(z, creature) || events.crabMarching(z, creature) || cave; // a crab on the march goes for whoever is in its way
       // A king with no quarrel with you speaks as you come in (KING_WORDS); the
       // Drowned God speaks in its own pause before it rises (zone.ts).
       if (ambush && !holdsGrudge && !hostile && KING_WORDS[creature.templateId] && creature.templateId !== DROWNED_GOD) {
@@ -977,6 +981,13 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
           z.send(session, `${cap(tmpl.name)} rises over its kill, hackles up and fixed on you — it hasn't sprung yet. (get out, or hit first)`);
           z.roomFeed(session.roomId, `${cap(tmpl.name)} rises from its kill, hackles up.`, session.pubkey, false); // local: mob reaction
         }
+        continue;
+      }
+      // A bear in its cave rushes you and stops short: the warning comes first,
+      // as it does everywhere a bear bluffs, and it is not a free opening blow.
+      // Inside the rearm, or with you on its books, it is no bluff.
+      if (cave && !holdsGrudge && styles.bluffPending(z, creature, tmpl, session.pubkey, now)) {
+        styles.beforeAttack(z, creature, tmpl, session, now);
         continue;
       }
       creature.target = session.pubkey;
@@ -1966,10 +1977,22 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
   // Already-hostile kinds (sentinels bar their post, drowners take the water,
   // the watchman its door) keep their own aggro and are excluded. The tick loop
   // rolls the odds and runs the telegraphed wind-up; this is just the predicate.
+// The hunger at which a predator turns on a lone wanderer: the end of the rope
+// for most, mere hunger for a few (HUNTS_WHEN_HUNGRY).
+export function huntsAt(templateId: string): number {
+  return HUNTS_WHEN_HUNGRY.has(templateId) ? HUNGRY_AT : STARVING_AT;
+}
+
+// Awake in one of its own caves, so whoever walks in is walking into it.
+export function defendsCave(creature: Creature): boolean {
+  return DEFENDS_CAVE.has(creature.templateId) && !creature.asleep
+    && (CAVE_DWELLERS.get(creature.templateId) ?? []).includes(creature.roomId);
+}
+
 export function starvingHunts(z: ZoneDO, creature: Creature): boolean {
     if (!STARVE_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
     if (SENTINELS.has(creature.templateId) || DROWNERS.has(creature.templateId) || AGGRESSIVE.has(creature.templateId)) return false;
-    if ((creature.hunger ?? 0) < STARVING_AT) return false;
+    if ((creature.hunger ?? 0) < huntsAt(creature.templateId)) return false;
     // A hunter that DOES keep a prey map (the surface pack) runs down the easier
     // animal first — it only comes for you when there's nothing weaker in the room.
     // The deep's pale hunters have no prey map, so this never spares you: you're it.

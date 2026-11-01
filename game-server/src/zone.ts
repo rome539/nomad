@@ -137,7 +137,7 @@ import { FORGE_STOCK,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  STARVING_AT, SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -4899,15 +4899,17 @@ export class ZoneDO implements DurableObject {
             if (lurker) creature.hidden = false; // it uncoils to wind up — unseen no longer
             this.send(prey, lurker
               ? `${cap(tmpl.name)} uncoils from the dark despite your light — starved past caring, it fixes on you. It hasn't sprung yet. (get out, or hit first)`
+              : creature.hunger < STARVING_AT
+              ? `${cap(tmpl.name)}, hungry, fixes on you — not a guard's warning but a predator's appetite. It hasn't sprung yet. (get out, or hit first)`
               : `${cap(tmpl.name)}, gaunt and starving, fixes on you — not a guard's warning but a predator's hunger. It hasn't sprung yet. (get out, or hit first)`);
-            this.roomFeed(creature.roomId, `${cap(tmpl.name)}, starving, sizes up ${prey.name}.`, prey.pubkey, false);
+            this.roomFeed(creature.roomId, `${cap(tmpl.name)}, ${creature.hunger < STARVING_AT ? "hungry" : "starving"}, sizes up ${prey.name}.`, prey.pubkey, false);
           }
         } else if (now >= creature.rouseAt) {
           creature.rouseAt = undefined;
           creature.target = prey.pubkey;
           if (!prey.target) prey.target = creature.id;
           this.send(prey, `${cap(tmpl.name)} lunges — hunger drives it straight onto you.`, "dmgin");
-          this.roomFeed(creature.roomId, `${cap(tmpl.name)} runs at ${prey.name}, starving.`, prey.pubkey, false);
+          this.roomFeed(creature.roomId, `${cap(tmpl.name)} runs at ${prey.name}, ${creature.hunger < STARVING_AT ? "hungry" : "starving"}.`, prey.pubkey, false);
         }
       }
       // The food web reads WOUNDS too, independent of the predator's OWN

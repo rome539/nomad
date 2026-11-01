@@ -42,6 +42,7 @@ try {
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
         "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine} from './ai';",
         "export {ratHoards} from './ai';",
+        "export {starvingHunts, huntsAt} from './ai';",
         "export {cmdDive} from './verbs';",
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
@@ -69,7 +70,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1044,7 +1045,7 @@ try {
   });
   check('the creature hooks ask the rat king', () => {
     const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
-    assert.match(ai, /if \(ratking\.spares\(z, creature, session\)\) continue;\s*const hostile = AGGRESSIVE\.has\(creature\.templateId\) \|\| bloodWake \|\| ratking\.bold\(z, creature\)(?: \|\| events\.crabMarching\(z, creature\))?;/);
+    assert.match(ai, /if \(ratking\.spares\(z, creature, session\)\) continue;\s*const hostile = AGGRESSIVE\.has\(creature\.templateId\) \|\| bloodWake \|\| ratking\.bold\(z, creature\)(?: \|\| events\.crabMarching\(z, creature\))?(?: \|\| cave)?;/);
     assert.match(ai, /remembers\(z, creature, s\.pubkey, now\) \|\| ratking\.bold\(z, creature\)(?: \|\| events\.crabMarching\(z, creature\))?\)\s*&& !ratking\.spares\(z, creature, s\)/);
   });
 
@@ -2650,6 +2651,43 @@ try {
     king.grudges = [{ pk: 'me', at: Date.now() }];
     await provokeGrudges(z, me, true);
     assert.ok(!said.some((t) => /"/.test(t)), 'with a quarrel between you there is no talk');
+  });
+
+  await checkAsync('a bear in its own cave rushes whoever walks in, and a hungry one hunts (2026-11-01)', async () => {
+    const z = new ZoneDO({}, {});
+    z.world = { mobTemplates: new Map([['brown-bear', { id: 'brown-bear', name: 'a brown bear', level: 5, max_hp: 70 }], ['grey-wolf', { id: 'grey-wolf', name: 'a grey wolf', level: 3, max_hp: 30 }]]),
+      mobSpawns: [], itemTemplates: new Map(), rooms: new Map(), exits: new Map(), entryRooms: new Set(), safeRooms: new Set() };
+    const bear = { id: 'b', templateId: 'brown-bear', roomId: 'the-wall-cave', hp: 70, grudges: [], target: null, hunger: 0 };
+    z.creatures = new Map([['b', bear]]);
+    const said = []; let struck = 0;
+    z.send = (_s, t) => said.push(t); z.roomFeed = () => {}; z.refreshRoomCtx = () => {}; z.outOfWorld = () => false;
+    z.creatureFirstStrike = async () => { struck++; };
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'the-wall-cave' };
+    await provokeGrudges(z, me, true);
+    assert.equal(bear.bluffing, 'me', 'it rushes you as you walk into its cave');
+    assert.match(said.join(' '), /stops short/, 'and stops short: the warning');
+    assert.equal(struck, 0, 'no free opening blow');
+    // the same bear out in the wood lets you by
+    Object.assign(bear, { roomId: 'the-broken-avenue', bluffing: undefined, bluffedAt: undefined, target: null });
+    me.roomId = 'the-broken-avenue'; said.length = 0;
+    await provokeGrudges(z, me, true);
+    assert.equal(bear.bluffing, undefined, 'out in the wood it lets you by');
+    assert.equal(bear.target, null);
+    // asleep in its cave it sleeps through you
+    Object.assign(bear, { roomId: 'the-wall-cave', asleep: true }); me.roomId = 'the-wall-cave';
+    await provokeGrudges(z, me, true);
+    assert.equal(bear.bluffing, undefined, 'a sleeping bear does not rush');
+    bear.asleep = false;
+    // inside the rearm, the second time in is no bluff
+    bear.bluffedAt = Date.now() - 60_000;
+    await provokeGrudges(z, me, true);
+    assert.equal(bear.target, 'me', 'walk back in on it soon after and it comes for you');
+    // hungry is enough for the bear; a wolf still waits for the end of the rope
+    z.creaturesInRoom = () => [];
+    assert.equal(huntsAt('brown-bear'), 50); assert.equal(huntsAt('grey-wolf'), 85);
+    assert.equal(starvingHunts(z, { templateId: 'brown-bear', roomId: 'x', hunger: 55 }), true, 'a hungry bear hunts you');
+    assert.equal(starvingHunts(z, { templateId: 'brown-bear', roomId: 'x', hunger: 40 }), false, 'a fed one does not');
+    assert.equal(starvingHunts(z, { templateId: 'grey-wolf', roomId: 'x', hunger: 55 }), false, 'the others are as they were');
   });
 
   check('the log keeps a day of text and lets the rest go (2026-10-27)', () => {

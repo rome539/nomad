@@ -5521,6 +5521,16 @@ export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", 
 // The one it leaves keeps its sign (a "den" trace) for the next to read.
 export const BEAR_CAVES = ["the-ridge-cave", "the-oak-cave", "the-wall-cave", "the-boundary-cave", "the-pile-cave"];
 export const CAVE_DWELLERS = new Map<string, string[]>([["brown-bear", BEAR_CAVES]]);
+// A BEAR'S CAVE IS NOT WALKED INTO (rome, 2026-11-01). Awake in one of its own
+// caves, a bear comes at whoever walks in, with no grudge and no hunger: the
+// first rush is still its bluff (BLUFFERS), and the next, inside the rearm, is
+// not. Out in the wood it is the bear it always was.
+export const DEFENDS_CAVE = new Set<string>(["brown-bear"]);
+// ...AND HUNGRY IS ENOUGH (rome, 2026-11-01). These come for a lone wanderer
+// once they are merely hungry (HUNGRY_AT), not only at the end of the rope
+// (STARVING_AT). Every other guardrail of starvingHunts holds: an easier
+// animal in the room spares you, and the wind-up still gives you the door.
+export const HUNTS_WHEN_HUNGRY = new Set<string>(["brown-bear"]);
 export const CAVE_HOLD_MIN_MS = 8 * 3_600_000;
 export const CAVE_HOLD_MAX_MS = 20 * 3_600_000;
 // THE WOOD'S HABITS (mig 321, rome 2026-10-21): how the new animals meet the
