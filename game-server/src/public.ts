@@ -12134,6 +12134,18 @@ var SKY_STARS = {
   eclipse: "394,18,9,fbe29b;611,18,9,fff7ba;80,34,3,896a52;225,34,9,f6cc95;1052,34,4,ab8e6f;1186,34,2,8f7b6b;1426,34,9,fff3c3;457,40,6,c69873;815,40,9,fbe8af;267,69,9,ffffc3;1467,69,9,fffff6;47,73,9,fff9bd;363,73,9,ffedb3;1394,73,9,ffffdf;194,74,9,ffffcf;632,74,9,ffffba;1091,74,9,fffff6;1564,74,9,fff3b6;15,78,5,b49678;1246,78,9,fdfef4;722,100,9,f6f7db;932,100,9,feffef;886,106,3,a17e6b;1362,111,7,e2bd9e;80,112,2,928473;1516,117,4,ac8f76;659,122,9,fff6c3;602,139,4,9e7f6b;707,139,7,d7a77f;1121,144,9,fffff0;960,149,3,9f836b;754,151,9,ffffe4;1278,151,9,ffffdd;1323,151,8,f1c790;222,166,9,ffffd4;1426,166,7,e0c4a6;143,188,9,fff7c6;252,195,9,fbf4cf;314,199,9,fce4b3;1370,204,9,fffbc1;1453,204,9,f4d9aa;626,215,9,fff9da;1222,215,9,fffdc6;1162,237,2,89776c;1350,237,9,f7dba6;1079,266,9,f0e1c8;1047,277,9,fcfae6;1277,288,9,fffbc3;1142,315,9,fdffd7;925,321,7,d4af82;572,326,5,b9a07f;1071,332,3,967e67;1309,332,4,af9681;617,340,9,ffffe6;572,348,2,8a6e53;681,354,9,f7f4dc;850,354,9,fefffe;982,370,9,fafbd0;343,381,9,f9c08b;88,465,9,fff7c1;834,505,9,fff5d6;906,505,9,ffffe2;185,518,9,faf3b8;1450,518,9,f9f0c3;799,536,9,fce4b6;691,558,9,fff7b9;710,664,2,8d7d6c",
   dawn: "960,18,9,f9e1af;159,41,9,f9f8a8",
 };
+// THE SKY KEEPS GOING WHILE YOU ARE UNDER A ROOF (rome, 2026-11-01). Each sky
+// remembers where it was and which way it was going when you lost sight of it;
+// come back out under the same one and it has drifted on by the time you were
+// gone, the same way, instead of starting again from a random place. A sky not
+// seen yet this visit starts anywhere, going either way.
+var skyKept = {};
+function skyHandover(old, oldT, oldDir, next, now) {
+  if (old) skyKept[old] = [oldT, oldDir, now];
+  var k = next ? skyKept[next] : null;
+  return k ? { t: k[0] + Math.max(0, now - k[2]) / 1000, dir: k[1] }
+           : { t: Math.random() * 600, dir: Math.random() < .5 ? -1 : 1 };
+}
 var skyDrift = (function () {
   var layer = null, tiles = [], starCv = null, starCtx = null, stars = {};
   var name = "", dir = 1, frame = null, stamp = 0, t = 0, geo = null, img = "";
@@ -12239,7 +12251,8 @@ var skyDrift = (function () {
     var base = next.replace(/-\\d+$/, "");
     if (!SKY_PAINTED[base]) next = "";
     if (next !== name) {
-      name = next; geo = null; t = Math.random() * 600; dir = Math.random() < .5 ? -1 : 1;
+      var kept = skyHandover(name, t, dir, next, performance.now());
+      name = next; geo = null; t = kept.t; dir = kept.dir;
       img = name ? "url(/sky/" + name + ".webp?v=" + SKY_V + ")" : "";
       build();
     }

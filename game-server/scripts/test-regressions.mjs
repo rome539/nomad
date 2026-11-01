@@ -640,6 +640,19 @@ try {
     assert.equal(isSpeech('get face 2'), false);
     assert.equal(isSpeech('take second stone face'), false);
   });
+  check('the sky picks up where it was after a roof, not from a random place (2026-11-01)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const src = pub.match(/var skyKept = \{\};\nfunction skyHandover[\s\S]*?\n\}\n/)[0];
+    const handover = new Function(src + 'return skyHandover;')();
+    const first = handover('', 0, 1, 'night', 0);
+    const indoors = handover('night', 300, -1, '', 10_000);          // under a roof at t=300, drifting left
+    assert.equal(typeof indoors.t, 'number');
+    const back = handover('', indoors.t, indoors.dir, 'night', 70_000); // out again a minute later
+    assert.equal(back.t, 360, 'it drifted on for the minute you were inside');
+    assert.equal(back.dir, -1, 'and still the same way');
+    assert.ok(first.t >= 0 && first.t < 600, 'a sky not seen yet starts anywhere');
+    assert.match(pub, /var kept = skyHandover\(name, t, dir, next, performance\.now\(\)\);\n      name = next; geo = null; t = kept\.t; dir = kept\.dir;/, 'the drift uses it');
+  });
   await checkAsync('a smoke in the lockbox can be lit; one in the vault cannot (2026-11-01)', async () => {
     const { db, D1 } = sqliteD1();
     const said = [];
