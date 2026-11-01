@@ -1505,7 +1505,9 @@ try {
     const chips = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
     assert.match(chips, /if \(!fighting && session\.litSource === "lantern" && z\.carriesLight\(session\)\) suggest\.push\("douse"\);/);
     const parser = readFileSync(new URL('../src/parser.ts', import.meta.url), 'utf8');
-    assert.match(parser, /"  douse             \(shutter, snuff\)/);
+    assert.match(parser, /"  light \/ douse      a torch or a lantern/, 'douse is in the short help');
+    const guide = readFileSync(new URL('../src/guide.ts', import.meta.url), 'utf8');
+    assert.match(guide, /<code>douse<\/code> \(snuff, shutter\)/, 'and in full in the guide');
     assert.deepEqual(parse('douse'), { verb: 'douse', arg: '' });
   });
 

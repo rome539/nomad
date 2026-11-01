@@ -1,22 +1,18 @@
 // THE GUIDE — nomadmud.com/guide
 //
-// `help` is a COMMAND REFERENCE: what to type, and the one rule you must know
-// before you die (what you keep). It has never explained how anything WORKS —
-// why an axe struggles against plate, what a bleed actually does, why the
-// quiet man hears you coming. That is what this is for.
+// Two halves (rome, 2026-11-01): how the world works, kept lean, and then every
+// command in full. In the game `help` is the short list (parser.HELP_TEXT) and
+// points here for the rest. Both were checked against the parser and the code
+// that day; when a command changes, change it in both.
 //
-// THE RULE THIS PAGE IS WRITTEN UNDER (rome, 2026-08-07): THE LAWS, NOT THE
-// NUMBERS. Every system's shape is explained and no constant is printed — no
-// drop rates, no stat blocks, no bestiary. A player should finish this able to
-// reason about the world and still have to go and find out what is in it. The
-// moment this page lists the woodward's hitpoints it has replaced the game with
-// a spreadsheet, and the secret economy (which nothing in-game ever names) dies
-// the same day.
+// THE LAWS, NOT THE NUMBERS (rome, 2026-08-07) still holds for the first half:
+// the shape of each system and never its odds, drop rates or stat blocks, so a
+// player can reason about the world and still has to find out what is in it.
+// The command half gives the counts a player needs to use a command (slots,
+// costs, lengths), the ones the old help always gave.
 //
 // Its own module rather than more of public.ts, per the standing rule about the
-// spine: public.ts is the client, this is a document. No JavaScript at all —
-// nothing here needs to move, and a page that cannot break is worth more than a
-// page that scrolls prettily.
+// spine: public.ts is the client, this is a document. No JavaScript at all.
 export const GUIDE_PAGE = `<!doctype html>
 <html lang="en">
 <head>
@@ -24,9 +20,9 @@ export const GUIDE_PAGE = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NOMAD — how it works</title>
 <link rel="canonical" href="https://nomadmud.com/guide">
-<meta name="description" content="How NOMAD works: what you keep, what armour does, what weight costs, and why the world does not wait for you.">
+<meta name="description" content="How NOMAD works, and every command: what you keep, how fights run, why weight is noise, and a world that keeps going without you.">
 <meta property="og:title" content="NOMAD — how it works">
-<meta property="og:description" content="What you keep, what armour does, what weight costs, and why the world does not wait for you.">
+<meta property="og:description" content="How the world works, and every command in full.">
 <meta property="og:image" content="https://nomadmud.com/og.jpg?v=4">
 <link rel="icon" href="/icon.png">
 <style>
@@ -115,6 +111,10 @@ export const GUIDE_PAGE = `<!doctype html>
     h1 { letter-spacing: 0.3em; }
     nav ol { grid-template-columns: minmax(0, 1fr); }
   }
+  /* the command reference: each command, then what it does */
+  dl { margin-top: 6px; }
+  dt { margin-top: 18px; color: var(--cream); }
+  dd { margin-top: 5px; color: var(--bone); }
 </style>
 </head>
 <body>
@@ -122,430 +122,424 @@ export const GUIDE_PAGE = `<!doctype html>
 
 <header>
   <h1>NOMAD</h1>
-  <div class="sub">How it works. Not what to type — <code>help</code> does that, in the game.
-  This is the shape of the rules underneath: what you keep, what armour does, what weight
-  costs you, and why the world carries on without you.</div>
+  <div class="sub">How the world works, then every command in full. In the game,
+  <code>help</code> gives the short list.</div>
   <a class="back" href="/">&#8592; back to the door</a>
 </header>
-
-
-<div class="tldr">
-  <div class="lbl">The short version</div>
-  <ul>
-    <li><b>Die and you drop everything you were carrying</b>, sealed things included.
-    Anything you put in the lockbox, the vault or your own shelf survives you.</li>
-    <li><b>Loot is worth nothing until you have banked it.</b> The gatehouse behind
-    any gate is the bank, and the only room nothing can reach you in.</li>
-    <li><b>Armour is subtracted from every blow.</b> Edge pays full price against it
-    and answers with bleeding; blunt caves it in; a point slips past it.</li>
-    <li><b>Combat runs on a four-second beat.</b> You do not swing by typing —
-    you pick a fight and it keeps happening until someone stops.</li>
-    <li><b>Weight is noise.</b> The safest kit and the quietest kit are opposites,
-    and things hunt by sound.</li>
-    <li><b>Every swing tires you.</b> The heavier your kit, the more each one costs,
-    tired arms hit softer, and nothing comes back while you are still fighting.</li>
-    <li><b>Bleeding ignores armour entirely.</b> Carry dressings.</li>
-    <li><b>The dark is really dark.</b> A torch is fire — it frightens most things,
-    burns out, and dies in rain. A lantern lasts and frightens nothing.</li>
-    <li><b>The world runs while you are logged out.</b> Things get hungry, move,
-    hold grudges; food spoils and iron rusts.</li>
-    <li><b>Your key is your character.</b> No accounts, no wipes.</li>
-    <li><b>Nothing about you is published unless you ask.</b> The leaderboards are
-    opt-in, and only one command ever posts to your own feed.</li>
-  </ul>
-  <div class="tail">The rest of this page is why each of those is true.</div>
-</div>
 
 <nav>
   <div class="lbl">Contents</div>
   <ol>
-<li><span class="n">01</span> <a href="#keep">What you keep</a></li>
-    <li><span class="n">02</span> <a href="#walk">The walk home</a></li>
-    <li><span class="n">03</span> <a href="#beat">The four-second beat</a></li>
-    <li><span class="n">04</span> <a href="#armour">Armour and the three damages</a></li>
-    <li><span class="n">05</span> <a href="#wounds">Wounds</a></li>
-    <li><span class="n">06</span> <a href="#load">What you carry</a></li>
-    <li><span class="n">07</span> <a href="#stance">How you stand</a></li>
-    <li><span class="n">08</span> <a href="#dark">Light and the dark</a></li>
-    <li><span class="n">09</span> <a href="#alive">The world does not wait</a></li>
-    <li><span class="n">10</span> <a href="#sky">Weather, night and the tide</a></li>
-    <li><span class="n">11</span> <a href="#home">Living somewhere</a></li>
-    <li><span class="n">12</span> <a href="#trade">Trade, forge and fire</a></li>
-    <li><span class="n">13</span> <a href="#know">Knowing where you are</a></li>
-    <li><span class="n">14</span> <a href="#others">Other wanderers</a></li>
-    <li><span class="n">15</span> <a href="#key">Your key is your character</a></li>
-    <li><span class="n">16</span> <a href="#boards">Your standing, and saying so</a></li>
+    <li><span class="n">01</span> <a href="#keep">What you keep</a></li>
+    <li><span class="n">02</span> <a href="#gates">Gates and the walk home</a></li>
+    <li><span class="n">03</span> <a href="#fight">Fighting</a></li>
+    <li><span class="n">04</span> <a href="#load">Weight is noise</a></li>
+    <li><span class="n">05</span> <a href="#dark">Light and the dark</a></li>
+    <li><span class="n">06</span> <a href="#alive">A world that keeps going</a></li>
+    <li><span class="n">07</span> <a href="#home">A place of your own</a></li>
+    <li><span class="n">08</span> <a href="#others">Other wanderers</a></li>
+    <li><span class="n">09</span> <a href="#key">Your key and your name</a></li>
+    <li><span class="n">10</span> <a href="#commands">Every command</a></li>
   </ol>
 </nav>
 
 <section id="keep">
   <h2>01 &nbsp;What you keep</h2>
-  <p>This is the rule to know before anything else, because it is the rule that
-  costs you.</p>
-  <div class="law"><b>Die, and everything you were carrying stays where you fell.</b>
-  Everything. The sealed things too — the gate's seal is a title, not armour.
-  What is put away somewhere is what survives you.</div>
-  <p>There are four places to put a thing, and only one of them is your pockets:</p>
-  <ul>
-    <li><b>Your pack</b> is what you are carrying. It is lost the moment you are.</li>
-    <li><b>The lockbox</b> is set into the gatehouse wall. Small, and it is the
-    same lockbox at every gate — put something in at one, take it out at another.</li>
-    <li><b>The vault</b> is bigger and it <em>stops time</em>: nothing in it ages,
-    rusts or spoils. It is also the hardest to fill.</li>
-    <li><b>Your shelf</b>, if you have raised a den, holds as much gear as you
-    like — but it is out where you built it, and the world's clock runs in it.
-    Food ages on that shelf. Iron rusts on it.</li>
-  </ul>
-  <p>What lies where you died does not vanish. Anyone can pick it up, including
-  you, if you can get back before something else does.</p>
+  <div class="law"><b>Die, and everything you were carrying stays where you fell</b>,
+  sealed things included. What survives you is what you put away.</div>
+  <p>Logging off costs nothing: log off anywhere and you, and everything on you, are
+  exactly where you left them. Dying is what costs. There are three places to put
+  things that death cannot reach: the <b>lockbox</b> and the <b>vault</b>, at any
+  gate, and the <b>shelf</b> in a den of your own. Whatever lies where you died can
+  be picked up by anyone, you included, if you get back to it first.</p>
 </section>
 
-<section id="walk">
-  <h2>02 &nbsp;The walk home</h2>
-  <p>Nothing you find is yours until you have put it somewhere. That single fact
-  is the whole game: every step further out is worth more loot and a longer walk
-  back through it.</p>
-  <p>A <strong>gate</strong> is a door in the world. Behind it is a
-  <strong>gatehouse</strong> — the only warm room there is. Step in and you are
-  out of the world entirely: nothing can reach you, and everything is there —
-  your lockbox and vault, the keeper's hatch, the forge, the smoke racks, the
-  wall chart, the board.</p>
-  <div class="law">There is <b>no timer and no queue</b>. Nobody makes you leave
-  and nothing calls the raid. The only thing deciding whether you push on or turn
-  back is how far you are from a door and how much you are carrying — which is
-  why both of those things matter more here than anywhere else.</div>
-  <p>Gates are not all in the same place, and some parts of the world are a long
-  way from any of them.</p>
+<section id="gates">
+  <h2>02 &nbsp;Gates and the walk home</h2>
+  <p>Nothing you find is safe until you have put it somewhere, and every step
+  further out is better loot and a longer walk back. There is no timer: the only
+  thing deciding when you turn back is how far you are from a door and how much
+  you are carrying.</p>
+  <p>Behind every gate is a <b>gatehouse</b>, the one room nothing in the world can
+  reach. The keeper, the lockbox and vault, the bench, the brazier and the board are
+  all there. There are gates on the fortress walls, on the road, in the wood, on the
+  crossing and up the mountain, and some ground is a long way from any of them.</p>
 </section>
 
-<section id="beat">
-  <h2>03 &nbsp;The four-second beat</h2>
-  <p>Combat is not turn-based and it does not wait for you to type. Once you are
-  in a fight, <strong>blows land every four seconds</strong>, on a clock, whether
-  your hands are on the keyboard or not.</p>
-  <div class="law"><b>You do not swing by typing.</b> You pick a fight and the
-  fight keeps happening. What you type between beats is which fight, what stance,
-  what is in your hands — and whether you are still here.</div>
-  <p>What that buys you is four seconds to think, every four seconds, and the
-  knowledge that thinking too long is itself a decision. What it costs you is the
-  option of standing still while you work something out.</p>
-  <h3>What happens on a beat</h3>
-  <ul>
-    <li><b>You swing first.</b> The living get initiative — your blow lands before
-    theirs each round.</li>
-    <li><b>You fight one thing at a time</b>, and turn to the next the moment it
-    falls. Everything facing you swings back. That is why a crowd is so much worse
-    than one big thing: they all answer, and you answer one of them — unless your
-    weapon <em>cleaves</em>, which is exactly what cleaving is for.</li>
-    <li><b>Being stunned costs you the swing</b>, not just some damage. One beat,
-    gone.</li>
-    <li>Some steel is <b>fast</b> enough to land more than once in a beat.</li>
-  </ul>
-  <p>Everything else in the world runs on its own faster clock — creatures moving,
-  wounds bleeding, torches burning down. Only the exchange of blows waits for the
-  beat, so a fight reads at a human pace instead of a blur.</p>
-  <h3>The exception, and it is the one worth knowing</h3>
-  <p>Striking something that has <strong>not noticed you</strong> does not wait for
-  the beat. It lands immediately, and it lands hard. An ambush is the whole reward
-  for being quiet — which is the other half of why weight matters.</p>
-  <p>Leaving is a decision like any other, and it is made on the beat too. Walk out
-  and whatever you were fighting may well come after you.</p>
-  <h3>Your wind</h3>
-  <p>Beside your health is your <strong>stamina</strong> (<code>sta</code>), and a
-  fight spends it. <strong>Every swing costs some</strong>, and the more you are
-  wearing and holding, the more each one costs. Walking costs a little too.</p>
-  <div class="law"><b>Tired arms hit softer.</b> The lower your stamina, the less
-  every blow does — and <b>none of it comes back while you are fighting</b>. A long
-  fight in heavy kit is a fight you are slowly losing even when you are winning it.</div>
-  <p>It comes back once the fighting stops: slowly on your feet, faster sitting
-  down to rest or in the gatehouse, fastest by a fire. The things you fight tire
-  too — some of them quickly — and the dead and the made things never do.</p>
-</section>
-
-<section id="armour">
-  <h2>04 &nbsp;Armour and the three damages</h2>
-  <p>Armour is not a chance to avoid a hit. It is <strong>subtracted from every
-  blow that lands</strong> — which means a small hit against good armour is
-  almost nothing, and armour is worth far more against many light blows than
-  against one heavy one.</p>
-  <p>Weapons answer that in three different ways, and the difference is the whole
-  of combat:</p>
-  <ul>
-    <li><span class="atk">EDGE</span> — swords, axes, knives. It opens flesh.
-    Against armour it pays <em>full price</em>: an edge does not cheat plate at
-    all. Its answer to armour is not the swing, it is the <strong>bleed</strong>
-    that follows.</li>
-    <li><span class="atk">BLUNT</span> — maces, mauls, hammers. Weight caves
-    armour in, so a blunt weapon <strong>ignores some armour outright</strong>.
-    It is also the heaviest thing you can swing, and it can leave a man
-    <strong>stunned</strong>.</li>
-    <li><span class="atk">POINT</span> — picks, spikes, war-pikes. A point slips
-    between the plates. It ignores <strong>more armour than blunt does</strong>,
-    and it is lighter, but it opens far less.</li>
-  </ul>
-  <p>A fourth thing some weapons do is <strong>cleave</strong>: one swing reaches
-  more than one enemy. That is worth nothing in a duel and a great deal when
-  three things come at you at once.</p>
-  <div class="law">So the useful question is never <b>what is the best weapon</b>.
-  It is <b>what is it wearing</b> — and whether there is one of them or five.</div>
-  <p>One more thing, and it is easy to miss: when a creature's own swing goes
-  wide it is briefly off balance, and <strong>your very next blow</strong> hits
-  harder for it. Every weapon gets something from that moment. It is the one time
-  an edge gets past armour.</p>
-</section>
-
-<section id="wounds">
-  <h2>05 &nbsp;Wounds</h2>
-  <p>Damage is not the only thing that happens to you.</p>
-  <ul>
-    <li><b>Bleeding</b> keeps taking from you after the fight has stopped, and it
-    <strong>ignores armour completely</strong> — a bleed is subtracted raw, which
-    is why lightly-armed things that cut can be far worse than their damage
-    suggests. It clots on its own eventually. A <span class="mend">dressing</span>
-    stops it now.</li>
-    <li><b>Hobbled</b> means something went for your legs. You can still leave —
-    it is never a lock on the door — but you leave slowly, and slowly is the
-    problem.</li>
-    <li><b>Stunned</b> costs you the moment you needed.</li>
-  </ul>
-  <p>Healing is food, dressings and <span class="mend">rest</span>. Nothing closes
-  on its own while you walk. Resting takes you from nothing to whole in about a
-  minute, and gets your wind back with it; by a fire it is quicker, and the
-  gatehouse heals you at a rest's pace. Resting works anywhere, and anywhere is
-  not always wise: it takes time, any effort ends it, and time is when things
-  arrive.</p>
-  <p>In a fight, a meal you are carrying goes down on its own once you are badly
-  hurt — but only one at a time, and only if you brought it.</p>
-  <p>Certain gear is made against all this — some of it stops a wound opening at
-  all, and some makes one you already have clot sooner. Read what a piece says
-  about itself; it will tell you which.</p>
+<section id="fight">
+  <h2>03 &nbsp;Fighting</h2>
+  <p>A fight runs on a <b>four-second beat</b>. You pick it and it keeps happening,
+  typing or not; what you type between beats is who you are fighting, how you stand,
+  and whether you stay. Striking something that has not noticed you does not wait
+  for the beat: it lands at once, and hard.</p>
+  <p><b>Every swing spends stamina</b>, more in heavy kit, and tired arms hit softer.
+  None of it comes back until the fight is over.</p>
+  <p><b>Armour is taken off every blow that lands.</b> Weapons answer it three ways:
+  <span class="atk">edge</span> pays full price against armour and opens bleeding
+  wounds; <span class="atk">blunt</span> ignores some armour and can stun;
+  <span class="atk">point</span> slips past more armour still and opens less. So the
+  question is never which weapon is best, it is what the thing in front of you is
+  wearing, and how many of them there are.</p>
+  <p><b>Bleeding ignores armour</b> and keeps taking after the fight; a dressing
+  stops it. Wounds do not close on their own: food, dressings and rest close them,
+  and rest takes about a minute, less by a fire.</p>
 </section>
 
 <section id="load">
-  <h2>06 &nbsp;What you carry</h2>
-  <p>Weight is the price of power, and it is charged three times.</p>
-  <ul>
-    <li><b>It is heard.</b> The more you carry the more noise you make moving,
-    and noise is how things find you. An empty-handed wanderer is very nearly
-    silent. Someone in full plate with a mace is not, and everything with ears
-    knows where they are.</li>
-    <li><b>It is slower to get out of the way.</b> Dodging is a load problem.</li>
-    <li><b>It costs you the parting</b> — leaving a fight cleanly is easier
-    light than heavy.</li>
-  </ul>
-  <div class="law">Armour is weight and weight is noise, so <b>the safest kit and
-  the quietest kit are opposites</b>. There is no build that is simply best. There
-  is the one that suits what you are about to do.</div>
-  <p>Weight is not only what you wear. What you are holding counts, and so does
-  loose metal past what a person can comfortably carry. A pack full of salvage is
-  a pack that announces you.</p>
-  <p>Rain covers noise. Deep stone does not.</p>
-</section>
-
-<section id="stance">
-  <h2>07 &nbsp;How you stand</h2>
-  <p>Three ways to hold yourself in a fight, changeable at any time:</p>
-  <ul>
-    <li><span class="atk">Reckless</span> — hit harder, take more.</li>
-    <li><b>Steady</b> — neither.</li>
-    <li><span class="def">Guarded</span> — hit softer, take less.</li>
-  </ul>
-  <p>A shield is a separate argument. A big one blocks a great deal and
-  <strong>drags the swing it is protecting</strong> — it says so when you pick it
-  up. A small one costs you almost nothing and saves you almost nothing.</p>
+  <h2>04 &nbsp;Weight is noise</h2>
+  <p>The more you carry, the louder you move, and things hunt by sound. Weight also
+  makes you slower to get out of the way and harder to break off a fight. Armour is
+  weight, so the safest kit and the quietest kit are opposites, and there is no
+  build that is simply best. Rain covers noise. Stone does not.</p>
 </section>
 
 <section id="dark">
-  <h2>08 &nbsp;Light and the dark</h2>
-  <p>Dark rooms are genuinely dark. You cannot see the room, its exits, what is
-  on the floor, or what is in there with you.</p>
-  <ul>
-    <li>A <b>torch</b> is fire: it burns out, it dies in the rain, and it
-    <strong>frightens most living things</strong> — a great many creatures will
-    break off a fight rather than stay near an open flame, though not every round
-    and never the ones with a reason to hold their ground.</li>
-    <li>A <b>lantern</b> is shuttered. It lasts far longer and it is
-    <strong>not fire</strong>, so it scares nothing at all.</li>
-  </ul>
-  <p>Both occupy a hand. A light in your shield hand means you are not really
-  carrying a shield, and the game will tell you so rather than quietly halving
-  your guard. <b>douse</b> puts the light out: a lantern's shutter closes and
-  keeps what is left of its fat, a torch is ground out and spent. <b>equip
-  shield</b> does the same, and gives you your guard back.</p>
-  <div class="law">A torch buys you passage and costs you the dark's one gift:
-  <b>things cannot see you either</b>.</div>
+  <h2>05 &nbsp;Light and the dark</h2>
+  <p>Dark rooms are really dark: no room, no exits, nothing on the floor, nothing
+  with you. A <b>torch</b> is fire. It burns out, dies in rain, and frightens most
+  living things. A <b>lantern</b> lasts far longer and frightens nothing. Either one
+  takes your shield hand, and a light lets things see you too.</p>
 </section>
 
 <section id="alive">
-  <h2>09 &nbsp;The world does not wait</h2>
-  <p>This is the part that is not like other games of this kind. The world is not
-  a set of rooms that come alive when you walk in. It is running now, and it was
-  running while you were away.</p>
-  <ul>
-    <li>Creatures get <b>hungry</b>, and a hungry thing behaves differently from
-    a fed one. Some of them hunt each other. You can walk into the middle of
-    that.</li>
-    <li>They hold <b>territory</b>, keep to ground they know, and remember. Hurt
-    something and get away, and it has not forgotten you.</li>
-    <li>They <b>travel</b>. Things come up out of the deep and walk to where they
-    live. Some patrol a fixed round, forever, and are exactly where their round
-    says they should be.</li>
-    <li>Food <b>spoils</b>. Iron <b>rusts</b>. A corpse draws scavengers.</li>
-  </ul>
-  <p>Log out for two days and you do not return to a paused world. You return to
-  one that has had two days.</p>
-</section>
-
-<section id="sky">
-  <h2>10 &nbsp;Weather, night and the tide</h2>
-  <p>Outdoors is outdoors. It rains, and rain drowns torches, masks noise and
-  leaves mud that holds a footprint. Night falls and the surface goes properly
-  dark. Water rises and falls, and there are places you can only cross at the
-  right hour — and places you should not be standing at the wrong one.</p>
-  <p>You always know what weather you are standing in. The world will not hide
-  that from you; it will only make you deal with it.</p>
+  <h2>06 &nbsp;A world that keeps going</h2>
+  <p>The world runs whether you are in it or not. Creatures get hungry, hunt each
+  other, keep to their ground, travel, and remember who hurt them. Rain, fog, wind
+  and cold come and go over different ground, night falls, and the tide rises and
+  falls. Food spoils and iron rusts. Log out for two days and you come back to a
+  world that has had two days.</p>
 </section>
 
 <section id="home">
-  <h2>11 &nbsp;Living somewhere</h2>
-  <p>Far enough out from the gates, open ground will take a house, and the
-  ground is yours to choose.</p>
-  <ul>
-    <li><b>Raise a door</b> and you have a house: a shelf that holds unlimited
-    gear, and bunks you can hand to other wanderers face to face. It goes up
-    well out from every gate, so nothing you keep there is a short walk from
-    a vault.</li>
-    <li><b>Build into it.</b> A house can have more than walls: a fire to rest
-    by, a cover against the damp, something on the door to wake you, more room
-    on the shelf, a place for food to keep. Each is made of what you break
-    down at the bench and carry out yourself.</li>
-    <li><b>It opens exposed.</b> A new den shelters you from nothing — things
-    walk straight in. Only a <strong>bar</strong>, made of iron you carried out
-    there yourself, changes that.</li>
-    <li><b>The ground stays public.</b> Anyone can stand on it, learn who lives
-    there, and wait. The door is yours; the street never is.</li>
-    <li><b>An unbarred hold falls in</b> if you stop coming home. There is no
-    rent and no upkeep bar — the only question it asks is whether you still live
-    there. Bar the door and it stands until you give it up.</li>
-  </ul>
-  <p>Nothing in a den is frozen the way the vault freezes things. That is the
-  difference between a bank and a home.</p>
-</section>
-
-<section id="trade">
-  <h2>12 &nbsp;Trade, forge and fire</h2>
-  <p>The keeper at the hatch <strong>deals in kind</strong>. There is no coin: you
-  name what you want, and you lay things on the counter until he is square. He
-  gives no change, so pay attention to what you are handing over.</p>
-  <p>He does not carry everything at once. What is not on his shelf today comes
-  back another day — the hatch tells you what he is not carrying, so you know to
-  come back rather than wonder whether it ever existed.</p>
-  <p>What he privately prizes, he never says. Some things are worth far more than
-  they look.</p>
-  <p>The <strong>forge</strong> turns salvage into iron and iron into gear. The
-  <strong>smoke racks</strong> turn raw meat into food that keeps. Both are in the
-  gatehouse, and both take time you spend not out there.</p>
-</section>
-
-<section id="know">
-  <h2>13 &nbsp;Knowing where you are</h2>
-  <p>Nothing hands you a map. Knowledge is a thing you find, carry, and can lose
-  like anything else.</p>
-  <ul>
-    <li>A <b>surveyor's map</b> starts blank and sets down true every room you
-    walk with it. A <b>crude map</b> is somebody's rough copy: patches of the
-    world already drawn, true as far as they go, and it takes what you walk too.</li>
-    <li>A <b>journal</b> is somebody's record. It can be taken off them.</li>
-    <li>The <b>wall chart</b> in the gatehouse is shared: what one wanderer carves
-    into it, every wanderer reads.</li>
-    <li>The <b>board</b> in the gatehouse is where people leave word for each
-    other. A notice keeps for a week, and it is the only thing anyone says here
-    that is still there after they log off. Nobody checks a word of it, anybody
-    can tear any of it down, and some of it is a lie somebody wants you to
-    believe. <code>board</code> reads it, <code>post &lt;words&gt;</code> pins
-    one up.</li>
-    <li>Some things out in the world <b>keep a list of names</b>, and comparing
-    two such lists tells you who went on and who turned back.</li>
-  </ul>
-  <p>Reading needs light. Carving is loud and takes a while.</p>
+  <h2>07 &nbsp;A place of your own</h2>
+  <p>Well out from the gates, open ground will take a den, and where is your choice.
+  It is a door, a shelf and bunks you can hand out. You can build into it: a hearth,
+  a smoke rack, a larder, a water butt and more, each made of what you carry out
+  there. It opens with nothing shut, so things walk straight in, until you fit a
+  <b>bar</b>. The ground outside stays public. An unbarred den falls in if you stop
+  coming home; a barred one stands until you give it up. Nothing on the shelf is
+  frozen the way the vault freezes things.</p>
 </section>
 
 <section id="others">
-  <h2>14 &nbsp;Other wanderers</h2>
-  <p>Other people are real and they are not on your side by default.</p>
-  <ul>
-    <li>You can <b>kill them</b>, and they drop what they were carrying like
-    anyone else.</li>
-    <li>Killing leaves <b>blood on your hands</b> that others can see. Nothing
-    punishes you with dice for it — the consequence is that people know.</li>
-    <li>A <b>fresh key is weak</b> for a while, which makes hunting the newly
-    arrived a poor way to spend an afternoon.</li>
-    <li>You can <b>trade</b> face to face, item for item, no keeper involved.</li>
-    <li>You can <b>talk</b>. Speech carries to the next room. In the gatehouse,
-    anything you type that is not a command is something you said out loud.</li>
-  </ul>
+  <h2>08 &nbsp;Other wanderers</h2>
+  <p>Other people are real. <b>Fighting them is a choice</b>: everyone starts out of
+  it, and only two wanderers who have both chosen it at a gate can fight each other.
+  Once on it stays on until you turn it off, which you can only do after a day, and
+  anyone who looks at you can see it. A
+  killing drops everything the dead one carried and leaves blood on the killer's
+  hands for anyone close enough to read.</p>
+  <p>You can trade face to face, item for item. You can talk: a word to the room, a
+  shout through the walls, or, in the gatehouse, a private word to one person.</p>
 </section>
 
 <section id="key">
-  <h2>15 &nbsp;Your key is your character</h2>
-  <p>NOMAD runs on Nostr. Your key <em>is</em> your wanderer — there is no account,
-  no password and no server that owns you. Arrive with a key you already have and
-  it is the same you; arrive without one and you are handed a fresh one at the
-  door.</p>
-  <div class="law">There are no wipes. <b>The dead stay dead</b> and the living
-  keep going, and both of those are permanent on purpose.</div>
-  <p>The dungeon can put its own signature to what you have done — your standing,
-  your ledger, a thing you own. What that is worth, and how you use it, is the
-  next section.</p>
+  <h2>09 &nbsp;Your key and your name</h2>
+  <p>NOMAD runs on Nostr. Your key is your wanderer: no account, no password, no
+  wipes. Lose the key and nobody can give the wanderer back.</p>
+  <p>Everything you do is counted, privately. Nothing about you leaves the world
+  unless you ask: the boards are opt-in, and only one command ever posts to your
+  own feed.</p>
 </section>
 
-<section id="boards">
-  <h2>16 &nbsp;Your standing, and saying so</h2>
-  <p>Everything you do is counted. <b>sheet</b> shows you the count: what you have
-  killed, what has killed you, kings put down, wanderers put down, and how long you
-  have been alive under this name. That ledger is yours and it is private.</p>
-  <div class="law">Nothing about you leaves this world unless you ask for it. There
-  is no profile, no directory, no automatic posting. <b>The world does not
-  snitch.</b></div>
-  <p>When you do want to be seen, there are three separate things you can do, and
-  they are separate on purpose.</p>
-  <h3>The reckoning</h3>
-  <p><b>publish score</b> enters you into the boards. <b>leaderboard</b> reads them,
-  and so does the plaque on the door before you have even entered. There are two,
-  and they reward opposite lives:</p>
-  <ul>
-    <li><b>Trophies</b> — what every trophy you hold is worth, counting your pack,
-    your lockbox and your vault together. This board is about what you have
-    <em>brought home and kept</em>. Die with it all on your back and the board
-    knows.</li>
-    <li><b>Legend</b> — everything you have killed for as long as you have lived,
-    with kings and wanderers weighing heaviest, and every creature whose full
-    account you have written in your own journal. This one cannot be lost, only
-    added to.</li>
-  </ul>
-  <p>Your entry is <strong>signed by the dungeon, not by you</strong>. That is the
-  whole point: the world attests the number, so nobody can post a legend they did
-  not earn. Publish again whenever you like — a new score replaces your old one
-  rather than piling up beside it. The boards reach outside as well as in, so a
-  score put up here is a score standing on the open network.</p>
-  <h3>Your own feed</h3>
-  <p><b>publish kind 1</b> posts your wanderer to your own timeline, in your own
-  hand, signed with your own key — an ordinary note, in front of whoever follows
-  you, permanent. It draws your ledger onto a card so the post carries the numbers
-  as a picture, and tags the dungeon's signed copy so anyone who cares can check
-  the figures against the world's own word.</p>
-  <div class="law">This is the only thing that touches your feed. Entering the
-  boards does not post anything to it, and neither does anything else you do here.</div>
-  <h3>Claims</h3>
-  <p><b>publish sheet</b> speaks who you are with the dungeon's signature behind it,
-  and <b>publish &lt;sealed item&gt;</b> proclaims a thing you own. These are
-  certificates, not announcements — proof you can show, made when you ask for it.</p>
-  <p>None of it is required. You can play the whole game and never appear anywhere.</p>
+<section id="commands">
+  <h2>10 &nbsp;Every command</h2>
+  <p>Short forms are in brackets. Most commands take the first few letters of a
+  name: <code>attack hy</code> is enough for a hyena. Two of a kind?
+  <code>attack second hyena</code> or <code>look hyena 2</code> picks by the order
+  the room lists them.</p>
+
+  <h3>Getting about</h3>
+  <dl>
+    <dt><code>look [thing]</code> (l, x, examine, read)</dt>
+    <dd>The room, or a closer look at anything it mentions, not just what you can
+    pick up: the walls, the water, the graves, the trees. Most places have more to say
+    than their first paragraph. It needs light. <code>look east</code> (or any
+    direction) names the country that way; big things carry far, small ones do not,
+    and fog and the dark take it unless the moon is full.</dd>
+    <dt><code>go &lt;direction&gt;</code>, or <code>n s e w u d</code></dt>
+    <dd>Move. The fen is the one crossing that weighs you: it carries you and what
+    keeps you alive (rations, torches, dressings) and no more than 6 other things.</dd>
+    <dt><code>in</code> / <code>out</code></dt>
+    <dd>At a gate, into the gatehouse and back out. On a den site, through your own
+    door and back out onto the ground.</dd>
+    <dt><code>listen [direction]</code> (hark)</dt>
+    <dd>Take the rooms around you by sound: breathing, bone, water, a fight, someone
+    keeping still. Nothing hears you do it.</dd>
+    <dt><code>scan</code></dt>
+    <dd>From a height or an edge, read the ground one step out: what is standing in
+    it, and which way. Fog takes it, and so does the dark unless the moon is full.</dd>
+    <dt><code>map</code> (chart)</dt>
+    <dd>Open a map you carry. A surveyor's map starts blank and sets down every room
+    its carrier walks. A crude map comes with part of the world already drawn, true as
+    far as it goes, and takes what you walk too.</dd>
+    <dt><code>dive [item]</code> (swim)</dt>
+    <dd>In a drowned room, go under and feel across the floor; name a thing to bring
+    it up. The splash carries. Some water soaks you to the skin.</dd>
+  </dl>
+
+  <h3>Fighting</h3>
+  <dl>
+    <dt><code>attack &lt;foe&gt;</code> (k, kill)</dt>
+    <dd>Start a fight; it runs on the four-second beat until it ends. Walk out of the
+    room to flee. You face one foe and turn to the next when it falls, but everything
+    facing you swings back. Fast steel can land twice in a beat, and sweeping steel
+    drags through a crowd. A wanderer's name works too, if both of you have chosen to
+    fight other wanderers. A fight narrows what you can do: no carving, claiming,
+    stashing, renaming or armour swaps, and eating or changing weapons leaves an
+    opening. Under a third of your health you hit softer and fumble more, and so does
+    everything else.</dd>
+    <dt><code>throw &lt;item&gt; at &lt;foe&gt;</code> (hurl)</dt>
+    <dd>Its weight plus your arm, and then it is on the floor. One throw a beat.</dd>
+    <dt><code>stance reckless|steady|guarded</code></dt>
+    <dd>Hit harder and take more, neither, or hit softer and take less. Change it any
+    time.</dd>
+    <dt><code>bandage</code> (bind, dress)</dt>
+    <dd>Stop a bleed and close some of the wound with a dressing from your pack.
+    Carry them before you need them.</dd>
+    <dt><code>rest</code> (sit)</dt>
+    <dd>Let wounds close and your wind come back: about a minute from nothing,
+    sooner by a fire. On your feet your stamina comes back slowly and your wounds not
+    at all. Any effort ends a rest.</dd>
+    <dt><code>pvp on</code> / <code>pvp off</code> / <code>pvp</code></dt>
+    <dd>At a gate, choose to fight other wanderers or not. Everyone starts out of it.
+    Once on, it stays on until you turn it off yourself, and <code>pvp off</code> only
+    works once it has been on a full day. Bare
+    <code>pvp</code> says where you stand. Both wanderers have to have chosen it for
+    either to attack the other.</dd>
+  </dl>
+
+  <h3>Your things</h3>
+  <dl>
+    <dt><code>inventory</code> (i)</dt>
+    <dd>What you carry. The pack holds 20.</dd>
+    <dt><code>get &lt;item&gt;</code> (take) / <code>drop &lt;item&gt;</code></dt>
+    <dd>Pick up and put down. Past a few loose pieces of gear the pack rides loud, so
+    dropping is also how you get quiet mid-chase. A sealed thing set down loses its
+    seal.</dd>
+    <dt><code>equip &lt;item&gt;</code> (wear, wield) / <code>remove &lt;item&gt;</code></dt>
+    <dd>Put armour or a shield on, and take it off. The best weapon in your pack is the
+    one you fight with.</dd>
+    <dt><code>eat &lt;food&gt;</code></dt>
+    <dd>Wounds close from the inside. In a fight, a meal you carry goes down by itself
+    once you are badly hurt, one at a time.</dd>
+    <dt><code>light</code> (kindle) / <code>light lantern</code></dt>
+    <dd>Set a torch burning, or a lantern. A torch burns about ten minutes; a lump of
+    fat in a lantern burns three times that.</dd>
+    <dt><code>douse</code> (snuff, shutter)</dt>
+    <dd>Put out your light. A lantern keeps the fat left in it; a torch is spent.
+    <code>equip shield</code> does it too, and gives you your guard back.</dd>
+    <dt><code>fill lantern</code></dt>
+    <dd>Put a lump of fat in your lantern's well. It holds three.</dd>
+    <dt><code>unlock &lt;box&gt;</code> (open, pry)</dt>
+    <dd>Use a key you found on a locked chest or box, and take what is inside.</dd>
+    <dt><code>burn &lt;item&gt;</code> (destroy)</dt>
+    <dd>Gone for good: no scrap, no trace.</dd>
+  </dl>
+
+  <h3>At a gate</h3>
+  <dl>
+    <dt><code>claim [item]</code> (seal)</dt>
+    <dd>Put the dungeon's seal on a piece: it is provable and publishable, and it is the
+    vault's price of entry. It does nothing for you when you die.</dd>
+    <dt><code>stash &lt;item&gt;</code> / <code>unstash &lt;item&gt;</code></dt>
+    <dd>The lockbox: 8 slots, takes anything. The same lockbox at every gate.
+    <code>stash</code> alone looks inside.</dd>
+    <dt><code>vault &lt;item&gt;</code> / <code>unvault &lt;item&gt;</code></dt>
+    <dd>The vault: 50 slots; gear is sealed going in, and nothing in it ages, rusts or
+    spoils. <code>vault</code> alone looks inside. A count moves that many of a stack:
+    <code>unvault 6 leather</code>, <code>vault all scrap</code> (stash, unstash, stow
+    and fetch take counts too).</dd>
+    <dt><code>barter</code> (trade, shop), <code>buy &lt;thing&gt;</code>, <code>offer &lt;thing&gt;</code></dt>
+    <dd>The keeper deals in kind. <code>buy</code> names what you want, then
+    <code>offer</code> lays goods on the counter until he is square. He gives no change
+    and touches nothing sealed. <code>buy 3 torch</code> buys three. What he is not
+    carrying today comes back another day.</dd>
+    <dt><code>bounty</code> / <code>bounty claim &lt;trophy&gt;</code></dt>
+    <dd>The keeper's board of four trophies he pays for in meals he never stocks. It
+    reaches your keeping as well as your pack, pays each wanderer once a posting, and
+    turns over every hour or so.</dd>
+    <dt><code>salvage &lt;gear&gt;</code> (scrap)</dt>
+    <dd>Break gear down at the vice for scrap iron. The rarer the piece, the bigger the
+    pile.</dd>
+    <dt><code>smelt</code></dt>
+    <dd>Five scrap iron into one bar of iron at the brazier.</dd>
+    <dt><code>forge [item]</code> (craft)</dt>
+    <dd>Work scrap and iron, and the odd trophy, into gear. <code>forge</code> alone
+    reads the recipe book.</dd>
+    <dt><code>repair &lt;gear&gt;</code> (mend)</dt>
+    <dd>Spend scrap iron to hammer out wear. Gear wears with every blow, from sound to
+    worn, battered, failing and then gone for good; mend it before it fails.</dd>
+    <dt><code>dice</code> (bones), <code>roll</code>, <code>stand</code></dt>
+    <dd>On the gatehouse bench. Two bones to open, then one at a time; over 21 and you
+    are out. <code>roll</code> takes another, <code>stand</code> holds. Bare
+    <code>dice</code> plays the keeper for nothing, <code>dice &lt;trophy&gt;</code>
+    stakes one against his bowl, <code>dice bowl</code> reads the table, and
+    <code>dice &lt;name&gt; [trophy]</code> calls out anyone by the fire. Trophies or
+    nothing.</dd>
+    <dt><code>board</code>, <code>post &lt;words&gt;</code>, <code>tear &lt;number&gt;</code></dt>
+    <dd>The notice board inside. Read it, pin up a notice of up to 120 characters, or
+    tear one down. A notice keeps a week, and the board holds twenty. Nobody checks a
+    word of it.</dd>
+    <dt><code>tell &lt;name&gt; &lt;words&gt;</code> (whisper)</dt>
+    <dd>In the gatehouse, a word to one person. It goes to their key alone. In the
+    gatehouse, anything you type that is not a command is said aloud to the room.</dd>
+  </dl>
+
+  <h3>Food and fire</h3>
+  <dl>
+    <dt><code>cook &lt;catch&gt;</code> (roast)</dt>
+    <dd>A fish, an eel, a crab, an egg, over a fire. It heals more and will not keep.
+    A gate's brazier does it free; out in the world it takes a campfire, and
+    everything there sees the flame.</dd>
+    <dt><code>cure &lt;meat&gt;</code></dt>
+    <dd>Hang raw meat on a smoke rack and it becomes food that keeps. Behind any gate
+    the racks are safe and slow. Out in the world, the old smokehouse in the fortress
+    (feed its cold racks a torch), the Hollow Under on the mountain, the crossing's
+    smoke house and the wood's charcoal flat are quicker, and anyone can lift what is
+    hanging there. A smoke rack over your own hearth cures while you are away, and
+    nobody else can reach it.</dd>
+    <dt><code>campfire</code> (stoke)</dt>
+    <dd>Lay a bundle of split wood and light it, from a torch or a rock struck on scrap
+    iron. It warms and dries whoever stands at it. <code>campfire</code> again feeds it
+    another bundle.</dd>
+    <dt><code>fish</code> (cast)</dt>
+    <dd>At open water: the fen, the drowned orchard, the flooded quarry, the millpond
+    and the pools of the road, the crossing's stages and shore, and the water in the
+    deep. Rain wakes the surface waters.</dd>
+    <dt><code>feed &lt;bird&gt; &lt;food&gt;</code></dt>
+    <dd>Hold out food to a raven or crow. One that has been working the road may drop
+    what it picked up. Sometimes.</dd>
+    <dt><code>smoke</code></dt>
+    <dd>Light a cigarette. It steadies you for a breath, and out in the world the dark
+    sees the ember.</dd>
+  </dl>
+
+  <h3>A place of your own</h3>
+  <dl>
+    <dt><code>settle</code></dt>
+    <dd>Raise a den on open ground of your choosing, well out from every gate. It costs
+    20 split wood, 10 leather offcuts, 4 iron and 10 scrap, carried out there. You hold
+    one den in the world. Dying sometimes wakes you at your own door.</dd>
+    <dt><code>bar</code></dt>
+    <dd>Fit a bar to your door: 2 iron and 3 scrap. Behind it nothing reaches you, no
+    creature and no wanderer without a key. Unbarred, it stops nothing.</dd>
+    <dt><code>build [thing]</code></dt>
+    <dd>Inside your den, <code>build</code> alone lists what else it can have and what
+    each costs: a hearth, a smoke rack over it, oiled hides, a bone rattle on the door,
+    a second rack, a larder, a water butt, a whetstone, a stretching frame, stakes and
+    a snare line outside, a slit in the wall, a root cellar, a bolt-hole.
+    <code>build &lt;thing&gt;</code> sets to work; it takes a few goes, and the right
+    tool in your pack halves it.</dd>
+    <dt><code>stow &lt;item&gt;</code> / <code>fetch &lt;item&gt;</code></dt>
+    <dd>Put things on your shelf, and take them back. It holds any amount of gear, and
+    12 of everything else (20 with a second rack). Food ages on it and iron rusts.</dd>
+    <dt><code>bunk &lt;name&gt;</code> / <code>unbunk &lt;name&gt;</code></dt>
+    <dd>Hand someone standing in front of you a key, and take it back from anywhere.
+    Draw steel on anybody under a roof that is not yours and that roof is shut to you
+    for good.</dd>
+    <dt><code>den</code></dt>
+    <dd>How your holding stands: the door, the bunks, the shelf, and how long it has
+    left if you stop coming home.</dd>
+    <dt><code>stretch &lt;pelt&gt;</code>, <code>draw water</code>, <code>bolt</code></dt>
+    <dd>On the stretching frame, a pelt off a kill becomes leather (it needs a blade).
+    From the water butt, a draught of water; rain fills it. Through the bolt-hole, out
+    and up in the next room over, unseen at your own door.</dd>
+    <dt><code>abandon</code></dt>
+    <dd>Give your den up. Nothing on the shelf moves.</dd>
+  </dl>
+
+  <h3>Other wanderers</h3>
+  <dl>
+    <dt><code>say &lt;words&gt;</code> (')</dt>
+    <dd>Speak to the room.</dd>
+    <dt><code>shout &lt;words&gt;</code> (yell)</dt>
+    <dd>Every room around hears it, and everything with ears comes to see who owns the
+    voice.</dd>
+    <dt><code>deal &lt;name&gt;</code></dt>
+    <dd>Trade item for item with someone in the same room, anywhere. Both sides lay
+    goods down, and changing the table unshakes both hands. Anything off your body can
+    cross, sealed things and journals included; what you are wearing cannot. Steel
+    drawn on either side calls it off.</dd>
+    <dt><code>wash</code> (scrub)</dt>
+    <dd>At water, or in the rain, scrub a killing off your hands. It fades on its own;
+    water takes it now. Anyone watching sees you do it.</dd>
+    <dt><code>guard</code>, <code>lean</code>, <code>crouch</code></dt>
+    <dd>Stand a way and keep standing it; anyone who comes in sees it on you. The same
+    word again stands out of it, and any effort ends it.</dd>
+    <dt><code>point &lt;thing&gt;</code></dt>
+    <dd>Hold a hand out toward something and leave it there. Bare <code>point</code>
+    lowers it.</dd>
+    <dt><code>beckon</code>, <code>wave</code>, <code>nod</code>, <code>brow</code> [name]</dt>
+    <dd>Call someone on; a raised hand (which shows whether yours is empty); the passing
+    acknowledgement; two fingers to the brow, the road's courtesy.</dd>
+    <dt><code>dance</code>, <code>keen</code>, <code>sing</code>, <code>whistle</code></dt>
+    <dd>A few steps; grieving where you stand; a human noise; one hard note that carries
+    to the next room and wakes what sleeps in this one.</dd>
+    <dt><code>ring</code> (toll)</dt>
+    <dd>Ring the bell-buoy, or a bell you carry. Every bell is a dinner bell with a name
+    on it.</dd>
+  </dl>
+
+  <h3>Marks and records</h3>
+  <dl>
+    <dt><code>carve &lt;words&gt;</code></dt>
+    <dd>Scratch up to 40 characters into the surface where you stand; it weathers off
+    within a day. Bare <code>carve</code> at a milestone cuts your name into the road's
+    register, and in the gatehouse sets the halls you walked down on the wall chart.</dd>
+    <dt><code>carve rock</code></dt>
+    <dd>With a loose rock and a tool that cuts stone in your pack, work it into a small
+    carving. What it becomes is the stone's business; how finely it is cut is the
+    tool's.</dd>
+    <dt><code>place &lt;carving&gt;</code></dt>
+    <dd>Set a carving down where you stand and leave it. Nobody can pick it up. In your
+    own den it lasts; anywhere else it weathers away over a few days. A spot holds
+    three.</dd>
+    <dt><code>study &lt;creature&gt;</code> (observe)</dt>
+    <dd>With a journal in your pack, watch a creature and note what it is doing.
+    <code>study dead &lt;creature&gt;</code> reads a body on the floor and uses it up. A
+    full account wants everything the animal does, and its kills.</dd>
+    <dt><code>journal [creature]</code></dt>
+    <dd>Read your journal, or one creature's page. It drops when you die, and can be
+    taken, pages and all.</dd>
+    <dt><code>sheet</code> (score, stats)</dt>
+    <dd>Your ledger: kills, deaths, kings, wanderers, your age under this name, and
+    whether you fight other wanderers.</dd>
+    <dt><code>leaderboard</code> (top)</dt>
+    <dd>The boards: <b>trophies</b> (what you have brought home and kept) and
+    <b>legend</b> (everything you have killed, and every full account in your
+    journal).</dd>
+    <dt><code>publish score</code></dt>
+    <dd>Enter the boards, signed by the dungeon so nobody can post a legend they did
+    not earn. Publish again to replace it.</dd>
+    <dt><code>publish sheet</code> / <code>publish &lt;sealed item&gt;</code></dt>
+    <dd>The dungeon speaks your ledger, or your claim on a thing you own, to the
+    relays.</dd>
+    <dt><code>publish kind 1</code></dt>
+    <dd>Post your wanderer to your own feed, in your own hand. The only thing that ever
+    touches your feed.</dd>
+    <dt><code>invite [message]</code> / <code>invite post</code></dt>
+    <dd>Write a letter for someone new and get a link; your message goes with it.
+    Whoever comes in through it wakes with a plain kit, supplies and your letter.
+    Someone already on the road who opens it gets the letter and a little food, up to
+    three a day. <code>invite post</code> posts the letter to your own feed.</dd>
+    <dt><code>who</code></dt>
+    <dd>Everyone awake in the world.</dd>
+    <dt><code>name &lt;new name&gt;</code></dt>
+    <dd>Choose what the world calls you.</dd>
+    <dt><code>quit</code> (leave)</dt>
+    <dd>Step out. Your wanderer and everything you carry wait where you are. If
+    something is fighting you when you go, your body stands and swings for 45 seconds
+    first.</dd>
+    <dt><code>fullscreen</code></dt>
+    <dd>Fill the screen (also in settings). Again to leave, or hold Esc.</dd>
+    <dt><code>help</code> (?)</dt>
+    <dd>The short list, in the game.</dd>
+  </dl>
 </section>
 
 <footer>
-  Everything here is the shape of a rule, never a table of numbers — the numbers
-  are for finding out. <a href="/">Go to the door.</a>
+  <a href="/">Go to the door.</a>
 </footer>
 
 </div>
