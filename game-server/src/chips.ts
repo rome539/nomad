@@ -173,8 +173,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // WHAT THE HOLLOW'S EYES ARE DOING (rome, 2026-10-18), one per sprite like
   // `doing`. Flat black is the default and needs no word; the blood moon's red
   // and the eclipse's white are the sky's and the client reads those itself.
-  // These two are the ones only the server knows: the one that remembers YOUR
-  // blood, and the deep breathing out on the room.
+  // This one only the server knows: the deep breathing out on the room. (The
+  // orange of a hollow that remembers your blood was taken off, rome
+  // 2026-10-31: a grudge shows in what it does, not in its eyes.)
   const eyes: string[] = [];
   const exhale = events.exhaling(z, session.roomId);
   // AND WHAT IS LYING ON THE GROUND. A body is not a two-second flourish: the
@@ -247,9 +248,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         : creature.curious ? "watch"
         : "";
       doing.push(state);
-      eyes.push(!HOLLOW.has(creature.templateId) ? ""
-        : ai.remembers(z, creature, session.pubkey, now) ? "ember"
-        : exhale ? "frost" : "");
+      eyes.push(HOLLOW.has(creature.templateId) && exhale ? "frost" : "");
     }
   }
   // ...and the other wanderers standing here, after the creatures, in what is

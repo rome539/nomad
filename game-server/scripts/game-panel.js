@@ -89,7 +89,7 @@
   // THE HOLLOW'S EYES as the server would send them (chips.ts): the grudge and
   // the deep's breath. The blood moon and the eclipse come from the sky above.
   var eyeSel = mk("select", btnCss);
-  [["", "eyes: as the sky has them"], ["ember", "eyes: ember (a grudge)"], ["frost", "eyes: frost (the deep breathes)"]].forEach(function (x) {
+  [["", "eyes: as the sky has them"], ["frost", "eyes: frost (the deep breathes)"]].forEach(function (x) {
     var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; eyeSel.appendChild(o); });
   eyeSel.onchange = function () { lastEyes = eyeSel.value ? [eyeSel.value, eyeSel.value, eyeSel.value, eyeSel.value] : null; };
 

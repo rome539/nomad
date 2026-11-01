@@ -1509,7 +1509,6 @@ export const PAGE = `<!doctype html>
   }
   #mobs .mob[data-death="1"]::after { display: none; }
   #mobs .mob[data-eye="white"] { --eye: #f4f1e6; }   /* the eclipse: cold, dead white */
-  #mobs .mob[data-eye="ember"] { --eye: #c4621c; }   /* it remembers your blood */
   #mobs .mob[data-eye="frost"] { --eye: #a6d8f2; }   /* the deep breathing out */
   #scene.sky-day   { --scrim: transparent; }
   #scene.sky-dawn  { --scrim: linear-gradient(rgba(84,104,148,.20), rgba(198,168,118,.10)); }
@@ -10228,8 +10227,8 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "55";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "16";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "35";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "17";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "36";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10969,7 +10968,6 @@ var PLATE_OF = {
   "ossuary":                "keep-passage",
   "catacomb":               "keep-passage",
   "larder":                 "keep-store",
-  "smokehouse":             "keep-store",
   "scullery":               "keep-store",
   "cistern":                "keep-store",
   "forge":                  "keep-store",
@@ -11780,7 +11778,7 @@ var MOB_LINE = {
   // THE KEEP GROWS' OWN PICTURES (2026-10-31), read off where each floor starts:
   // the stores' floor starts at 65%, the root hall's at 64% and the sump's
   // bank at 66% (the redrawn three, 2026-10-31). The corridor runs away from the camera on the lock.
-  "keep-stores": 65, "the-root-hall": 64, "the-warren-sump": 66,
+  "keep-stores": 65, "smokehouse": 64, "the-root-hall": 64, "the-warren-sump": 66,
                  // The summit's drake stood too low on the new plate (rome,
                  // 2026-10-22); five points up from the default.
                  "the-summit": 50,
