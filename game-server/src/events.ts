@@ -124,8 +124,12 @@ const POOL: [string, number, string][] = [
   ["crabs", 2, "crossing+road"],
   // THE WOOD (mig-less, 2026-08-06) — 170 rooms that had no weather of their own
   ["rut", 2, "wood"], ["walk", 1, "wood"], ["quiet", 2, "wood"], ["mast", 2, "wood"],
-  // THE DEN GROUND — 60 rooms, likewise
-  ["pack", 2, "den"], ["fever", 2, "den"],
+  // THE DEN GROUND — 60 rooms, likewise. THE PACK IS RETIRED (rome, 2026-11-01):
+  // it was a raid on people's doors, and the dens moved off this ground, so it
+  // threatened nobody's home and only landed a second pack on the hamlet's own
+  // dogs. It is no longer drawn; tickPack still runs, so one already going when
+  // this shipped plays out and ends as it always did.
+  ["fever", 2, "den"],
   // THE MOUNTAIN — the shadow is not drawn for (see below); its two WEATHER
   // arcs are the cloud that comes down the hill (8a) and the slope that lets
   // go (8d).

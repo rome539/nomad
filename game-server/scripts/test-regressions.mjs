@@ -2772,6 +2772,14 @@ try {
     assert.doesNotMatch(feats, /Not laid out in rows/, 'the room says the graves are in rows, so the close look does too');
   });
 
+  check('the pack is retired from the roll, and the fever stays (2026-11-01)', () => {
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const pool = ev.match(/const POOL: \[string, number, string\]\[\] = \[[\s\S]*?\n\];/)[0];
+    assert.doesNotMatch(pool, /\["pack",/, 'the dogs no longer come in by the roll');
+    assert.match(pool, /\["fever", 2, "den"\]/, 'the fever is still drawn');
+    assert.match(ev, /await tickPack\(z, now\)|tickPack\(z, now\)/, 'one already running still ends');
+  });
+
   check('the log keeps a day of text and lets the rest go (2026-10-27)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const keep = eval(pub.match(/var LOG_KEEP_MS = ([^;]+);/)[1]);
