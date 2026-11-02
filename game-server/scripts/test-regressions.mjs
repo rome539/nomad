@@ -543,6 +543,9 @@ try {
     assert.ok(rolls('the-woodward', blade, 200000) > 0, 'an edge never found the woodward');
     for (const id of ['brown-bear', 'the-baited-bear', 'cave-lion']) assert.equal(BIG_VITALS[id]?.by, 'point', id);
   });
+  check('the fever rat falls to a vital as the rat king does (2026-11-02)', () => {
+    assert.deepEqual(BIG_VITALS['fever-rat'], BIG_VITALS['rat-king']);
+  });
 
   // ---------------------------------------------------------------- the body
   console.log('a body a vital shot stiffened');

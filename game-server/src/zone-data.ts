@@ -9794,6 +9794,7 @@ export const VITALS_HOUND = 1 / 5000; // the sentinel's tiny pierce-only vitals 
 // God is not here and never falls this way.
 export const BIG_VITALS: Record<string, { by: "point" | "edge" | "blunt"; oneIn: number }> = {
   "rat-king":                  { by: "point", oneIn: 1500 },  // 1 in 100, ~15 hits: the first boss, the easiest throat
+  "fever-rat":                 { by: "point", oneIn: 1500 },  // as the rat king: same hide, same hp, same throat
   "the-great-crab":            { by: "point", oneIn: 1800 },  // 1 in 100 fights, ~18 hits
   "the-great-devil-crab":      { by: "point", oneIn: 2500 },  // 1 in 120, ~21
   "the-old-grey":              { by: "point", oneIn: 3000 },  // 1 in 120, ~25

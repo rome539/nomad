@@ -123,6 +123,8 @@ const BODY_SCALE = {
   "the-salt-widow": 0.971, "thrice-dead": 0.975,
   "the-fowler": 0.982,
   "cutthroat": 0.9635, "road-carrier": 0.9498, "strand-thief": 0.9525,
+  // its 2026-11-02 redraw filled its frame ~17% more than the strip it replaced
+  "fever-rat": 0.852,
 };
 
 const NOT_A_POSE = new Set(["sheet-order", "source", "combat-source", "flight-source",
