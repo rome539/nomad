@@ -1331,21 +1331,20 @@ export const PAGE = `<!doctype html>
   /* ...LAID THROUGH THE PLATE'S OWN FOG MASK (scripts/plate-fog.py): the colour
      is solid and the mask, worked out from the picture's depth, says how much
      of it stands in front of each part of the picture. */
-  #fogveil.masked { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
-  body[data-view="image"] #fogveil.masked.f-day { background: rgb(196,200,204); }
-  /* Dawn's fog is the light coming, cool and pale; dusk's is the night's blue
-     with a little light still in it (rome, 2026-10-26: one flat grey for both
-     sat wrong on the ground under each). */
-  body[data-view="image"] #fogveil.masked.f-dawn { background: rgb(104,108,116); }
-  body[data-view="image"] #fogveil.masked.f-dusk { background: rgb(52,64,82); }
-  /* Night fog is the night plates' own moonlit blue, a shade lighter than the
-     ground it hangs over (rome, 2026-10-26: the slate grey read as a smear on a
-     blue night, not fog in it). */
-  body[data-view="image"] #fogveil.masked.f-night { background: rgb(40,56,74); }
+  /* ...DRAWN THROUGH THE PLATE'S OWN FOG MASK (scripts/plate-fog.py) onto the
+     canvas inside it: the colour is solid and the mask, worked out from the
+     picture's depth, says how much of it stands in front of each part of the
+     picture. A canvas, not a CSS mask (rome, 2026-11-02: the fog came in after
+     the picture) - a CSS mask is fetched and decoded again on its own time, so
+     the new room showed clear first; the canvas is drawn from the mask image
+     already decoded with the picture, in the same frame. The colours are FOG_RGB. */
+  #fogveil > canvas { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  #fogveil.masked > canvas { display: block; }
   body[data-view="image"] #fogveil.f-day { display: block; background: linear-gradient(to bottom, rgba(196,200,204,.92) 0%, rgba(196,200,204,.92) 50%, rgba(196,200,204,.76) 62%, rgba(196,200,204,.38) 85%, rgba(196,200,204,.20) 100%); }
   body[data-view="image"] #fogveil.f-dawn { display: block; background: linear-gradient(to bottom, rgba(104,108,116,.90) 0%, rgba(104,108,116,.88) 50%, rgba(104,108,116,.72) 62%, rgba(104,108,116,.34) 85%, rgba(104,108,116,.16) 100%); }
   body[data-view="image"] #fogveil.f-dusk { display: block; background: linear-gradient(to bottom, rgba(52,64,82,.90) 0%, rgba(52,64,82,.88) 50%, rgba(52,64,82,.72) 62%, rgba(52,64,82,.34) 85%, rgba(52,64,82,.16) 100%); }
   body[data-view="image"] #fogveil.f-night { display: block; background: linear-gradient(to bottom, rgba(40,56,74,.90) 0%, rgba(40,56,74,.88) 50%, rgba(40,56,74,.70) 62%, rgba(40,56,74,.32) 85%, rgba(40,56,74,.14) 100%); }
+  body[data-view="image"] #fogveil.masked { background: none; }
   #scene-sparks { mix-blend-mode: screen; }
   #mobs { display: none; }
   body[data-view="image"] #mobs {
@@ -2648,7 +2647,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   <div id="lamplight" aria-hidden="true"><i></i></div>
   <canvas id="scene-fx" aria-hidden="true"></canvas>
   <canvas id="scene-sparks" aria-hidden="true"></canvas>
-  <div id="fogveil" aria-hidden="true"></div>
+  <div id="fogveil" aria-hidden="true"><canvas></canvas></div>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fogmix" color-interpolation-filters="sRGB"><feColorMatrix id="fogmixm" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><filter id="torchwarm" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1.4 0 0 0 0 0 .83 0 0 0 0 0 .16 0 0 0 0 0 1 0"/></filter></svg>
   <div id="mobs" aria-hidden="true"></div>
   <canvas id="scene-mist" aria-hidden="true"></canvas>
@@ -13051,7 +13050,17 @@ function fadeScene() {
   // room). The copy is laid over the live fog veil, so with no fog of its own
   // the old room went clear the moment you stepped and the new room's fog only
   // showed as the copy faded. Copied as it stands, mask and all.
-  if (typeof fogVeilEl !== "undefined" && fogVeilEl && fogVeilEl.className) cover.appendChild(copy(fogVeilEl));
+  if (typeof fogVeilEl !== "undefined" && fogVeilEl && fogVeilEl.className) {
+    var fogCopy = copy(fogVeilEl), fogSrc = fogVeilEl.firstChild;
+    if (/masked/.test(fogVeilEl.className) && fogSrc && fogSrc.width) {
+      var fogPix = document.createElement("canvas");
+      fogPix.width = fogSrc.width; fogPix.height = fogSrc.height;
+      fogPix.getContext("2d").drawImage(fogSrc, 0, 0);
+      fogPix.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%";
+      fogCopy.appendChild(fogPix);
+    }
+    cover.appendChild(fogCopy);
+  }
   sceneEl.parentNode.insertBefore(cover, document.getElementById("mobs"));
   return function () {
     if (!cover.animate) { cover.remove(); return; }
@@ -13559,8 +13568,25 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       lampIn.style.webkitMaskImage = lampIn.style.maskImage = lampT.length ? "url(" + lampMap + ")" : "";
     }
     if (typeof fogVeilEl !== "undefined" && fogVeilEl) {
-      fogVeilEl.className = veil ? "f-" + veil + (fogMask ? " masked" : "") : "";
-      if (fogVeilEl.style) fogVeilEl.style.webkitMaskImage = fogVeilEl.style.maskImage = fogMask ? "url(" + fogMask + ")" : "";
+      // drawn now, from the mask decoded alongside the picture: it lands with it
+      var fogCv = fogVeilEl.firstChild, drawn = false;
+      if (fogMask && fogImg && fogCv && fogCv.getContext) {
+        var fw = fogImg.naturalWidth, fh = fogImg.naturalHeight, fx2 = fogCv.getContext("2d"), frgb = FOG_RGB[veil] || FOG_RGB.day;
+        if (fx2 && fw && fh) {
+          if (fogCv.width !== fw) fogCv.width = fw;
+          if (fogCv.height !== fh) fogCv.height = fh;
+          fx2.globalCompositeOperation = "source-over";
+          fx2.clearRect(0, 0, fw, fh);
+          fx2.drawImage(fogImg, 0, 0);
+          fx2.globalCompositeOperation = "source-in";
+          fx2.fillStyle = "rgb(" + frgb.join(",") + ")";
+          fx2.fillRect(0, 0, fw, fh);
+          fx2.globalCompositeOperation = "source-over";
+          drawn = true;
+        }
+      }
+      fogVeilEl.className = veil ? "f-" + veil + (drawn ? " masked" : "") : "";
+      if (fogVeilEl.dataset) fogVeilEl.dataset.mask = drawn ? fogMask : "";
     }
     setWeather(precipitation);
     var fxOn = typeof sceneFx !== "undefined" && sceneFx.paint(scene, tint, preparedFx, cloud);
@@ -13574,7 +13600,12 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   }
   readySceneImage(scene ? scene + "?v=" + BG_V : "", loaded);
   readySceneImage(sky ? sky + "?v=" + SKY_V : "", loaded);
-  readySceneImage(fogMask, loaded);
+  var fogImg = null;   // the decoded mask, kept to draw the fog from in put()
+  readySceneImage(fogMask, function (ok) {
+    var e = fogMask && readySceneImage.cache ? readySceneImage.cache.get(fogMask) : null;
+    fogImg = ok && e ? e.image : null;
+    loaded(ok);
+  });
   readySceneImage(snowLight, loaded);
   readySceneImage(lampMap, loaded);
   readySceneImage(lampSrc, loaded);

@@ -79,7 +79,9 @@ const style = () => ({ setProperty() {} });
 const sceneEl = { style: style(), className: "", setProperty() {} };
 sceneEl.style.setProperty = () => {};
 const skyEl = { style: style(), dataSky: "", setAttribute(k, v) { if (k === "data-sky") this.dataSky = v; }, removeAttribute() {}, getAttribute() { return null; } };
-const veilEl = { className: "", style: {} };
+// The fog is drawn on a canvas inside the veil (2026-11-02); this one records what was drawn.
+const fogCtx = { drew: [], clearRect() {}, drawImage(im) { this.drew.push(im.src); }, fillRect() {} };
+const veilEl = { className: "", style: {}, dataset: {}, firstChild: { width: 0, height: 0, getContext: () => fogCtx } };
 const fogMix = { values: "", setAttribute(k, v) { if (k === "values") this.values = v; } };
 const mobsEl = { className: "", style: {}, dataset: {} };
 // THE TIDE SHEET. A stub with no style bag throws the moment paintFlood sets the
@@ -99,7 +101,7 @@ const code = [
   // The preloader is the one thing a stub cannot supply: on the page an Image
   // holds the old room up until the new plate has decoded. Here it lands at once,
   // which is the same path a cached picture takes.
-  'function Image(){ this.complete = true; Object.defineProperty(this, "src", { set: function(){ this.onload && this.onload(); } }); }',
+  'function Image(){ this.complete = true; this.naturalWidth = 4; this.naturalHeight = 4; var u = ""; Object.defineProperty(this, "src", { get: function(){ return u; }, set: function(v){ u = v; this.onload && this.onload(); } }); }',
   'var BG_V = "0", SKY_V = "0", FOG_V = "0";',
   fn("paintScene"),
   // The lifted block declares its own elements from getElementById; the stubs win.
@@ -805,17 +807,17 @@ for (const g of ["weeper-arch", "gate", "sally-port", "the-ferry-house", "the-cr
 // torch plate takes its night plate's; a plate without one keeps the veil.
 ctx.setMasks({ "gully-day": 1, "gully-night": 1 });
 ctx.paint("mountain", "fog", "gully", "fm-day", 0, 0, "", 0, 0, false, 0, 0);
-t("fog by day is laid through the plate's own mask", veilEl.className === "f-day masked" && /^url\(\/room-fog\/gully-day\.webp\?v=\d+\)$/.test(veilEl.style.maskImage), veilEl.className + " " + veilEl.style.maskImage);
+t("fog by day is laid through the plate's own mask", veilEl.className === "f-day masked" && /^\/room-fog\/gully-day\.webp\?v=\d+$/.test(veilEl.dataset.mask) && /gully-day\.webp/.test(fogCtx.drew[fogCtx.drew.length - 1]), veilEl.className + " " + veilEl.dataset.mask);
 ctx.paint("mountain", "fog", "gully", "fm-torch", 1, 0, "", 0, 0, false, 1, 0);
-t("...a torch at night takes the night plate's mask", veilEl.className === "f-night masked" && /gully-night\.webp/.test(veilEl.style.maskImage), veilEl.className + " " + veilEl.style.maskImage);
+t("...a torch at night takes the night plate's mask", veilEl.className === "f-night masked" && /gully-night\.webp/.test(veilEl.dataset.mask) && /gully-night\.webp/.test(fogCtx.drew[fogCtx.drew.length - 1]), veilEl.className + " " + veilEl.dataset.mask);
 ctx.paint("mountain", "fog", "scree", "fm-none", 0, 0, "", 0, 0, false, 0, 0);
-t("...a plate without a mask keeps the veil", veilEl.className === "f-day" && veilEl.style.maskImage === "", veilEl.className + " " + veilEl.style.maskImage);
+t("...a plate without a mask keeps the veil", veilEl.className === "f-day" && !veilEl.dataset.mask, veilEl.className + " " + veilEl.dataset.mask);
 t("...and the creatures stand in it, mixed toward the fog's colour", mobsEl.style.filter === "url(#fogmix)" && /^0\.\d+ 0 0 0 0\.\d+ /.test(fogMix.values) && fogMix.values.split(" ")[0] !== "1", mobsEl.style.filter + " " + fogMix.values);
 ctx.paint("mountain", "rain", "gully", "fm-rain", 0, 0, "", 0, 0, false, 0, 0);
 t("...not in the rain", mobsEl.style.filter === "", mobsEl.style.filter);
-t("...and rain is never masked", veilEl.className === "" && veilEl.style.maskImage === "", veilEl.className + " " + veilEl.style.maskImage);
+t("...and rain is never masked", veilEl.className === "" && !veilEl.dataset.mask, veilEl.className + " " + veilEl.dataset.mask);
 ctx.paint("mountain", "day", "gully", "fm-clear", 0, 0, "", 0, 0, false, 0, 0);
-t("...and when it clears the mask goes too", veilEl.className === "" && veilEl.style.maskImage === "", veilEl.className + " " + veilEl.style.maskImage);
+t("...and when it clears the mask goes too", veilEl.className === "" && !veilEl.dataset.mask, veilEl.className + " " + veilEl.dataset.mask);
 ctx.setMasks(null);
 
 // THE TORCH ON THE SNOW (rome, 2026-10-26): snow has no torch picture, so the
