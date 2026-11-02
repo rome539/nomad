@@ -214,14 +214,16 @@ export async function pickUp(z: ZoneDO, session: Session, arg: string): Promise<
   return true;
 }
 
-// What the room says of them.
+// What the room says of them: one at a time, a different one at random each
+// look (rome, 2026-11-01), so a full spot reads as one carving, not a list.
 export function roomLines(z: ZoneDO, session: Session): string[] {
   const now = Date.now();
-  return here(z, session, now).map((c) => {
-    const s = stage(c, now);
-    if (s === 2) return "A weathered stone shape sits here, almost past knowing.";
-    return `A stone ${c.kind} sits here, ${s === 1 ? "worn soft" : CARVE_QUALITY[c.quality]}.`;
-  });
+  const all = here(z, session, now);
+  if (!all.length) return [];
+  const c = pick(all);
+  const s = stage(c, now);
+  if (s === 2) return ["A weathered stone shape sits here, almost past knowing."];
+  return [`A stone ${c.kind} sits here, ${s === 1 ? "worn soft" : CARVE_QUALITY[c.quality]}.`];
 }
 
 // The close look at one standing here.

@@ -2780,6 +2780,22 @@ try {
     assert.match(ev, /await tickPack\(z, now\)|tickPack\(z, now\)/, 'one already running still ends');
   });
 
+  check('a spot of carvings shows one at a time, a different one at random (2026-11-01)', () => {
+    const now = Date.now();
+    const put = (id, kind) => ({ id, kind, quality: 0, carver: 'Rome', carverPk: 'me', roomId: 'moor', inside: '', lasting: true, placedAt: now });
+    const z = { carvings: new Map([['moor', [put('a', 'face'), put('b', 'hound'), put('c', 'owl')]]]),
+      inGatehouse: new Set(), inDen: new Map(), dens: new Map() };
+    const me = { pubkey: 'me', roomId: 'moor' };
+    const seen = new Set();
+    for (let i = 0; i < 200; i++) {
+      const lines = carving.roomLines(z, me);
+      assert.equal(lines.length, 1, 'one line, never the whole list');
+      seen.add(lines[0]);
+    }
+    assert.equal(seen.size, 3, 'each of them turns up in its turn');
+    assert.equal(carving.roomLines(z, { pubkey: 'me', roomId: 'elsewhere' }).length, 0, 'none where none stand');
+  });
+
   check('the log keeps a day of text and lets the rest go (2026-10-27)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const keep = eval(pub.match(/var LOG_KEEP_MS = ([^;]+);/)[1]);
