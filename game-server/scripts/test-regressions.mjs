@@ -2894,6 +2894,12 @@ try {
     assert.equal(step('the-rope-stage', 'crossing', { ...dry, rain: 2 }), 'wood', 'boards do not go to mud in the rain');
     assert.equal(roomSound.soundscapeOf({ roomId: 'the-listening-stand', band: 'wood', open: false, inside: true, floor: 'leaves' }, dry).ground, '', 'behind the gatehouse door is the plain step');
   });
+  check('the room fades out with its fog in it, so the fog comes and goes with the picture (2026-11-02)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const fade = pub.slice(pub.indexOf('function fadeScene()'), pub.indexOf('var lastCovered = false;'));
+    assert.match(fade, /cover\.appendChild\(ground\);[^]*cover\.appendChild\(copy\(fogVeilEl\)\)/, 'the frozen old room carries its fog');
+    assert.ok(pub.indexOf('<div id="fogveil"') < pub.indexOf('<div id="mobs"'), 'the fade goes in above the fog veil, so it must carry the fog');
+  });
   check('a spot of carvings shows one at a time, a different one at random (2026-11-01)', () => {
     const now = Date.now();
     const put = (id, kind) => ({ id, kind, quality: 0, carver: 'Rome', carverPk: 'me', roomId: 'moor', inside: '', lasting: true, placedAt: now });

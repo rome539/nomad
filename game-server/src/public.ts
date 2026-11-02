@@ -13047,6 +13047,11 @@ function fadeScene() {
   if (skyEl) cover.appendChild(skyCopy(copy(skyEl)));
   var ground = copy(sceneEl); ground.appendChild(copy(sceneEl, "::after"));
   cover.appendChild(ground);
+  // ...AND ITS FOG (rome, 2026-11-02: the fog was slow to come in with the
+  // room). The copy is laid over the live fog veil, so with no fog of its own
+  // the old room went clear the moment you stepped and the new room's fog only
+  // showed as the copy faded. Copied as it stands, mask and all.
+  if (typeof fogVeilEl !== "undefined" && fogVeilEl && fogVeilEl.className) cover.appendChild(copy(fogVeilEl));
   sceneEl.parentNode.insertBefore(cover, document.getElementById("mobs"));
   return function () {
     if (!cover.animate) { cover.remove(); return; }
