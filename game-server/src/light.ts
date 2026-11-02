@@ -388,6 +388,7 @@ export async function cmdFill(z: ZoneDO, session: Session, arg = ""): Promise<vo
   }
   z.send(session, `You work a lump of fat down into the lantern's well and wipe your fingers on your leg. ${wellWords(wellOf(session, lantern))}`, "gain");
   z.sendStatus(session);
+  z.sendCtx(session); // the fat is gone: the 'fill lantern' chip must go with the last lump
 }
 
 // SHUTTER IT: a lantern goes dark and keeps what it had not burned. A torch

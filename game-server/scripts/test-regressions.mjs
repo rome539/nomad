@@ -65,6 +65,7 @@ try {
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon, terrainOf} from './zone-util';",
+        "export * as roomSound from './sound';",
       ].join('\n'),
       resolveDir: root, loader: 'ts',
     },
@@ -74,7 +75,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2875,6 +2876,24 @@ try {
     assert.ok(Math.abs(ratio - 1) < 0.08, 'the fever rat is drawn ' + ratio.toFixed(2) + 'x the rat king\'s length');
   });
 
+  await checkAsync('filling the lantern redraws the chips, so the last lump takes its chip with it (2026-11-02)', async () => {
+    const db = { prepare: () => ({ bind: () => ({ run: async () => ({}) }) }) };
+    let ctx = 0;
+    const z = { env: { DB: db }, send: () => {}, sendStatus: () => {}, sendCtx: () => { ctx++; }, inCombat: () => false };
+    const me = { pubkey: 'me', items: [{ itemId: 'hooded-lantern', rowId: 'l', fuel: 0, condition: 100 }, { itemId: 'fat', rowId: 'f' }] };
+    await light.cmdFill(z, me, 'lantern');
+    assert.equal(me.items.some((c) => c.itemId === 'fat'), false, 'the fat was not used (the test is not testing anything)');
+    assert.equal(ctx, 1, 'the chips were not redrawn after the fat went in');
+  });
+  check('every room has its own floor underfoot: the Listening Stand steps in leaves like the Heart of It beside it (2026-11-02)', () => {
+    const dry = { rain: 0, windUp: false, snow: false, mud: false, seaUp: false, runUp: false };
+    const step = (id, region, w = dry) => roomSound.soundscapeOf(roomSound.placeOfRow({ id, region, description: '' }), w).ground;
+    assert.equal(step('the-heart-of-it', 'wood'), 'leaves');
+    assert.equal(step('the-listening-stand', 'wood'), 'leaves');
+    assert.equal(step('the-rope-stage', 'crossing'), 'wood', 'a timber stage');
+    assert.equal(step('the-rope-stage', 'crossing', { ...dry, rain: 2 }), 'wood', 'boards do not go to mud in the rain');
+    assert.equal(roomSound.soundscapeOf({ roomId: 'the-listening-stand', band: 'wood', open: false, inside: true, floor: 'leaves' }, dry).ground, '', 'behind the gatehouse door is the plain step');
+  });
   check('a spot of carvings shows one at a time, a different one at random (2026-11-01)', () => {
     const now = Date.now();
     const put = (id, kind) => ({ id, kind, quality: 0, carver: 'Rome', carverPk: 'me', roomId: 'moor', inside: '', lasting: true, placedAt: now });

@@ -15,7 +15,7 @@ import {
 } from "./zone-data";
 import * as events from "./events";
 import * as lore from "./lore";
-import { isNight, isDusk, isDawn } from "./zone-util";
+import { isNight, isDusk, isDawn, terrainOf } from "./zone-util";
 
 // THE PLACES THAT CREAK: built of timber, and saying so. Picked from the room
 // ids and the prose (hulls, piers, lofts, huts, gibbets, scaffolds). A stand
@@ -107,6 +107,64 @@ export const HOLLOW_ROOMS = new Set<string>(["the-kept-room", "the-mine-gallery"
 // whose prose says it is lit. The gatehouse's own hearth is `inside`.
 export const FIRE_ROOMS = new Set<string>(["the-shieling"]);
 
+// WHAT EVERY OTHER STEP LANDS ON (rome, 2026-11-02: the Heart of It crunched
+// in leaves and the Listening Stand beside it thudded like a flagged floor).
+// The lists above were hand-picked and covered a few dozen rooms; everything
+// else stepped on the plain floor. So every room now has a floor: its own
+// entry here when the prose says it outright, else what its ground (terrainOf,
+// the same reading that picks its picture) is made of, else a plain word in
+// its text, else the plain step. A roof over you is always the plain step.
+// Rain, snow, a ford in spate and the hand lists above still come first.
+export const FLOOR_BY_ROOM: Record<string, string> = {
+  // boards and planks you stand on
+  "the-rotted-scaffold": "wood", "the-hunters-stand": "wood", "the-rush-shore": "wood",
+  "the-rope-stage": "wood", "the-plank-span": "wood", "the-plank-run": "wood",
+  "the-eel-hut": "wood", "the-net-loft": "wood", "the-eel-staithe": "wood",
+  // standing in the water itself
+  "the-shallow-ford": "wet", "the-drowned-ford": "wet", "the-far-south-turning": "wet",
+  "the-flooded-ride": "wet", "the-brown-water": "wet", "the-standing-water": "wet",
+  "the-sunk-fence": "wet", "the-osier-landing": "wet", "the-wet-ride": "wet",
+  "the-third-channel": "wet", "the-fifth-channel": "wet",
+  // laid stone underfoot, on ground whose kind would say otherwise
+  "the-gate-arch": "", "the-hall-floor": "", "the-reeves-yard": "", "the-thorn-gap": "",
+  "the-hawthorn-narrows": "", "the-hard": "", "the-capstan-stone": "", "the-far-hard": "",
+  "the-marsh-hard": "", "the-well-yard": "", "the-shingle-stair": "", "the-paved-road": "",
+  "the-turning-bay": "", "the-street": "", "the-cart-turn": "",
+};
+// ...by the kind of ground. "" is the plain step: rock, laid stone, beaten earth.
+const FLOOR_OF_TERRAIN: Record<string, string> = {
+  scree: "scree", boulder: "scree", gully: "scree", beck: "scree", shell: "scree", "road-gill": "scree",
+  snow: "snow", glacier: "snow",
+  cairn: "grass", fold: "grass", "corrie-floor": "grass", heath: "grass", glade: "grass",
+  common: "grass", fields: "grass", eyot: "grass", "marsh-dyke": "grass", "road-moor": "grass",
+  "road-hedges": "grass", "wood-bailey": "grass",
+  wood: "leaves", "wood-holly": "leaves", "wood-birch": "leaves", "wood-felling": "leaves",
+  "under-roots": "leaves", sunken: "leaves", "road-oaks": "leaves",
+  wet: "mud", "wood-osier": "mud", marsh: "mud", "marsh-carr": "mud", "marsh-samphire": "mud",
+  reed: "mud", alder: "mud",
+  ford: "wet",
+};
+// ...and ground that is no one kind (an unnamed hillside, a corrie's rim, the
+// fortress grounds, a village) goes by the first plain word its text gives.
+const FLOOR_MIXED = new Set(["", "corrie-rim", "the-dens"]);
+const FLOOR_SAYS: [string, RegExp][] = [
+  ["mud", /\b(mud|mire|bog|fen|peat|sodden|standing water)\b/i],
+  ["scree", /\b(scree|gravel|shingle|loose stone)\b/i],
+  ["grass", /\b(turf|grass|heather|moss)\b/i],
+];
+const floorSeen = new Map<string, string>();
+export function floorOf(roomId: string, desc: string, band: string, open: boolean): string {
+  if (roomId in FLOOR_BY_ROOM) return FLOOR_BY_ROOM[roomId];
+  if (!open) return "";
+  let f = floorSeen.get(roomId);
+  if (f !== undefined) return f;
+  const t = terrainOf(roomId, desc, band);
+  f = FLOOR_OF_TERRAIN[t] ?? "";
+  if (!f && FLOOR_MIXED.has(t)) for (const [g, re] of FLOOR_SAYS) if (re.test(desc)) { f = g; break; }
+  floorSeen.set(roomId, f);
+  return f;
+}
+
 export interface Soundscape {
   leaves: number;  // wind moving a wooded canopy
   rain: number;    // 0 none, 1 a shower, 2 settled rain
@@ -140,6 +198,7 @@ export interface Place {
   band: string;    // the map region (lore.mapRegionOf)
   open: boolean;   // under the sky (OUTDOOR_ROOMS)
   inside: boolean; // behind the gatehouse door
+  floor?: string;  // what a step lands on when nothing else says (floorOf)
 }
 export interface Weather {
   dripsStopped?: boolean; // the deep drawing breath
@@ -200,11 +259,13 @@ export function soundscapeOf(p: Place, w: Weather): Soundscape {
       : w.snow ? "snow"
       : SCREE_ROOMS.has(roomId) ? "scree"
       : WOOD_FLOOR_ROOMS.has(roomId) ? "wood"
+      // boards, water, loose stone and snow do not go to mud in the rain
+      : p.floor === "wood" || p.floor === "wet" || p.floor === "scree" || p.floor === "snow" ? p.floor
       : w.mud || (rain && open) || roomId === "the-black-mud" ? "mud"
       : roomId === "the-white-ground" ? "quiet"
       : LEAF_FLOOR_ROOMS.has(roomId) ? "leaves"
       : GRASS_FLOOR_ROOMS.has(roomId) ? "grass"
-      : "",
+      : p.floor ?? "",
     hollow: !inside && (HOLLOW_ROOMS.has(roomId) || (!open && (sunless || band === "upper"))) ? 1 : 0,
     // A hut in the wood still hears the wood, through its walls (shut); a room
     // cut into stone hears none of it.
@@ -223,13 +284,13 @@ export function soundscapeOf(p: Place, w: Weather): Soundscape {
 // It repeats two readings the world makes at load: lore.mapRegionOf for the
 // band, and the OUTDOOR_ROOMS fold in zone.ts init() for the sky. If either of
 // those changes, change this with it.
-export function placeOfRow(row: { id: string; region?: string | null; is_entry?: number | null }): Place {
+export function placeOfRow(row: { id: string; region?: string | null; is_entry?: number | null; description?: string | null }): Place {
   const id = row.id, region = row.region || "", entry = row.is_entry === 1;
   const band = region || (entry ? "gate"
     : GROUNDS_ROOMS.has(id) ? "out" : OVERWORKS_ROOMS.has(id) ? "sky" : WARRENS_ROOMS.has(id) ? "warrens"
     : DEEP_ROOMS.has(id) ? "deep" : "upper");
   const open = entry || (!INDOOR_ROOMS.has(id) && (OUTDOOR_REGIONS.has(region) || GROUNDS_ROOMS.has(id) || OVERWORKS_ROOMS.has(id)));
-  return { roomId: id, band, open, inside: false };
+  return { roomId: id, band, open, inside: false, floor: floorOf(id, row.description || "", band, open) };
 }
 
 export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
@@ -238,8 +299,9 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
   // gate keeps the gate's own sound round you, the same as its picture.
   const inside = z.inGatehouse.has(s.pubkey);
   const rainState = z.events.get("rain");
+  const band = lore.mapRegionOf(z, roomId), open = !inside && OUTDOOR_ROOMS.has(roomId);
   return soundscapeOf(
-    { roomId, band: lore.mapRegionOf(z, roomId), open: !inside && OUTDOOR_ROOMS.has(roomId), inside },
+    { roomId, band, open, inside, floor: floorOf(roomId, z.world?.rooms.get(roomId)?.description ?? "", band, OUTDOOR_ROOMS.has(roomId)) },
     {
       dripsStopped: !inside && events.deepRoom(z, roomId) && ["telegraph", "active"].includes(events.phaseOf(z, "exhale")),
       rain: rainState?.phase !== "active" || !events.wxCovers(z, "rain", roomId) ? 0 : rainState.data === "settled" ? 2 : 1,
