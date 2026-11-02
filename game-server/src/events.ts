@@ -16,6 +16,7 @@ import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
+import * as feverrat from "./feverrat";
 import { cap, foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand } from "./zone-util";
 import { setItemAcquiredAt } from "./world";
 import {
@@ -81,7 +82,7 @@ import {
   PACK_TELEGRAPH_MS, PACK_ACTIVE_MIN_MS, PACK_ACTIVE_MAX_MS, PACK_AFTERMATH_MS,
   PACK_DOGS, PACK_WOLVES, PACK_HYENAS, PACK_HEAD_ODDS, PACK_HEADS_BAD,
   PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
-  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS,
+  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_RAT_HOLD_MS, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
   DAY_CYCLE_MS, BUGLE_EVERY_DAYS, BUGLE_SALUTERS, BUGLE_REVEILLE, BUGLE_TAPS, BUGLE_FAR, BUGLE_SALUTE_ONE, BUGLE_SALUTE_MANY,
 } from "./zone-data";
 
@@ -605,9 +606,25 @@ export function quieted(z: ZoneDO, roomId: string): boolean {
   return phaseOf(z, "quiet") === "active" && z.world!.rooms.get(roomId)?.region === "wood";
 }
 
-// THE FEVER is on this ground: the dens, and only while it runs.
+// THE FEVER is on this ground: the old village and the wood beside it (rome,
+// 2026-11-01: with the dens gone out onto open ground, a fever kept to the
+// village bit nobody), and only while it runs.
 export function fevered(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "fever") === "active" && z.world!.rooms.get(roomId)?.region === "den";
+  return phaseOf(z, "fever") === "active" && FEVER_BANDS.has(z.world!.rooms.get(roomId)?.region ?? "");
+}
+// Does the fever cut this wanderer's mending where they stand? Not through the
+// fever rat's grave-cloth (feverrat.ts).
+export function feverBites(z: ZoneDO, s: Session): boolean {
+  return fevered(z, s.roomId) && !feverrat.spared(z, s);
+}
+// THE FEVER RAT IS KILLED, and the fever lifts with it, then and there.
+export function feverLifts(z: ZoneDO, now = Date.now()): void {
+  const st = z.events.get("fever");
+  if (!st || st.phase !== "active") return;
+  st.phase = "aftermath";
+  st.until = now + FEVER_AFTERMATH_MS;
+  st.data = undefined;
+  z.roomFeedBands(FEVER_BANDS, "The wind comes round off the fen, cold and clean, all at once, and the ground lets go of the fever as if it had been holding it in its teeth.", "evt");
 }
 
 // THE SHADOW is over the mountain: the drake's passage, and only while it runs.
@@ -893,6 +910,13 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       case "aftermath": return " The mast is picked over now — the floor goes back to being the floor.";
       default: break;
     }
+    // The fever reaches the wood too (FEVER_BANDS), and cuts mending as hard
+    // here as in the village, so it says so here as it does there.
+    switch (phaseOf(z, "fever")) {
+      case "telegraph": return " The wind through the trees is coming off the old village's graves, warm and wrong.";
+      case "active": return " The fever sits over the wood, on a wind off the old village's graves. Sleep will not take here, and nothing you eat or bind does you any good.";
+      default: break;
+    }
   }
   if (region === "den") {
     switch (phaseOf(z, "pack")) {
@@ -905,7 +929,9 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     // about why. Without this line a bad bandage reads as a bug.
     switch (phaseOf(z, "fever")) {
       case "telegraph": return " The wind is off the graves, warm and wrong, and this ground smells faintly of the pit.";
-      case "active": return " The fever sits over the whole ground. Sleep will not take here, and nothing you eat or bind does you any good.";
+      case "active": return feverrat.rat(z)
+        ? " The fever sits over the whole ground, on a wind off the fever graves, where the earth has been broken open from below. Sleep will not take here, and nothing you eat or bind does you any good."
+        : " The fever sits over the whole ground. Sleep will not take here, and nothing you eat or bind does you any good.";
       default: break;
     }
   }
@@ -1355,9 +1381,13 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
       return rutWolvesOut(z, Date.now()) && chance(0.3) ? pick(RUT_WOLF_AMBIENT) : pick(RUT_AMBIENT);
     }
     if (phaseOf(z, "mast") === "active") return pick(MAST_AMBIENT);
+    if (phaseOf(z, "fever") === "active") return pick(FEVER_AMBIENT);
   } else if (region === "den") {
     if (phaseOf(z, "pack") === "active") return pick(PACK_AMBIENT);
-    if (phaseOf(z, "fever") === "active") return pick(FEVER_AMBIENT);
+    if (phaseOf(z, "fever") === "active") {
+      // the fever rat up in the graves: the old village sounds of it
+      return feverrat.rat(z) && chance(FEVER_RAT_AMBIENT_ODDS) ? pick(FEVER_RAT_AMBIENT) : pick(FEVER_AMBIENT);
+    }
   } else if (region === "mountain") {
     if (phaseOf(z, "shadow") === "active") return pick(SHADOW_AMBIENT);
     if (phaseOf(z, "clouddown") === "active") return pick(CLOUDDOWN_AMBIENT);
@@ -2491,7 +2521,7 @@ async function tickPack(z: ZoneDO, now: number): Promise<void> {
 }
 
 // ---- THE FEVER (dens) ----
-async function tickFever(z: ZoneDO, now: number): Promise<void> {
+export async function tickFever(z: ZoneDO, now: number): Promise<void> {
   let st = z.events.get("fever");
   if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("fever", st); }
   if (now < st.until) return;
@@ -2503,19 +2533,29 @@ async function tickFever(z: ZoneDO, now: number): Promise<void> {
       // the graves" and the wake is the graves answering. A fever beginning
       // loads the warrens' die — bias, never a trigger.
       chargeBand(z, "warrens", "wake");
-      z.roomFeedBands(new Set(["den"]), "The wind turns and comes off the graves, and it is warm, and it is wrong. Everything on this ground smells faintly of the pit.", "evt");
+      z.roomFeedBands(FEVER_BANDS, "The wind turns and comes off the graves, and it is warm, and it is wrong. Everything on this ground smells faintly of the pit.", "evt");
       break;
     }
     case "telegraph": {
       st.phase = "active";
       st.until = now + randInt(FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS);
-      z.roomFeedBands(new Set(["den"]), "It settles over the whole ground. Sleep will not take, food does you no good, and a dressing may as well be a rag. There is nothing here to fight and nothing to mend.", "evt");
+      st.data = String(now + FEVER_RAT_HOLD_MS); // the latest the rat can hold it
+      z.roomFeedBands(FEVER_BANDS, "It settles over the whole ground. Sleep will not take, food does you no good, and a dressing may as well be a rag. Out in the old village, among the graves, something is digging its way up.", "evt");
+      feverrat.comes(z, now);
       break;
     }
     case "active": {
+      // THE RAT HOLDS IT: while the fever rat lives the fever does not lift,
+      // until its long course runs out and it goes back down (feverrat.ts). A
+      // rat in a fight is not sent back mid-fight: look again in a minute.
+      if (feverrat.rat(z) && (now < Number(st.data ?? 0) || !feverrat.goesBack(z))) {
+        st.until = now + 60_000;
+        break;
+      }
+      st.data = undefined;
       st.phase = "aftermath";
       st.until = now + FEVER_AFTERMATH_MS;
-      z.roomFeedBands(new Set(["den"]), "The wind comes round again off the fen, cold and clean, and the ground lets go of it.", "evt");
+      z.roomFeedBands(FEVER_BANDS, "The wind comes round again off the fen, cold and clean, and the ground lets go of it.", "evt");
       break;
     }
     case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }

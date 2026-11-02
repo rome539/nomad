@@ -85,6 +85,7 @@ import * as campfire from "./campfire";
 import * as body from "./body";
 import * as ratking from "./ratking";
 import * as whiteroe from "./whiteroe";
+import * as feverrat from "./feverrat";
 import * as rising from "./rising";
 import * as cough from "./cough";
 import * as dice from "./dice";
@@ -138,7 +139,7 @@ import { FORGE_STOCK,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  STARVING_AT, WHITE_ROE, SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  STARVING_AT, WHITE_ROE, FEVER_RAT, SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -6078,11 +6079,10 @@ export class ZoneDO implements DurableObject {
         // CHILL_MEND_MULT until you are warm. Warmth clears it on the minute (cough.ts).
         const chillMult = session.chilled && !byFire && !indoors ? CHILL_MEND_MULT : 1;
         // THE FEVER (2026-08-06). On bad ground sleep will not take: an hour
-        // off your feet is worth a fraction of an hour. It is not a cure you
-        // can buy or a fight you can win — the answer is to leave, which is the
-        // whole point of putting it on the ground people LIVE on. The gate's
-        // fire is unreachable by it (the fever is the den band's own).
-        const feverMult = events.fevered(this, session.roomId) ? FEVER_MEND_MULT : 1;
+        // off your feet is worth a fraction of an hour. The answers are to
+        // leave, to kill the fever rat that holds it, or to wear its grave-cloth
+        // (feverrat.ts, 2026-11-01). The gate's fire is unreachable by it.
+        const feverMult = events.feverBites(this, session) ? FEVER_MEND_MULT : 1;
         session.hp = Math.min(session.maxHp, Math.round((session.hp + healingDue * feverMult * chillMult) * 100) / 100);
         this.sendStatus(session);
         if (session.hp >= session.maxHp) {
@@ -6207,6 +6207,7 @@ export class ZoneDO implements DurableObject {
     rising.tick(this, now);      // the dead that only seemed to fall get up (rising.ts)
     ratking.roll(this, now);     // about once a day, a rat king comes to the warrens (ratking.ts)
     whiteroe.roll(this, now);    // about once a day, a white roe comes into the wood (whiteroe.ts)
+    feverrat.keeper(this, now);  // while the fever rat is up, the keeper speaks of it (feverrat.ts)
     cough.tick(this, now);       // the drowned's water, a chill, smoke: what sets you coughing (cough.ts)
     this.applyRot(now, false);
     this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches
@@ -7085,6 +7086,7 @@ export class ZoneDO implements DurableObject {
     this.creatures.delete(creature.id);
     if (creature.templateId === RAT_KING) ratking.fell(this); // its rats go leaderless (ratking.ts)
     if (creature.templateId === WHITE_ROE) whiteroe.slain(this, killer); // the wood turns on its killer (whiteroe.ts)
+    if (creature.templateId === FEVER_RAT) events.feverLifts(this); // the fever goes with it (feverrat.ts)
     this.noteCreaturesChanged(); // a throw can kill between beats
     for (const s of this.sessions.values()) {
       if (s.target === creature.id) s.target = null;

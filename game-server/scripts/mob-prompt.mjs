@@ -1022,6 +1022,11 @@ const BIRD_SHEETS = {
 // wrong one out of sixteen lists, which is how eight drawn sheets lost a real
 // cell. Restored, with hit gone instead.
 const REDRAW = {
+  // THE FEVER RAT (rome, 2026-11-01): a boss rat sheet. No sweep: a second blow
+  // breaks a rat's body. ITS PROMPT IS HAND-BUILT from the rat king's
+  // (output/imagegen/fever-rat-prompt.txt off rat-king-prompt.txt): the tool's
+  // generic wording drew it nothing like the game's rats. Use that file.
+  "fever-rat": ["idle","watch","alert","move-a","move-b","attack","feed","death"],
   "the-woodward": ["idle","watch","alert","move-a","move-b","attack","sweep","death"],
   // The carrier's sheet as cut on 2026-10-20 (output/.../road-carrier/sheet-order.json);
   // the tool had no record and put death fifth.
@@ -1213,6 +1218,8 @@ try { cache = JSON.parse(fs.readFileSync(CACHE, "utf8")); } catch {}
 // So an entry here wins over D1 until its migration ships. DELETE THE ENTRY the
 // moment it does, or this quietly becomes the thing that overrides live prose.
 const PENDING_DESC = {
+  // migration 362 — the fever rat, new (rome, 2026-11-01)
+  "fever-rat": "A rat the size of a hound, come up out of the ground: the fur gone in patches over skin that is wet and grey, the eyes running, the earth of the grave still packed in its coat. It breathes with its mouth open, fast and shallow, and the air around it is warm and sweetish. There is a strip of old linen caught round its neck, dragged up with it from below.",
   // migration 289 — he comes down off the rope and works standing
   "the-scaffold-hand": "Standing under the broken arch with both arms up over his head, dressing the underside of a span that is not there any more. The scaffold came down two centuries ago. He did not come down with it, and he has not put his arms down since.",
 };
@@ -1756,7 +1763,7 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "the-cook", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand", "the-long-warden", "the-miller", "the-keeper-of-the-holding"]);
+const CLEAR_BG = new Set(["twice-dead", "the-cook", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand", "the-long-warden", "the-miller", "the-keeper-of-the-holding", "fever-rat"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")

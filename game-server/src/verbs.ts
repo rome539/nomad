@@ -3537,7 +3537,7 @@ export async function consumeFood(z: ZoneDO,
   let heal = spoiled ? Math.max(1, Math.round(foodHeal * FOOD_SPOIL_HEAL_MULT)) : foodHeal;
   // THE FEVER (2026-08-06): on that ground nothing mends, and food is not an
   // exception to it — the same fraction rest pays and a dressing pays.
-  if (events.fevered(z, session.roomId)) heal = Math.max(1, Math.round(heal * FEVER_MEND_MULT));
+  if (events.feverBites(z, session)) heal = Math.max(1, Math.round(heal * FEVER_MEND_MULT));
   session.hp = Math.min(session.maxHp, session.hp + heal);
   return { before, tmpl, spoiled };
 }
@@ -3737,7 +3737,7 @@ export async function applyBandage(z: ZoneDO, session: Session, carried: Carried
   await removeItemRow(z.env.DB, carried.rowId);
   const before = session.hp;
   session.bleedTicks = 0; session.bleedDmg = 0; // the wound is bound
-  session.hp = Math.min(session.maxHp, session.hp + (events.fevered(z, session.roomId)
+  session.hp = Math.min(session.maxHp, session.hp + (events.feverBites(z, session)
     ? Math.max(1, Math.round(tmpl.staunch * FEVER_MEND_MULT)) : tmpl.staunch));
   z.send(session, (auto
     ? `Your hands move on their own — you bind the wound with ${tmpl.name}.`

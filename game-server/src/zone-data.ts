@@ -2861,6 +2861,35 @@ export const FEVER_ACTIVE_MIN_MS = 25 * 60_000;
 export const FEVER_ACTIVE_MAX_MS = 45 * 60_000;
 export const FEVER_AFTERMATH_MS = 12 * 60_000;
 export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all worth on bad ground
+// THE FEVER RAT (rome, 2026-11-01). Once the dens moved out onto open ground,
+// a fever kept to the old village bit nobody, so it now sits over the wood next
+// door as well; and it has something to fight. When it settles, the fever rat
+// comes up out of the fever graves and sits there, and the fever does not lift
+// while it lives. Kill it and the wind comes round. Left alone long enough it
+// goes back down and the fever ends on its own. Its grave-cloth, worn over the
+// face, is the one thing that lets you mend under the fever.
+export const FEVER_BANDS = new Set(["den", "wood"]);  // the ground the fever sits over
+export const FEVER_RAT = "fever-rat";
+export const FEVER_RAT_HOME = "the-fever-graves";
+export const FEVER_RAT_HOLD_MS = 4 * 3_600_000;       // left alone this long, it goes back into the graves
+export const FEVER_CLOTH_TRAIT = "grave-clothed";      // the grave-cloth's own; on nothing else in the world
+// HOW ANYONE KNOWS IT IS UP (rome, 2026-11-02): the keeper speaks of it at the
+// gatehouse, as he does of the king and the roe; the fever's status line names
+// the graves; and the old village sounds of it while it is out. A place, never
+// a rule: nothing here says kill it and the fever lifts.
+export const FEVER_RAT_KEEPER_PER_MIN = 0.05;
+export const FEVER_RAT_KEEPER_GAP_MS = 30 * 60_000;
+export const FEVER_RAT_KEEPER_LINES = [
+  "The keeper says, to nobody in particular: \"Somebody's opened one of the graves in the old village. Not dug it. Opened it. From underneath.\"",
+  "\"Fever's off the graves again.\" The keeper doesn't look up. \"Last time it sat like this there was something come up out of them with it, and it didn't lift till somebody went out there.\"",
+  "The keeper sniffs at the hatch and makes a face. \"Wind's off the graves. Folk in the old village used to tie a cloth over their faces when it blew like this. They tied them on their dead too.\"",
+];
+export const FEVER_RAT_AMBIENT_ODDS = 0.4;  // of an ambient beat on the old village while it is up
+export const FEVER_RAT_AMBIENT = [
+  "Every rat in the old village has gone still, and every one of them is facing the graves.",
+  "Over by the graves, something heavy turns over in loose earth.",
+  "Something is breathing among the graves, fast and shallow, loud enough to hear from here.",
+];
 // ---- the small lives (rome, 2026-07-13): sleep, thirst, calls, and fear ----
 // Nothing blanket: each need lands only where it CHARACTERIZES, and the
 // refusals are design too — the dead never sleep, never drink, never call.

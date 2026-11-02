@@ -3593,7 +3593,7 @@ var VOICE_FAMILY = {
   coyote: "coyote",
   hyena: "grave-hyena",
   direhyena: "dire-hyena",
-  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king",
+  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king fever-rat",
   gull: "great-gull black-backed-gull",
   oystercatcher: "oystercatcher",
   chough: "mountain-chough",
@@ -10226,13 +10226,13 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "128";      // /mob/      strips and their eye layers
+var MOB_V  = "130";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "55";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "56";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "17";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "36";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "37";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -14293,6 +14293,7 @@ var MOB_SPRITE = {
   "fleet-rat": 3,             // 0.15
   "albino-rat": 3,            // 0.15
   "rat-king": 24,             // a boss, sized with the old grey: a rat bigger than any rat should be (rome: 11 read too small)
+  "fever-rat": 11,            // the rat king's body at 24, measured body to body THROUGH mobVh's curve (17, matched as if linear, drew it a fifth too big)
   "grey-heron": 13,           // 1.00  standing; the same as the feral goat at 1.00
   "roe-deer": 16,             // 1.00  head up. Smaller than the red hind at 18
   "white-roe": 13,            // 1.00
@@ -14512,6 +14513,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "fever-rat":   { n: 8, aspect: 1.301, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"death":7} },
   "the-cook":   { n: 8, aspect: 0.928, f: {"idle":0,"hone-the-blade":1,"wipe-the-blade":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-king":   { n: 9, aspect: 0.894, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"call-the-rats":6,"feed":7,"death":8} },
   "coyote":   { n: 8, aspect: 1.172, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
