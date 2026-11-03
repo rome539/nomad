@@ -21,6 +21,9 @@ export interface Room {
   // bake, which simply draws nothing for that room rather than guessing.
   map_x: number | null;
   map_y: number | null;
+  // WHICH FLOOR (mig 365): 1 the overworks, 0 the ground, -1 the halls, -2 the
+  // warrens, -3 the deep. A square is unique on its floor, not across them.
+  map_z?: number;
 }
 
 // The bands of the world. A room either declares its own (the `region` column,

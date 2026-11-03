@@ -1981,8 +1981,9 @@ export const EMOTE_MAX = 240;
 // the line is put right the way a reader would: the verb takes its -s ("hug"
 // -> "hugs", "kiss" -> "kisses", "cry" -> "cries"; one already ending in s is
 // left alone, so "looks" never becomes "lookss"), a short name for someone in
-// the room becomes their whole name ("iron" -> "Irongate"), and the line ends
-// on a full stop. A leading "'s" or "," joins the name ("Luna's eyes narrow").
+// the room becomes their whole name ("iron" -> "Irongate"). No stop is added
+// at the end (rome, 2026-11-03): the line ends as typed. A leading "'s" or ","
+// joins the name ("Luna's eyes narrow").
 const EMOTE_IRREGULAR: Record<string, string> = { be: "is", am: "is", are: "is", have: "has", do: "does", go: "goes" };
 function thirdPerson(verb: string): string {
   const lower = verb.toLowerCase();
@@ -1996,7 +1997,7 @@ function thirdPerson(verb: string): string {
 export function emoteLine(name: string, words: string, folk: string[] = []): string {
   const w = words.trim().replace(/\s+/g, " ").slice(0, EMOTE_MAX);
   if (!w) return name;
-  if (/^('|,)/.test(w)) return end(`${name}${w}`);
+  if (/^('|,)/.test(w)) return `${name}${w}`;
   const parts = w.split(" ");
   // An adverb first ("slowly nods") hands the -s on to the word after it.
   const v = /ly$/i.test(parts[0]) && parts.length > 1 ? 1 : 0;
@@ -2009,10 +2010,7 @@ export function emoteLine(name: string, words: string, folk: string[] = []): str
     const who = folk.find((n) => n.toLowerCase().startsWith(m[1].toLowerCase()));
     if (who) parts[i] = who + m[2];
   }
-  return end(`${name} ${parts.join(" ")}`);
-}
-function end(line: string): string {
-  return /[.!?…"')]$/.test(line) ? line : line + ".";
+  return `${name} ${parts.join(" ")}`;
 }
 export function cmdEmote(z: ZoneDO, session: Session, words: string): void {
   if (!words.trim()) return z.send(session, "emote <what you do>: the room sees your name, then your words.");

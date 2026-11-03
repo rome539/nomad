@@ -3508,7 +3508,7 @@ export function wallStudy(z: ZoneDO, session: Session): void {
       q: MAP_QUARTERS[id], // the room's quarter — see the same field in lore.sendMap
       // (was WOOD_QUARTERS, which is a subset: the wall never captioned the east
       // road's four, the Crossing's seven or the open ground's four.)
-      x: at?.x, y: at?.y,
+      x: at?.x, y: at?.y, z: at?.z, // ...and on its floor, as the surveyor's map has it
     });
   }
   try {

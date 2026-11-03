@@ -7919,6 +7919,10 @@ export const NIGHT_LIT = new Set<string>([
 // torch-lit with no torch in your hand). They are lit ground above, for what you
 // can see there, but their night picture already has the lantern burning, so
 // they never take the torch picture for it: only your own light swaps it.
+// SO THIS IS A SET OF PICTURES, NOT OF DOORS (2026-11-03). The Weeper's Arch is
+// no gate since mig 366 but still paints the gate picture with its lantern, so
+// it stays; the Village Smithy is a gate now but paints the burned village's
+// own plate, which takes the torch picture when its fire is lit, so it is not.
 export const GATE_ROOMS = new Set<string>([
   "gate", "weeper-arch", "sally-port", "the-first-milestone", "the-timber-stack", "the-withy-hut", "the-gate-arch",
   "the-ferry-house", "the-relay-house", "the-crossing-house", "the-shieling", "the-stell", "the-slabs", "the-shelter-crag",
@@ -8260,6 +8264,9 @@ export const TERRAIN_RULES: [string, RegExp][] = [
 // status frame beside the terrain, never instead of it, so a client with no
 // picture for the id goes on painting exactly what it painted before.
 export const ART_ROOMS = new Set<string>([
+  // THE WEEPER'S ARCH (mig 366): a gate no longer, so it is asked for by name
+  // and paints the gate picture it always had (public.ts PLATE_OF).
+  "weeper-arch",
   // ---- THE DENS' ROOFED ROOMS (2026-09-30). Indoors is the cheap part - three
   // pictures each - so every roof in the hamlet and on the common has its own.
   "the-smithy", "the-bare-chapel", "the-mill", "the-wheel-pit",
@@ -8353,7 +8360,7 @@ export const ART_ROOMS = new Set<string>([
   "the-churchyard",
   "the-bell-pit",
   "the-green",
-  "the-village-smithy",
+  // (the Village Smithy is a gate since mig 366 and paints its own gate picture)
   "the-fish-stew",
   "the-orchard-rows",
   "the-cider-house",
@@ -11820,7 +11827,7 @@ export const MAP_BAND_OF: Record<string, number> = {
 //   wood  -> the maze (its three doors)       the wood court, and the wood
 // That is the whole reason to have gates spread across bands rather than piled
 // in one: the door you run for decides what you find out. A wanderer who only
-// ever banks at the Weeper's Arch never hears a word about the wood.
+// ever banks at the Broken Gate never hears a word about the wood.
 //
 // THE PRICE IS TIME, AND THE GATEHOUSE IS WHERE YOU HAVE IT. A line lands about
 // every 25 seconds you sit behind the door — which is what you are doing anyway
@@ -12227,6 +12234,8 @@ export const KEEPER_DELAY_MAX_MS = 45_000;
 // Absent from this table means the fortress line below, which is right: the
 // three old doors are the ones it was written for.
 export const GATEHOUSE_ROOM: Partial<Record<Region, string>> = {
+  // The Village Smithy (mig 366): the gatehouse is the smithy's own back room.
+  out: "A room knocked through behind the smithy's back wall, warm and close, the old forge hearth drawing for it. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its coals. The burned village is on the other side of the door, and the fortress stands over the roofs of it.",
   road: "A low room off the paving, warm and close. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its coals. The road is on the other side of the door, going both ways, and it will still be going both ways whenever you are ready for it.",
   wood: "A hut of split timber, warm and close, the walls still going sticky where the fire gets at them. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its coals. The wood stands on the other side of the door, right up against the walls, and it does not come in.",
   crossing: "A house of tarred board set above the tideline, warm and close and dry, which is the whole of its argument. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its coals. The water is on the other side of the door, going out or coming in, and the door knows the difference.",

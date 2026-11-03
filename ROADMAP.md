@@ -110,12 +110,10 @@ so the split this file used to schedule has shipped.
 - **Rooms come from `regions/*.rooms`** via scripts/build-rooms.mjs, never hand
   SQL; a new region needs a record (chronicle.ts RECORDS) or the tests fail.
 
-**Open ends:**
-
-- **The wood's map squares** were 226/410 correct when last measured
-  (2026-08): its maze cores were wired for connectivity, not geometry, so its
-  loops don't close. Not re-measured since the wood grew to 332 rooms.
-  Correctable one door at a time.
+**The wood is a maze on purpose** (rome, 2026-10-29): its exits between its
+own rooms don't have to match the map, and scripts/check-map-true.mjs exempts
+them. Every other compass exit points the way it says (3,762 checked live,
+2026-11-03).
 
 **Capacity** *(measured 2026-07 at ~400 rooms; not re-measured at 1,528)*:
 nothing was near a limit then. DO duration is the one real ceiling and the
@@ -280,6 +278,88 @@ clarity in the interface, scope in a small number of deep systems.**
 ## Icebox — liked, not building yet
 
 Directions rome likes and wants held. Design only; no code until he says go.
+
+- **THE WIDE LAND — the world's next shape** *(researched 2026-11-03; rome
+  likes it, research only, nothing authorised)*. The world today is one thin
+  strip: 165 squares west to east and about 34 north to south, every region a
+  stop on a single line (wood, den ground, road, fortress, road, crossing,
+  mountain), with the fortress's inside and the deep laid flat as a column on
+  the land to the south. It reads as a corridor, the two ends are dead ends,
+  and there is no open country for settlements. The older MUD that plays most
+  like NOMAD, MUME, is one wide land drawn to scale with places dotted across
+  it and no shortcut home; that is the model. The plan, as it stands:
+  1. **New country, low ground only, nothing moves.** North country (low moors,
+     a river valley, rolling hills) above the line, stopping at the crossing;
+     south country (coast, salt marsh, fen, at sea level) below it, the whole
+     width. Every existing room keeps its square.
+  2. **The mountain stays the highest point.** Nothing new north of it (north
+     of the mountain is only its own high face, cliffs and snow); the land
+     rises one way, sea and marsh to moor and road to the crossing to the
+     summit. The landmarks already make the mountain the thing seen furthest
+     off, so new ground gets it for free.
+  3. **A northern road** from the wood's north side across the north country
+     to the mountain's foot by the crossing, never over higher ground: two
+     ways home from either end.
+  4. **Floors. BUILT 2026-11-03 (mig 365), not yet shipped.** Every room has
+     a floor: 1 the overworks, 0 the ground, -1 the halls, -2 the warrens, -3
+     the deep, taken from the stratum each room was already in rather than
+     from the stairs. The halls, warrens and deep moved north to sit under the
+     fortress, so the south of the open ground is free for the south country.
+     The map window shows only the floor you stand on (rome turned down the
+     ground drawn faint over the floors below), with arrows for the floors
+     your copy has rooms on. `.rooms` files
+     take `!floor N`; a square is unique per floor; check-map-true holds up to
+     never lead to a lower floor. One stair disagrees and is listed as the
+     check's only exception: up from the Black Fen into the Sewer Mouth, a
+     warrens room. Floors are only for indoors and underground: the
+     mountain's height stays ground you climb.
+  5. **About 1,600 new rooms** (rome's pick): half the density of the wood and
+     the mountain, open country with places dotted across it rather than a
+     maze in every square. The world goes from 1,528 to about 3,100.
+  6. **What the new ground is for:** settlements wherever three or more dens
+     cluster, in any region; old places people left to find and rebuild (the
+     holding, the hamlet, the old growth already exist, the new country adds
+     more); the den shelf as a shop (goods priced in kind, taken by leaving
+     the price); one thing per region players rebuild for everyone (the wood's
+     west bridge, taken up from inside, is the first); and the returned names
+     (below).
+  7. **No recall, portals or coaches.** The walk home stays the game.
+  Still open: the new country's regions and names, where the northern road
+  meets the old ground, and the build order. Every new room still needs its
+  plates (day, night, night-torch, snow) and creatures at the band's density.
+
+- **THE NAMES COME BACK** *(researched 2026-11-03; rome likes it, research
+  only)*. The fortress canon: after it fell, somebody took the names off
+  everything (faces scraped, name-stones chiselled blank, devices cut off).
+  A few names survived where the scrapers missed them, each a physical thing
+  found by a close look in the right place (inside a helmet in the deep,
+  under a tabard's lining, on a tally the holding kept, under a gravestone),
+  no list and no hints, and carried home, so it drops if you die. Returning
+  them opens **the deep's own secret** (rome, 2026-11-03), and the keeper
+  starts telling that person's story, a telling that did not exist before.
+  Why the deep: every other part of the world has a secret door of its own
+  (the wood's moon door, the crossing's tide door, the mountain's riddle door,
+  the fortress's bell door up from the armory), while the deep's heart door is
+  only the way IN (undercroft, down); its 46 rooms hide nothing of their own.
+  This gives it one, and the canon already points at it: the only writing the
+  scrapers left in the deep is the warning on the Black Threshold's lintel.
+  Open: what the secret is and where it opens, how many names it takes, and
+  whether the names go back at the roll room or down in the deep itself.
+  (A version where a named hollow lies down for good was offered and turned
+  down; so was the chapter house being the sealed place.)
+
+- **EXITS YOU SAY IN WORDS** *(researched 2026-11-03; rome likes it, research
+  only)*. From Armageddon's rebuilt world, where an exit can be free text
+  ("enter the wardrobe") as well as a compass point. Today NOMAD has the compass,
+  up/down, in/out, and animal paths; `climb` is only another word for `go`. The
+  idea: some ways out are things you do, `climb the yew`, `squeeze through the
+  gap`, `wade the ford`, so crossing from one place into another feels like an
+  event (Koster's zone lesson: make the exit between two pockets dramatic).
+  Open: whether a word exit replaces the compass direction on that side or sits
+  beside it; how the map draws it (rooms keep their fixed squares); whether the
+  map-truth check and the corridor rule see it as an ordinary exit; and where
+  word exits belong (the obvious places are where the room text already
+  describes climbing, squeezing or wading).
 
 - **THE ONE THING IN THE WORLD** *(researched 2026-11-03; rome likes the
   sound of it, research only)*. From Carrion Fields, where each team's powers

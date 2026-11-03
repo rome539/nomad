@@ -27,7 +27,7 @@ try {
         "export {ZoneDO} from './zone';",
         "export {parse} from './parser';",
         "export * as den from './den';",
-        "export {cmdMap, copyCounts} from './lore';",
+        "export {cmdMap, copyCounts, worldGrid} from './lore';",
         "export {cmdGo} from './verbs';",
         "export {handleGatehouse} from './gate';",
         "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, glutMult, tickGlut, offerCore, cmdOffer} from './gate';",
@@ -84,7 +84,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -440,6 +440,111 @@ try {
   });
 
   // ---------------------------------------------------------------- maps
+  console.log('the floors');
+  // THE FLOORS (2026-11-03, mig 365). The fortress's inside was drawn as a
+  // column of stripes south of the land; now each room carries its floor and
+  // the halls lie under the fortress. A square is shared across floors, never
+  // within one, and a caption is placed among its own floor's rooms.
+  function floorWorld() {
+    const z = new ZoneDO({}, {});
+    const rooms = new Map([
+      // the ground: a gate with the open ground's room just north of it
+      ['yard', { id: 'yard', name: 'The Yard', region: 'out', map_x: 0, map_y: 0, map_z: 0 }],
+      ['door', { id: 'door', name: 'The Door', region: 'out', map_x: 0, map_y: 1, map_z: 0 }],
+      // the halls, straight under them, on the same squares
+      ['hallA', { id: 'hallA', name: 'Hall A', region: 'upper', map_x: 0, map_y: 1, map_z: -1 }],
+      ['hallB', { id: 'hallB', name: 'Hall B', region: 'upper', map_x: 1, map_y: 1, map_z: -1 }],
+      // ...and a halls room a floor further down, among the warrens
+      ['drain', { id: 'drain', name: 'The Drain', region: 'upper', map_x: 4, map_y: 4, map_z: -2 }],
+    ]);
+    const exits = new Map([
+      ['yard', [{ dir: 'south', to_room: 'door' }]],
+      ['door', [{ dir: 'north', to_room: 'yard' }, { dir: 'down', to_room: 'hallA' }]],
+      ['hallA', [{ dir: 'up', to_room: 'door' }, { dir: 'east', to_room: 'hallB' }]],
+      ['hallB', [{ dir: 'west', to_room: 'hallA' }, { dir: 'down', to_room: 'drain' }]],
+      ['drain', [{ dir: 'up', to_room: 'hallB' }]],
+    ]);
+    z.world = { rooms, exits, entryRooms: new Set(), safeRooms: new Set(),
+      itemTemplates: new Map([['finished-chart', { id: 'finished-chart', name: 'a finished chart', slot: '' }]]) };
+    z.dens = new Map(); z.inDen = new Map();
+    z.send = () => {};
+    const frames = [];
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'hallA', items: [{ rowId: 'row1', itemId: 'finished-chart', serial: null, equipped: false, condition: 100 }],
+      ws: { send: (m) => frames.push(JSON.parse(m)) } };
+    z.sessions = new Map([['me', me]]);
+    return { z, me, frames };
+  }
+  check('every room is on a floor, and two floors can hold the same square', () => {
+    const { z } = floorWorld();
+    const g = worldGrid(z);
+    assert.deepEqual(g.at.get('door'), { x: 0, y: 1, z: 0 });
+    assert.deepEqual(g.at.get('hallA'), { x: 0, y: 1, z: -1 }, 'the hall under the door keeps its own square, on its own floor');
+  });
+  check('a caption is placed among its own floor, and a region gets one per floor it is on', () => {
+    const { z } = floorWorld();
+    const bands = worldGrid(z).bands;
+    const halls = bands.filter((b) => b.region === 'upper').sort((a, b) => b.z - a.z);
+    assert.equal(halls.length, 2, 'the halls on their floor, and the drain on the one below');
+    // Over Hall A is the Yard's square on the ground, a floor up. It is not in
+    // the hall's way: the caption hangs straight over the hall.
+    assert.deepEqual({ ...halls[0], y: +halls[0].y.toFixed(2) }, { region: 'upper', x: -0.35, y: -0.05, z: -1 });
+    assert.equal(halls[1].z, -2);
+  });
+  await checkAsync('the map frame tells the client which floor each room is on', async () => {
+    const { z, me, frames } = floorWorld();
+    await cmdMap(z, me, '');
+    const rooms = Object.fromEntries(frames.at(-1).regions.flatMap((r) => r.rooms).map((r) => [r.id, r]));
+    assert.equal(rooms.door.z, 0);
+    assert.equal(rooms.hallA.z, -1);
+    assert.equal(rooms.drain.z, -2);
+    assert.ok(rooms.hallA.here);
+  });
+  check('the map window draws one floor and nothing of the others', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const draw = pub.slice(pub.indexOf('function drawMap()'), pub.indexOf('function mapZoom('));
+    assert.match(draw, /if \(nd\.fz !== mapFloor\) continue;/, 'rooms off the floor in view are not drawn bright');
+    assert.match(draw, /if \(ed\.z !== mapFloor\) continue;/, 'passages off the floor in view are not drawn');
+    assert.match(draw, /if \(su\.z !== mapFloor\) continue;/, 'nor their stubs');
+    assert.doesNotMatch(draw, /fz !== 0\) continue;/, 'and the ground is not laid faint over the floors below (2026-11-03)');
+    assert.match(pub, /if \(nodes\[ex\.to\]\.fz !== nodes\[fid\]\.fz\) continue;/, 'no line drawn between two floors');
+    // ...and the two inside files say which floor they build on, so a regen
+    // cannot drop the halls, warrens or deep back on the ground.
+    const deep = readFileSync(new URL('../regions/the-deep-2.rooms', import.meta.url), 'utf8');
+    assert.match(deep, /^!floor -3$/m);
+    const keep = readFileSync(new URL('../regions/the-keep-grows.rooms', import.meta.url), 'utf8');
+    assert.match(keep, /^!floor -1$/m);
+    assert.match(keep, /## the-old-adit \| The Old Adit\n!floor -2\n/, 'the Old Adit is the warrens');
+  });
+
+  console.log('the smithy gate');
+  check('the Weeper\'s Arch is no gate and the Village Smithy is (2026-11-03, mig 366)', () => {
+    const mig = readFileSync(new URL('../migrations/366_the_smithy_is_a_gate.sql', import.meta.url), 'utf8');
+    assert.match(mig, /UPDATE rooms SET is_entry = 0 WHERE id = 'weeper-arch';/);
+    assert.match(mig, /UPDATE rooms SET is_entry = 1 WHERE id = 'the-village-smithy';/);
+    assert.match(mig, /UPDATE players SET room_id = 'gate' WHERE room_id = 'weeper-arch';/, 'nobody comes back behind a door that is gone');
+    assert.match(mig, /This was a gate once, with a keeper behind it: the hatch in the wall beside the arch is boarded over now/, 'the arch says what it was');
+    // ...and the smithy paints its own gate picture, not the burned village's.
+    const pub0 = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const gp = pub0.slice(pub0.indexOf('var GATE_PLATE = {'), pub0.indexOf('};', pub0.indexOf('var GATE_PLATE = {')));
+    assert.match(gp, /"the-village-smithy":  "day night night-torch snow"/);
+    const rp = pub0.slice(pub0.indexOf('var ROOM_PLATE = {'), pub0.indexOf('\n};', pub0.indexOf('var ROOM_PLATE = {')));
+    assert.ok(!rp.includes('"the-village-smithy"'), 'a room picture is asked for before a gate one, so the smithy must not have one');
+    const og = readFileSync(new URL('../regions/open-ground.rooms', import.meta.url), 'utf8');
+    assert.match(og, /## the-village-smithy \| The Village Smithy\n[^#]*\n!entry\n/, 'a regen of the open ground keeps the smithy a gate');
+    // Its gatehouse is the smithy's own, and its keeper tells the fortress's story.
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /GATEHOUSE_ROOM: Partial<Record<Region, string>> = \{\n(?:  \/\/.*\n)*  out: "A room knocked through behind the smithy/);
+    const lo = readFileSync(new URL('../src/lore.ts', import.meta.url), 'utf8');
+    assert.match(lo, /const band = \(own === "out" \? "gate" :/, 'the smithy keeper is not left with no story');
+    // The arch paints the picture it always had, as a room, people on the paving.
+    assert.ok(/export const ART_ROOMS = new Set<string>\(\[[\s\S]*?"weeper-arch",/.test(zd), 'the arch asks for its own picture');
+    const gr = zd.match(/export const GATE_ROOMS = new Set<string>\(\[([^\]]*)\]/)[1];
+    assert.ok(gr.includes('"weeper-arch"') && !gr.includes('the-village-smithy'), 'the lantern set follows the pictures, not the doors');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /var PLATE_OF = \{\n  "weeper-arch": "gate-weeper-arch",/);
+    assert.match(pub, /var ROOM_PLATE = \{\n(?:  \/\/.*\n)*  "weeper-arch":/);
+  });
+
   console.log('the crude map');
   // A line of 200 rooms, r0 - r1 - ... - r199, each joined east to the next.
   function mapWorld(journalId) {
@@ -3430,30 +3535,31 @@ try {
   });
 
   check('emotes open with the wanderer\'s name, go out as speech, and must be seen (2026-11-03)', () => {
-    assert.equal(emoteLine('Rome', 'crouches   by the fire'), 'Rome crouches by the fire.');
-    assert.equal(emoteLine('Rome', "'s eyes narrow"), "Rome's eyes narrow.", 'a possessive joins the name');
-    assert.ok(emoteLine('Rome', 'waits ' + 'a'.repeat(400)).length <= 'Rome '.length + 240 + 1, 'as long as a said line');
+    assert.equal(emoteLine('Rome', 'crouches   by the fire'), 'Rome crouches by the fire');
+    assert.equal(emoteLine('Rome', "'s eyes narrow"), "Rome's eyes narrow", 'a possessive joins the name');
+    assert.ok(emoteLine('Rome', 'waits ' + 'a'.repeat(400)).length <= 'Rome '.length + 240, 'as long as a said line');
     // IT READS AS A SENTENCE (rome, 2026-11-03): typed like a command, read like prose.
-    assert.equal(emoteLine('Gloambrook', 'hug iron', ['Irongate', 'Lunapilot']), 'Gloambrook hugs Irongate.', 'the verb takes its s, a short name becomes the whole one');
-    assert.equal(emoteLine('Irongate', 'jump'), 'Irongate jumps.');
-    assert.equal(emoteLine('Irongate', 'look up'), 'Irongate looks up.');
-    assert.equal(emoteLine('Irongate', 'looks up'), 'Irongate looks up.', 'already right is left alone');
-    assert.equal(emoteLine('Irongate', 'kiss luna', ['Lunapilot']), 'Irongate kisses Lunapilot.');
-    assert.equal(emoteLine('Irongate', 'cry'), 'Irongate cries.');
-    assert.equal(emoteLine('Irongate', 'play'), 'Irongate plays.');
-    assert.equal(emoteLine('Irongate', 'slowly nod'), 'Irongate slowly nods.', 'an adverb hands the s on');
-    assert.equal(emoteLine('Irongate', 'have a drink'), 'Irongate has a drink.');
+    assert.equal(emoteLine('Gloambrook', 'hug iron', ['Irongate', 'Lunapilot']), 'Gloambrook hugs Irongate', 'the verb takes its s, a short name becomes the whole one');
+    assert.equal(emoteLine('Irongate', 'jump'), 'Irongate jumps');
+    assert.equal(emoteLine('Irongate', 'look up'), 'Irongate looks up');
+    assert.equal(emoteLine('Irongate', 'looks up'), 'Irongate looks up', 'already right is left alone');
+    assert.equal(emoteLine('Irongate', 'kiss luna', ['Lunapilot']), 'Irongate kisses Lunapilot');
+    assert.equal(emoteLine('Irongate', 'cry'), 'Irongate cries');
+    assert.equal(emoteLine('Irongate', 'play'), 'Irongate plays');
+    assert.equal(emoteLine('Irongate', 'slowly nod'), 'Irongate slowly nods', 'an adverb hands the s on');
+    assert.equal(emoteLine('Irongate', 'have a drink'), 'Irongate has a drink');
     assert.equal(emoteLine('Irongate', 'hug luna!', ['Lunapilot']), 'Irongate hugs Lunapilot!', 'its own ending is kept');
-    assert.equal(emoteLine('Lunapilot', 'polish the iron', ['Irongate']), 'Lunapilot polishes the iron.', 'after the, a, my: a thing, not a name');
-    assert.equal(emoteLine('Lunapilot', 'wave at iron', ['Irongate']), 'Lunapilot waves at Irongate.');
+    assert.equal(emoteLine('Irongate', 'jump'), 'Irongate jumps', 'and none is added (rome, 2026-11-03)');
+    assert.equal(emoteLine('Lunapilot', 'polish the iron', ['Irongate']), 'Lunapilot polishes the iron', 'after the, a, my: a thing, not a name');
+    assert.equal(emoteLine('Lunapilot', 'wave at iron', ['Irongate']), 'Lunapilot waves at Irongate');
     assert.deepEqual(parse('emote Wipes THE blade'), { verb: 'emote', arg: 'Wipes THE blade' }, 'the words as typed');
     const said = [], fed = [];
     let lit = true, fog = false;
     const me = { pubkey: 'me', name: 'Rome', roomId: 'moor' };
     const z = { send: (s, t, c, sp) => said.push([t, c, sp]), roomFeed: (...a) => fed.push(a), litFor: () => lit, events: new Map(), world: { rooms: new Map() }, sessions: new Map() };
     cmdEmote(z, me, 'wipes the blade');
-    assert.deepEqual(said.at(-1), ['Rome wipes the blade.', 'say', { name: 'Rome', pk: 'me' }], 'the speaker sees it as speech');
-    assert.deepEqual(fed.at(-1), ['moor', 'Rome wipes the blade.', 'me', false, 'say', { name: 'Rome', pk: 'me' }], 'the room too, never to a relay');
+    assert.deepEqual(said.at(-1), ['Rome wipes the blade', 'say', { name: 'Rome', pk: 'me' }], 'the speaker sees it as speech');
+    assert.deepEqual(fed.at(-1), ['moor', 'Rome wipes the blade', 'me', false, 'say', { name: 'Rome', pk: 'me' }], 'the room too, never to a relay');
     lit = false; fed.length = 0;
     cmdEmote(z, me, 'wipes the blade');
     assert.equal(fed.length, 0, 'in the dark nobody sees it');

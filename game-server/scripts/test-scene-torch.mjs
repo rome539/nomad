@@ -666,10 +666,13 @@ for (const room of ["the-white-ride", "the-gnawed-stand", "the-picked-bones", "t
 // A ROOFED ROOM ON BORROWED GROUND KEEPS ITS SKY (rome, 2026-10-25: the
 // Marshal's Lodging was black over the siege lines). Its picture is the open
 // ground outside, cut for a sky, so the sky stays behind it.
-for (const room of ["the-marshals-lodging", "the-mine-mouth", "the-village-smithy", "the-cider-house"]) {
+for (const room of ["the-marshals-lodging", "the-mine-mouth", "the-cider-house"]) {
   ctx.paint("out", "in", "", "borrow-" + room, 0, 0, room, 0, 0, true, 0);
   t(room + " keeps a sky behind its borrowed ground", !!skyEl.style.backgroundImage, strip(sceneEl.style.backgroundImage));
 }
+// ...and the Village Smithy is a gate now (mig 366), with its own gate picture.
+ctx.paint("out", "day", "gate:the-village-smithy", "smithy-gate", 0, 0, "", 0, 0, true, 0);
+t("the Village Smithy paints its own gate picture", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-the-village-smithy-day.webp" && !!skyEl.style.backgroundImage, strip(sceneEl.style.backgroundImage));
 ctx.paint("den", "in", "", "loft-own", 0, 0, "the-lodge-loft", 0, 0, true, 1);
 t("...a room with its own window plate still takes its sky through the window", /\/sky\//.test(skyEl.style.backgroundImage));
 
@@ -767,8 +770,8 @@ t("...but a room with its own window plate has no fog inside it", veilEl.classNa
 
 // THE DAWN GROUND (rome, 2026-10-25): lifted on the night plate under every dawn sky, lamps still lit.
 t("the dawn ground has its grade, the day plate dimmed", /#scene\.t-dawn \{ filter: brightness\(0?\.\d+\)/.test(src));
-ctx.paint("mountain", "dawn", "gate:weeper-arch", "dawn-gate", 0, 0, "", 0);
-t("...at a gate too, on its day plate", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-weeper-arch-day.webp" && sceneEl.className === "t-dawn", strip(sceneEl.style.backgroundImage) + " " + sceneEl.className);
+ctx.paint("mountain", "dawn", "gate:sally-port", "dawn-gate", 0, 0, "", 0);
+t("...at a gate too, on its day plate", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-sally-port-day.webp" && sceneEl.className === "t-dawn", strip(sceneEl.style.backgroundImage) + " " + sceneEl.className);
 t("...and its lanterns keep burning", /\bdawn: 1/.test(src.match(/var FX_UNDER_TINT = \{([^}]*)\}/)[1]));
 
 // RAIN BY DAY DARKENS THE WHOLE PICTURE ALIKE (rome, 2026-10-26: the tops of the
@@ -797,10 +800,15 @@ for (const [g, sk] of [["snow-night", "wet-night"], ["snow-dawn", "wet-dawn"], [
 
 // THE GATES STAND THEIR NOMADS ON THE PAVING (rome, 2026-10-25): at the
 // Weeper's Arch a nomad stood into the wall on the default line.
-for (const g of ["weeper-arch", "gate", "sally-port", "the-ferry-house", "the-crossing-house"]) {
+for (const g of ["gate", "sally-port", "the-ferry-house", "the-crossing-house"]) {
   ctx.paint("out", "day", "gate:" + g, "gl-" + g, 0, 0, "", 0);
   t("the nomads at " + g + " stand out on the yard", Number(mobsEl.dataset.floorLine) >= 62, mobsEl.dataset.floorLine);
 }
+// THE ARCH IS NO GATE NOW (mig 366) and keeps its gate picture as a room, with
+// its people still out on the paving rather than walking into the wall.
+ctx.paint("out", "day", "lane", "wa-room", 0, 0, "weeper-arch", 0);
+t("the Weeper's Arch, a room now, paints its own picture", strip(sceneEl.style.backgroundImage) === "/room-bg/gate-weeper-arch-day.webp", strip(sceneEl.style.backgroundImage));
+t("...and stands its nomads out on the paving", Number(mobsEl.dataset.floorLine) >= 62, mobsEl.dataset.floorLine);
 
 // THE FOG BY DISTANCE (rome, 2026-10-26: the veil by height looked wrong). A
 // plate with a fog mask (scripts/plate-fog.py) has the fog laid through it; a

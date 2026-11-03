@@ -52,6 +52,7 @@
 #   off the Tideways: gods-pool(10,56), below the Still Cradle (the Drowned God's)
 
 !region deep
+!floor -3
 
 # ---- FLOOR 1: THE FLOODED HALLS — the west wing ------------------------------
 

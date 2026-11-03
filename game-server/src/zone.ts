@@ -9098,12 +9098,12 @@ export class ZoneDO implements DurableObject {
           fatigue: Math.floor((session.exhaustion?.units ?? 0) / 2) / 10,
           fatigue_penalty: exhaustion.playerPenalty(session.exhaustion),
           recovery: this.recoveryMode(session),
-          // Inside, the HUD must say INSIDE. You are not at the Weeper's Arch —
+          // Inside, the HUD must say INSIDE. You are not at the Broken Gate —
           // you are behind its door, and the bar saying otherwise was the visible
           // face of a deeper lie: the world still had you standing in the gate room.
           room: this.inGatehouse.has(session.pubkey) ? "The Gatehouse" : den.roomTitle(this, session, room?.name ?? session.roomId),
           // AND WHAT COUNTRY THAT ROOM IS IN (rome, 2026-08-12). The bar named
-          // the room and nothing else, so "The Weeper's Arch" told you where you
+          // the room and nothing else, so "The Broken Gate" told you where you
           // were standing and never which of the world's bands you were standing
           // in. Behind a door it still answers: the gatehouse belongs to the gate
           // it is built into, so the bar reads the ground outside rather than

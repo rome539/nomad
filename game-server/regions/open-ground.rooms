@@ -169,6 +169,7 @@ Open ground between the church and the last of the houses, cropped short by some
 ## the-village-smithy | The Village Smithy
 Open-fronted, stone-backed, roofed in slate that has mostly held, with the hearth still in the back wall and the stone trough beside it full of black water. There is an anvil bed and no anvil. An anvil is worth carrying away and everything else here was not.
 !safe
+!entry
 > east the-green
 
 # ============================== THE ORCHARD ==================================

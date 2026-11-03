@@ -20,6 +20,8 @@
 # band a blank fortress room reads as anyway - and mig 356 blanks the column.
 # A regen of this file would write `upper` back: redo the blanking with it.
 !region upper
+# The halls' floor (mig 365); the Old Adit's rooms below are the warrens' and say so.
+!floor -1
 
 ## the-five-ways | The Five Ways
 A low crossing with a door on every side. The scullery's damp comes in from one of them and the kennels' smell from another, the gallery and the great hall open off two more, and a stair goes down to the forge. The flags are worn into a shallow dish in the middle by a garrison that went everywhere through here and never once stopped to stand in it.
@@ -122,28 +124,33 @@ Four cots, a table, and a rack for four sets of kit, all of it empty. The cots a
 > east the-wet-run
 
 ## the-side-run | The Side-Run
+!floor -2
 A run off the Rat-Warren just high enough to go along bent double, its floor polished smooth by bodies. The walls are greasy at rat height, a dark band along both sides, and the band goes on ahead into the dark further than you can see.
 > west the-rat-warren
 > east the-litter-chamber
 
 ## the-litter-chamber | The Litter Chamber
+!floor -2
 A round hollow lined with shredded cloth, straw and hair, packed down into a nest the size of a cart. It is warm in here, warmer than earth has any business being, and the warmth is coming up out of the nest.
 > west the-side-run
 > east the-root-hall
 > south the-scrape
 
 ## the-root-hall | The Root Hall
+!floor -2
 The roof of the warren is roots here: a whole tree's worth come down through the earth from somewhere far above and spread out flat, a ceiling of ropes. Things have been carried up and wedged in among them, and the floor underneath is bones.
 > west the-litter-chamber
 > south the-old-adit
 
 ## the-scrape | The Scrape
+!floor -2
 A low stretch where the floor is all claw-marks, cut and recut into the clay until there is no flat left in it. Everything that goes deeper goes through here, and goes through fast.
 > north the-litter-chamber
 > east the-old-adit
 > south the-fallen-props
 
 ## the-old-adit | The Old Adit
+!floor -2
 Squared timbers, black and furred with mould, hold up a cut that men made: a sapper's adit driven toward the fortress walls and given up. The rats found it and took it over. Their runs come in through its sides at every height.
 > north the-root-hall
 > west the-scrape
@@ -151,15 +158,18 @@ Squared timbers, black and furred with mould, hold up a cut that men made: a sap
 > south the-hoard-hole
 
 ## the-blind-heading | The Blind Heading
+!floor -2
 The adit's last few yards, where the digging stopped. The face is still marked with the pick, and a shovel blade lies rusted into the floor at its foot. The air does not move here at all. Nobody finished this, and nobody will.
 > west the-old-adit
 
 ## the-wet-run | The Wet Run
+!floor -2
 A run off the Dripping Gallery where water comes down the walls in sheets and the floor is a channel of black mud. Small prints go along it both ways, hundreds of them, and something larger has dragged through them all and left a trench.
 > west the-dripping-gallery
 > east the-fallen-props
 
 ## the-fallen-props | The Fallen Props
+!floor -2
 The old mine timbers have given way here, and the props lie across the passage at every angle like a dropped bundle of sticks. You go through over and under them. The roof they were holding is mostly still up.
 > west the-wet-run
 > north the-scrape
@@ -167,10 +177,12 @@ The old mine timbers have given way here, and the props lie across the passage a
 > south the-warren-sump
 
 ## the-hoard-hole | The Hoard-Hole
+!floor -2
 A pocket dug into the side of the run and packed with things carried here from somewhere else: buttons, a spoon, a buckle, a key-ring with no keys on it, teeth, a heap of whatever once shone. It has been added to for a very long time, and it is still being added to.
 > west the-fallen-props
 > north the-old-adit
 
 ## the-warren-sump | The Black Sump
+!floor -2
 The lowest point of the runs, where their water comes to stand. It is black and still and smells of iron, and it fills the floor wall to wall. Bones show white just under the surface, close enough to touch, and none of them are small.
 > north the-fallen-props

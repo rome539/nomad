@@ -18,6 +18,9 @@
 // THE FORMAT
 // ----------
 //   !region wood                         <- the file's band, once, up top
+//   !floor -1                            <- its floor, once, up top (mig 365; default 0,
+//                                           the ground: 1 the overworks, -1 the halls,
+//                                           -2 the warrens, -3 the deep)
 //
 //   ## the-eaves | The Eaves            <- room id | display name
 //   Prose. Multiple lines are joined     <- description, blank line ends nothing
@@ -122,6 +125,7 @@ for (const file of files) {
   // a region is written one file at a time, so declaring it per room would be
   // noise you'd eventually forget on one room and never notice.
   let fileRegion = "";
+  let fileFloor = 0;
   lines.forEach((raw, i) => {
     const n = i + 1;
     const line = raw.trim();
@@ -135,7 +139,7 @@ for (const file of files) {
       const name = body.slice(bar + 1).trim();
       if (!ID_RE.test(id)) err(file, n, `bad room id "${id}" — lowercase letters, digits and hyphens only`);
       if (!name) err(file, n, `room "${id}" has no display name`);
-      cur = { id, name, desc: [], safe: false, entry: false, spawn: false, region: fileRegion, exits: [], file, line: n };
+      cur = { id, name, desc: [], safe: false, entry: false, spawn: false, region: fileRegion, floor: fileFloor, exits: [], file, line: n };
       // A REDECLARATION IS NOT AUTOMATICALLY A MISTAKE. A region authored one
       // tier per file names the previous tier's boundary room as !existing so
       // it can bolt the throat onto it — correct when the files are built in
@@ -154,7 +158,7 @@ for (const file of files) {
 
     // !region is the one directive allowed before the first room — that's how a
     // file declares its band once, up top.
-    const isRegion = line.startsWith("!") && line.slice(1).trim().toLowerCase().startsWith("region");
+    const isRegion = line.startsWith("!") && /^(region|floor)\b/.test(line.slice(1).trim().toLowerCase());
     if (!cur && !isRegion) return err(file, n, `content before the first "## id | Name" header`);
 
     if (line.startsWith("!")) {
@@ -177,7 +181,15 @@ for (const file of files) {
         } else if (cur) cur.region = name;
         else fileRegion = name;
       }
-      else err(file, n, `unknown flag "!${flag}" — expected !safe, !entry, !spawn, !existing or !region <name>`);
+      // WHICH FLOOR (mig 365). A square is unique on its own floor, so the
+      // halls can lie under the fortress without either one shoving the other.
+      else if (flag === "floor") {
+        const f = Number(rest[0]);
+        if (!Number.isInteger(f) || f < -9 || f > 9) err(file, n, `!floor needs a whole number (0 the ground, 1 up, -1 down) — got "${rest[0] ?? ""}"`);
+        else if (cur) cur.floor = f;
+        else fileFloor = f;
+      }
+      else err(file, n, `unknown flag "!${flag}" — expected !safe, !entry, !spawn, !existing, !region <name> or !floor <n>`);
       return;
     }
 
@@ -207,8 +219,7 @@ for (const file of files) {
 let liveRooms = new Set();
 let liveExits = new Map(); // room -> [{dir, to}]
 let liveEntries = new Set();
-const liveCoords = new Map(); // room id -> its baked square on the paper (mig 166)
-const liveBands = new Map();  // room id -> which stratum it is drawn in (mig 167's stair check)
+const liveCoords = new Map(); // room id -> its baked square on the paper (mig 166) and its floor (mig 365)
 let worldKnown = false;
 
 if (!flags.has("--offline")) {
@@ -220,15 +231,12 @@ if (!flags.has("--offline")) {
         { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 });
       return JSON.parse(out)[0].results;
     };
-    for (const r of q("SELECT id, is_entry, map_x, map_y FROM rooms;")) {
+    for (const r of q("SELECT id, is_entry, map_x, map_y, map_z FROM rooms;")) {
       liveRooms.add(r.id);
       if (r.is_entry) liveEntries.add(r.id);
       // Where the world already sits on the paper (mig 166) — the seed the new
       // ground is laid out from, so nothing already drawn ever moves.
-      if (r.map_x !== null && r.map_x !== undefined) liveCoords.set(r.id, { x: r.map_x, y: r.map_y ?? 0 });
-      // The band a room is drawn in, read off its own y once the bake exists —
-      // strata are stacked and never overlap, so the row IS the stratum.
-      if (r.map_y !== null && r.map_y !== undefined) liveBands.set(r.id, r.map_y);
+      if (r.map_x !== null && r.map_x !== undefined) liveCoords.set(r.id, { x: r.map_x, y: r.map_y ?? 0, z: r.map_z ?? 0 });
     }
     for (const e of q("SELECT room_id, dir, to_room FROM exits;")) {
       if (!liveExits.has(e.room_id)) liveExits.set(e.room_id, []);
@@ -375,25 +383,29 @@ if (worldKnown) {
     if (rewrite && rooms.has(id) && !rooms.get(id).existing) continue;
     coords.set(id, p);
   }
-  const occupied = new Set([...coords.values()].map((p) => `${p.x},${p.y}`));
+  // A square is held on ONE floor (mig 365): "z:x,y".
+  const sq = (z, x, y) => `${z}:${x},${y}`;
+  const occupied = new Set([...coords.values()].map((p) => sq(p.z, p.x, p.y)));
   // Who holds each square, so --why can name the room a loser collided with.
   const holder = new Map();
-  for (const [id, p] of coords) holder.set(`${p.x},${p.y}`, id);
+  for (const [id, p] of coords) holder.set(sq(p.z, p.x, p.y), id);
+  // Every room claimed here is new ground from these files, so its floor is its own.
   const claim = (id, x, y) => {
-    if (!occupied.has(`${x},${y}`)) { occupied.add(`${x},${y}`); holder.set(`${x},${y}`, id); coords.set(id, { x, y }); return true; }
-    if (why) console.log(`  square (${x}, ${y}) wanted by "${id}" is held by "${holder.get(`${x},${y}`) ?? "?"}"`);
+    const z = rooms.get(id)?.floor ?? 0;
+    if (!occupied.has(sq(z, x, y))) { occupied.add(sq(z, x, y)); holder.set(sq(z, x, y), id); coords.set(id, { x, y, z }); return true; }
+    if (why) console.log(`  square (${x}, ${y}) on floor ${z} wanted by "${id}" is held by "${holder.get(sq(z, x, y)) ?? "?"}"`);
     for (let ring = 1; ring <= 200; ring++) {
       for (let dx = -ring; dx <= ring; dx++) for (let dy = -ring; dy <= ring; dy++) {
         if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
-        if (!occupied.has(`${x + dx},${y + dy}`)) {
-          occupied.add(`${x + dx},${y + dy}`);
-          holder.set(`${x + dx},${y + dy}`, id);
-          coords.set(id, { x: x + dx, y: y + dy });
+        if (!occupied.has(sq(z, x + dx, y + dy))) {
+          occupied.add(sq(z, x + dx, y + dy));
+          holder.set(sq(z, x + dx, y + dy), id);
+          coords.set(id, { x: x + dx, y: y + dy, z });
           return false;
         }
       }
     }
-    coords.set(id, { x, y });
+    coords.set(id, { x, y, z });
     return false;
   };
   // Seed: every new room that touches ground already on the paper.
@@ -435,7 +447,7 @@ if (worldKnown) {
   if (why) for (const r of rooms.values()) {
     if (r.existing) continue;
     const p = coords.get(r.id);
-    console.log(`  AT ${p ? `${p.x},${p.y}` : "?"}\t${r.id}`);
+    console.log(`  AT ${p ? `${p.x},${p.y} floor ${p.z}` : "?"}\t${r.id}`);
   }
   if (shoved) warnings.push(`${shoved} new room${shoved === 1 ? "" : "s"} could not sit where ${shoved === 1 ? "its" : "their"} own exits say — the ground contradicts itself there (a loop whose compass steps don't close). Drawn on the nearest free square; fix the doors if it matters.`);
 }
@@ -547,20 +559,14 @@ if (worldKnown && !errors.length && rooms.size) {
 // with a bake — and nothing caught it either time, because nothing measured it.
 // Now something does, on every build, whether or not this file touched a stair.
 if (worldKnown && !errors.length && liveCoords.size) {
-  // Strata are stacked with a gap between them, so the stripes fall out of the
-  // sorted rows: any jump of more than 2 rows starts a new stratum.
-  const rowsUsed = [...new Set(liveBands.values())].sort((a, b) => a - b);
-  const stripe = new Map();
-  let band = 0;
-  for (let i = 0; i < rowsUsed.length; i++) {
-    if (i && rowsUsed[i] - rowsUsed[i - 1] > 2) band++;
-    stripe.set(rowsUsed[i], band);
-  }
+  // The strata are FLOORS now (mig 365), carried on each room, so a stair is
+  // any way between two floors and its drift is measured on both axes: the
+  // floors lie over one another, and a stair should land under its own head.
   const bandOfId = new Map();
-  for (const [id, y] of liveBands) bandOfId.set(id, stripe.get(y));
+  for (const [id, p] of liveCoords) bandOfId.set(id, p.z);
   for (const r of rooms.values()) {
     const c = coords.get(r.id);
-    if (!r.existing && c) bandOfId.set(r.id, stripe.get(c.y) ?? 1);
+    if (!r.existing && c) bandOfId.set(r.id, c.z);
   }
   let drift = 0, stairs = 0, worst = 0, worstAt = "";
   const seen = new Set();
@@ -575,15 +581,15 @@ if (worldKnown && !errors.length && liveCoords.size) {
       const key = from < e.to ? `${from}|${e.to}` : `${e.to}|${from}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const d = Math.abs(a.x - b.x);
+      const d = Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
       drift += d; stairs++;
       if (d > worst) { worst = d; worstAt = `${from} <-> ${e.to}`; }
     }
   }
   if (stairs) {
     const avg = drift / stairs;
-    const line = `STAIRS: ${stairs} ways between strata, average ${avg.toFixed(1)} squares of sideways drift (worst ${worst}, ${worstAt}).`;
-    if (avg > 4) warnings.push(`${line} A stratum is hanging off to one side instead of under the one it descends from — re-bake the band offsets (see mig 167).`);
+    const line = `STAIRS: ${stairs} ways between floors, average ${avg.toFixed(1)} squares of sideways drift (worst ${worst}, ${worstAt}).`;
+    if (avg > 4) warnings.push(`${line} A floor is hanging off to one side instead of under the one it descends from — re-bake its offset (see migs 167 and 365).`);
     else console.log(`  ${line} ok`);
   }
 }
@@ -622,12 +628,12 @@ for (const r of rooms.values()) {
     // moved would leave the stale one behind next to the new one.
     const at = coords.get(r.id);
     out.push(`UPDATE rooms SET name = ${q(r.name)}, description = ${q(r.desc)}, is_entry = ${r.entry ? 1 : 0}, is_safe = ${r.safe ? 1 : 0},`);
-    out.push(`  region = ${q(r.region)}, is_spawn = ${r.spawn ? 1 : 0}, map_x = ${at ? at.x : "NULL"}, map_y = ${at ? at.y : "NULL"} WHERE id = ${q(r.id)};`);
+    out.push(`  region = ${q(r.region)}, is_spawn = ${r.spawn ? 1 : 0}, map_x = ${at ? at.x : "NULL"}, map_y = ${at ? at.y : "NULL"}, map_z = ${r.floor} WHERE id = ${q(r.id)};`);
     out.push(`DELETE FROM exits WHERE room_id = ${q(r.id)};`);
   } else {
     const at = coords.get(r.id);
-    out.push(`INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, map_x, map_y) VALUES`);
-    out.push(`  (${q(r.id)}, 'door', ${q(r.name)}, ${q(r.desc)}, ${r.entry ? 1 : 0}, ${r.safe ? 1 : 0}, ${q(r.region)}, ${r.spawn ? 1 : 0}, ${at ? at.x : "NULL"}, ${at ? at.y : "NULL"});`);
+    out.push(`INSERT INTO rooms (id, zone, name, description, is_entry, is_safe, region, is_spawn, map_x, map_y, map_z) VALUES`);
+    out.push(`  (${q(r.id)}, 'door', ${q(r.name)}, ${q(r.desc)}, ${r.entry ? 1 : 0}, ${r.safe ? 1 : 0}, ${q(r.region)}, ${r.spawn ? 1 : 0}, ${at ? at.x : "NULL"}, ${at ? at.y : "NULL"}, ${r.floor});`);
   }
   for (const e of r.exits) {
     // OR REPLACE on a rewrite only: an attachment room's door is already out

@@ -964,6 +964,13 @@ export const PAGE = `<!doctype html>
   #mapctl { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; }
   #mapctl button { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border2); background: var(--panel); color: var(--cream); font: inherit; font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #mapctl button:hover { color: var(--gold); border-color: var(--gold); }
+  /* which floor of the sheet you are looking at (mig 365): above the zoom row */
+  #mapfloors { position: absolute; right: 8px; bottom: 46px; display: flex; gap: 6px; align-items: center; }
+  #mapfloors[hidden] { display: none; }
+  #mapfloors button { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border2); background: var(--panel); color: var(--cream); font: inherit; font-size: 12px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #mapfloors button:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); }
+  #mapfloors button:disabled { opacity: 0.35; cursor: default; }
+  #mapfname { min-width: 9.5em; text-align: center; padding: 5px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); color: var(--bone); font-size: 12px; letter-spacing: 0.04em; }
   #maphint { position: absolute; left: 10px; top: 8px; color: var(--dim); font-size: 11px; pointer-events: none; letter-spacing: 0.02em; }
   #mapm.crude #mapwrap { border-color: var(--blood); }
   #mapm.crude #maphint { color: var(--blood); }
@@ -2013,6 +2020,8 @@ export const PAGE = `<!doctype html>
   :is(#bench, #trade, #forge, #mapm):focus { outline: none; }
   :is(#bench, #trade, #forge, #mapm) :is(button, input, canvas, summary):focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   #mapctl button { width: auto; min-width: 40px; height: 40px; padding: 0 10px; font-size: 13px; }
+  #mapfloors { bottom: 56px; }
+  #mapfloors button { width: 40px; height: 40px; font-size: 13px; }
   #maphint { max-width: calc(100% - 20px); padding: 4px 6px; background: var(--bg); border-radius: 3px; }
   @media (max-width: 680px), (max-height: 500px) and (pointer: coarse) {
     .list-sections { display: flex; }
@@ -2617,8 +2626,13 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
       </div>
       <div id="mapbody">
         <div id="mapwrap">
-          <canvas id="mapcv" tabindex="0" aria-label="Room map. Arrow keys pan; plus and minus zoom; Home centers on you."></canvas>
+          <canvas id="mapcv" tabindex="0" aria-label="Room map. Arrow keys pan; plus and minus zoom; Page Up and Page Down change floor; Home centers on you."></canvas>
           <div id="maphint"></div>
+          <div id="mapfloors" hidden>
+            <button id="mapfup" title="the floor above" aria-label="look at the floor above">&#9650;</button>
+            <span id="mapfname" aria-live="polite"></span>
+            <button id="mapfdown" title="the floor below" aria-label="look at the floor below">&#9660;</button>
+          </div>
           <div id="mapctl">
             <button id="mapzin" title="zoom in" aria-label="zoom in">+</button>
             <button id="mapzout" title="zoom out" aria-label="zoom out">−</button>
@@ -8214,6 +8228,18 @@ var mapCam = { cx: 0, cy: 0, scale: 1 };
 // room. First unrolling centers on you; the crosshair button recenters anytime.
 var mapCamKept = false;
 var mapCv = null, mapCtx = null, mapWrap = null, mapDpr = 1, mapWired = false;
+// THE FLOORS (mig 365). Every room carries the floor it is on: 1 the overworks,
+// 0 the ground, below that the halls, the warrens and the deep, each drawn under
+// the fortress's own outline. The sheet shows one floor at a time and nothing
+// of the others (rome, 2026-11-03: the ground drawn faint over the floors below
+// was in the way). It opens on the floor you stand on and follows you when you
+// take a stair; the arrows look at another.
+var mapFloor = 0, mapHereFloor = null;
+function mapFloorName(z) {
+  if (z === 0) return "Ground";
+  var n = Math.abs(z), w = ["", "One", "Two", "Three", "Four", "Five"][n] || String(n);
+  return w + (n === 1 ? " floor " : " floors ") + (z > 0 ? "up" : "down");
+}
 
 function mapCssVar(name) {
   var v = getComputedStyle(document.documentElement).getPropertyValue(name);
@@ -8385,7 +8411,7 @@ function buildMapGraph(f) {
       // frame, so there is one copy of the strata and not two to drift apart.
       var band = (rm.band !== undefined && rm.band !== null) ? rm.band : 1;
       nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0, safe: !!rm.safe, hold: !!rm.hold,
-                       q: rm.q || "", gx: rm.x, gy: rm.y };
+                       q: rm.q || "", gx: rm.x, gy: rm.y, fz: rm.z || 0 };
       order.push(rm.id);
     }
   }
@@ -8493,9 +8519,11 @@ function buildMapGraph(f) {
       // A wood quarter's caption is satisfied by having walked a room OF THAT
       // QUARTER, not by having walked the wood — otherwise one step past the
       // Eaves would print all seven names across ground you have never seen.
-      var anyHere = false, sumX = 0, sumY = 0, own = 0, bareX = 0, bareY = 0, bare = 0;
+      var anyHere = false, sumX = 0, sumY = 0, own = 0, bareX = 0, bareY = 0, bare = 0, bz = ba.z || 0;
       for (var ah = 0; ah < order.length; ah++) {
         var nd = nodes[order[ah]], nr = nd.region, pl = placed[order[ah]];
+        // A caption belongs to one floor, and only that floor's rooms answer it.
+        if (nd.fz !== bz) continue;
         if (nr === ba.region || nd.q === ba.region || (ba.region === "out" && nr === "gate")) anyHere = true;
         // The far view sets the name on the middle of the region's own rooms
         // (not the doors, which stand in every region at once)...
@@ -8508,12 +8536,14 @@ function buildMapGraph(f) {
           if (nr === ba.region && !nd.q) { bareX += pl.x; bareY += pl.y; bare++; }
         }
       }
-      if (anyHere) labels.push({ x: ba.x, y: ba.y, text: text, major: MAP_MAJOR_REGIONS[ba.region] ? 1 : 0,
+      if (anyHere) labels.push({ x: ba.x, y: ba.y, z: bz, text: text, major: MAP_MAJOR_REGIONS[ba.region] ? 1 : 0,
         cx: bare ? bareX / bare : own ? sumX / own : ba.x, cy: bare ? bareY / bare : own ? sumY / own : ba.y, n: own });
     }
   } else {
     // A CRUDE COPY ONLY. Pieces packed into rows and each stratum centred — the
     // right shape for a map that is lying to you, and reached by nothing else.
+    // It stacks its own strata on one sheet, so it has no floors to page.
+    for (var nz in nodes) nodes[nz].fz = 0;
     var bandY = 0;
     for (var bi = 0; bi < MAP_BANDS.length; bi++) {
       var bcomps = [];
@@ -8560,12 +8590,15 @@ function buildMapGraph(f) {
         // A way between strata draws as a faint gold thread across the gap —
         // the strata never lay out through each other, so these read clean.
         var cross = nodes[ex.to] && nodes[ex.to].band !== nodes[fid].band;
+        // A stair between two floors has no line to draw: the rooms are on
+        // different sheets, and the badge on each says which way it goes.
+        if (nodes[ex.to].fz !== nodes[fid].fz) continue;
         var bent = fp.displaced || tp.displaced || Math.abs(fp.x - tp.x) > 1 || Math.abs(fp.y - tp.y) > 1;
-        edges.push({ x1: fp.x, y1: fp.y, x2: tp.x, y2: tp.y, vertical: vertical, cross: !!cross, bent: bent && !vertical && !cross });
+        edges.push({ x1: fp.x, y1: fp.y, x2: tp.x, y2: tp.y, z: nodes[fid].fz, vertical: vertical, cross: !!cross, bent: bent && !vertical && !cross });
       } else if (!vertical) {
         // A compass way to a room this copy forgot; vertical stubs stay silent
         // (the badge already marks them).
-        stubs.push({ x: fp.x, y: fp.y, dx: d2[0], dy: d2[1] });
+        stubs.push({ x: fp.x, y: fp.y, z: nodes[fid].fz, dx: d2[0], dy: d2[1] });
       }
     }
   }
@@ -8591,6 +8624,7 @@ function drawMap() {
   ctx.lineWidth = Math.max(1, 1.4 * s);
   for (var i = 0; i < g.edges.length; i++) {
     var ed = g.edges[i];
+    if (ed.z !== mapFloor) continue;
     ctx.strokeStyle = ed.vertical || ed.cross ? gold : dim;
     ctx.setLineDash(ed.vertical || ed.cross ? [2 * s, 4 * s] : (ed.bent ? [4 * s, 4 * s] : []));
     ctx.globalAlpha = ed.cross ? 0.4 : ed.vertical ? 0.85 : 1;
@@ -8599,7 +8633,8 @@ function drawMap() {
   ctx.setLineDash([]); ctx.globalAlpha = 1;
   // exits that leave the map (off-chart or, on a crude copy, lead nowhere): a stub
   for (var st = 0; st < g.stubs.length; st++) {
-    var su = g.stubs[st], x0 = sx(su.x), y0 = sy(su.y);
+    var su = g.stubs[st]; if (su.z !== mapFloor) continue;
+    var x0 = sx(su.x), y0 = sy(su.y);
     ctx.strokeStyle = dim; ctx.globalAlpha = 0.45; ctx.setLineDash([3 * s, 3 * s]);
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + su.dx * MAP_CELL * s * 0.5, y0 + su.dy * MAP_CELL * s * 0.5); ctx.stroke();
   }
@@ -8630,6 +8665,7 @@ function drawMap() {
     // new one appears beside it.
     var lrects = [], lh = far ? 15 * mapDpr : Math.max(12 * mapDpr, 13 * s);
     for (var lb = 0; lb < g.labels.length && !far; lb++) {
+      if ((g.labels[lb].z || 0) !== mapFloor) continue;
       var ltx = g.labels[lb].text.split("").join("\\u2009");
       var lpx = sx(g.labels[lb].x), lpy = sy(g.labels[lb].y), lpw = ctx.measureText(ltx).width;
       for (var lg = 0; lg < 8; lg++) {
@@ -8650,7 +8686,8 @@ function drawMap() {
   var tw = MAP_CELL * s * 0.80, th = MAP_CELL * s * 0.33;
   for (var o = 0; o < g.order.length; o++) {
     var id = g.order[o], p = g.placed[id]; if (!p) continue;
-    var nd = g.nodes[id], cx = sx(p.x), cy = sy(p.y), col = mapRegionColor(nd.region, nd.gate);
+    var nd = g.nodes[id]; if (nd.fz !== mapFloor) continue;
+    var cx = sx(p.x), cy = sy(p.y), col = mapRegionColor(nd.region, nd.gate);
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s);
     // A DOOR LOOKS LIKE A DOOR (rome, 2026-08-02: "you made a gate not blue").
     // Steel at a 15% wash and a hairline stroke reads as grey — which was fine
@@ -8747,7 +8784,7 @@ function drawMap() {
     // in closer - two names printed through each other name neither. A dark
     // edge keeps each one legible over the lines it sits on.
     {
-      var farLabels = g.labels.filter(function (l) { return l.major; })
+      var farLabels = g.labels.filter(function (l) { return l.major && (l.z || 0) === mapFloor; })
         .sort(function (a, b) { return (b.n || 0) - (a.n || 0); });
       ctx.textAlign = "center";
       ctx.lineJoin = "round"; ctx.lineWidth = 3 * mapDpr; ctx.strokeStyle = mapCssVar("--bg");
@@ -8797,7 +8834,11 @@ function mapZoom(f, clientX, clientY) {
 }
 function mapFitChart() {
   if (!mapGraph || !mapWrap) return;
-  var points = Object.values(mapGraph.placed).filter(function (p) { return isFinite(p.x) && isFinite(p.y); });
+  var points = [];
+  for (var fk in mapGraph.placed) {
+    var fp2 = mapGraph.placed[fk];
+    if (mapGraph.nodes[fk] && mapGraph.nodes[fk].fz === mapFloor && isFinite(fp2.x) && isFinite(fp2.y)) points.push(fp2);
+  }
   if (!points.length) return;
   var xs = points.map(function (p) { return p.x; }), ys = points.map(function (p) { return p.y; });
   var left = Math.min.apply(null, xs), right = Math.max.apply(null, xs), top = Math.min.apply(null, ys), bottom = Math.max.apply(null, ys);
@@ -8808,7 +8849,10 @@ function mapFitChart() {
 }
 function mapCenterHere() {
   mapCam.scale = Math.max(0.8, mapCam.scale);
-  if (mapGraph && mapGraph.placed[mapGraph.here]) { var p = mapGraph.placed[mapGraph.here]; mapCam.cx = p.x; mapCam.cy = p.y; }
+  if (mapGraph && mapGraph.placed[mapGraph.here]) {
+    var p = mapGraph.placed[mapGraph.here]; mapCam.cx = p.x; mapCam.cy = p.y;
+    mapSetFloor(mapGraph.nodes[mapGraph.here].fz);
+  }
   else if (mapGraph) {
     // YOU ARE NOT ON THIS SHEET. The wall chart holds only what you carved, so
     // standing in a gatehouse whose gate you have not set down leaves 'here'
@@ -8828,6 +8872,33 @@ function mapCenterHere() {
     if (any) { mapCam.cx = (minx + maxx) / 2; mapCam.cy = (miny + maxy) / 2; }
   }
   drawMap();
+}
+// The floors this copy has anything on, top first. A floor you have not walked
+// is not offered: the arrows would be telling you it is there.
+function mapFloors() {
+  var seen = {}, list = [];
+  if (!mapGraph) return list;
+  for (var k in mapGraph.nodes) { var z = mapGraph.nodes[k].fz; if (!seen[z]) { seen[z] = 1; list.push(z); } }
+  return list.sort(function (a, b) { return b - a; });
+}
+function mapSetFloor(z) {
+  mapFloor = z;
+  var list = mapFloors(), box = document.getElementById("mapfloors");
+  // One floor known is no choice at all, and most wanderers never see another.
+  box.hidden = !(list.length > 1 || mapFloor !== 0);
+  document.getElementById("mapfname").textContent = mapFloorName(mapFloor);
+  document.getElementById("mapfup").disabled = !list.some(function (f) { return f > mapFloor; });
+  document.getElementById("mapfdown").disabled = !list.some(function (f) { return f < mapFloor; });
+}
+// Step to the next floor that has rooms on it, up (+1) or down (-1).
+function mapStepFloor(dir) {
+  var list = mapFloors(), next = null;
+  for (var i = 0; i < list.length; i++) {
+    var f = list[i];
+    if (dir > 0 ? f > mapFloor && (next === null || f < next) : f < mapFloor && (next === null || f > next)) next = f;
+  }
+  if (next === null) return;
+  mapSetFloor(next); drawMap();
 }
 function wireMap() {
   if (mapWired) return; mapWired = true;
@@ -8863,6 +8934,8 @@ function wireMap() {
     else if (e.key === "+" || e.key === "=") mapZoom(1.25);
     else if (e.key === "-") mapZoom(1 / 1.25);
     else if (e.key === "Home") mapCenterHere();
+    else if (e.key === "PageUp") mapStepFloor(1);
+    else if (e.key === "PageDown") mapStepFloor(-1);
     else return;
     e.preventDefault();
   });
@@ -8870,6 +8943,8 @@ function wireMap() {
   document.getElementById("mapzout").addEventListener("click", function () { mapZoom(1 / 1.25); });
   document.getElementById("mapzhere").addEventListener("click", mapCenterHere);
   document.getElementById("mapzfit").addEventListener("click", mapFitChart);
+  document.getElementById("mapfup").addEventListener("click", function () { mapStepFloor(1); });
+  document.getElementById("mapfdown").addEventListener("click", function () { mapStepFloor(-1); });
   window.addEventListener("resize", function () { if (mapEl.classList.contains("open")) mapResize(); });
   // ...and the creature row re-fits, or a window dragged narrower leaves the
   // room standing at the size it was when you last walked into it. It goes
@@ -8907,6 +8982,12 @@ function renderMap(f) {
   }
   wireMap();
   mapGraph = buildMapGraph(f);
+  // Open on your own floor, and follow you when a stair takes you to another;
+  // a floor you chose to look at stays in view while you walk on the one you are on.
+  var hereNode = mapGraph.nodes[f.here], hereFloor = hereNode ? hereNode.fz : 0;
+  if (!mapCamKept || hereFloor !== mapHereFloor) mapSetFloor(hereFloor);
+  else mapSetFloor(mapFloor);
+  mapHereFloor = hereFloor;
   if (!mapCamKept) {
     mapCam.scale = 1;
     mapCenterHere();
@@ -10232,8 +10313,8 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "56";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "32";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "17";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "37";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "18";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "38";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10489,6 +10570,8 @@ var BANDS_WITH_PLATES = { mountain: 1, crossing: 1, road: 1, wood: 1, den: 1 };
 // and the conditions listed are the ones that were actually shot.
 //   "the-summit": "day night night-torch fog rain snow",
 var ROOM_PLATE = {
+  // THE WEEPER'S ARCH (mig 366), a gate no longer: its gate picture, as a room.
+  "weeper-arch":      "day night night-torch fog rain snow",
   // The top of the mountain, and the two rooms of the approach to it. All three
   // were being answered by the ground rules and answered wrongly — the Summit
   // was painted as a snowfield by a room whose own text says there is no snow
@@ -10667,7 +10750,6 @@ var ROOM_PLATE = {
   "the-churchyard":         "day night night-torch fog rain snow",
   "the-bell-pit":           "day night night-torch fog rain snow",
   "the-green":              "day night night-torch fog rain snow",
-  "the-village-smithy":     "day night night-torch fog rain snow",
   // the back lands (mig 347)
   "the-toft-ends":          "day night night-torch snow",
   "the-back-lane":          "day night night-torch snow",
@@ -10862,6 +10944,7 @@ var ROOM_PLATE = {
 // chalky and crumbling to powder, while the picture is full of solid ribs, a
 // horn and a skull — which is the Bone Ground's own sentence, word for word.
 var PLATE_OF = {
+  "weeper-arch": "gate-weeper-arch",
   "the-bone-ground": "the-dry-bones",
   // BEHIND THE MOON DOOR IS ONE PLACE (rome, 2026-10-23): the four rooms the
   // old grey's ground added past the glade had fallen back to plain wood
@@ -10944,7 +11027,6 @@ var PLATE_OF = {
   "the-churchyard":         "the-burned-village",
   "the-bell-pit":           "the-burned-village",
   "the-green":              "the-burned-village",
-  "the-village-smithy":     "the-burned-village",
   // THE BACK LANDS (mig 347): the footings and burned posts behind the houses,
   // its own plate (2026-10-29)
   "the-toft-ends":          "back-lands",
@@ -11357,12 +11439,11 @@ var GATE_PLATE = {
   "gate":                "day night night-torch fog rain snow",
   "sally-port":          "day night night-torch fog rain snow",
   "the-first-milestone": "day night night-torch fog rain snow",
-  // AND THE LAST FOUR (2026-09-21). Every door in the world now has a picture
-  // of itself, which is the first time that has been true: the weeper arch on
-  // the mountain, the gate arch, the timber stack and the withy hut. The
-  // "still unpainted" list that stood here is gone because there is nothing
-  // left to put in it.
-  "weeper-arch":         "day night night-torch fog rain snow",
+  // AND THE LAST FOUR (2026-09-21): the weeper arch, the gate arch, the timber
+  // stack and the withy hut. The arch is no gate since mig 366 and paints its
+  // same picture as a room (PLATE_OF); the Village Smithy took its place, and
+  // has its own (2026-11-03).
+  "the-village-smithy":  "day night night-torch snow",
   "the-gate-arch":       "day night night-torch fog rain snow",
   "the-timber-stack":    "day night night-torch fog rain snow",
   "the-withy-hut":       "day night night-torch fog rain snow",
@@ -11766,6 +11847,9 @@ var MOB_FLOOR = { "keep-passage": [14, 86] };
 // number only ever shows in the preview. It is here because a plate that
 // breaks the lock should say so wherever it is drawn.
 var MOB_LINE = {
+  // The arch's picture is a gate's, a wall with its door, so people stand out on
+  // the paving in front of it as they did when it was one: MOB_LINE_GATE's line.
+  "gate-weeper-arch": 63,
   // THE COAST STOOD SIX POINTS TOO LOW (rome, 2026-09-13). Measured against the
   // hill, which is the only reference that matters: a mountain creature's feet
   // land between 76% and 85% of the frame, and the crossing's were landing at

@@ -1122,5 +1122,13 @@
   "sky/dusk.webp",
   "sky/eclipse.webp",
   "sky/moon.webp",
-  "sky/night.webp"
+  "sky/night.webp",
+  "room-bg/gate-the-village-smithy-day.webp",
+  "room-bg/gate-the-village-smithy-night-torch.webp",
+  "room-bg/gate-the-village-smithy-night.webp",
+  "room-bg/gate-the-village-smithy-snow.webp",
+  "room-fx/gate-the-village-smithy-day.png",
+  "room-fx/gate-the-village-smithy-night-torch.png",
+  "room-fx/gate-the-village-smithy-night.png",
+  "room-fx/gate-the-village-smithy-snow.png"
 ]

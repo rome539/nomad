@@ -1092,6 +1092,9 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The hinge-pins are bent inward, and the iron around them is torn from the outside. These gates were opened by something pushing to get in, and they have stood open ever since.",
   },
   "weeper-arch": {
+    // A gate no longer (mig 366): the hatch its picture still shows, shut.
+    "hatch|shutter|boards|lamp|bracket|keeper":
+      "Boards are nailed across the shutter from the outside, and the nail heads are still bright. The lamp above it has oil in it. Whoever fills it does not come by while anyone is watching.",
     "face|keystone|carving|water|tears":
       "The water is not rain. It seeps out of the stone from somewhere higher in the wall and comes out exactly at the corners of the eyes. Whoever carved the face carved it where the water already ran.",
   },

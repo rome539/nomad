@@ -232,8 +232,8 @@ function crudeHand(id: string): number {
 // Computed once per world and cached: the map is static, and this is a few
 // hundred cheap steps.
 export interface WorldGrid {
-  at: Map<string, { x: number; y: number }>;      // absolute, band offset already baked in
-  bands: { region: string; x: number; y: number }[]; // where each REGION's caption hangs, fixed forever
+  at: Map<string, { x: number; y: number; z: number }>; // absolute square, and its floor (mig 365)
+  bands: { region: string; x: number; y: number; z: number }[]; // where each REGION's caption hangs, fixed forever
 }
 
 export function worldGrid(z: ZoneDO): WorldGrid {
@@ -256,10 +256,10 @@ export function worldGrid(z: ZoneDO): WorldGrid {
   // lives in the row (map_x / map_y, mig 166), baked once. Nothing is derived,
   // nothing collides, nothing moves, and adding a region cannot disturb a single
   // room that was already drawn. The client fills in what you have walked.
-  const at = new Map<string, { x: number; y: number }>();
+  const at = new Map<string, { x: number; y: number; z: number }>();
   for (const room of world.rooms.values()) {
     if (room.map_x === null || room.map_x === undefined) continue;
-    at.set(room.id, { x: room.map_x, y: room.map_y ?? 0 });
+    at.set(room.id, { x: room.map_x, y: room.map_y ?? 0, z: room.map_z ?? 0 });
   }
   // EVERY REGION IS NAMED, NOT EVERY STRATUM (rome, 2026-08-06: "make it so on
   // the map all regions are labled (like it is with overworks, warrens, etc)").
@@ -285,8 +285,13 @@ export function worldGrid(z: ZoneDO): WorldGrid {
   // the middle of the hamlet, and "THE WEST ROAD" printed across the dens.
   // Anchors are chosen off REAL ROOMS now, and only where the caption has room
   // to be read — see anchorFor.
-  const pts = new Map<string, { x: number; y: number }[]>();
-  const owner = new Map<string, string>(); // "x,y" -> the region drawn on that cell
+  // A caption is placed among the rooms of its OWN FLOOR (mig 365): the halls
+  // lie under the fortress now, and a ground room above one is not in its way.
+  // So a region is captioned once per floor it has rooms on: the sewer and the
+  // well are halls rooms down on the warrens' floor, and get their own name
+  // there rather than one hung over the halls a floor above them.
+  const pts = new Map<string, { x: number; y: number; z: number }[]>();
+  const owner = new Map<string, string>(); // "z:x,y" -> the region drawn on that cell
   for (const [id, p] of at) {
     let region = mapRegionOf(z, id);
     if (region === "gate") region = "out"; // a door is drawn on the ground it stands on
@@ -298,8 +303,9 @@ export function worldGrid(z: ZoneDO): WorldGrid {
     // its row and this only decides what gets written above it.
     const quarter = MAP_QUARTERS[id];
     if (quarter) region = quarter;
-    (pts.get(region) ?? pts.set(region, []).get(region)!).push(p);
-    owner.set(`${p.x},${p.y}`, region);
+    const key = `${region}|${p.z}`;
+    (pts.get(key) ?? pts.set(key, []).get(key)!).push(p);
+    owner.set(`${p.z}:${p.x},${p.y}`, region);
   }
   // A caption is 11px type in a 108px cell, so the longest of them ("THE OLD
   // ENCLOSURE") runs about a cell and a half — it touches the cell it starts in
@@ -310,26 +316,32 @@ export function worldGrid(z: ZoneDO): WorldGrid {
   // cells), then over the region's own rooms if that's all there is, and only
   // then the old bounding-box corner — a caption somewhere imperfect still beats
   // no caption at all.
-  const anchorFor = (region: string, list: { x: number; y: number }[]) => {
+  // Every room in a list is on one floor (the key above), so the first says it.
+  const anchorFor = (region: string, list: { x: number; y: number; z: number }[]) => {
+    const fl = list[0].z;
     const cands = [...list].sort((a, b) => a.y - b.y || a.x - b.x);
     for (const ownOk of [false, true]) {
       for (const c of cands) {
         let clear = true;
         for (let dx = 0; dx < CAPTION_CELLS && clear; dx++) {
-          const o = owner.get(`${c.x + dx},${c.y - 1}`);
+          const o = owner.get(`${fl}:${c.x + dx},${c.y - 1}`);
           if (o !== undefined && !(ownOk && o === region)) clear = false;
         }
-        if (clear) return { x: c.x - 0.35, y: c.y - 1.05 };
+        if (clear) return { x: c.x - 0.35, y: c.y - 1.05, z: fl };
       }
     }
     return {
       x: Math.min(...list.map((p) => p.x)) - 0.35,
       y: Math.min(...list.map((p) => p.y)) - 1.05,
+      z: fl,
     };
   };
   const bands = [...pts.entries()]
     .sort((a, b) => Math.min(...a[1].map((p) => p.y)) - Math.min(...b[1].map((p) => p.y)))
-    .map(([region, list]) => ({ region, ...anchorFor(region, list) }));
+    .map(([key, list]) => {
+      const region = key.slice(0, key.lastIndexOf("|"));
+      return { region, ...anchorFor(region, list) };
+    });
   z.mapGrid = { at, bands };
   return z.mapGrid;
 }
@@ -520,7 +532,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // region captions already keep: a name floating over ground your copy has
       // never charted would be telling you a place exists.
       q: MAP_QUARTERS[id],
-      x: at?.x, y: at?.y,
+      x: at?.x, y: at?.y, z: at?.z,
     });
   }
   try {
@@ -1016,7 +1028,11 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   // no region, so they fall back to "gate" exactly as they always did. (The
   // crossing got its telling 2026-08-29; the `lines` check below still stands
   // for any band that gets a gate before it gets a story.)
-  const band = (z.world!.rooms.get(session.roomId)?.region as Region | undefined) || "gate";
+  // THE OPEN GROUND IS THE FORTRESS'S OWN (mig 366): the Village Smithy stands
+  // under its walls, so its keeper tells the garrison's story and keeps your
+  // place in it with the other fortress doors.
+  const own = z.world!.rooms.get(session.roomId)?.region;
+  const band = (own === "out" ? "gate" : own as Region | undefined) || "gate";
   const lines = GATE_TELLINGS[band as Region];
   if (!lines?.length) return false; // a band with no telling written yet keeps its own quiet
   // THE RARE ASIDE (2026-08-29): now and then he says the other thing instead —
