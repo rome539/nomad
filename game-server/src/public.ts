@@ -8740,11 +8740,38 @@ function drawMap() {
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s); ctx.stroke();
     ctx.setLineDash([]);
     ctx.shadowBlur = 0;
-    var hasU = false, hasD = false;
-    for (var x = 0; x < nd.exits.length; x++) { if (nd.exits[x].dir === "up") hasU = true; if (nd.exits[x].dir === "down") hasD = true; }
+    // A CLIMB ON THIS FLOOR keeps the small corner arrows (the mountain's ups and
+    // downs). A WAY TO ANOTHER FLOOR is the thing you hunt for on a sheet that
+    // shows one floor at a time (rome, 2026-11-03: make the rooms that go up or
+    // down to other floors easier to spot), so it gets a gold disc on the end of
+    // the plate, held to a readable size however far out you are, with the way
+    // it goes: up, down, or both. Which way is the floor's, not the word's.
+    var hasU = false, hasD = false, toUp = false, toDn = false;
+    for (var x = 0; x < nd.exits.length; x++) {
+      var tn = g.nodes[nd.exits[x].to];
+      if (tn && tn.fz !== nd.fz) { if (tn.fz > nd.fz) toUp = true; else toDn = true; }
+      else if (nd.exits[x].dir === "up") hasU = true;
+      else if (nd.exits[x].dir === "down") hasD = true;
+    }
     if (hasU || hasD) {
       ctx.fillStyle = gold; ctx.font = ((10 * s) | 0) + "px ui-monospace, monospace"; ctx.textAlign = "right"; ctx.textBaseline = "top";
-      ctx.fillText((hasU ? "\\u25b2" : "") + (hasD ? "\\u25bc" : ""), cx + tw / 2 - 3 * s, cy - th / 2 + 2 * s);
+      ctx.fillText((hasU ? "\\u25b2" : "") + (hasD ? "\\u25bc" : ""), cx + tw / 2 - (toUp || toDn ? 14 : 3) * s, cy - th / 2 + 2 * s);
+    }
+    if (toUp || toDn) {
+      var sr = Math.max(7 * mapDpr, 12 * s), sxp = cx + tw / 2, bgc = mapCssVar("--bg");
+      ctx.save();
+      ctx.shadowColor = gold; ctx.shadowBlur = Math.max(6 * mapDpr, 10 * s);
+      ctx.beginPath(); ctx.arc(sxp, cy, sr, 0, Math.PI * 2); ctx.fillStyle = gold; ctx.fill();
+      ctx.shadowBlur = 0; ctx.lineWidth = Math.max(1, 1.5 * mapDpr); ctx.strokeStyle = bgc; ctx.stroke();
+      ctx.fillStyle = bgc; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if (toUp && toDn) {
+        ctx.font = ((sr * 0.85) | 0) + "px ui-monospace, monospace";
+        ctx.fillText("\\u25b2", sxp, cy - sr * 0.38); ctx.fillText("\\u25bc", sxp, cy + sr * 0.42);
+      } else {
+        ctx.font = ((sr * 1.15) | 0) + "px ui-monospace, monospace";
+        ctx.fillText(toUp ? "\\u25b2" : "\\u25bc", sxp, cy + (toUp ? -sr * 0.06 : sr * 0.08));
+      }
+      ctx.restore();
     }
     // The roof, top-LEFT, where nothing else sits — the stair badges own the
     // right corner. Full weight for your own door, half for a bunk.
@@ -8763,7 +8790,7 @@ function drawMap() {
       // clip to the plate so even a mis-measured label can't bleed out; leave
       // extra right margin when an up/down badge shares the top corner, and
       // extra left when a roof shares the other one.
-      var maxW = tw - ((hasU || hasD) ? 24 * s : 12 * s) - ((mine || bunked || hide) ? 12 * s : 0);
+      var maxW = tw - ((hasU || hasD) ? 24 * s : 12 * s) - ((toUp || toDn) ? 12 * s : 0) - ((mine || bunked || hide) ? 12 * s : 0);
       ctx.save();
       mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s); ctx.clip();
       ctx.fillText(mapFitLabel(ctx, nd.name, maxW), cx, cy);

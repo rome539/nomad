@@ -507,6 +507,9 @@ try {
     assert.match(draw, /if \(su\.z !== mapFloor\) continue;/, 'nor their stubs');
     assert.doesNotMatch(draw, /fz !== 0\) continue;/, 'and the ground is not laid faint over the floors below (2026-11-03)');
     assert.match(pub, /if \(nodes\[ex\.to\]\.fz !== nodes\[fid\]\.fz\) continue;/, 'no line drawn between two floors');
+    // ...so a way to another floor is marked on the room itself, by the floor it reaches.
+    assert.match(draw, /if \(tn && tn\.fz !== nd\.fz\) \{ if \(tn\.fz > nd\.fz\) toUp = true; else toDn = true; \}/, 'a stair to another floor is told from a climb on this one');
+    assert.match(draw, /if \(toUp \|\| toDn\) \{\n      var sr = Math\.max\(7 \* mapDpr/, 'and drawn at a size that reads zoomed out');
     // ...and the two inside files say which floor they build on, so a regen
     // cannot drop the halls, warrens or deep back on the ground.
     const deep = readFileSync(new URL('../regions/the-deep-2.rooms', import.meta.url), 'utf8');
