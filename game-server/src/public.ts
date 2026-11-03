@@ -8743,9 +8743,9 @@ function drawMap() {
     // A CLIMB ON THIS FLOOR keeps the small corner arrows (the mountain's ups and
     // downs). A WAY TO ANOTHER FLOOR is the thing you hunt for on a sheet that
     // shows one floor at a time (rome, 2026-11-03: make the rooms that go up or
-    // down to other floors easier to spot), so it gets a gold disc on the end of
-    // the plate, held to a readable size however far out you are, with the way
-    // it goes: up, down, or both. Which way is the floor's, not the word's.
+    // down to other floors easier to spot), so it gets a small gold dot in the
+    // plate's corner with the way it goes: up, down, or both. Which way is the
+    // floor's, not the word's. (A glowing disc on the plate's end was too much.)
     var hasU = false, hasD = false, toUp = false, toDn = false;
     for (var x = 0; x < nd.exits.length; x++) {
       var tn = g.nodes[nd.exits[x].to];
@@ -8755,21 +8755,20 @@ function drawMap() {
     }
     if (hasU || hasD) {
       ctx.fillStyle = gold; ctx.font = ((10 * s) | 0) + "px ui-monospace, monospace"; ctx.textAlign = "right"; ctx.textBaseline = "top";
-      ctx.fillText((hasU ? "\\u25b2" : "") + (hasD ? "\\u25bc" : ""), cx + tw / 2 - (toUp || toDn ? 14 : 3) * s, cy - th / 2 + 2 * s);
+      ctx.fillText((hasU ? "\\u25b2" : "") + (hasD ? "\\u25bc" : ""), cx + tw / 2 - (toUp || toDn ? 17 : 3) * s, cy - th / 2 + 2 * s);
     }
     if (toUp || toDn) {
-      var sr = Math.max(7 * mapDpr, 12 * s), sxp = cx + tw / 2, bgc = mapCssVar("--bg");
+      var sr = Math.max(3.5 * mapDpr, 6.5 * s), sxp = cx + tw / 2 - sr - 3 * s, bgc = mapCssVar("--bg");
+      var syp = cy - th / 2 + sr + 2 * s;
       ctx.save();
-      ctx.shadowColor = gold; ctx.shadowBlur = Math.max(6 * mapDpr, 10 * s);
-      ctx.beginPath(); ctx.arc(sxp, cy, sr, 0, Math.PI * 2); ctx.fillStyle = gold; ctx.fill();
-      ctx.shadowBlur = 0; ctx.lineWidth = Math.max(1, 1.5 * mapDpr); ctx.strokeStyle = bgc; ctx.stroke();
+      ctx.beginPath(); ctx.arc(sxp, syp, sr, 0, Math.PI * 2); ctx.fillStyle = gold; ctx.fill();
       ctx.fillStyle = bgc; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       if (toUp && toDn) {
         ctx.font = ((sr * 0.85) | 0) + "px ui-monospace, monospace";
-        ctx.fillText("\\u25b2", sxp, cy - sr * 0.38); ctx.fillText("\\u25bc", sxp, cy + sr * 0.42);
+        ctx.fillText("\\u25b2", sxp, syp - sr * 0.38); ctx.fillText("\\u25bc", sxp, syp + sr * 0.42);
       } else {
         ctx.font = ((sr * 1.15) | 0) + "px ui-monospace, monospace";
-        ctx.fillText(toUp ? "\\u25b2" : "\\u25bc", sxp, cy + (toUp ? -sr * 0.06 : sr * 0.08));
+        ctx.fillText(toUp ? "\\u25b2" : "\\u25bc", sxp, syp + (toUp ? -sr * 0.06 : sr * 0.08));
       }
       ctx.restore();
     }

@@ -509,7 +509,8 @@ try {
     assert.match(pub, /if \(nodes\[ex\.to\]\.fz !== nodes\[fid\]\.fz\) continue;/, 'no line drawn between two floors');
     // ...so a way to another floor is marked on the room itself, by the floor it reaches.
     assert.match(draw, /if \(tn && tn\.fz !== nd\.fz\) \{ if \(tn\.fz > nd\.fz\) toUp = true; else toDn = true; \}/, 'a stair to another floor is told from a climb on this one');
-    assert.match(draw, /if \(toUp \|\| toDn\) \{\n      var sr = Math\.max\(7 \* mapDpr/, 'and drawn at a size that reads zoomed out');
+    assert.match(draw, /if \(toUp \|\| toDn\) \{\n      var sr = Math\.max\(3\.5 \* mapDpr, 6\.5 \* s\)/, 'and drawn small, in the corner (2026-11-03: the glowing disc was too much)');
+    assert.ok(!/shadowColor = gold; ctx\.shadowBlur = Math\.max\(6 \* mapDpr/.test(draw), 'with no glow');
     // ...and the two inside files say which floor they build on, so a regen
     // cannot drop the halls, warrens or deep back on the ground.
     const deep = readFileSync(new URL('../regions/the-deep-2.rooms', import.meta.url), 'utf8');
