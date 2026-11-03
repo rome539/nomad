@@ -37,7 +37,7 @@ import * as wanderer from "./wanderer";
 import * as styles from "./styles";
 import {
   SURFACE_BANDS, SKY_ROOFED, SKY_UNDER, OUTDOOR_ROOMS,
-  POSES, COURTESIES, WAVE_ARMED, WHISTLE_WAKE,
+  POSES, COURTESIES, WAVE_ARMED, WHISTLE_WAKE, WIND_TELLS,
   GREET_ANSWER, GREET_WRONG, GREET_SILENCE, GREET_THIEF, KEEN_HOLLOW_JOIN,
   DANCE_JOIN_SELF, DANCE_JOIN_ROOM, DANCE_ALONE, DANCE_ALONE_ROOM,
   KEEN_FALLEN_SELF, KEEN_FALLEN_ROOM, KEEN_OWN_SELF, KEEN_OWN_ROOM,
@@ -469,11 +469,21 @@ function gearWord(_z: ZoneDO, g: { carried: CarriedItem; tmpl: ItemTemplate }): 
 
 // The impression: the average state of everything they wear and wield, in one
 // descriptive sentence. Never a number, never a per-piece tag.
-function kitTell(pieces: { carried: CarriedItem }[]): string {
+function kitTell(pieces: { carried: CarriedItem }[], self = false): string {
   if (pieces.length === 0) return "";
   const avg = pieces.reduce((s, p) => s + p.carried.condition, 0) / pieces.length;
   const band = KIT_TELLS.find((b) => avg >= b.at) ?? KIT_TELLS[KIT_TELLS.length - 1];
-  return pick(band.lines);
+  return pick(self ? band.self : band.lines);
+}
+
+// How winded a wanderer is, read now (recovered up to this moment on a copy,
+// so looking never changes it). Nothing at all while they have their wind.
+function windTell(s: Session, self: boolean): string | null {
+  if (!s.exhaustion) return null;
+  const e = { ...s.exhaustion };
+  exhaustion.recover(e, Date.now());
+  const band = WIND_TELLS.find((b) => e.units >= b.at);
+  return band ? (self ? band.self : band.other) : null;
 }
 
 function andList(items: string[]): string {
@@ -525,6 +535,8 @@ export function describePlayer(z: ZoneDO, session: Session, other: Session): str
   const pose = other.pose ? POSES[other.pose] : undefined;
   if (pose) out.push(`${cap(pose.read.replace("{what}", other.poseAt ?? "something"))}.`);
   else if (other.resting) out.push("They are sat down, resting.");
+  const wind = windTell(other, false);
+  if (wind) out.push(wind);
 
   // The hands first: steel is what decides whether this is a threat or a mark.
   const w = z.equippedItem(other, "weapon");
@@ -570,6 +582,34 @@ export function describePlayer(z: ZoneDO, session: Session, other: Session): str
     return out.join(" ");
   }
   return out.join(" ") + pvp.bloodClause(z, other.pubkey);
+}
+
+// ONE PIECE OF SOMEBODY ELSE'S KIT (rome, 2026-11-02). Looking at a wanderer
+// names everything they wear; `look luna shield`, `look luna's shield` or
+// `look shield on luna` reads that one piece: what it is and how hard it has
+// been used. Never its numbers: those are read off your own kit, not off a
+// stranger's arm. The same light, fog and rain as the whole-body look. `folk`
+// is whoever the caller can see (the room out in the world, the fire inside).
+const ON_SHOW = ["weapon", "shield", "armor", "helm", "feet", "cloak"];
+export function lookOnPlayer(z: ZoneDO, session: Session, arg: string, folk: Session[]): string | null {
+  const a = arg.trim().toLowerCase();
+  const on = a.match(/^(.+?)\s+on\s+(\S+)$/);
+  const lead = a.match(/^(\S+?)(?:'s)?\s+(.+)$/);
+  const tries: [string, string][] = [...(on ? [[on[2], on[1]] as [string, string]] : []), ...(lead ? [[lead[1], lead[2]] as [string, string]] : [])];
+  for (const [who, rawWhat] of tries) {
+    const other = folk.find((s) => s.name.toLowerCase().startsWith(who));
+    if (!other) continue;
+    const what = rawWhat.replace(/^(the|their|his|her)\s+/, "");
+    const piece = ON_SHOW.map((slot) => z.equippedItem(other, slot)).find((g) => !!g && nameMatches(g.tmpl.name, what));
+    if (!piece) continue;
+    if (!z.litFor(session)) return "You can make out no one in this dark — shapes and breath and nothing you would swear to. (a light would show the room)";
+    if (events.foggy(z, session.roomId)) return `${other.name} is a grey shape in the fog — near enough to name, too deep in it to read. That they are there is all of it.`;
+    const head = `${other.name}'s ${piece.tmpl.name.replace(/^(a|an|the)\s+/i, "")}. ${piece.tmpl.description}`;
+    return events.raining(z, session.roomId)
+      ? `${head} The rain runs off it; you could not say how hard it has been used.`
+      : head + wearClause(z, piece.carried.condition);
+  }
+  return null;
 }
 
 // ---- verbs ----
@@ -783,7 +823,11 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // the honest tool for a dark room). So the player lookup is skipped blind,
   // and a probe falls through to the same neutral "Pitch dark" as everything else.
   const other = blind ? null : findPlayerIn(z, session.roomId, arg);
+  // Your own name is `look me`, never a stranger's view of yourself.
+  if (other === session) return z.send(session, selfExamine(z, session), "study");
   if (other) return z.send(session, describePlayer(z, session, other), "study");
+  const piece = blind ? null : lookOnPlayer(z, session, arg, [...z.sessions.values()].filter((s) => s.roomId === session.roomId && z.reachable(s)));
+  if (piece) return z.send(session, piece, "study");
   if (!blind && wanderer.named(z, session.roomId, arg)) return z.send(session, wanderer.LOOK_TEXT, "study");
   // Not in hand, not on the floor — maybe in the lockbox (rome, 2026-07-11:
   // look reaches into your own keeping too). Not mid-fight: nobody unlatches
@@ -981,6 +1025,10 @@ export function cmdSheet(z: ZoneDO, session: Session): void {
 // Examine yourself: your afflictions in prose (the fx pills' longer form),
 // plus a quick read of how hurt you are and what's in your hands — the
 // legible-sim mirror turned on the player.
+// LOOK ME (rome, 2026-11-02). Everything a stranger reads off you
+// (describePlayer), turned round to face you, after what only you can feel:
+// how hurt, the wounds, the wet. It named a weapon and one piece of armour and
+// left out the blood on your hands that everyone else in the room could see.
 export function selfExamine(z: ZoneDO, session: Session): string {
   const f = session.hp / session.maxHp;
   const state = f >= 1 ? "whole and unhurt" : f > 0.66 ? "bruised but sound" : f > 0.33 ? "badly hurt" : "at the very edge of it";
@@ -989,14 +1037,35 @@ export function selfExamine(z: ZoneDO, session: Session): string {
   if (session.hobbled) parts.push("One leg is a bad wound — you'd limp if you had to run.");
   if (session.stunned) parts.push("Your head still rings; the next moment won't quite be yours.");
   if (session.seizedBy) parts.push("Something has hold of you and won't let go.");
-  if (session.resting) parts.push("You're at rest, catching your breath.");
   if (session.chilled) parts.push("The chill is in your chest: you shake, you cough, and you are slow to mend until you are warm.");
   else if (isWet(session)) parts.push("You are soaked through.");
-  const weapon = z.equippedItem(session, "weapon");
-  const armor = z.equippedItem(session, "armor");
-  parts.push(weapon ? `You hold ${weapon.tmpl.name}.` : "Your hands are empty.");
-  if (armor) parts.push(`You wear ${armor.tmpl.name}.`);
-  return parts.join(" ");
+  const pose = session.pose ? POSES[session.pose] : undefined;
+  if (pose) {
+    const read = pose.read.replace("{what}", session.poseAt ?? "something").replace(/\btheir\b/g, "your");
+    parts.push(`${read.startsWith("with ") ? "You stand" : "You are"} ${read}.`);
+  } else if (session.resting) parts.push("You're at rest, catching your breath.");
+  const wind = windTell(session, true);
+  if (wind) parts.push(wind);
+  if (pvp.isPvp(session)) parts.push("You carry yourself like someone ready to fight another wanderer.");
+  const w = z.equippedItem(session, "weapon");
+  const sh = z.equippedItem(session, "shield");
+  if (w && sh) parts.push(`${cap(gearWord(z, w))} hangs in your fist, ${gearWord(z, sh)} strapped to your arm.`);
+  else if (w) parts.push(`${cap(gearWord(z, w))} hangs in your fist.`);
+  else if (sh) parts.push(`You hold ${gearWord(z, sh)}, and nothing to swing with.`);
+  else parts.push("Your hands are empty.");
+  const wornGear = ["armor", "helm", "feet", "cloak"]
+    .map((s) => z.equippedItem(session, s))
+    .filter((g): g is { carried: CarriedItem; tmpl: ItemTemplate } => !!g);
+  parts.push(wornGear.length ? `You wear ${andList(wornGear.map((g) => gearWord(z, g)))}.` : "You wear nothing that would turn a blade.");
+  const tell = kitTell([...(w ? [w] : []), ...(sh ? [sh] : []), ...wornGear], true);
+  if (tell) parts.push(tell);
+  if (z.carriesLight(session)) {
+    parts.push(session.litSource === "lantern"
+      ? "A hooded lantern swings at your side, its bead of light steady."
+      : "A torch burns in your hand, and your shadow swings on the wall behind you.");
+  }
+  if (z.burdened(session)) parts.push("Your pack rides heavy and stuffed — loose iron you aren't wearing, and it won't ride quiet.");
+  return parts.join(" ") + pvp.bloodClause(z, session.pubkey, true);
 }
 
 export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<void> {

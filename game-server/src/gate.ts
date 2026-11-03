@@ -36,7 +36,7 @@ import * as light from "./light";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
 import { MAP_QUARTERS } from "./detail";
-import { dropCarried, describePlayer, lookKeepingItem, selfExamine, cmdCensus, cmdSkies } from "./verbs";
+import { dropCarried, describePlayer, lookOnPlayer, lookKeepingItem, selfExamine, cmdCensus, cmdSkies } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -3059,6 +3059,9 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     if (/^(self|me|myself)$/i.test(target)) return z.send(session, selfExamine(z, session), "study");
     const who = gatehouseFolk(z).find((s) => s.pubkey !== session.pubkey && nameMatches(s.name, target));
     if (who) return z.send(session, describePlayer(z, session, who), "study");
+    // One piece of what they wear: `look luna shield`, `look shield on luna`.
+    const piece = lookOnPlayer(z, session, target, gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey));
+    if (piece) return z.send(session, piece, "study");
     // A PERSON BEATS A THING IN YOUR POCKET. Your own kit is read before the
     // room's fixtures on purpose (a bar of forge iron in the vault should answer
     // `look forge` before the brazier does) — but that rule put an item called a
@@ -3086,6 +3089,11 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     if (fixture) return z.send(session, fixture, "study");
     const carved = carving.lookPlaced(z, session, target);
     if (carved) return z.send(session, carved, "study");
+    // YOUR OWN NAME (rome, 2026-11-02). The fire's roll-call above skips you, so
+    // `look irongate` from Irongate named nobody and was said out loud. Out in
+    // the dark your name finds you; in here it finds you too. Last, so a thing
+    // you own or a fixture that shares a word with your name still answers.
+    if (session.name.toLowerCase().startsWith(target.toLowerCase())) return z.send(session, selfExamine(z, session), "study");
     // "look at his hair" — extra words that name nobody and nothing here weren't
     // a command. Say them.
     return gatehouseSay(z, session, text);

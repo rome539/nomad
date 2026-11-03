@@ -466,7 +466,9 @@ export function markBlood(z: ZoneDO, killer: Session): void {
   z.bloodOn.set(killer.pubkey, marks.slice(-12));
 }
 
-export function bloodClause(z: ZoneDO, pubkey: string): string {
+// `self` reads it on your own hands, for `look me`: everyone else can see it on
+// you, so you must be able to as well.
+export function bloodClause(z: ZoneDO, pubkey: string, self = false): string {
   const now = Date.now();
   const kept = (z.bloodOn.get(pubkey) ?? []).filter((t) => now - t < BLOOD_FADE_MS);
   if (kept.length === 0) {
@@ -476,9 +478,10 @@ export function bloodClause(z: ZoneDO, pubkey: string): string {
   z.bloodOn.set(pubkey, kept);
   const age = now - Math.max(...kept);
   const layered = kept.length > 1 ? ", layered over older stains" : "";
-  if (age < BLOOD_FRESH_MS) return ` There is blood on them that is not a beast's — fresh${layered}.`;
-  if (age < BLOOD_DRY_MS) return ` Dried blood darkens their hands${layered} — and it is not a beast's.`;
-  return ` Old man-blood is worked into their knuckles${layered}.`;
+  const on = self ? "you" : "them", hands = self ? "your" : "their";
+  if (age < BLOOD_FRESH_MS) return ` There is blood on ${on} that is not a beast's — fresh${layered}.`;
+  if (age < BLOOD_DRY_MS) return ` Dried blood darkens ${hands} hands${layered} — and it is not a beast's.`;
+  return ` Old man-blood is worked into ${hands} knuckles${layered}.`;
 }
 
 // The mark rides the living — but it can be scrubbed. Blood fades on its own

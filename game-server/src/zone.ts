@@ -5004,19 +5004,22 @@ export class ZoneDO implements DurableObject {
       // you came in, so nobody was ever out of a fight in its pool and its page
       // could never be written. Now it fixes on you for GOD_ROUSE_MS first: long
       // enough to watch it, leave, or strike first. A wind-up left over from a
-      // fight that started early is dropped, so the next visit gets one too.
-      if (creature.target && creature.templateId === DROWNED_GOD) creature.rouseAt = undefined;
+      // fight that started early is dropped.
+      // IT REMEMBERS YOU (rome, 2026-11-02): spoken to or fought in the last
+      // GOD_REMEMBERS_MS, there is no second speech and no second wind-up.
+      if (creature.target && creature.templateId === DROWNED_GOD) { creature.rouseAt = undefined; ai.godMet.set(creature.target, now); }
       if (!creature.target && creature.templateId === DROWNED_GOD) {
         const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
         if (!prey) {
           creature.rouseAt = undefined;
-        } else if (creature.rouseAt === undefined) {
+        } else if (creature.rouseAt === undefined && !ai.godRemembers(prey.pubkey, now)) {
+          ai.godMet.set(prey.pubkey, now);
           creature.rouseAt = now + GOD_ROUSE_MS;
           // Still crouched on the rim while it speaks: no pose sent, so the
           // picture keeps its seat until it rises.
           this.send(prey, pick(KING_WORDS[DROWNED_GOD]));
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} speaks to ${prey.name} from the rim of the pool.`, prey.pubkey, false);
-        } else if (now >= creature.rouseAt) {
+        } else if (creature.rouseAt === undefined || now >= creature.rouseAt) {
           creature.rouseAt = undefined;
           creature.target = prey.pubkey;
           if (!prey.target) prey.target = creature.id;

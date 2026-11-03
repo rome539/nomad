@@ -64,7 +64,7 @@ import {
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING, WHITE_ROE, FEVER_RAT, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
   EAT_SHOW_MS,
-  RIVAL_LINES, DROWNED_GOD, KING_WORDS,
+  RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -5015,4 +5015,14 @@ export function waitingHere(z: ZoneDO, c: Creature): boolean {
   if (!c.waitsOn) return false;
   const s = z.sessions.get(c.waitsOn);
   return !!s && s.roomId === c.roomId;
+}
+
+// Who the Drowned God has spoken to or fought, and when (pubkey -> ms). Kept in
+// memory like the keeper's own (ratking.keeperSaid): a deploy forgets it.
+export const godMet = new Map<string, number>();
+export function godRemembers(pubkey: string, now: number): boolean {
+  const at = godMet.get(pubkey);
+  if (at !== undefined && now - at < GOD_REMEMBERS_MS) return true;
+  godMet.delete(pubkey);
+  return false;
 }

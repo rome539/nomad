@@ -5324,6 +5324,10 @@ export const BOLD_DMG_MULT = 1.35; // a gorged scavenger swings harder
 // The Drowned God's wind-up before it takes you (zone.ts): two combat beats.
 export const DROWNED_GOD = "drowned-god";
 export const GOD_ROUSE_MS = 8000;
+// IT REMEMBERS YOU (rome, 2026-11-02). Stepping out and back in no longer buys
+// another wind-up: once it has spoken to you or fought you, it comes straight
+// for you until this long has passed without either.
+export const GOD_REMEMBERS_MS = 15 * 60_000;
 // THE KINGS SPEAK BEFORE THEY FIGHT (rome, 2026-10-27). Walk into a king's room
 // with no quarrel between you and he says something first: the Forgotten King
 // and the Marrow-King as you come in (ai.provokeGrudges), the Drowned God from
@@ -6035,26 +6039,51 @@ export const VITALS_KILLS: Record<"pierce" | "edge" | "blunt" | "spear" | "fist"
 // sentence, drawn from the AVERAGE state of everything they wear and wield.
 // (Your OWN kit still shows its exact wear — you know your own gear.)
 // Bands are floors, richest first; the finder takes the first one it clears.
-export const KIT_TELLS: { at: number; lines: string[] }[] = [
+// HOW WINDED THEY ARE (rome, 2026-11-02). A look tells you a wanderer is
+// low on breath; at full, nothing is said. Bands are fatigue units (0..1000),
+// floors, richest first, and they start where tiredness starts to cost a
+// blow (exhaustion.playerPenalty), so what you see is what is real.
+export const WIND_TELLS: { at: number; other: string; self: string }[] = [
+  { at: 750, other: "They are spent: chest heaving, arms hanging heavy at their sides.", self: "You are spent: your chest heaves and your arms hang heavy." },
+  { at: 500, other: "They are blowing hard, their shoulders heaving with it.", self: "You are blowing hard, your shoulders heaving with it." },
+  { at: 250, other: "They are winded, breathing through the mouth.", self: "You are winded, breathing through your mouth." },
+];
+// `self` is the same read on your own kit, for `look me`.
+export const KIT_TELLS: { at: number; lines: string[]; self: string[] }[] = [
   { at: 85, lines: [
     "Their kit is clean and sound — someone has the coin, or the sense, to keep it that way.",
     "Nothing they carry looks as though it has failed them yet.",
+  ], self: [
+    "Your kit is clean and sound, and you have kept it that way.",
+    "Nothing you carry has failed you yet.",
   ] },
   { at: 60, lines: [
     "Their gear shows honest use, and no more than that.",
     "The kit is worn in rather than worn out.",
+  ], self: [
+    "Your gear shows honest use, and no more than that.",
+    "Your kit is worn in rather than worn out.",
   ] },
   { at: 35, lines: [
     "Their kit is scarred and hard-used — this one has been down here a while.",
     "Everything on them is scratched, dented, and mended at least once.",
+  ], self: [
+    "Your kit is scarred and hard-used. You have been down here a while.",
+    "Everything on you is scratched, dented, and mended at least once.",
   ] },
   { at: 15, lines: [
     "Their gear is going: straps sprung, edges rolled, every piece a little wrong.",
     "The kit is failing on them, and they must know it.",
+  ], self: [
+    "Your gear is going: straps sprung, edges rolled, every piece a little wrong.",
+    "Your kit is failing on you, and you know it.",
   ] },
   { at: 0, lines: [
     "Their kit is all but ruined — it looks ready to come apart at the first hard blow.",
     "What they carry is held together by habit and luck, and not much of either.",
+  ], self: [
+    "Your kit is all but ruined. It will come apart at the first hard blow.",
+    "What you carry is held together by habit and luck, and not much of either.",
   ] },
 ];
 // The finality tacked onto a vitals verb (attacker's side), varied so the

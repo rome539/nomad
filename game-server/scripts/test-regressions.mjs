@@ -41,7 +41,7 @@ try {
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
         "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine} from './ai';",
-        "export {ratHoards} from './ai';",
+        "export {ratHoards, godMet, godRemembers} from './ai';",
         "export {starvingHunts, huntsAt} from './ai';",
         "export * as whiteroe from './whiteroe';",
         "export {cmdDive} from './verbs';",
@@ -75,7 +75,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -591,6 +591,75 @@ try {
     const where = () => db.prepare("SELECT container FROM player_items ORDER BY id").all().map((r) => r.container);
     return { z, me, db, wolf, said, where };
   }
+  await checkAsync('by the gatehouse fire you can look at yourself by name and at one piece of what another wears (2026-11-02)', async () => {
+    const { D1 } = sqliteD1();
+    const said = [];
+    const shield = { rowId: 's1', itemId: 'gravestone-shield', serial: null, equipped: true, condition: 100 };
+    const me = { pubkey: 'me', name: 'Irongate', roomId: 'gate', ws: { readyState: 1 }, items: [], hp: 100, maxHp: 100 };
+    const luna = { pubkey: 'you', name: 'Lunapilot', roomId: 'gate', ws: { readyState: 1 }, items: [shield], hp: 100, maxHp: 100 };
+    const tmpl = { id: 'gravestone-shield', name: 'a gravestone shield', slot: 'shield', description: 'A slab of headstone with a strap riveted on.' };
+    const z = { env: { DB: D1 }, sessions: new Map([['me', me], ['you', luna]]), outOfWorld: () => true, inGatehouse: new Set(['me', 'you']),
+      send: (s, t) => { if (s === me) said.push(t); }, sendGateCtx: async () => {}, sendStatus() {}, markSimDirty() {},
+      world: { itemTemplates: new Map([['gravestone-shield', tmpl]]), rooms: new Map(), regions: new Map(), mobTemplates: new Map() },
+      equippedItem: (s, slot) => { const c = s.items.find((i) => i.equipped && z.world.itemTemplates.get(i.itemId)?.slot === slot); return c ? { carried: c, tmpl: z.world.itemTemplates.get(c.itemId) } : null; },
+      findCarried: () => undefined, litFor: () => true, inCombat: () => false, conditionWord: () => '', carriesLight: () => false, burdened: () => false, bloodOn: new Map(), carvings: new Map(), inDen: new Map(), dens: new Map(),
+      phases: new Map(), events: new Map(), bandOf: () => 'upper', regionOf: () => '', wallOf: () => new Set(), walkedOf: () => new Set() };
+    for (const [line, want] of [['look lunapilot grave', /Lunapilot's gravestone shield\. A slab of headstone/], ['look shield on luna', /Lunapilot's gravestone shield/], ["look luna's gravestone", /Lunapilot's gravestone shield/]]) {
+      said.length = 0;
+      await handleGatehouse(z, me, line);
+      assert.doesNotMatch(said.join(' '), /You say/, line + ' is not said out loud');
+      assert.match(said.join(' '), want, line + ' reads the piece');
+    }
+    said.length = 0;
+    await handleGatehouse(z, me, 'look irongate');
+    assert.doesNotMatch(said.join(' '), /You say/, 'your own name is not said out loud');
+    // how winded they are shows; full breath says nothing (2026-11-02)
+    said.length = 0;
+    await handleGatehouse(z, me, 'look lunapilot');
+    assert.doesNotMatch(said.join(' '), /winded|blowing|spent|breath/i, 'nothing at full breath');
+    for (const [units, want] of [[300, /They are winded/], [600, /They are blowing hard/], [900, /They are spent/]]) {
+      luna.exhaustion = { units, at: Date.now(), mode: 'combat' };
+      said.length = 0;
+      await handleGatehouse(z, me, 'look lunapilot');
+      assert.match(said.join(' '), want, units + ' fatigue shows');
+    }
+    luna.exhaustion = { units: 100, at: Date.now(), mode: 'combat' };
+    said.length = 0;
+    await handleGatehouse(z, me, 'look lunapilot');
+    assert.doesNotMatch(said.join(' '), /winded|blowing|spent/i, 'a little used breath says nothing');
+    me.exhaustion = { units: 600, at: Date.now(), mode: 'combat' };
+    said.length = 0;
+    await handleGatehouse(z, me, 'look me');
+    assert.match(said.join(' '), /You are blowing hard/, 'and on yourself');
+    delete me.exhaustion;
+    said.length = 0;
+    await handleGatehouse(z, me, 'look lunapilot grave dirt');
+    assert.match(said.join(' '), /You say/, 'words that name nothing are still speech');
+    assert.match(readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8'), /const piece = blind \? null : lookOnPlayer\(z, session, arg,/, 'out in the world too');
+  });
+  await checkAsync('look me shows the blood on your hands and everything you wear, and your own name is look me everywhere (2026-11-02)', async () => {
+    const { D1 } = sqliteD1();
+    const said = [];
+    const tm = { mace: { name: 'a flanged mace', slot: 'weapon' }, slab: { name: 'a gravestone shield', slot: 'shield' }, plate: { name: 'a deadplate harness', slot: 'armor' },
+      crown: { name: 'the Marrow-Crown', slot: 'helm' }, boots: { name: "a pair of warden's sabatons", slot: 'feet' }, shroud: { name: "a drowned-diver's shroud", slot: 'cloak' } };
+    const me = { pubkey: 'me', name: 'Irongate', roomId: 'moor', ws: { readyState: 1 }, hp: 100, maxHp: 100, flags: [],
+      items: Object.keys(tm).map((id) => ({ rowId: id, itemId: id, serial: null, equipped: true, condition: 70 })) };
+    const z = { env: { DB: D1 }, sessions: new Map([['me', me]]), outOfWorld: () => true, inGatehouse: new Set(['me']), bloodOn: new Map([['me', [Date.now()]]]),
+      send: (s, t) => { if (s === me) said.push(t); }, sendGateCtx: async () => {}, sendStatus() {}, markSimDirty() {},
+      world: { itemTemplates: new Map(Object.entries(tm)), rooms: new Map(), regions: new Map(), mobTemplates: new Map(), exits: new Map() },
+      equippedItem: (s, slot) => { const c = s.items.find((i) => i.equipped && tm[i.itemId]?.slot === slot); return c ? { carried: c, tmpl: tm[c.itemId] } : null; },
+      findCarried: () => undefined, litFor: () => true, inCombat: () => false, conditionWord: () => '', carriesLight: () => false, burdened: () => false, reachable: () => true,
+      carvings: new Map(), inDen: new Map(), dens: new Map(), phases: new Map(), events: new Map(), bandOf: () => 'upper', regionOf: () => '', wallOf: () => new Set(), walkedOf: () => new Set() };
+    const read = (await handleGatehouse(z, me, 'look me'), said.join(' '));
+    assert.match(read, /blood on you that is not a beast's/, 'the blood on your hands');
+    for (const piece of Object.values(tm)) assert.ok(read.toLowerCase().includes(piece.name.toLowerCase()), 'names ' + piece.name);
+    assert.match(read, /Your gear shows honest use|worn in rather than worn out/, 'how used your kit is, in your own words');
+    assert.doesNotMatch(read, /\btheir\b|\bthem\b/, 'never a stranger\'s words');
+    said.length = 0;
+    await handleGatehouse(z, me, 'look irongate');
+    assert.match(said.join(' '), /^You take stock of yourself[\s\S]*blood on you/, 'your name by the fire is look me');
+    assert.match(readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8'), /if \(other === session\) return z\.send\(session, selfExamine\(z, session\)/, 'your name out in the world is look me, not a stranger\'s view');
+  });
   await checkAsync('carve rock works by the gatehouse fire, and bare carve is still the wall (2026-11-01)', async () => {
     const { D1 } = sqliteD1();
     const said = [], heard = [];
@@ -2306,13 +2375,14 @@ try {
     const b = zs.indexOf('} else if (!creature.target && DROWNERS.has(creature.templateId)) {', a);
     assert.ok(a > 0 && b > a, 'the god has its own wind-up ahead of the other drowned');
     const block = zs.slice(a, b) + '}';
-    const run = new Function('creature', 'tmpl', 'now', 'DROWNED_GOD', 'GOD_ROUSE_MS', 'cap', 'pick', 'KING_WORDS', block);
+    const run = new Function('creature', 'tmpl', 'now', 'DROWNED_GOD', 'GOD_ROUSE_MS', 'cap', 'pick', 'KING_WORDS', 'ai', block);
+    godMet.clear();
     const me = { pubkey: 'me', roomId: 'the-gods-pool', name: 'Rome' }, said = [];
     const poses = [];
     const z = { sessions: new Map([['me', me]]), reachable: () => true, send: (_s, t) => said.push(t), roomFeed() {}, fxPose: (_r, _id, p) => poses.push(p) };
     const god = { id: 'g', templateId: 'drowned-god', roomId: 'the-gods-pool', target: null };
     const words = { 'drowned-god': ['"Come in," says the Drowned God.'] };
-    const beat = (t) => run.call(z, god, { name: 'the Drowned God' }, t, 'drowned-god', 8000, (x) => x[0].toUpperCase() + x.slice(1), (xs) => xs[0], words);
+    const beat = (t) => run.call(z, god, { name: 'the Drowned God' }, t, 'drowned-god', 8000, (x) => x[0].toUpperCase() + x.slice(1), (xs) => xs[0], words, { godMet, godRemembers });
     beat(0);
     assert.equal(god.target, null, 'the beat you come in, it only looks');
     assert.deepEqual(said, ['"Come in," says the Drowned God.'], 'and speaks to you first');
@@ -2328,7 +2398,20 @@ try {
     assert.equal(god.rouseAt, undefined, 'an empty pool settles it again');
     me.roomId = 'the-gods-pool'; god.target = 'me'; god.rouseAt = 30000;
     beat(30000);
-    assert.equal(god.rouseAt, undefined, 'a fight you started drops the wind-up, so the next visit gets its own');
+    assert.equal(god.rouseAt, undefined, 'a fight you started drops the wind-up');
+    // IT REMEMBERS YOU (2026-11-02): out and back in, no second speech
+    god.target = null; me.target = null; me.roomId = 'elsewhere'; said.length = 0;
+    beat(60_000);
+    me.roomId = 'the-gods-pool';
+    beat(64_000);
+    assert.equal(god.target, 'me', 'back inside fifteen minutes, it comes straight for you');
+    assert.deepEqual(said.filter((l) => /Come in/.test(l)), [], 'without speaking again');
+    god.target = null; me.target = null; me.roomId = 'elsewhere';
+    beat(70_000);
+    me.roomId = 'the-gods-pool'; said.length = 0;
+    beat(64_000 + 15 * 60_000);
+    assert.equal(god.target, null, 'fifteen quiet minutes later it only looks again');
+    assert.deepEqual(said, ['"Come in," says the Drowned God.'], 'and speaks again');
   });
 
   check('the hyenas hunt: a hungry one in the pits does not eat the ground, a vulture still does (2026-10-30)', () => {
