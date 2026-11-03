@@ -731,7 +731,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // them.
   if (MILESTONES.has(session.roomId) && /^(the )?(stone|milestone|names|marks|register)$/i.test(arg.trim())) {
     if (blind) return z.send(session, "Your fingers find the cut names, one crowded over another, and tell you nothing but that they are there. You need a light to read them.");
-    return lore.milestoneRead(z, session);
+    return await lore.milestoneRead(z, session);
   }
 
   // "look dead rat" asks for the body, so a living rat here never answers it.

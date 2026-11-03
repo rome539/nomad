@@ -44,6 +44,7 @@ try {
         "export {ratHoards, godMet, godRemembers} from './ai';",
         "export * as chronicle from './chronicle';",
         "export {nextBellAt} from './events';",
+        "export {milestoneRead} from './lore';",
         "export {ROOM_FEATURES} from './detail';",
         "export {starvingHunts, huntsAt} from './ai';",
         "export * as whiteroe from './whiteroe';",
@@ -78,7 +79,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -594,6 +595,46 @@ try {
     const where = () => db.prepare("SELECT container FROM player_items ORDER BY id").all().map((r) => r.container);
     return { z, me, db, wolf, said, where };
   }
+  await checkAsync('the road keeps its record under the names on the first milestone (2026-11-02)', async () => {
+    const { db, D1 } = sqliteD1();
+    db.exec(readFileSync(new URL('../migrations/363_the_world_remembers.sql', import.meta.url), 'utf8'));
+    const said = [];
+    const z = { env: { DB: D1 }, world: { rooms: new Map([['the-first-milestone', { name: 'The First Milestone', region: 'road' }], ['the-stony-rise', { name: 'The Stony Rise', region: 'road' }]]) },
+      stoneNames: new Map([['the-first-milestone', [{ name: 'Irongate', at: 1 }]]]), send: (_s, t) => said.push(t) };
+    chronicle.died(z, { name: 'Lunapilot', roomId: 'the-stony-rise' }, { name: 'a barrow-wight', is_boss: 0 });
+    await new Promise((r) => setTimeout(r, 0));
+    await milestoneRead(z, { roomId: 'the-first-milestone' });
+    assert.match(said.join(' '), /Irongate[\s\S]*Lunapilot, dead at the Stony Rise, to a barrow-wight\./, 'the register, then the road\'s record');
+    said.length = 0; z.stoneNames.clear();
+    await milestoneRead(z, { roomId: 'the-first-milestone' });
+    assert.match(said.join(' '), /Lunapilot, dead at the Stony Rise/, 'with no names carved yet, still the record');
+    assert.match(readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8'), /return await lore\.milestoneRead\(z, session\);/, 'look milestone reads it');
+  });
+  check('wanderers wake at a gate, any gate, or out on the road, and nowhere else (2026-11-02)', () => {
+    const z = new ZoneDO({}, {});
+    const gates = ['gate', 'weeper-arch', 'sally-port', 'the-first-milestone', 'the-gate-arch', 'the-ferry-house', 'the-slabs'];
+    const room = (id, region) => [id, { id, region }];
+    z.world = { entryRooms: new Set(gates), entryRoom: 'gate', spawnRooms: new Set(['gate', 'the-old-road']),
+      rooms: new Map([...gates.map((g) => room(g, g === 'the-first-milestone' ? 'road' : 'wood')), room('the-old-road', 'out'),
+        room('the-stony-rise', 'road'), room('the-sixth-milestone', 'road'), room('the-road-bolthole', 'road'), room('the-boulder-beach', 'mountain')]),
+      safeRooms: new Set(['the-road-bolthole']) };
+    const woke = new Set();
+    for (let i = 0; i < 4000; i++) woke.add(z.randomGate());
+    assert.deepEqual([...woke].sort(), [...gates, 'the-stony-rise', 'the-sixth-milestone'].sort(), 'every gate, and any road room but a gate or a hideaway');
+  });
+
+  check('the gatehouse healing line is only said in the gatehouse (2026-11-02)', () => {
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const a = zs.indexOf('if (session.hp >= session.maxHp) {\n          // Fully healed');
+    const block = zs.slice(a, zs.indexOf('\n        }\n', a) + 10);
+    const run = new Function('session', 'sheltered', 'byFire', 'out', 'const self = { send: (_s, t) => out.push(t), trySavePlayer() {} };' +
+      'return (async function () {' + block.replace(/this\./g, 'self.').replace('await self.trySavePlayer(session.pubkey, session.roomId, session.hp);', '') + '})();');
+    const said = (s, sheltered) => { const out = []; run(s, sheltered, false, out); return out.join(' '); };
+    const road = { hp: 100, maxHp: 100, resting: true, exhaustion: { units: 40 } };
+    assert.doesNotMatch(said(road, false), /gatehouse/, 'resting out on the road, still winded');
+    assert.match(said(road, false), /waiting on your breath/);
+    assert.match(said({ hp: 100, maxHp: 100, resting: false }, true), /In the gatehouse quiet/, 'and in the gatehouse it still is');
+  });
   check('the bell rings once to its hour, never twice in one night (2026-11-02)', () => {
     const H = 3_600_000, day = Date.UTC(2026, 10, 3);
     for (let i = 0; i < 500; i++) {

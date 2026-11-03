@@ -140,7 +140,7 @@ import { FORGE_STOCK,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  STARVING_AT, WHITE_ROE, FEVER_RAT, SPAWN_QUARTERS, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, SPAWN_REGIONS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  STARVING_AT, WHITE_ROE, FEVER_RAT, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -531,28 +531,16 @@ export class ZoneDO implements DurableObject {
   private randomGate(): string {
     const world = this.world;
     if (!world) return "gate";
-    // Two kinds of spawn now. A marked ROOM (the fortress's thresholds) is one
-    // slot. A whole spawn REGION is also one slot, and resolves to a random room
-    // anywhere in it — the road hatches you out on the road, not on its
-    // doorstep (rome, 2026-08-02). Counting a region as ONE slot rather than one
-    // per room is what stops the road's thirty rooms from swamping the four
-    // fortress gates.
-    const slots: string[] = [...world.spawnRooms, ...[...SPAWN_REGIONS].map((r) => `@${r}`)];
-    const pick = slots[randInt(0, slots.length - 1)] ?? world.entryRoom;
-    if (!pick.startsWith("@")) return pick;
-    const band = pick.slice(1);
-    // Never in a hideaway, and never at a gate (regionOf calls a gate "gate", so
-    // gates fall out of the band automatically).
-    // ...and inside a band, only the quarters a fresh wanderer can survive
-    // waking in (SPAWN_QUARTERS): the crossing's two shores rather than its
-    // tideway, the mountain's foot rather than its bone fan. Bands with no
-    // entry there open whole, which is what the road has always done.
-    const allow = SPAWN_QUARTERS[band];
-    const pool = [...world.rooms.keys()].filter((r) => this.regionOf(r) === band
-      && !world.safeRooms.has(r)
-      && (!allow || allow.has(MAP_QUARTERS[r] ?? "")));
-    return pool[randInt(0, pool.length - 1)] ?? world.entryRoom;
+    // AT A GATE, OR OUT ON THE ROAD (rome, 2026-11-02; zone-data "WAKING").
+    // Every gate in the world is one slot, and the whole road is one more: that
+    // slot wakes you in any road room but a gate or a hideaway.
+    const slots = [...world.entryRooms, "@road"];
+    const pick = slots[randInt(0, slots.length - 1)];
+    if (pick !== "@road") return pick;
+    const road = [...world.rooms.keys()].filter((r) => this.regionOf(r) === "road" && !world.safeRooms.has(r));
+    return road[randInt(0, road.length - 1)] ?? world.entryRoom;
   }
+
 
   // All-pairs room distances (BFS over exits, ~49 rooms — trivial), and the
   // variant→base bloodline map. Both built once at init; territory, the dark
@@ -6098,8 +6086,13 @@ export class ZoneDO implements DurableObject {
             this.send(session, byFire
               ? "You come out of the doze slow and easy, the fire low beside you. You are whole."
               : session.away ? "Your wounds have closed — you are whole." : "You feel whole again, and rise.");
-          } else {
+          } else if (sheltered) {
             this.send(session, "In the gatehouse quiet, your wounds close. You are whole.");
+          } else if (session.resting) {
+            // Whole, but still winded: you stay down until the breath comes back
+            // too, and rise then. This used to fall through to the gatehouse's
+            // line out on an open verge (rome, 2026-11-02).
+            this.send(session, "Your wounds have closed. You stay down a while longer, waiting on your breath.");
           }
         }
       }

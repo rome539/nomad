@@ -58,11 +58,13 @@ export async function milestoneCarve(z: ZoneDO, session: Session): Promise<void>
   z.markSimDirty();
 }
 
-export function milestoneRead(z: ZoneDO, session: Session): void {
+export async function milestoneRead(z: ZoneDO, session: Session): Promise<void> {
   const stone = MILESTONES.get(session.roomId)!;
   const cut = z.stoneNames.get(session.roomId) ?? [];
+  // THE ROAD'S RECORD is cut on the same stone (chronicle.ts): read it with the names.
+  const record = (await chronicle.recordAt(z, session.roomId)).trim();
   if (!cut.length) {
-    return z.send(session, `The old cut has weathered past reading, and below it the stone is bare. Nobody has set their name down here. (carve)`, "study");
+    return z.send(session, `The old cut has weathered past reading, and below it the stone is bare. Nobody has set their name down here. (carve)` + (record ? `\n${record}` : ""), "study");
   }
   // The whole point of there being TWO stones: a name on both is somebody who
   // went on. Nothing tracks that — the comparison IS the record.
@@ -74,7 +76,7 @@ export function milestoneRead(z: ZoneDO, session: Session): void {
   const both = newestFirst.filter((c) => far.has(c.name)).length;
   z.send(session, `Names, crowded into the lee of ${stone.stone}, the newest cut over the oldest:\n${lines.join("\n")}` +
     (rest > 0 ? `\n  …and ${rest} more, cut deeper and read harder.` : "") +
-    `\n${both} of the ${newestFirst.length} are on both stones.`, "study");
+    `\n${both} of the ${newestFirst.length} are on both stones.` + (record ? `\n${record}` : ""), "study");
 }
 
 // ---- maps: open a chart you carry (the modal draws it) ----

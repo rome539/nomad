@@ -1786,7 +1786,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "One post and one arm on the rise behind the toll-house, and a chain off the arm that moves in a wind you cannot feel down here. The post is cut from the ground to head height with short strokes in fives. Nothing hangs from it now, and the count on it has not stopped.",
   },
   "the-first-milestone": {
-    "milestone|stone|pillar|names|marks|scratches":
+    // `milestone|stone|names|marks` read the carved register there (lore.milestoneRead).
+    "pillar|scratches":
       "Grey stone, waist-high, cut flat on the road-facing side, and the old cut on it has weathered past reading. Under it the stone is crowded with names scratched shallow by people who wanted the road to know they had come this far. Some of them have a second line under them, in a hand that is not theirs.",
   },
   "the-capstan-round": {

@@ -46,8 +46,11 @@ export const RECORDS: Record<string, { room: string; feature: string; intro: str
     intro: "Past where the knotted pegs stop, new cords hang, and beside each one a line is scratched into the oak:" },
   wood: { room: "the-bounds-house", feature: "shelf|shelves|rods|hazel|bundles|tallies|tally",
     intro: "The newest bundle is not tied yet. The rods on top are fresh-cut, the notches still pale, in the same hand:" },
-  road: { room: "the-first-milestone", feature: "milestone|stone|pillar|names|marks|scratches",
-    intro: "Newest on the stone, scratched deeper than the names around them:" },
+  // The road's is read with the milestone's own register of carved names
+  // (lore.milestoneRead answers `look milestone|stone|names|marks` there first),
+  // and with the close look on what that register leaves over.
+  road: { room: "the-first-milestone", feature: "pillar|scratches",
+    intro: "Lower on the stone, in a hand that is not any wanderer's, other lines are cut:" },
   out: { room: "the-old-road", feature: "gibbet|hill|chain|arm",
     intro: "Above the strokes, newer cuts in the post spell words:" },
   crossing: { room: "the-toll-board", feature: "toll board|board|figures|numbers",
@@ -161,6 +164,14 @@ export function entryLine(z: ZoneDO, e: { kind: Kind; who: string; what: string;
 export async function under(z: ZoneDO, roomId: string, feature: string): Promise<string> {
   const rec = RECORD_ROOMS.get(roomId);
   if (!rec || ROOM_FEATURES[roomId]?.[rec.feature] !== feature) return "";
+  return recordAt(z, roomId);
+}
+
+// The region's newest rows, for a record room, read however that room reads
+// them ("" anywhere else, or while the record is empty).
+export async function recordAt(z: ZoneDO, roomId: string): Promise<string> {
+  const rec = RECORD_ROOMS.get(roomId);
+  if (!rec) return "";
   const rows = await z.env.DB.prepare("SELECT kind, who, what, room_id FROM chronicle WHERE region = ? ORDER BY at DESC, id DESC LIMIT ?")
     .bind(rec.region, RECORD_SHOWS).all<{ kind: Kind; who: string; what: string; room_id: string }>()
     .catch(() => ({ results: [] as never[] }));

@@ -2340,47 +2340,12 @@ export const THIEVES = new Set([
 // the next arrives. Animals do not relocate because a constant changed.
 export const ROAMING_DENS = new Set(["masterless-dog", "footpad", "roe-deer", "grey-wolf"]);
 
-// SPAWN REGIONS (rome, 2026-08-02: "make the road spawn rng anywhere, like
-// mobs"). A band listed here hatches wanderers ANYWHERE in itself rather than at
-// a marked room — the same idea as ROAMING_DENS, applied to people.
-//
-// The road is the right place for it and the fortress is not. A road is where
-// you meet things that were already going somewhere; waking on it at a random
-// milestone reads as having walked there. The fortress's four spawns are
-// thresholds — arches and ports, places you are meant to arrive AT — so they
-// stay marked rooms.
-//
-// Weighting: each spawn ROOM is one slot and each spawn REGION is also one slot,
-// so the road is a fifth of arrivals rather than swamping the four fortress
-// gates with its thirty rooms. Hideaways are excluded (nobody wakes inside a
-// bolthole) and so are gates, since regionOf calls a gate "gate" — you never
-// wake on the Roadwarden's doorstep, you wake somewhere out on the road.
-export const SPAWN_REGIONS = new Set<string>(["road", "wood", "crossing", "mountain"]);
-// ...AND THE QUARTERS INSIDE THEM A FRESH WANDERER MAY WAKE IN (rome,
-// 2026-08-19: why can you not spawn in the wood and the crossing). The answer
-// was that nothing had revisited it since mig 126 handed the wake points to the
-// fortress and left every later band's doors as banks. Now every band wakes
-// people and each is ONE slot, so no region can swamp the pool by having more
-// doors than another — which is exactly what the mountain did by arriving with
-// four of them.
-//
-// Two bands cannot be opened whole, and this is the same shape MIGRATE_QUARTERS
-// already uses to keep settlers off the water:
-//
-//   THE CROSSING is a mile of tidal water with a causeway, a ford and a bridge
-//   in it. Waking on the causeway at half flood is drowning a wanderer who has
-//   not typed a command yet. The two SHORES only — the same two the migrants
-//   are held to.
-//
-//   THE MOUNTAIN is 398 rooms and five tiers, and the top of it is a bone fan
-//   with a wake of vultures on it and a drake above that. THE FOOT only: the
-//   summer ground where the doors are, density 0.4, the shallow end of the whole
-//   region. Waking anybody higher is not difficulty, it is a coin flip on
-//   whether they get a turn.
-export const SPAWN_QUARTERS: Record<string, Set<string>> = {
-  crossing: new Set(["nearshore", "farstrand"]),
-  mountain: new Set(["foot"]),
-};
+// WAKING (rome, 2026-11-02). A fresh wanderer, and the dead, wake at a GATE
+// (any one of the world's gates, each one slot) or anywhere out on the ROAD
+// (the whole road one more slot; never at a gate or in a hideaway there). See
+// zone.randomGate. It was the fortress's marked rooms plus a random room in the
+// road, wood, crossing and mountain bands (SPAWN_REGIONS and SPAWN_QUARTERS,
+// 2026-08-02 and 2026-08-19); rome put it back on the gates and the road.
 
 // THE MILESTONES (2026-08-01). Two stones on the West Road, twelve rooms apart,
 // that keep a PERMANENT register of names — distinct from `carve <words>`, which
