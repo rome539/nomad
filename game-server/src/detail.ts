@@ -1782,6 +1782,1083 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
     "eel staithe|staithe|grigs|landing":
       "A landing of tarred planks on posts where the creek comes closest to the track, with eel-grigs stacked under it out of the light — a dozen of them, wicker, mended. Somebody keeps this gear the way somebody kept the net loft: properly, and recently.",
   },
+  // ---- THE WOOD, CLOSE (rome, 2026-11-02). The deep wood, the heart, the
+  // enclosure and the holding: the household that owned this wood as a park,
+  // its gatehouse works on the road, and the trades it ran and left mid-cycle.
+  "the-eaves": {
+    "trees|trunks|canopy|gap|road|track|light":
+      "The line where the wood starts is too clean for a wood. Look along it and the trunks on the edge are the oldest ones, and there are old cut stumps just outside them, mossed level with the ground. Somebody kept this edge back from the road on purpose for a long time, and the wood has only just begun to step over it.",
+  },
+  "the-birch-edge": {
+    "birch|birches|trees|stand|daylight":
+      "Thin white trunks, all of an age, all leaning the one way. Birch is the first thing back on poor ground that has been cleared and let go. This margin was open once, and not so long ago as the oaks behind it would have you think.",
+  },
+  "the-bramble-margin": {
+    "bramble|brambles|loops|way|edge":
+      "The way through is low and round, the stems pushed aside at the height of a shoulder that is not a man's shoulder. Tufts of coarse hair are caught on the thorns along it, grey and brown. Whatever keeps it open comes through often enough that the bramble has stopped trying to close it.",
+  },
+  "the-deer-path": {
+    "path|earth|trunks|track|line":
+      "Packed so hard by hooves that rain sits on it. Slots in the soft edges, small and many, all pointing the same way, and among them one larger print with a dragged toe, going the other way. The deer use this path. So does something that uses deer.",
+  },
+  "the-holly-brake": {
+    "holly|leaves|spines|ground|carpet":
+      "The dead leaves underfoot are years deep and every one still has its spines; they keep for a long time and nothing eats them. Some of the stems in the middle are as thick as a thigh. Holly was cut here once for winter fodder, high up where the leaves go smooth, and the old cuts are still there, a long way above anything that cuts now.",
+  },
+  "the-nettle-glade": {
+    "nettles|nettle|stems|glade|wound":
+      "Nettles grow where people have been: they want the rich ground that comes from middens, ash and dung. There is nothing standing here, but under the stems the ground has the dark softness of a place that was lived on. The crushed track through them is the width of a body, not a path.",
+  },
+  "the-wet-hollow": {
+    "pool|water|alder|hollow|mud":
+      "Black water, still, with a skin of iron-coloured film where the light catches. Push a stick in and it goes down past your arm without touching bottom, and comes up stained and smelling of a drain. The alders stand back from the very edge, and they are the only trees that will stand in it at all.",
+  },
+  "the-ash-stand": {
+    "ash|trees|trunks|stand|felling":
+      "Every trunk the same width, because every one came up the same spring from the same clear-fell. Somebody took this stand down to the ground all at once, which is a winter's work for a gang and a cart road to take it away. Nobody has thinned it since. Nobody came back for the next crop.",
+  },
+  "the-turning": {
+    "trees|trunks|opening|way|ground":
+      "The trunks either side of the false opening are worn. Not cut, not blazed: rubbed smooth at about the height of a hand, the way a doorpost goes smooth, by many hands over a long time.",
+  },
+  "the-close-ground": {
+    "trunks|stand|floor|canopy|trees":
+      "The bark is scored on the near side of the closest trunks, two deep parallel lines at the height of your face, then again a little lower. They are old and healed at the edges. Something too wide for this gap has gone through it anyway, more than once, and taken the bark off both sides doing it.",
+  },
+  "the-swallowing": {
+    "ivy|trunks|branches|trees|mass":
+      "Pull the ivy aside and the trunk under it is dead. Ivy does not kill a tree quickly, but it does it, and nobody has cut it back here in a very long time. Most of the shapes overhead are ivy holding up ivy, with the wood inside them long gone to powder.",
+  },
+  "the-close-dark": {
+    "limb|fern|split|trunks|floor|leaf-mould":
+      "The limb came off cleanly at the trunk and the fern in its split is fully grown. Turn the rotten end and it is soft red heartwood, crawling with things, and under the limb the leaf-mould is dry. It fell in the dry, and nothing has moved it since, which in a wood with this much going through it is a long time.",
+  },
+  "the-turned-ground": {
+    "ground|ridges|litter|earth|floor":
+      "The ridges run in rows. Not straight rows, but rows, all the same depth and the same distance apart, and the soil turned up in them is black and fine. Pigs root like this when they are let into a wood in autumn to eat the mast, and this was somebody's pannage once. Whatever turns it now does it the same way.",
+  },
+  "the-wind-shorn-edge": {
+    "trees|scrub|edge|lip|weather|growth":
+      "Every branch on the windward side has died back at the same length, as if cut with shears. The bark is scoured grey on that side and green on the other. Nothing on this edge is younger than the wind that shaped it, and the wind has been at it a long time.",
+  },
+  "the-high-holly": {
+    "holly|trees|crowns|trunks":
+      "The lower trunks are smooth-leaved and bare of spines; holly only keeps its armour where something can reach it. On these the spines start well above your head. Something tall browsed this holly down to that line, for long enough that the trees gave up defending the bottom.",
+  },
+  "the-sunken-ditch": {
+    "ditch|bank|leaves|silt":
+      "The bank is on the wood side and the ditch is on the outside, so whatever it was dug against was meant to be kept in. That is the park's arrangement, the same one the pale uses. This edge of the wood was somebody's deer, and the ditch was the law about it.",
+  },
+  "the-north-turning": {
+    "avenue|trees|ground|holly|line":
+      "For thirty paces the trunks stand in two lines, and they are much older than the trees around them. Then the lines stop. Somebody planted an avenue toward something here, and the something was never built, or was built and taken away so completely that even the avenue forgot.",
+  },
+  "the-south-turning": {
+    "green|trees|light|canopy|ground":
+      "The first trees past the burnt ground are scorched on their east faces and whole on the west. The fire came this far and stopped against green wood that would not take. The line where it gave up is still plain in the bark, at the same height, all the way along.",
+  },
+  "the-crooked-stand": {
+    "trunks|trees|stand|bend|leaves":
+      "Every trunk kinks at about the height of a man's knee and then goes up straight. A young stand bends like that when something heavy lies on it: a deep snow, or a great fall of wet ground. Whatever it was came once, when these were saplings, and they have carried the shape ever since.",
+  },
+  "the-white-ground": {
+    "fungus|floor|ground|white|trunks":
+      "It is one thing, not many: a single growth spread over the whole stretch and up every trunk, all of it joined underneath. Lift an edge and there are threads in the soil going down further than your fingers. It is very old and very large, and it is eating the wood from below, slowly, without a sound.",
+  },
+  "the-leaning-wood": {
+    "trees|wood|trunks|ground":
+      "Look long enough and there is one thing: every trunk has a pale scar low on the same side, the bark knocked off and grown back. A cart or a sledge was dragged through here, many times, between these exact trees. There is no track now, but the trees remember the width of it.",
+  },
+  "the-mast-fall": {
+    "mast|beech|husks|shells|nuts":
+      "The husks are split and the nuts in them are empty: something has been through and taken the meat out of each one where it lay, and left the shells exactly where they fell. A whole autumn of mast, eaten in place. Whatever did it was not in a hurry and was not interrupted.",
+  },
+  "the-grey-thicket": {
+    "scrub|stems|thicket|gap|canopy":
+      "The stems are all the same thickness, because they all came up in the same few years of light and all died in the same few years of shade. Snap one and the inside is dry and pale. A fire would go through this in a breath, and nothing in it would know until it did.",
+  },
+  "the-turning-leaves": {
+    "leaves|canopy|trees|branches":
+      "The leaves that fall are whole and undamaged, gone colour from the edges in. The twigs they came from are sound. Nothing is wrong with these trees that you can find, except that they are a season ahead of every tree around them, and have been, judging by the depth of leaf under them, for years.",
+  },
+  "the-far-hollow": {
+    "hollow|bowl|bottom|floor|trees":
+      "The rim is a low bank, even all the way round, and on the inside of it the ground slopes down too evenly for weather to have done it. Something was dug out here and the spoil thrown up round the edge. Whatever was taken out was taken away, all of it, and trees have grown in the hole since.",
+  },
+  "the-far-birches": {
+    "birch|birches|stand|light|gap":
+      "The same thin white trunks as the wood's other edge, the same lean. Birch comes in on cleared ground, so this edge was cleared too, at the other end of the wood, as far from the road as the holding could reach. The holding kept both ends open, and both ends are closing.",
+  },
+  "the-north-marches": {
+    "grass|wood|trees|ground|marches":
+      "The grass is cropped short and the trees are browsed up to one height, clean underneath, like a hedge cut from below. Deer do that in numbers. It is what a deer park looks like, and it is what this was, and the deer are still keeping it for nobody.",
+  },
+  "the-edge-of-it": {
+    "edge|line|wood|country|trees":
+      "The last trees on the line have bark that is grey and pitted on the outside and clean on the inside. The wind off that open ground has been at this edge for a very long time, and nothing has grown a step further out into it in all that time.",
+  },
+  "the-long-glade": {
+    "glade|grass|length":
+      "Too straight and too even to be a glade. It was cut as a ride, a long open lane through the park for riding and for driving deer down to where somebody stood waiting with a bow. The grass is fine because something keeps it grazed. The far end is exactly where it was laid out to be.",
+  },
+  "the-west-ride": {
+    "ride|abutments|bridge|gap|moat bank|bank":
+      "The abutments are dressed stone, and there are iron pins rusted into the tops of them where a timber deck was fixed. The pins are bent, all of them, outward, the way they go when a deck is levered up off them. Somebody took this bridge up on purpose, from this side.",
+  },
+  "the-standing-water": {
+    "water|sheet|trees|reflections|floor":
+      "Under the water the ground is grass, not mud: this was dry once, and the water is new to it. Somewhere a ditch that kept this ground drained has silted up, and nobody has been along to clear it. Every year the sheet is a little wider.",
+  },
+  "the-boar-ground": {
+    "ground|turf|saplings|soil":
+      "The turf is turned in sheets the width of a broad snout, and the saplings are pushed over, not bitten off, by something leaning its weight on them to get at the roots. Bristles are caught in the bark of the larger trees at the height of your hip. Whatever works this ground comes back to it.",
+  },
+  "the-far-mire": {
+    "mire|line|ground|trees":
+      "The straight line across it is sunk a hand below the rest of the surface, and under the moss there are logs laid side by side. Somebody built a trackway over this mire, a long time ago, and the logs are still taking the weight of whatever walks it.",
+  },
+  "the-stew-pond": {
+    "pond|sill|stone|mud|leaf-mud|fish":
+      "The stone sill has a slot cut in it for a board to hold the water back, and grooves in the slot where the board slid up and down. A stew pond holds fish alive until a feast day. The board is gone. The last fish in here were never wanted.",
+  },
+  "the-sunken-lawn": {
+    "lawn|grass|edges|ground|rectangle":
+      "The edges are cut square and there are the stubs of a low wall at two of the corners, too low to keep anything in. This was a garden, sunk so it could be looked down on from the house. The grass is still kept short, and it is not people keeping it.",
+  },
+  "the-broken-avenue": {
+    "beech|beeches|avenue|trees|line":
+      "Every fallen tree went down to the north-east, and every one tore its roots out whole. One wind, one night. The ones still standing are the same age as the fallen and no stronger. They are only the ones the wind happened not to choose.",
+  },
+  "the-holly-hedge": {
+    "hedge|holly|stems":
+      "Look along the base and the old stems are cut half through and bent over, then grown up again from the bend, the way a hedger lays a hedge. Every few yards a stake was driven to hold the line. The stakes are long gone; the bends are still there, and the hedge has kept the shape it was taught.",
+  },
+  "the-ash-heap": {
+    "ash|heap|mound|clinker|nettle":
+      "Dig a hand in and it is all fine white ash with lumps of clinker in it, and a bone, and a broken pot rim. This was where a household put out its hearths every morning, for years. The nettles round it are the richest green in the wood.",
+  },
+  "the-fish-house": {
+    "tanks|tank|vault|building|water|stone":
+      "Three stone tanks, each with a lip cut to let water run from one to the next, so fish could be graded and held. The stone of the vault is sweating cold. Something is moving in the middle tank, low down, where the light does not reach; it moves when you lean over, and then it is still.",
+  },
+  "the-still-pool": {
+    "pool|water|surface|roots":
+      "No insect touches it and nothing rises in it. Drop a leaf and it lies on the surface without a ripple spreading. It is water, and it is cold, and it is so clear that the bottom looks close, and it is not close.",
+  },
+  "the-thorn-waste": {
+    "thorn|scrub|ways|ground":
+      "The ways through it are low, round-topped, worn smooth underneath, made by animals going on their bellies. Hair hangs on the thorns along every one of them. A man can go through, bent double and torn, at the pace of whatever made the way, and no faster.",
+  },
+  "the-broken-ground": {
+    "pits|pit|heaps|heap|ground":
+      "The heaps are spoil from the pits, and the pits are all the same size, as if dug to a measure. Somebody was looking for something under the ground across a wide area, one hole at a time, in no order. It is the work of people who knew it was here and did not know where.",
+  },
+  "the-gorse-brake": {
+    "gorse|brake|growth|flowers":
+      "The dead growth under the living gorse is tinder-dry and goes down a foot. Gorse burns hot and fast and comes back from the root, and the old people used to fire it on purpose to keep heath open for grazing. Nobody has fired this in a long time. It is waiting.",
+  },
+  "the-paved-road": {
+    "road|flags|paving|stones|grooves|grass":
+      "The grooves are worn a hand deep into the flags, and the distance between them is a cart's width, the same at every stone. Heavy carts, loaded, for a long time. The road was made to carry something out of here, and it carried it.",
+  },
+  "the-road-ruts": {
+    "ruts|turf|road|prints|tyres":
+      "The ruts are iron-cut, the edges sharp where a rim bit down. Down in the bottom of them, the most recent marks are not wheels. Hooves and pads and something with a long dragging toe, all using the road the carts made, going both ways.",
+  },
+  "the-outer-ditch": {
+    "ditch|sides|works|bank":
+      "The sides are cut at an angle a man cannot run up and has to climb. The bottom is flat and grassed and has the long low mounds in it of things that fell in and stayed. This ditch was dug to be fought over. Somebody expected to have to.",
+  },
+  "the-counterscarp": {
+    "counterscarp|bank|stone|ditch|facing":
+      "The facing stones that have fallen lie in the ditch below, and the ones still standing are scored along their top edges by something sharpened against them, over and over. Men stood here a long time with nothing to do but watch the ditch and keep an edge on.",
+  },
+  "the-barbican-footings": {
+    "footings|stone|outwork|gap|road|walls":
+      "The squared stone has iron stubs leaded into its top course, where a gate or a grille was hung across the road in front of the arch. The lead has been chiselled out of most of them. Somebody came back for the metal, and took their time about it.",
+  },
+  "the-killing-ground": {
+    "ground|grass|open|trees":
+      "The trees round the edge stand back in a line, and the stumps of their forebears are just inside it, cut off at the ground. Somebody felled every tree that tried to take this ground, for years, so that nothing could cross it unseen from the wall. The wall is gone and the line has held.",
+  },
+  "the-guard-footings": {
+    "footings|hearth|hearthstone|stone|post":
+      "The hearthstone is cracked across from heat and black to a hand's depth. Somebody kept a fire in this post every night of the year, to stay awake as much as to stay warm. The doorway faced the road, and the stone of its sill is worn in the middle where one man stood, always in the same place.",
+  },
+  "the-pay-stone": {
+    "stone|hollow|coin|edge":
+      "The hollow is worn glassy, and at the bottom of it, pressed into a crack, there is the green edge of a coin too corroded to read. The toll was paid here before you went under the arch. This is the last one anybody left.",
+  },
+  "the-mounting-block": {
+    "block|steps|step|stone":
+      "The top step is hollowed on the left side only, by a left foot going up into a stirrup, many thousands of times. The steps face the arch. Whoever mounted here was setting out from the holding, not arriving at it.",
+  },
+  "the-outer-bailey": {
+    "bailey|banks|bank|enclosure|grass":
+      "Under the grass along the inside of the bank there are the low squares of footings, a long row of them: stables, stores, the sheds a gatehouse keeps its life in. They are evenly spaced and all the same size. Somebody planned this yard before they built a thing in it.",
+  },
+  "the-bailey-wall": {
+    "wall|walk|ivy|stone":
+      "The stones on the walk are worn hollow in a line along the inside of the wall, a single path a foot wide, by a single round walked over and over. Somebody kept a watch along this wall for longer than the wall has had ivy on it.",
+  },
+  "the-rampart-walk": {
+    "walk|bank|rampart|curve|ditch|grass":
+      "The grass on the crest is worn into a narrow path that goes all the way round and is still worn. Something walks this round still, every night, at the same steady pace, and the turf has never had the chance to close over it.",
+  },
+  "the-old-palisade": {
+    "palisade|stakes|stake|bank|oak":
+      "The stakes still standing are black and hard, and each one has the axe-marks of its point still sharp on it. They lean outward because the bank has crept under them, slowly, over a very long time. Not one of them has been knocked over by anything coming in.",
+  },
+  "the-ward-ditch": {
+    "ditch|water|sides":
+      "Narrow enough to jump if you were not wearing anything, and deep enough to drown in if you were. There are iron hooks set in the inner face low down, below the waterline, rusted to points. Nobody was ever meant to come up out of this ditch on the inside.",
+  },
+  "the-turning-bay": {
+    "flags|paving|arc|bay|fan|wheels":
+      "The fan of flags is worn in a single deep arc, all carts swinging the same way: left, round, and back out along the road. Nothing ever came the other way and turned here. The holding sent carts out. It did not send them back in.",
+  },
+  "the-tilt-yard": {
+    "yard|strip|banks|ground|grass":
+      "Halfway along there is a line of post-holes down the middle, filled with darker soil, where a barrier ran to keep the horses apart. At one end the bank has a seat cut into it, turfed and level, for whoever was watching. One seat.",
+  },
+  "the-horse-pond": {
+    "pond|cobbles|ramp|water|hoofprints|prints":
+      "The cobbles on the ramp are worn into a groove down the middle by hooves going in and coming out. The fresh prints at the edge are cloven, and they go in and do not come back out on this side.",
+  },
+  "the-boundary-cross": {
+    "cross|shaft|mark|stone|arms":
+      "The mark cut into the shaft is a crown over three notches, the cuts deep and square. The arms of the cross were struck off with a hammer, and the marks of the hammer are on the stumps. Whoever broke it took the cross off the stone and left the mark on it.",
+  },
+  // ...the worked wood, the felling the holding left mid-stroke; the sunken
+  // wood, an older country the ground came down over; and the heath.
+  "the-outer-scrub": {
+    "thorn|birch|scrub|ground|gaps":
+      "The thorn is grazed flat on top and dense below, the shape scrub takes where animals feed on it all year. The birch among it is young. This was all open grazing once, and the scrub is the wood walking out over it, a few feet in a lifetime.",
+  },
+  "the-fallen-wall": {
+    "wall|stones|stone|boundary":
+      "Where it still stands the stones are set with their long faces inward and a through-stone every yard, which is a waller's trick and takes a good waller. Moss has sealed the joints. The trees growing through it came up after the last time anybody mended a gap.",
+  },
+  "the-bracken-edge": {
+    "bracken|ground|trees|sea":
+      "Bracken comes in where trees have been taken and nothing was replanted. Push it apart at the base and there are stumps under it, rotted soft, at even spacing. The light got in here because a felling let it, and the bracken has held the ground against the trees ever since.",
+  },
+  "the-north-ride": {
+    "ride|cut|grass":
+      "Forty feet is wider than a timber road needs. It is the width you cut to let mounted men drive deer along it in the open toward a line of bows. Every so often there is a low mound on the verge, grassed over: the stands where somebody waited.",
+  },
+  "the-thin-soil": {
+    "rock|stone|trees|roots|soil":
+      "Where the bare rock shows through it is scored with old grooves, straight and parallel, and in one place a squared notch: somebody quarried here, just a little, for a wall or a hearth, and then the trees came back over the scar. The roots have followed the cuts into the stone.",
+  },
+  "the-far-north-turning": {
+    "oaks|trees|wood|ground":
+      "The trunks here carry no marks at all: no blaze, no scar, no browse line, no bark rubbed off at the height of anything. It is the first stretch of the wood where nothing has touched the trees in living memory, and that is the whole of what is strange about it.",
+  },
+  "the-bracken-sea": {
+    "bracken|trunks|ground|way":
+      "Under the fronds the stems are thick as a finger and set close, and between them there are runs, low, the height of a fox. The bracken hides everything that lies down in it. You are the only thing out here walking upright.",
+  },
+  "the-pine-dark": {
+    "pine|pines|rows|needles|branches|floor":
+      "Planted, and the rows are dead straight in two directions. Pine is not this country's tree: somebody brought it in and set it for a crop that grows fast and straight, and then never cut it. The lower branches have died off for want of light and nobody brashed them.",
+  },
+  "the-windfall": {
+    "trunks|root-plates|roots|stand|trees":
+      "Every trunk lies pointing the same way. Some of them have been cut through with a saw where they blocked the way, and the cut ends are grey and checked and old: somebody started clearing this, a few trunks in, and stopped.",
+  },
+  "the-empty-ride": {
+    "ride|grass|ends|wood":
+      "At both ends the standing wood is younger than the wood around it. The ride did go somewhere once, both ways, and the trees have grown back over its ends faster than over its middle, where something still grazes. Somebody stopped keeping this ride open from the ends inward.",
+  },
+  "the-lichen-wood": {
+    "lichen|beards|branches|trees":
+      "The beards are longest on the oldest branches and absent from the youngest, so you can read the age of every limb by it. Lichen like this takes generations. Nothing has disturbed this stand in all that time, not a fire, not a felling, not a smoke from anybody's hearth.",
+  },
+  "the-thin-birches": {
+    "birch|birches|trees|stems":
+      "A crop that came up thick after a clear-fell and was never thinned. A forester would have cut nine in ten of these and left the rest to grow. Nobody came back to do it, and now they are choking each other at the same slow rate.",
+  },
+  "the-old-burn": {
+    "charcoal|burn|trunks|litter|ground|scar":
+      "Every mature trunk is blackened on its west side to the height of your chest, and only on that side. The fire came through from the west with the wind behind it. The charcoal in the litter is fine and even, a ground fire, fast and low, the kind people used to set on purpose.",
+  },
+  "the-holly-maze": {
+    "holly|walls|passages|floor|maze":
+      "The swept floors between the walls are swept by something that lies in them: the dead leaves are pushed to the edges, the ground in the middle pressed smooth. More than one bed, in more than one blind end. Things that want to be hard to reach sleep in here.",
+  },
+  "the-dry-gully": {
+    "gully|stones|watercourse|lips|bed":
+      "The stones in the bed are rounded and graded, big to small, downstream, the way running water leaves them, and moss has grown across the tops of the biggest. Upstream, where the gully should begin, the bank has been cut and filled. Somebody turned this water away, deliberately, to somewhere else.",
+  },
+  "the-open-canopy": {
+    "crowns|canopy|light|columns|tangle":
+      "The gap overhead is the shape of a tree that is not there. Its stump is in the tangle, sawn level, and the saw-cut is clean. It was felled and taken out whole, for its size, and nothing has grown up yet to fill the hole it left in the roof.",
+  },
+  "the-deer-lawn": {
+    "grass|lawn|trees|line|browse line":
+      "The browse line is level to a hand's width all the way round. Deer graze a lawn like this only when there are enough of them that every mouthful is taken the day it grows. The park this was is gone. The herd that kept it is still doing the job.",
+  },
+  "the-sunken-wood": {
+    "ground|trees|canopy|floor|bank":
+      "The bank is not a slope. It is a face, near vertical, with layers in it: leaf-mould, then black soil, then a band of old ash, then soil again. The ground up there built up over this a hand at a time, and somewhere in the middle of it, once, everything burned.",
+  },
+  "the-under-eaves": {
+    "light|canopy|green|leaves":
+      "The undergrowth down here is all one plant, broad-leaved and limp, of a kind that grows in deep shade and nowhere else. It has spread across the whole floor from somewhere and has not met a single competitor on the way.",
+  },
+  "the-cold-seep": {
+    "seep|seeps|water|clay|bank":
+      "The water comes out of the bank along one level line, at the same height in all its dozen places. That is the line where the ground above meets something it cannot soak into. The clay floor is printed with small cloven feet, all of them coming to drink.",
+  },
+  "the-earth-fall": {
+    "earth|bank|slope|trees|roots|hole":
+      "In the raw face where the bank came away there is a line of squared stones, a course of something built, cut through by the fall and showing for the first time in a very long time. Earth is still trickling from round them.",
+  },
+  "the-white-roots": {
+    "roots|root|bank|curtain":
+      "The roots are white because they have never been in the light. Touch one and it is cold and wet and alive. Some of them have been gnawed through at the height of a crouching animal, and the cut ends have healed into knots.",
+  },
+  "the-slip": {
+    "clay|slope|marks|slip":
+      "The scoring in the clay is claw marks, long and dragged, going down. Not one set goes up. Everything that came down this way went on along the bottom and found its own way out, or did not.",
+  },
+  "the-lost-stand": {
+    "trees|stand|trunks|bank|steps":
+      "The bark is deeply ridged and the trunks are wider than any up above. These are the trees that stood on the old ground before it went down, and they came down with it standing. Their crowns are level with the young wood's now, and they are a great deal older.",
+  },
+  "the-green-dark": {
+    "light|green|dark|trees":
+      "Hold your hand up and it is green; so is your other hand, and the bark, and your breath when it is cold. The colour gets into everything down here. After a while you stop seeing it, which is when it is most useful to remember.",
+  },
+  "the-bottom-of-it": {
+    "water|clay|floor|trunks":
+      "The water is an inch deep everywhere and flat as a table, and the clay under it holds every print that was ever made in it. Most of the prints are blurred by time under the water. A few are sharp. They come in and they wander and they leave.",
+  },
+  "the-old-ditch": {
+    "ditch|banks|earth|bank":
+      "The sides are cut with a spade, square, and there is a little stone revetting at one corner, the same rough work as the lower ditch. Someone drained this ground when it was the top of the world. The world has gone up fifteen feet since, and the ditch is still draining it.",
+  },
+  "the-lower-ditch": {
+    "ditch|cut|stone|revetment|revetting":
+      "The revetting is laid dry, the stones chosen to fit rather than cut, by people who had all the time in the world and no mortar. Water still runs in the bottom of it, slowly, the way it was set to run.",
+  },
+  "the-black-loam": {
+    "loam|soil|roots|print|prints":
+      "Fine as flour and black as soot, and it takes a print so well that you can read the grain of a boot sole in yours. It is the floor of a burned place, years of ash gone to soil. Some of the prints in it are bare feet, small ones, and very old, and the soil has kept them.",
+  },
+  "the-drip-line": {
+    "water|pools|threads|roots|ceiling":
+      "Each pool is worn exactly under its own drip, a hand deep, smooth-sided, the size of a bowl. A hundred bowls, filled for longer than anything up there has been alive. The water is clean and tastes faintly of iron and of earth.",
+  },
+  "the-old-course": {
+    "riverbed|river|gravel|banks|bed|course":
+      "The gravel is clean and sorted and the banks are cut steep on the outside of every bend. In one bank there is a line of old stakes, driven in a row, where somebody built a fish weir across this river when it ran. The stakes are still standing. The river is not.",
+  },
+  "the-low-sump": {
+    "water|sump|middle":
+      "The water is black and does not move, and does not reflect much either. At the edge the clay goes down at a steady slope and keeps going. A stick pushed in at arm's length finds nothing, and comes back up with a smell on it that stays on your hand.",
+  },
+  "the-tree-fall": {
+    "tree|trunk|fungus|roots|wood":
+      "It came down through the roof of roots with its crown first, and its own roots are still up there in the ceiling, holding. It is dead, and it is still holding up its own small part of the wood above, and the fungus is slowly taking that job away from it.",
+  },
+  "the-buried-lane": {
+    "lane|track|banks|ruts|floor":
+      "The ruts are narrow: a smaller cart than the holding ever used, on smaller wheels. In the bank on one side there is a gatepost, stone, with the iron of a hinge rusted into it. Somebody's lane, to somebody's gate, with a wood fifteen feet thick laid over the lot.",
+  },
+  "the-under-roots": {
+    "roots|ceiling|mat|columns|floor":
+      "The columns are roots grown down to the floor and thickened into trunks of their own, and they take the weight. In one of them there is a nail, iron, driven in when the root was a sapling's root and swallowed since. Someone was down here when this was still the surface.",
+  },
+  "the-grey-scrub": {
+    "scrub|line|wood|edge":
+      "The line where the wood begins again is too straight for any wood to grow. There are the low stumps of a bank along it, worn down almost to nothing. It was a boundary, and the trees were kept back to it on one side and let grow on the other, until there was nobody left to tell them which side was which.",
+  },
+  "the-sand-cut": {
+    "sand|face|holes|martin holes|spoil|cut":
+      "The face is cut square, and there are pick marks in it still, low down where the weather has not reached. Somebody dug sand here by the cartload, for mortar or for a floor, and the cut has been left long enough for the martins to own it.",
+  },
+  "the-heath-edge": {
+    "heather|sand|scrub|heath|edge":
+      "The heather is all one age and all one height, which means it was burned off together not so long ago and came back together. Heath is kept by fire and grazing. Something is still burning this ground, or something did until recently, and grazing it, and it has not been the weather.",
+  },
+  "the-stunted-oaks": {
+    "oaks|trees|trunks|heather":
+      "The trunks are thick and the crowns are flat and the bark on the windward side is cropped short. They are as old as anything in the wood and they have never once been allowed to grow up, by wind, by sand, and by teeth, all three.",
+  },
+  "the-rabbit-warren": {
+    "warren|burrows|holes|sand|turf|rise":
+      "The rise is not a hill. It was built, a long low mound of sand heaped up on purpose and turfed, for rabbits to burrow in and be harvested from. Rabbits were somebody's property here, kept and counted and netted. The rabbits never heard that the owner was gone.",
+  },
+  "the-dry-heath": {
+    "heath|wind|sky|ground":
+      "The ground is sand under a thin skin of heather root, and it blows where the skin has broken. In the hollows there are flints, and among the flints, here and there, a worked one, as if the heath had been walked by people a very long time before anything else was here.",
+  },
+  "the-pale-grass": {
+    "grass|tufts|sand|ground":
+      "The tufts stand on little pillars of sand, each one held up by its own roots where the wind has scoured the ground away round it. Nothing has trodden here because there is nothing here to tread toward. The wind keeps the place exactly as empty as this.",
+  },
+  "the-wind-gap": {
+    "saddle|sand|stone|rise|gap":
+      "The stones on the saddle are polished on the windward faces and rough on the others, by sand driven over them for a very long time. One of them has been stood on end, a long time ago, and the wind has polished it too, all down the side that faces west.",
+  },
+  "the-wolf-earth": {
+    "earth|mouth|beech|roots|bone|bones|hair|floor":
+      "The bones are deer, mostly, and every long bone has been split for its marrow by jaws, not tools. The hair in the drifts is grey and it is a great deal of hair. More than one animal has slept here, for more than one year, and the earth has been dug wider for every new litter.",
+  },
+  "the-felling-edge": {
+    "line|trees|stumps|rows|ground":
+      "The rows are surveyed: each stump is a fixed number of paces from the next, and the first row runs dead straight along the edge of the standing wood. A felling worked like this is on a rota, a bay a winter, and there is a plan somewhere of which bay comes next. The next bay is still standing.",
+  },
+  "the-stump-field": {
+    "stumps|stump|saplings|ground|field":
+      "Every stump is cut at knee height and every cut slopes so the rain runs off it. The fellers knew their trade. Very few saplings, which means the deer have eaten what came up, year after year, because nobody fenced the felling as they ought to have.",
+  },
+  "the-hauling-ride": {
+    "ride|ruts|chains|floor|water":
+      "The ruts were cut by trunks dragged on chains behind horses, and here and there in them is a link of chain, broken off and rusted to a lump. They all run toward the road. Every tree that came down in the felling went out this way and was never seen again.",
+  },
+  "the-brash-heaps": {
+    "brash|heaps|heap|branches|bramble":
+      "The brash is laid in long windrows, as a gang lays it, to rot down and keep the deer off the young growth. Something has dug a way into the biggest heap and lives in it, and the way in is worn smooth with use.",
+  },
+  "the-saw-pit": {
+    "pit|boards|water|dog-iron|iron":
+      "The dog-iron is still driven into the edge timber where it held the log steady, and it has a second one beside it with the log gone from between them. The last trunk was sawn, lifted out, and carried away, and the men who sawed it did not bother to take their irons.",
+  },
+  "the-sawdust-floor": {
+    "sawdust|floor|ground|prints":
+      "Under the top inch the sawdust is still pale and still smells of fresh oak, kept from the air. Years of it. This was the busiest yard in the wood, and the prints in it now are cloven and padded, and one set goes round and round, the same circle, as if something paced here.",
+  },
+  "the-skid-road": {
+    "logs|road|mud|timber":
+      "The logs are laid with the bark still on, which means they were thrown down in a hurry to get one heavy load out over soft ground, and never replaced with anything better. The road went toward the hauling ride. It was used once, hard, and left.",
+  },
+  "the-axe-stumps": {
+    "stumps|stump|ring|middle":
+      "The stumps in the ring were felled outward, all of them, away from the centre. Fellers drop trees away from what they want to keep. Whatever was in the middle, they cut a ring round it and left it standing, and it is gone now without any stump to show where it was.",
+  },
+  "the-bark-strip": {
+    "bark|sheets|trunks|ground":
+      "Oak bark, peeled in the spring when the sap runs and it comes off whole, for the tanners' pits. Tons of it. It was stacked to dry and the stacks have fallen, and nobody carted a sheet of it away. Bark was worth money once. It was left lying like it was not.",
+  },
+  "the-cord-stacks": {
+    "cords|cord|stacks|stakes|firewood|mounds|fungus":
+      "Cut to a length, split, and stacked a cord at a time, which is the measure a buyer pays by. The stacks were counted and sold standing, before they were ever carted. Somebody was owed this wood. It is still here, rotting where it was measured out.",
+  },
+  "the-sawyers-bench": {
+    "bench|trestle|whetstone|chips|clearing":
+      "The whetstone is worn into a deep saddle from a lifetime of one blade. The bench is set so that whoever sat on it had their back to a big oak and could see every ride into the felling. It was the place a foreman sat, and the chips round it are the last chips anybody split here.",
+  },
+  "the-wedge-ground": {
+    "wedges|wedge|iron|grass|logs":
+      "Iron wedges, each one mushroomed at the head from years of the maul. Iron was dear. A felling gang that leaves its wedges on the ground does not mean to be away long. There are dozens of them here, every one exactly where it was put down.",
+  },
+  "the-split-oak": {
+    "oak|trunk|halves|wedges|tree":
+      "The wedges are still in the split, driven home, and one of them has a maul-head lying beside it in the grass with its handle rotted away. Somebody drove the last wedge, the trunk sprang open, and then they put the maul down and went. The halves have been lying here ever since, waiting to be sawn.",
+  },
+  "the-coppice-stools": {
+    "hazel|stools|stool|poles|stems|thicket":
+      "Every stool has a ring of poles all the same age, because they were all cut the same winter and all grew back together. In the middle of some stools there is a stub of the pole before, cut on a slant. Seven years between cuts, for longer than anybody could count, and then not again.",
+  },
+  // ...the carr and the osier holt, the wet half of the holding's trade; the
+  // bears' caves; and the moon's ground behind the door.
+  "the-alder-carr": {
+    "alder|alders|roots|water|ground":
+      "Alder is the one tree that likes its feet wet, and its wood does not rot under water, which is why it was cut for piles and sluice-boards. These have been cut before: every big tree is three or four trunks from one old stool. Nobody has cut them in a long while.",
+  },
+  "the-mire-edge": {
+    "mire|moss|line|skin|carr":
+      "The straight line across the moss is a darker green, sunk a little, the moss there crushed and grown back and crushed again. It is a way somebody knew. It goes straight because whoever walked it first knew where the firm ground ran underneath, and nothing has walked it any other way since.",
+  },
+  "the-black-alders": {
+    "alders|alder|bark|ground|water|roots":
+      "The black below the knee is a tidemark: the water stands that high every winter and stains everything it touches. On one trunk, just above it, there is an iron staple driven in and rusted, with a scrap of rope rotted to a ring round it. Something was tied here at the waterline once.",
+  },
+  "the-sodden-ground": {
+    "ground|prints|wood":
+      "Your prints fill from below with clear water, and so do the older prints around them, which are larger and further apart. Something heavy crosses here regularly and does not slow down for it, and the ground has no memory of it for longer than it takes to drink the print back.",
+  },
+  "the-reed-break": {
+    "reeds|reed|stand|stems":
+      "Reed grows in open water, not in woods, which means this was open water once, and the trees have come in round it and up through it since. The reed has never let go. Cut stems at the base, old and grey, show it was harvested for thatch, a long time ago, by people who came in here with sickles.",
+  },
+  "the-drowned-roots": {
+    "roots|water|arches|bottom":
+      "The roots under the water are pale and soft, and they are not all roots. Some of them are timbers, squared, lying side by side in the bottom, gone the same colour as everything else. There was a way across this once, built of wood, and the water has had it.",
+  },
+  "the-blind-corner": {
+    "trees|wall|pocket|gap|floor":
+      "The floor of the pocket is bare and smooth, and in the middle of it the earth is pressed flat in a long oval, warm-smelling. Something lies up in here, facing the gap. It has chosen the one spot in the wood where nothing can come at it except straight in.",
+  },
+  "the-willow-margin": {
+    "willow|willows|ground|margin|water":
+      "Every willow on the margin has been cut back at some time and has grown again from the cut, in three or four stems. Willow is cut and comes back, cut and comes back, for as long as somebody keeps cutting. These have had one growth too many since the last time.",
+  },
+  "the-old-pond": {
+    "pond|sill|stone|weed|water":
+      "The stone sill has a lip cut in it to the exact level the pond was meant to stand at, and a groove where a board could raise it. The pond is still at that level, give or take, the same water finding the same lip. It is the only thing in the carr still doing what it was told.",
+  },
+  "the-flood-meadow": {
+    "meadow|grass|tidemark|twigs|water|edge":
+      "The tidemark is a line of twigs and seed and dead reed at knee height all round the edge, and some of what is caught in it was not grown here: a scrap of rope, a splinter of painted board. The winter water comes in from somewhere with people in it, or had people in it.",
+  },
+  "the-south-ride": {
+    "ride|channel|water|cut":
+      "Forty feet, the same as the north ride, cut by the same hands for the same driving of deer. At this end the water got in and nobody dug it a drain, so the south ride is a ditch now with grass at the edges, and the deer go along the edges.",
+  },
+  "the-black-mud": {
+    "mud|ground|record|prints|grease":
+      "The prints overlap so thickly that only the newest can be read: cloven, padded, cloven again, and one long sliding mark where something lost its footing and caught it. Every animal that crosses this part of the carr crosses at this exact place. It is the only firm bottom for a long way either side.",
+  },
+  "the-drowned-holly": {
+    "holly|leaves|water":
+      "The water is new to the holly: the dead lower leaves still have their spines and the trees are old and full-grown, rooted on dry ground. Something blocked a drain or a stream somewhere and the water came back up over a holly stand that was here before it.",
+  },
+  "the-far-south-turning": {
+    "water|trees|wading":
+      "The water is the same temperature as the air and the same colour as the shade, and it has no current. Nothing marks where it gets deeper, and the trees grow out of it at the same spacing whatever its depth. The carr is the same in every direction you choose.",
+  },
+  "the-willow-break": {
+    "willow|thicket|stems":
+      "Every stem in the thicket comes up from a cut stool, and the stools are in rows under the water. This was a planted holt that has run wild, and it still stands in its lines below the surface while it goes every way it likes above it.",
+  },
+  "the-flooded-ride": {
+    "ride|water|cut|trees|line":
+      "The ride is straight because it was laid out with a line, and it is flooded because the drain that ran beside it has filled in. Under the water the grass of the ride is still there, drowned, and it is still short.",
+  },
+  "the-black-pool": {
+    "pool|water|edge|canopy":
+      "The edge goes down so steeply because it was dug. A pool this size and this deep, square-ish under the weed at the near side, was cut for clay or for fish or for a reason nobody wrote down. The water in the middle has no bottom you could reach and no reason to be this still.",
+  },
+  "the-sedge-flat": {
+    "sedge|tussocks|tussock|water":
+      "Each tussock is a hundred years of sedge growing up on its own old leaves, a pillar of it standing out of the water. The water between is soft-bottomed and holds nothing. Animals cross here tussock to tussock, and the tops of the best footings are trodden flat.",
+  },
+  "the-leaning-alders": {
+    "alders|alder|stand|ground":
+      "They lean all one way because the ground under them is moving, a fraction a year, downhill toward the wetter carr. Their roots are pulled out of the bank on the upslope side in a long raw line. The whole stand is walking slowly into the water, still in leaf.",
+  },
+  "the-quaking-ground": {
+    "ground|raft|moss|roots|water":
+      "Push your hand through the moss and there is water underneath, black and cold, and nothing under that your hand can find. The raft is roots holding moss holding roots. It takes your weight because it takes the trees' weight, and it moves when they do.",
+  },
+  "the-silted-pond": {
+    "pond|silt|mud|water|prints":
+      "The mud is grey and smooth and it swallows a stick to the hand without stopping. The prints that go in and do not come out lead toward the middle and stop there, all of them at about the same place, where the mud is perfectly flat.",
+  },
+  "the-rush-bed": {
+    "rush|rushes|stand|water":
+      "Soft rush was cut and dried to make rushlights, the pith dipped in fat to burn in a house that could not afford candles. Some of the stems at the edge are cut off short and square, old cuts. Somebody gathered light from here, a bundle at a time.",
+  },
+  "the-frog-chorus": {
+    "frogs|frog|noise|water|chorus":
+      "The water is full of spawn in the shallows, and the edges are trodden by herons and worse. The frogs stop for you because they stop for anything that stands up, and here, nearly everything that stands up is hunting them.",
+  },
+  "the-sunk-fence": {
+    "fence|posts|post|wire|water":
+      "The posts are split oak and driven deep, and each one has the staples still in it where the wire ran, three to a post. Wire fencing was the late attempt at this wood, after the old pale had failed, and the water came up over that too.",
+  },
+  "the-brown-water": {
+    "water|brown water":
+      "The colour is peat, washed out of somewhere further up, and it does not settle. Cup some and it is clear brown in the hand and smells of nothing much. It is clean water. It is only that you cannot see through it, and neither can anything else.",
+  },
+  "the-moon-glade": {
+    "glade|grass|trees|ground":
+      "The trees round the edge lean outward, all of them, and the lean is old: every trunk grew that way from a sapling. Nothing has cropped the grass and nothing has trodden it. It is the only grass in the wood that has never been eaten, and it is kept, but not by teeth.",
+  },
+  "the-withy-holt": {
+    "holt|willow|rows|stools|rods":
+      "The rows were planted along lines a pace apart, and the lines are surveyed straight. An osier holt is a crop, cut every winter, and this one fed a trade. The rods have run on for many winters since, and are too thick now for anything but firewood.",
+  },
+  "the-cut-osiers": {
+    "osiers|rods|stools|shoots|cut ends|ends":
+      "The cut ends are all at one height because the cutter worked along the row bent at the same angle, rod after rod, a whole winter's work. The last winter anybody worked the holt, they worked it right up to this row and stopped.",
+  },
+  "the-soaking-pit": {
+    "pit|water|bundle|twine|rods":
+      "The bundle stood upright in the water to soak, as it should, ready to be lifted out, peeled and bent. Nobody lifted it. It has stood in its pit through every winter since, rotting from the waterline down, still tied.",
+  },
+  "the-willow-stools": {
+    "stools|stool|willow|stumps|water":
+      "A willow stool this wide is a great many cuttings old: every winter the rods were taken and the stool grew a little fatter. These were cut for longer than anything else in the holt. They are the oldest work in the whole wet half of the wood.",
+  },
+  "the-bundle-ground": {
+    "bundles|stakes|grass|ground":
+      "The stakes are set in a row, a bundle's width apart, to stack against. The grass under where the bundles lay is pale and short, not because they were lifted yesterday but because they lay there so many seasons that the ground underneath has never recovered.",
+  },
+  "the-wet-ride": {
+    "ride|willows|water|rows|light":
+      "The ride was cut so a cart could get between the rows at cutting time. The ruts are still in the bottom under the water, two straight grooves. The water came in after the carts stopped coming, and has never been out since.",
+  },
+  "the-pollard-line": {
+    "pollards|pollard|willows|willow|trunks|heads|drain":
+      "The hollow trunk somebody slept in still has a bed of dry rushes in it, pressed flat, and a ring of soot on the inside wall where a small fire was kept. The rushes are old. Whoever slept there did it more than once, and kept the fire small.",
+  },
+  "the-holt-drain": {
+    "drain|plank|weed|sides":
+      "The plank across the drain is sawn, not split, and it has a cleat nailed across its middle for a foothold. The drain kept the holt from going back to carr. Every season it runs a little slower, and every season the carr comes a little further up the rows.",
+  },
+  "the-osier-carr": {
+    "carr|willow|alder|sedge|rows|water":
+      "Under the wild growth the old rows are still there, if you look along the ground and not up: straight lines of stools gone to fat knuckles in the water. The holt came this far. The carr has taken it back, one row at a time, from the wet end in.",
+  },
+  "the-peeling-bank": {
+    "bank|bark|heaps|mould":
+      "The peeled bark has rotted down into a bank of fine brown mould, knee-deep, and the bank under it is firm because generations of peelers stood here. In the mould there are the iron hoops of a brake, the forked tool rods were pulled through to strip them, rusted to nothing.",
+  },
+  "the-basket-ground": {
+    "baskets|basket|grass":
+      "The half-made baskets are laid in a row, each one at a different stage, as if a group of people had been working on them together and all stopped at the same moment. The last rods woven into each are pushed in and not yet beaten down. They were coming back to them.",
+  },
+  "the-withy-drain": {
+    "sluice|boards|drain|pool|mud":
+      "The boards are slotted into stone grooves, one above another, so the level could be raised a board at a time. The top board is missing from the groove. It was lifted out, on purpose, once, and never put back, and the pool has been standing at that one board's height ever since.",
+  },
+  "the-ridge-cave-mouth": {
+    "mouth|rock|ferns|ground|cave":
+      "The bare ground inside the mouth is trodden into a path that keeps to the left wall. The ferns over the lip are torn on that side, at a height well over your head. Whatever comes and goes here is tall and keeps to one side out of habit.",
+  },
+  "the-ridge-cave-drop": {
+    "slope|stone|floor|drop|roof":
+      "The polish on the left of the slope is a long dark smear on the stone, worn into it by a body going down the same line on all fours, many times. Down in the polish there are scratches, short and deep, where it braced.",
+  },
+  "the-ridge-cave-fork": {
+    "pillar|rock|passage|hole|fork":
+      "The grease on the pillar is grease from fur, rubbed on at the height of a shoulder going by, and it is thick enough to hold a thumbprint. Coarse brown hairs are caught in it. Both ways round the pillar are equally worn. Whatever lives here uses both.",
+  },
+  "the-ridge-cave-pocket": {
+    "bones|bone|skulls|skull|pocket|larder":
+      "The bones are in layers: the bottom ones are brown and crumbling, the top ones still pale. On a good many of them there are the long grooves of teeth, wide-set. This pocket has been used as a larder by one animal after another, for a very long time, each one finding it already stocked.",
+  },
+  "the-ridge-cave-squeeze": {
+    "squeeze|roof|rock|hair|passage":
+      "The hair on the roof is caught along a single line where a broad back has scraped through, over and over, until the rock is polished brown. Something that size comes through here on its belly and does not mind it at all.",
+  },
+  "the-ridge-cave": {
+    "cave|chamber|walls|grooves|floor|bracken":
+      "The grooves on the walls are claw marks, in fours, and the highest of them are well above where you could reach with an arm stretched up. Some are old enough to have been softened by the drip. Others are clean-edged and new. The bracken on the floor has been carried in an armful at a time.",
+  },
+  "the-oak-cave-mouth": {
+    "oak|mouth|split|rock|roots|bark|threshold":
+      "The bark of the oak beside the mouth is clawed through in long strips, and the wood under the strips is grooved in turn. The newest marks still show pale, and above them the oldest have grown over into raised scars. The tree has been marked here for longer than you have been alive.",
+  },
+  "the-oak-cave-crawl": {
+    "crawl|roots|earth|stone|ceiling":
+      "The roots coming through the ceiling are worn on their undersides where something has pushed past them on its back, again and again. The earth on the floor of the crawl is packed hard. It has never been anything but a way in and a way out.",
+  },
+  "the-oak-cave-hall": {
+    "hall|dirt|floor|scoops|corner|roof":
+      "The scoops in the corner are dug and abandoned, dug and abandoned, a dozen of them at different ages. Something has tried to make a bed here for years and never settled, and has gone on west every time to the one place it will sleep.",
+  },
+  "the-oak-cave-neck": {
+    "neck|throat|rock|bone|sides":
+      "The bone in the middle of the neck is a deer's thigh, split for the marrow and laid down exactly in the centre of the passage. Not dropped: put down. The rock either side is polished to the width of a broad body passing, and the bone has not been kicked aside.",
+  },
+  "the-oak-cave": {
+    "cave|chamber|bed|roots|bracken|leaves|floor":
+      "The bed is pressed so deep that its edges stand up like the sides of a bowl. In the bracken there are tufts of thick brown underfur, the stuff that comes out in spring. It is the warmest room in the wood because something large has slept in it through every winter there has been.",
+  },
+  "the-wall-cave-mouth": {
+    "breach|stones|stone|mouth|wall|hillside|tumble":
+      "The cut stones in the mouth are the facing of the wall that came down, and on the back of one of them there is the mark of a mason, a short line with a hook. The path through the tumble is low and wide. It has been used for long enough that the stones along it have moved aside.",
+  },
+  "the-wall-cave-passage": {
+    "passage|rock|floor|dust|prints|feet":
+      "The first few paces are cut: there are chisel marks on the walls at the height of a man's hand, straight and patient. Then the chisel marks stop and the passage goes on as rock. Somebody began to make something of this hole and gave it up very early.",
+  },
+  "the-wall-cave-turn": {
+    "passage|root|crack|turn":
+      "The torn root was pulled down through its crack from below and chewed. The pieces lie where they fell, and they are dry, so it was not done for food. It was done because the root was in the way, by something that did not mean to duck.",
+  },
+  "the-wall-cave": {
+    "cave|chamber|bed|scrape|sand|walls|hollow|drip":
+      "The hollow under the drip is worn smooth and holds a mouthful of water, always. The bed is a body's length from it. Whatever sleeps here has worked it out exactly: drink without getting up, and keep its back to the scored wall.",
+  },
+  "the-boundary-cave-mouth": {
+    "hole|stone|hollow|moss|lip|oak":
+      "The moss torn off the lip is torn in strips the width of claws, by something hauling itself in and out. The old stone above the hollow has a mark on its face, worn nearly smooth, that might have been the same mark as the boundary oak's iron. It was put here to say where something ended.",
+  },
+  "the-boundary-cave-slope": {
+    "slope|claw marks|marks|floor|rock|roof":
+      "The claw marks go up the slope only, gouged in hard to get purchase on the way out. Going down, whatever lives here simply slides. The leaf mould on the slope came in on its fur.",
+  },
+  "the-boundary-cave": {
+    "cave|chamber|bed|bracken|moss|hair|floor":
+      "The bed fills the chamber to the walls, which is the shape a bed takes when the animal in it is the size of the room. The hair matted into it is shed in clumps. There is no bone in here at all: whatever sleeps here eats somewhere else and keeps this place for nothing but sleep.",
+  },
+  "the-pile-cave-mouth": {
+    "gap|stones|stone|ground|mouth":
+      "The ground in front of the gap is beaten bare in a fan, and there are the long marks of something lying out on it in the sun. The two stones that make the gap have their inner edges worn smooth, as if a big body has squeezed between them a great many times.",
+  },
+  "the-pile-cave": {
+    "cave|bed|stones|stone|leaves|bracken":
+      "The stones over the bed are polished dark where a shoulder has leaned on them through every night of every winter. The field stones of the pile above were carried here by people clearing a field. Something has made a home in the heap they left.",
+  },
+  "the-white-ride": {
+    "ride|grass|paths|turf|edges":
+      "The narrow paths along the edges are worn the width of one paw, and they go in single file, one animal behind another, all the same way. The grass in the middle of the ride is grazed by something that does not leave a print in it. Only the edges are walked.",
+  },
+  "the-gnawed-stand": {
+    "trees|marks|bark|scores|trunks|stand":
+      "The scores above the rubs are four-clawed and long, and on the tallest trees they reach higher than your own hand. The rubbing is at the shoulder of a big dog. Whatever stands up against these trees to mark them is much taller standing than it is walking.",
+  },
+  "the-picked-bones": {
+    "bones|bone|skull|ribs|grass":
+      "The long bones are split by teeth, not tools, and each split is clean down the middle. The oldest bones are white and green with moss; the newest are only white. They are laid out, not scattered, as if things were brought here to be finished, and this were the table.",
+  },
+  "the-grey-lie": {
+    "lie|hollow|roots|beech|hair|ground|bones":
+      "The earth in the hollow is pressed into the shape of one very large animal curled nose to tail, and the shape is exact. The grey hair caught in the roots is long and coarse, and there is a great deal of it. The fresh bones are just outside, where it can reach them without getting up.",
+  },
+  // ...and the old growth: past the bank where the holding's cutting stopped,
+  // never felled, with older people's marks under it than the holding's.
+  "the-boundary-bank": {
+    "bank|boundary|coppice|trunks|leaves":
+      "The bank is built, not grown: there is a ditch along its outer foot, silted to a hollow, and the turf on its crest is laid. On the coppice side every stool is cut. On the far side nothing has ever been cut at all. The bank told the woodmen where to stop, and they stopped, every one of them, for as long as there were woodmen.",
+  },
+  "the-dry-rise": {
+    "rise|oaks|soil|leaf|alders|ground":
+      "Kick into the floor and it is leaf over leaf over leaf, black and crumbling, and under that more of the same, and no stump or charcoal or cut root anywhere in it. Nothing on this rise has been taken out in all the years the leaves have been falling on it.",
+  },
+  "the-leaning-limes": {
+    "limes|lime|crowns|trees":
+      "The limes were never cut, so their crowns have grown out over the way from both sides until they locked. Lime bark is stringy underneath; people once stripped it to twist into rope. Low on the trunks there are old long wounds, healed, where somebody took a strip and left the tree to live.",
+  },
+  "the-drowned-hollow": {
+    "hollow|water|leaves|prints":
+      "The water is a hand deep and lies on a floor of leaves that goes down a long way. The prints that go in at one side do not come out the other because the far side is too soft to hold them: something crossed and climbed out on the roots instead, by the scrape marks.",
+  },
+  "the-last-oak": {
+    "oak|limbs|limb|floor|ring":
+      "Along the lowest limb the bark is worn smooth in a long strip and there are short deep scratches where something climbs up onto it. It is the only tree around with a limb broad enough to lie on. Things that sleep in trees have been sleeping on this one since before anything else around it was a tree.",
+  },
+  "the-sloe-thicket": {
+    "sloe|sloes|blackthorn|thicket|fruit|thorns|way":
+      "The way through is a tunnel at the height of your knee, worn bare underneath. The fruit nearest it has all been taken, and the fruit out of reach of it has all been left. Whatever uses this way eats as it goes, and goes the same way every time.",
+  },
+  "the-black-oaks": {
+    "oaks|bark|moss|trees":
+      "The black on the bark is not dirt. It is a stain that comes out of the oak itself where water runs down it year after year. These have been standing in this wet for so long that every tree is the same colour as the next, which is why you cannot tell one from another.",
+  },
+  "the-owl-oak": {
+    "oak|trunk|pellets|feathers|hollow|door":
+      "Break a pellet open and it is fur rolled round tiny bones, a skull no bigger than a fingernail. There are hundreds of them on the floor of the hollow, in layers, the bottom ones gone to grey dust. Owls have slept in this oak for a great many generations of owls.",
+  },
+  "the-long-fall": {
+    "tree|trunk|gap|slope|way":
+      "The break halfway along is clean on one side and torn on the other, and the torn side is clawed. Something did not want to go round a hundred feet of tree, and it made itself a door through the middle, and it has used that door often enough to wear the sapwood smooth.",
+  },
+  "the-grey-stools": {
+    "stools|stool|trunks|rings|circles|coppice":
+      "Each ring is one tree, grown out from a stool cut so long ago that the middle has rotted away and left a circle of trunks round nothing. Somebody coppiced here, once, before the bank, before the holding. Then they stopped, and the stools went on growing wider and wider for longer than the holding stood.",
+  },
+  "the-oak-fall-gap": {
+    "gap|shaft|light|grass|foxgloves|oak|canopy":
+      "The fallen oak that made the gap is a long low mound under the grass, green and soft. It came down by itself, of age, and nobody took the timber. Foxgloves are poison, and nothing grazes them, which is why they are the only tall thing in the light.",
+  },
+  "the-deep-roots": {
+    "roots|trees|wall|dark|ground":
+      "The roots hang down where the bank has fallen out from under them, and behind them is not earth but space: a low hollow under the trees, dry and dark. The soil from it is gone, washed out by water that no longer runs here. The trees above have not noticed.",
+  },
+  "the-thorn-thicket": {
+    "thorn|thorns|blackthorn|thicket|way":
+      "The way is narrow and the thorns along it are broken off at the height of a broad flank, not cut. Every so often a thorn holds a tuft of hair, grey or brown. Things that use this way carry the thicket's marks on them, and leave some of themselves on it in return.",
+  },
+  "the-bent-hazels": {
+    "hazel|hazels|stems|nuts|lattice|understorey":
+      "The nuts on the floor are split in two clean halves, which is a squirrel, or gnawed through at one end in a neat round hole, which is a mouse, or crushed flat, which is neither. The hazel was coppice once. Every stem leans from a stool somebody cut and never came back to.",
+  },
+  "the-mossed-wall": {
+    "wall|bank|moss|boundary":
+      "Push the moss aside and the bank is stones, laid, with earth packed between: a field wall, older than the trees that grow out of it. There were fields here, under the old growth. Somebody walled them, and then the wood came, and the wood has been here a great deal longer than the fields were.",
+  },
+  "the-woodpecker-stand": {
+    "limbs|holes|trees|woodpecker|drumming":
+      "The holes in the dead limbs are round and in rows, each the size of a thumb, and in the bigger trunks there is one larger hole, oval, where a nest went in. The drumming stops when you stop. It starts again on a tree you are not looking at.",
+  },
+  "the-hornets-oak": {
+    "oak|hornets|scraps|split|trunk|nest":
+      "The grey scraps on the ground are paper, chewed out of wood and spat into sheets, fallen from a nest somewhere up in the split. They are fresh. The hum does not change when you come close, which is the only reason you are still close.",
+  },
+  "the-elder-brake": {
+    "elder|stems|ground|brake":
+      "Elder grows where the ground is rich with what animals and people leave behind. Under this brake the floor is trodden flat and littered with droppings and little bones: things lie up in here, out of sight, and have done for long enough to feed the elder that hides them.",
+  },
+  "the-wild-cherry": {
+    "cherry|stones|fruit|bark|birds|leaves":
+      "The stones on the ground are all split, cracked open for the kernel inside. Birds swallow cherries whole and pass the stones; something here has been sitting under the tree and opening them one at a time with its teeth.",
+  },
+  "the-old-boundary-stone": {
+    "stone|letters|moss|oak|carving":
+      "Scrape the moss out of the letters and they are not any letters you know, and they are not this holding's mark. Cut square and deep, by somebody who meant them to outlast them. The oak was a sapling beside this stone once, and it has been taking it in ever since.",
+  },
+  "the-old-pollards": {
+    "pollards|trees|limbs|crowns|trunks":
+      "The limbs coming out of the old cut are each as thick as a tree, which means it is centuries since the last cut. The bolling, the swollen head where the cuts were made, is scarred all round with them, cut after cut after cut, before anybody stopped. Pollards like these were cut for leaf fodder in a hard winter, when there was stock to feed.",
+  },
+  "the-great-root": {
+    "root|tree|back":
+      "The worn strip along its back is polished and dark, and in places there are the round prints of pads pressed into the moss either side where things step on and off it. It is the driest way across the wet ground under this tree, and everything that lives here knows it.",
+  },
+  "the-grey-mist": {
+    "mist|trunks|posts":
+      "The mist lies in this one hollow and nowhere else, and it is cold. Put your hand into it and the cold comes off the ground underneath, which is colder than the air above it at every hour. Something down there keeps the cold in the way stone does.",
+  },
+  "the-wet-oaks": {
+    "oaks|roots|ground|water|hollows":
+      "The roots stand up out of the wet because the ground has sunk away from them a little at a time, and the oaks have held their own height while the soil around them went. Each of them is standing on its own old floor, and the floor has left.",
+  },
+  "the-fungus-fall": {
+    "trunk|fungus|brackets|shelves|fingers|wood":
+      "The glow is real: a cold green light from the soft white threads where the wood is most gone, faint enough that you only see it out of the corner of your eye. Press the trunk and your fingers go in. It is holding its shape out of nothing but habit.",
+  },
+  "the-holly-tree": {
+    "holly|tree|leaves|limbs|crown":
+      "Holly this tall and this old is rare: holly is cut for fodder and for winter, and a tree like this means nobody cut it in centuries. The bare lower limbs are bare because something browses them up to a line, the same line as everywhere in the wood.",
+  },
+  "the-black-alder-stand": {
+    "alders|alder|roots|trunks|water|bark":
+      "The red under the broken bark is alder's own; the wood turns orange when it is cut, as if it bled. The cold here comes up out of the standing water, which never warms, because the canopy over this stand never lets the sun reach it.",
+  },
+  "the-leaf-drifts": {
+    "leaves|drifts|trunks|ground":
+      "The drifts are banked against the west faces of the trunks and the ground on the east is bare. The wind comes through here from one quarter only and has been sorting the leaves the same way every autumn, so the drifts are as old as the trees at their bottoms.",
+  },
+  "the-moss-boulders": {
+    "boulders|boulder|moss|ferns|stones":
+      "The boulders are not this ground's stone. They are a hard grey rock with flecks in it, rounded by something far bigger than any river here, and dropped. They were here before the wood, before the fields, before the people with the lettered stones. The moss is the youngest thing about them.",
+  },
+  "the-sunless-floor": {
+    "floor|earth|trunks|ground":
+      "The earth is bare because nothing can grow without light, and it is dry because the canopy turns the rain. There are no leaves on it because the wind under here is too weak to bring them. It is the floor the wood was standing on before it grew a roof, and nothing has been added to it since.",
+  },
+  "the-dappled-way": {
+    "light|spots|canopy|floor|way":
+      "The holes in the canopy are made by leaves that are not there: something has eaten through the crowns here, caterpillar or beetle, a hole at a time. The light comes through where the wood is being eaten. In a few summers this will be open sky.",
+  },
+  "the-ancient-ash": {
+    "ash|trunk|burrs|hollows|limbs":
+      "The burrs on the trunk are the scars of old cuts, healed over and swollen. This ash was pollarded once, many times, a very long time ago, and then left, and it has spent every year since growing round the wounds. It is dying back from the ends now, slowly, the way the very old do.",
+  },
+  "the-cracked-oak": {
+    "oak|wound|halves|split":
+      "The wound between the halves is charred black and hard as iron, and it has not rotted, because fire seals what it does not consume. The two halves have each grown bark down to the edge of the char and stopped. Nothing grows in the wound because nothing will grow on the black.",
+  },
+  "the-moss-tunnel": {
+    "tunnel|banks|moss|fern|way|water":
+      "The banks are too regular for a wood to make: two straight sides, the same height, a level floor between. It is a hollow way, a road worn down into the ground by long use and then roofed by the wood. The drip is water coming through the moss above, as it has every day since the road stopped being a road.",
+  },
+  "the-crows-oak": {
+    "crows|oak|limbs|droppings|birds":
+      "The crows on the dead limbs sit facing out in every direction, so there is no side of the oak they are not watching. The droppings below are years deep. They have used this tree as a watch long enough that the ground under it has gone sour and nothing will grow in it.",
+  },
+  "the-stone-oak": {
+    "oak|stones|stone|heap|trunk|bark":
+      "The stones in the heap are field stones, the size you can carry in two hands. They were cleared from a field and piled here, and the oak came up out of the heap afterward and has grown its whole life through them. The field is under the old growth now. The heap is inside the tree.",
+  },
+  "the-hazel-ride": {
+    "ride|hazel|nuts|husks|passage":
+      "The ride was cut straight, and the hazel along its edges was coppice, cut on the same rota as the rest of the wood until it stopped. Among the squirrel-split husks on the floor there are whole nuts crushed flat under a weight much heavier than a squirrel's.",
+  },
+  "the-yew-shade": {
+    "yews|yew|trunks|needles|floor|shade":
+      "The red trunks are fluted so deep you could lay your arm in the folds. Yew is poisonous to stock and slow to grow and makes the best bows there are. Nobody took a bowstave from these; they have grown past any use and into something else.",
+  },
+  "the-deer-browse": {
+    "browse|leaves|trees|trunks|floor|droppings|line":
+      "The browse line is level to a hand's width, round every trunk, for as far as you can see. It takes a great many deer, every day, for a long time, to hold a line that exact. The holding's park went this far into the old growth. The deer did not stop at the bank.",
+  },
+  "the-rot-wood": {
+    "logs|log|limbs|wood|beetles|grubs|ground":
+      "Everything here fell in the same storm and is rotting at the same pace, which is why it all gives at once. Under the soft places in the ground there are whole trunks gone to a crumbling red powder. You are walking on a fallen forest that has not finished being one.",
+  },
+  "the-ground-ivy": {
+    "ivy|stumps|stones|roots|floor|sheet":
+      "Lift the ivy and there are stumps under it, cut square, a lot of them: the only cut stumps in the old growth. Someone felled a stand here, once, a long time before the holding, and the ivy has covered the evidence so thoroughly that only the shape of the ground still argues about it.",
+  },
+  "the-clean-floor": {
+    "floor|earth|leaves|trees":
+      "The floor is swept clean in a circle, and at the edge of the circle the leaves are banked in a low ridge, as if pushed there. In the middle the earth is pressed flat. Something turns round and round here before it lies down, the way a dog does, every time, for years.",
+  },
+  "the-twisted-yews": {
+    "yews|yew|trunks|crowns|resin":
+      "The trunks wind round each other because they grew from one root and fought each other for the light all their lives. Inside the twist there is a hollow, dry and black and smelling of resin. A yew this old has no heart left; it is all outside, and it will stand like that for centuries more.",
+  },
+  "the-soft-floor": {
+    "floor|moss|leaf|prints|print":
+      "The prints are deep and round-toed and evenly spaced, one set, crossing the floor from one side to the other at a steady walk. They are the only marks here, and the moss is slowly lifting them out, the oldest end first.",
+  },
+  "the-spring-mire": {
+    "spring|mire|water|moss|threads|roots":
+      "The water comes up cold through a ring of pale sand at the centre of the mire, stirring the grains so they boil gently and settle. Pressed into the sand at the edge there is a coin, green and worn smooth, laid flat on purpose. Somebody gave something to this spring once.",
+  },
+  "the-badger-banks": {
+    "banks|setts|sett|holes|spoil|bones|bedding":
+      "The bedding dragged out of the setts is old bracken and grass, aired in the sun and taken back in. Among the bones in the spoil there are some that are not animal: a thread of bronze, a bead of blue glass, brought up from somewhere under the banks by digging that goes deeper than anything else here.",
+  },
+  "the-snapped-limbs": {
+    "limbs|limb|crowns|wood":
+      "The breaks are fresh and the limbs lie where they landed, each one dropped straight down. Look up and the crowns are whole; the breaks are on the trees' own dead wood, letting go of it. A big tree drops its old limbs without warning, and these came down together.",
+  },
+  "the-thin-light": {
+    "light|canopy|trunks|floor":
+      "The light is grey because it comes through a high thin layer of lichen hung in the canopy, beards of it, a whole ceiling of pale grey-green. Nothing has disturbed the air here long enough for lichen to grow that thick. It is the cleanest air you will ever breathe.",
+  },
+  "the-sunk-way": {
+    "way|banks|roots|track":
+      "The sunk way is straight because it was walked straight, from one place to another, by a great many people for a long time, until their feet wore it down below the ground. It stops because the place at this end of it is gone. The roots in its banks have been growing into it ever since.",
+  },
+  "the-wolf-run": {
+    "run|way|trunks|feet|floor":
+      "The run is the width of one animal and it is worn into a groove, and along it there are the scrapes where something marks its way: the earth raked back at a turn, the bark of a trunk scored at the height of a knee. It is walked in single file, by things following one another.",
+  },
+  "the-sapling-crowd": {
+    "saplings|tree|gap|light":
+      "The saplings are all one age, every one of them, the seed of the old tree and its neighbours, waiting in the shade for a hole in the roof. The old tree lies along the ground under them, gone to soft red earth. Only one of the saplings will reach the canopy. The rest are already dying.",
+  },
+  "the-bramble-tunnel": {
+    "bramble|tunnel|way|thorns":
+      "The tunnel is the height of a big animal's back and its floor is worn hard and bare. The thorns overhead are broken off along one line where something taller than the tunnel ducks through it, and some of the broken ends are dark.",
+  },
+  "the-tangle": {
+    "limbs|branches|growth|tangle|mass":
+      "The fallen limbs are of every age, some soft as cake, some still sound, laid down over each other by one storm after another in the same low ground where the wind drops them. The way through goes under, over, under. Something smaller than you uses the unders and never the overs.",
+  },
+  "the-fallen-crowns": {
+    "crowns|limbs|trees|thicket|gap":
+      "The two trees came down together because one fell into the other. Their trunks are some distance off; only their tops landed here. The gap underneath is worn smooth along its bottom by things going through on their bellies, and it has hair caught in the twigs above it.",
+  },
+  "the-buckled-ground": {
+    "ground|floor|roots|waves":
+      "The waves are roots: every rise is a root heaved up by the growth of the trees, and every dip is the ground between them. The roots have been lifting this floor a fraction a year for longer than you can think about, and the floor is still going up.",
+  },
+  "the-holly-wall": {
+    "holly|wall|gap|floor":
+      "The gap is head-high and its edges are broken, not cut: whole branches snapped off and pushed aside. The broken ends are of every age, from grey to green. Something has kept this gap open through the holly for years by walking straight through it.",
+  },
+  "the-ferny-bank": {
+    "bank|fern|ferns|moss|roots|water":
+      "Lie your ear to the bank and the water is inside it: a culvert, or a drain, running through under the bank in stone. Somebody built it to carry a stream under a road or a wall that is no longer here. The stream has gone on using it.",
+  },
+  "the-silent-beeches": {
+    "beeches|beech|floor|leaves|trees":
+      "Beech casts the deepest shade there is and nothing grows under it, so this floor is only leaves, and the leaves make no sound when they are old enough. The trunks carry no marks: no scratches, no scars, no letters cut by anybody who passed. Nothing has ever wanted to leave a sign here.",
+  },
+  "the-dead-air": {
+    "air|wind|leaf|sound":
+      "The air is warm because the trees here trap it, three canopies deep, and it smells of the rot under the leaves because nothing ever blows it away. The silence is the silence of a closed room. Whatever is breathing in here breathes the same air for a very long time.",
+  },
+  "the-oak-aisle": {
+    "oaks|rows|aisle|floor":
+      "The oaks are in rows because they were planted along the two sides of something: a road, or the walk to a door. They are older than the holding. Whatever the aisle led to has gone so entirely that the wood has not even left a mound.",
+  },
+  "the-beech-mast": {
+    "mast|husks|drifts|furrows|beech":
+      "The furrows are rooting: a snout pushed along under the drifts to turn up the nuts, leaving a groove behind it. The furrows run in lines, side by side, the way pigs work a wood when they are turned into it to fatten. Nobody turned these in. They came on their own.",
+  },
+  "the-wych-elms": {
+    "elms|elm|seed|seeds|bark|floor":
+      "Elm grows to the height of a church and lives as long as one, and these are the size of their age. The pale seed on the floor is from this year, and none of it will take; it never does under its own parents. They creak because they are taller than everything around them, and the wind up there is real.",
+  },
+  "the-hornbeam-gloom": {
+    "hornbeam|trunks|light|gloom":
+      "Hornbeam is the hardest wood in the country; it blunts tools and was cut for things that had to last. These were never cut. They have spent centuries growing twisted round their own hardness, and they are cold to the touch because nothing warms them.",
+  },
+  "the-last-of-the-light": {
+    "light|trees|dark":
+      "The crowns here are layered, one beneath another, so every hole in the top layer is shut by the next. Look down and the floor is grey with nothing on it, the colour of an old ceiling. Further in, the layers get thicker. The light is not going; it is being stopped.",
+  },
+  "the-rotten-gate": {
+    "gate|posts|post|hinge":
+      "The hinge on the post is iron, hand-forged, the pin worn bright on one side from a gate swinging on it for years. The posts are set a cart's width apart. There was a field here, or a yard, with a wall on either side, and the wall is gone and the field is gone and the gate's posts have outlasted both.",
+  },
+  "the-moss-steps": {
+    "steps|stair|stone|moss":
+      "Under the moss the steps are cut stone, worn hollow in the middle of each tread by feet going up and down them. They go up to a level place, and the level place is the wood floor. Somebody went up these steps to something every day, for a long time.",
+  },
+  "the-high-crowns": {
+    "trees|crowns|trunks|canopy":
+      "The trunks are bare to a great height because they grew up close together and every lower branch died for want of light. They are the tallest trees in the wood because they were the first, and nobody ever cut a single one of them down for the timber they are.",
+  },
+  "the-ivy-wall": {
+    "ivy|walls|wall|gaps|gap|trees|sheets":
+      "The gaps in the ivy are pushed through, not grown: the sheets hang torn at the height of a shoulder, and the torn edges are of different ages. Something goes through these walls on its own way, and the ivy has been growing back across its doors and being torn open again for years.",
+  },
+  "the-lime-stand": {
+    "limes|lime|trunks|stool|pillars|stand":
+      "Each crowd of trunks comes up from one stool, and the stool is the old part: lime coppiced so long ago that the stool has outlived any cutter. The bark has been stripped from some trunks in long ribbons, low down, and healed. Lime bark makes rope. Somebody made rope here once, and somebody else, since.",
+  },
+  "the-murk": {
+    "trees|canopy|air|murk":
+      "Every direction looks the same because, here, it is: the trees grow at the spacing the shade allows and no closer, so the wood has arranged itself evenly in every direction from every point. Nothing has interfered with that arrangement since it settled.",
+  },
+  "the-holly-dark": {
+    "holly|floor|leaves":
+      "The floor under the holly is black because it is years of dead holly leaves, which do not rot, and the dry is the dry of a roof. The leaves rattle after you touch them because they are stiff and they rest against each other; it is not anything moving. Mostly.",
+  },
+  "the-toadstool-ring": {
+    "toadstools|toadstool|ring|rings":
+      "Each ring is one growth spreading outward through the soil from a single point, and fruiting at its edge. The rings inside rings are the same growth, older and older, spreading for longer than you would believe. The middle of the oldest ring is somewhere off under the trees, a long way away.",
+  },
+  "the-lichen-stones": {
+    "stones|stone|lichen|wall":
+      "The stones lie in a line if you stand at the right end and look along them, and they are all the same size. A wall, then, or the footing of one, laid when there was a reason to wall this ground. The lichen on them is the same age on every stone. Nothing has moved them since it took hold.",
+  },
+  "the-cold-hollow-oaks": {
+    "hollow|dip|air|mist|floor|mould|trees":
+      "Cold air runs downhill like water and pools in the lowest place, and this hollow has no way out for it. The trees on the rim lean away from it because their buds froze on the inner side, spring after spring, and they grew toward the warm. The mould on the floor is the only thing here that likes it.",
+  },
+  "the-dead-stand": {
+    "stand|trees|fungus|brackets":
+      "They all died at once, standing, and none of them fell. Something in the ground took them, or a drought, or a sickness that came through one summer. The fungus is eating them from the bottom up, and the living trees around them have been growing up into their room for longer than the dead ones were alive.",
+  },
+  "the-grass-island": {
+    "grass|lawn|holly|island":
+      "The grass is cropped because something grazes it, and the holly is dense because it was planted and kept dense once, as a hedge round a little lawn. A garden, in the old growth, older than the holding's garden. Whatever grazes it comes and goes through the holly and leaves no gap that you can find.",
+  },
+  "the-fern-floor": {
+    "bracken|fronds|floor":
+      "The bracken stands on ground that was cleared, once: bracken takes open ground and holds it against the trees for centuries. Somebody cleared this space in the old growth, a very long time ago, and the bracken has been holding it for them ever since.",
+  },
+  "the-crooked-oaks": {
+    "oaks|oak|trees|shapes":
+      "Each oak turns where it met something as a young tree: a fallen trunk, a boulder, the shade of another tree that has since gone. They carry the shapes of things that are not there any more. Read together, they are a map of a wood that stood here before this one.",
+  },
+  "the-oak-knees": {
+    "roots|knees|knuckles|oaks|moss|trunks":
+      "The knees are worn on their tops, and between them the ground is trodden into a path that goes knee to knee. Everything that crosses here steps on the same knuckles in the same order. The moss is gone from exactly those.",
+  },
+  "the-green-ridge": {
+    "trunk|ridge|trees|earth":
+      "The young trees grow out of the dead trunk's back in a straight line because the trunk is their nurse: they seeded on the rotting wood, where there was light and nothing else to compete. In a hundred years they will be a row of oaks standing on nothing, in a line, for no reason anybody walking past will understand.",
+  },
+  "the-deep-litter": {
+    "litter|leaves|layer|floor":
+      "Dig down and the leaves go from brown to black to a soft brown earth, and then to more leaves, darker, and then a layer of grey ash, a long way down. Once, before all these leaves, this ground burned. The fire is still down there, a hand thick, under everything that grew after it.",
+  },
+  "the-grey-trunks": {
+    "beech|beeches|trunks|rows|litter":
+      "The rows are real, but nobody planted them: beech seeds fall in lines along the drip of their parents' crowns, and these grew where the old ones dropped them, a long time ago. The parents are gone. The rows they made are still standing in their places.",
+  },
+  "the-split-ash": {
+    "ash|trees|root|halves|split":
+      "The split runs down into the root, and the two halves are joined underground. Water stands in the crotch where they divide, black and full of leaves, and never dries out. Both halves are alive, and both are slowly leaning further apart.",
+  },
+  "the-root-hollow": {
+    "hollow|roots|soil|trees|legs":
+      "Under the roots it is dry and the floor is dust, fine and pale, printed with the small hands of things that live in here and the drag of a tail. The trees above are standing on their roots like on stilts, because the water took the soil out from under them and never came back.",
+  },
+  "the-dark-pool": {
+    "pool|water|mud|hooves|pads|prints|leaves":
+      "The prints at the edge are pressed one into the next, cloven and padded together, all at the same place on the bank. Things that would kill each other anywhere else drink here side by side. The mud keeps a record of every one of them, and the record is very long.",
+  },
+  "the-standing-oaks": {
+    "oaks|ring|ground|ceiling|crowns|floor":
+      "The floor inside the ring is swept by nothing you can see, and in the middle of it the earth is a slightly different colour, in a square, as if something stood on that spot for a very long time. The oaks were planted round the square. Whatever was in it, it is the oldest thing in the wood, and it is not here.",
+  },
 };
 
 // Everything below is prose keyed off the same tables and read by lookFeature.

@@ -2779,6 +2779,17 @@ try {
     assert.doesNotMatch(feats, /Not laid out in rows/, 'the room says the graves are in rows, so the close look does too');
   });
 
+  check('every room of the wood answers a close look (2026-11-02)', () => {
+    const detail = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    const feats = detail.slice(detail.indexOf('export const ROOM_FEATURES'), detail.indexOf('export const SIGNPOSTS'));
+    const files = ['the-wood-1', 'the-wood-2', 'the-wood-3', 'the-wood-4', 'the-old-growth', 'the-gate-rings', 'the-bear-caves', 'the-old-greys-ground'];
+    const ids = files.flatMap((f) => readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8')
+      .split('\n').filter((l) => /^## [a-z0-9-]+ \| /.test(l) && !/\| attachment/.test(l)).map((l) => l.slice(3).split(' | ')[0]));
+    assert.equal(ids.length, 329, 'the wood\'s rooms in its region files');
+    const missing = ids.filter((id) => !feats.includes(`  "${id}": {`));
+    assert.deepEqual(missing, [], 'each one answers a close look');
+  });
+
   check('the pack is retired from the roll, and the fever stays (2026-11-01)', () => {
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     const pool = ev.match(/const POOL: \[string, number, string\]\[\] = \[[\s\S]*?\n\];/)[0];
