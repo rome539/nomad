@@ -1976,15 +1976,50 @@ export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
 // world's narration. It has to be SEEN, as a look has to: in the dark or the
 // fog nobody can make it out. The room only, like `say`; nothing to a relay.
 export const EMOTE_MAX = 240;
-export function emoteLine(name: string, words: string): string {
+// IT READS AS A SENTENCE (rome, 2026-11-03: "emote hug iron" came out as
+// "Gloambrook hug iron"). People type an emote the way they type a command, so
+// the line is put right the way a reader would: the verb takes its -s ("hug"
+// -> "hugs", "kiss" -> "kisses", "cry" -> "cries"; one already ending in s is
+// left alone, so "looks" never becomes "lookss"), a short name for someone in
+// the room becomes their whole name ("iron" -> "Irongate"), and the line ends
+// on a full stop. A leading "'s" or "," joins the name ("Luna's eyes narrow").
+const EMOTE_IRREGULAR: Record<string, string> = { be: "is", am: "is", are: "is", have: "has", do: "does", go: "goes" };
+function thirdPerson(verb: string): string {
+  const lower = verb.toLowerCase();
+  if (EMOTE_IRREGULAR[lower]) return EMOTE_IRREGULAR[lower];
+  if (!/^[a-z]+$/.test(lower)) return verb;               // not a plain word: leave it as typed
+  if (/(ss|sh|ch|x|z|o)$/.test(lower)) return verb + "es";
+  if (/s$/.test(lower)) return verb;                       // already "hugs", "looks", "nods"
+  if (/[^aeiou]y$/.test(lower)) return verb.slice(0, -1) + "ies";
+  return verb + "s";
+}
+export function emoteLine(name: string, words: string, folk: string[] = []): string {
   const w = words.trim().replace(/\s+/g, " ").slice(0, EMOTE_MAX);
-  return /^('|,)/.test(w) ? `${name}${w}` : `${name} ${w}`; // "'s eyes narrow" -> "Luna's eyes narrow"
+  if (!w) return name;
+  if (/^('|,)/.test(w)) return end(`${name}${w}`);
+  const parts = w.split(" ");
+  // An adverb first ("slowly nods") hands the -s on to the word after it.
+  const v = /ly$/i.test(parts[0]) && parts.length > 1 ? 1 : 0;
+  parts[v] = thirdPerson(parts[v]);
+  // A name for someone here, short or whole, becomes theirs in full.
+  for (let i = v + 1; i < parts.length; i++) {
+    const m = /^([A-Za-z]+)([^A-Za-z]*)$/.exec(parts[i]);
+    if (!m || m[1].length < 3) continue;
+    if (/^(the|a|an|my|his|her|their|your|its|our)$/i.test(parts[i - 1])) continue; // "the iron" is a thing, not Irongate
+    const who = folk.find((n) => n.toLowerCase().startsWith(m[1].toLowerCase()));
+    if (who) parts[i] = who + m[2];
+  }
+  return end(`${name} ${parts.join(" ")}`);
+}
+function end(line: string): string {
+  return /[.!?…"')]$/.test(line) ? line : line + ".";
 }
 export function cmdEmote(z: ZoneDO, session: Session, words: string): void {
   if (!words.trim()) return z.send(session, "emote <what you do>: the room sees your name, then your words.");
   if (!z.litFor(session)) return z.send(session, "It is too dark here for anyone to see it.");
   if (events.foggy(z, session.roomId)) return z.send(session, "The fog is too thick here for anyone to see it.");
-  const line = emoteLine(session.name, words);
+  const folk = [...z.sessions.values()].filter((s) => s.roomId === session.roomId && s.pubkey !== session.pubkey && z.reachable(s)).map((s) => s.name);
+  const line = emoteLine(session.name, words, folk);
   const speaker = { name: session.name, pk: session.pubkey };
   z.send(session, line, "say", speaker);
   z.roomFeed(session.roomId, line, session.pubkey, false, "say", speaker);

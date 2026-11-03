@@ -3065,7 +3065,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // An emote by the fire is seen by the fire (the gatehouse is always lit).
   if (v === "emote") {
     if (!cmd.arg.trim()) return z.send(session, "emote <what you do>: the room sees your name, then your words.");
-    const line = emoteLine(session.name, cmd.arg);
+    const line = emoteLine(session.name, cmd.arg, gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey).map((s) => s.name));
     z.send(session, line, "say", { name: session.name, pk: session.pubkey });
     return gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
   }

@@ -3430,17 +3430,30 @@ try {
   });
 
   check('emotes open with the wanderer\'s name, go out as speech, and must be seen (2026-11-03)', () => {
-    assert.equal(emoteLine('Rome', 'crouches   by the fire'), 'Rome crouches by the fire');
-    assert.equal(emoteLine('Rome', "'s eyes narrow"), "Rome's eyes narrow", 'a possessive joins the name');
-    assert.equal(emoteLine('Rome', 'x'.repeat(400)).length, 'Rome '.length + 240, 'as long as a said line');
+    assert.equal(emoteLine('Rome', 'crouches   by the fire'), 'Rome crouches by the fire.');
+    assert.equal(emoteLine('Rome', "'s eyes narrow"), "Rome's eyes narrow.", 'a possessive joins the name');
+    assert.ok(emoteLine('Rome', 'waits ' + 'a'.repeat(400)).length <= 'Rome '.length + 240 + 1, 'as long as a said line');
+    // IT READS AS A SENTENCE (rome, 2026-11-03): typed like a command, read like prose.
+    assert.equal(emoteLine('Gloambrook', 'hug iron', ['Irongate', 'Lunapilot']), 'Gloambrook hugs Irongate.', 'the verb takes its s, a short name becomes the whole one');
+    assert.equal(emoteLine('Irongate', 'jump'), 'Irongate jumps.');
+    assert.equal(emoteLine('Irongate', 'look up'), 'Irongate looks up.');
+    assert.equal(emoteLine('Irongate', 'looks up'), 'Irongate looks up.', 'already right is left alone');
+    assert.equal(emoteLine('Irongate', 'kiss luna', ['Lunapilot']), 'Irongate kisses Lunapilot.');
+    assert.equal(emoteLine('Irongate', 'cry'), 'Irongate cries.');
+    assert.equal(emoteLine('Irongate', 'play'), 'Irongate plays.');
+    assert.equal(emoteLine('Irongate', 'slowly nod'), 'Irongate slowly nods.', 'an adverb hands the s on');
+    assert.equal(emoteLine('Irongate', 'have a drink'), 'Irongate has a drink.');
+    assert.equal(emoteLine('Irongate', 'hug luna!', ['Lunapilot']), 'Irongate hugs Lunapilot!', 'its own ending is kept');
+    assert.equal(emoteLine('Lunapilot', 'polish the iron', ['Irongate']), 'Lunapilot polishes the iron.', 'after the, a, my: a thing, not a name');
+    assert.equal(emoteLine('Lunapilot', 'wave at iron', ['Irongate']), 'Lunapilot waves at Irongate.');
     assert.deepEqual(parse('emote Wipes THE blade'), { verb: 'emote', arg: 'Wipes THE blade' }, 'the words as typed');
     const said = [], fed = [];
     let lit = true, fog = false;
     const me = { pubkey: 'me', name: 'Rome', roomId: 'moor' };
     const z = { send: (s, t, c, sp) => said.push([t, c, sp]), roomFeed: (...a) => fed.push(a), litFor: () => lit, events: new Map(), world: { rooms: new Map() }, sessions: new Map() };
     cmdEmote(z, me, 'wipes the blade');
-    assert.deepEqual(said.at(-1), ['Rome wipes the blade', 'say', { name: 'Rome', pk: 'me' }], 'the speaker sees it as speech');
-    assert.deepEqual(fed.at(-1), ['moor', 'Rome wipes the blade', 'me', false, 'say', { name: 'Rome', pk: 'me' }], 'the room too, never to a relay');
+    assert.deepEqual(said.at(-1), ['Rome wipes the blade.', 'say', { name: 'Rome', pk: 'me' }], 'the speaker sees it as speech');
+    assert.deepEqual(fed.at(-1), ['moor', 'Rome wipes the blade.', 'me', false, 'say', { name: 'Rome', pk: 'me' }], 'the room too, never to a relay');
     lit = false; fed.length = 0;
     cmdEmote(z, me, 'wipes the blade');
     assert.equal(fed.length, 0, 'in the dark nobody sees it');
@@ -3448,7 +3461,7 @@ try {
     const vsrc = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.match(vsrc, /if \(events\.foggy\(z, session\.roomId\)\) return z\.send\(session, "The fog is too thick here for anyone to see it\."\);/, 'nor in the fog');
     const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
-    assert.match(gsrc, /const line = emoteLine\(session\.name, cmd\.arg\);\n    z\.send\(session, line, "say", \{ name: session\.name, pk: session\.pubkey \}\);\n    return gatehouseFeed\(z, line, session\.pubkey, "say"/, 'by the fire too');
+    assert.match(gsrc, /const line = emoteLine\(session\.name, cmd\.arg, gatehouseFolk\(z\)[^\n]*\n    z\.send\(session, line, "say", \{ name: session\.name, pk: session\.pubkey \}\);\n    return gatehouseFeed\(z, line, session\.pubkey, "say"/, 'by the fire too');
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub.match(/var SPEECH_VERBS = [^\n]*/)[0], /emote: 1/, 'the page does not echo it twice');
     assert.match(pub, /  alias: 1, unalias: 1,\n\};/, 'alias echoes as a command by the fire');
