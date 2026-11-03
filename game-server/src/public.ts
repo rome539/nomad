@@ -5963,7 +5963,7 @@ var histAt = -1;
 // the speech verbs anywhere, and \\u2014 in the gatehouse \\u2014 any line that isn't one of
 // the room's few commands, because in there the input box is a mouth. Getting it
 // wrong costs one duplicated line or one missing echo; nothing breaks.
-var SPEECH_VERBS = { say: 1, talk: 1, speak: 1, shout: 1, yell: 1, holler: 1, bellow: 1, scream: 1, tell: 1, whisper: 1, quietly: 1 };
+var SPEECH_VERBS = { say: 1, talk: 1, speak: 1, shout: 1, yell: 1, holler: 1, bellow: 1, scream: 1, tell: 1, whisper: 1, quietly: 1, emote: 1 };
 var GATEHOUSE_CMDS = {
   out: 1, exit: 1, outside: 1, in: 1, enter: 1, inside: 1, gatehouse: 1,
   look: 1, l: 1, who: 1, players: 1, help: 1, "?": 1, commands: 1, h: 1,
@@ -6002,6 +6002,8 @@ var GATEHOUSE_CMDS = {
   fill: 1, refill: 1, refuel: 1,
   // choosing to fight other wanderers is done at a gate, so by the fire too
   pvp: 1,
+  // your own short words are made and dropped anywhere (aliases.ts)
+  alias: 1, unalias: 1,
 };
 // No-argument commands (aliases). Mirrors the server's GATEHOUSE_NOARG: bare
 // they command, but with words after them they were a sentence. Kept in sync so

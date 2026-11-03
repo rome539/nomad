@@ -335,11 +335,18 @@ export interface PlayerRow {
   exhaustion?: string;
   keeper_told: string; // how far through each keeper's telling you are: "muster-clerk:4,the-roadwarden:9"
   pvp_at?: number; // ms the wanderer chose to fight other wanderers; 0 = out of it (mig 359)
+  aliases?: string; // the wanderer's own short words, JSON {word: command} (mig 364, aliases.ts)
 }
 
 // The choice to fight other wanderers, made at a gate (pvp.cmdPvp).
 export async function setPvpAt(db: D1Database, pubkey: string, at: number): Promise<void> {
   await db.prepare("UPDATE players SET pvp_at = ? WHERE pubkey = ?").bind(at, pubkey).run();
+}
+
+// A wanderer's own aliases (aliases.ts), packed. Written only when one is made
+// or dropped.
+export async function setAliases(db: D1Database, pubkey: string, packed: string): Promise<void> {
+  await db.prepare("UPDATE players SET aliases = ? WHERE pubkey = ?").bind(packed, pubkey).run();
 }
 
 // How far you have got through each region keeper's story (zone-data.KEEPERS).

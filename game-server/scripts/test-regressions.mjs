@@ -43,6 +43,9 @@ try {
         "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine} from './ai';",
         "export {ratHoards, godMet, godRemembers} from './ai';",
         "export * as chronicle from './chronicle';",
+        "export * as aliases from './aliases';",
+        "export * as follow from './follow';",
+        "export { cmdEmote, emoteLine } from './verbs';",
         "export {nextBellAt} from './events';",
         "export {milestoneRead} from './lore';",
         "export {ROOM_FEATURES} from './detail';",
@@ -79,7 +82,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -3342,6 +3345,112 @@ try {
     assert.equal(z.cacheRoomId({ id: 'box-glade', roomId: 'the-moon-glade' }), 'the-moon-glade', 'the casket is in the glade');
     z.cacheRoom.set('box-roams', 'somewhere');
     assert.equal(z.cacheRoomId({ id: 'box-roams', roomId: 'home' }), 'somewhere', 'a roaming chest keeps its saved spot');
+  });
+
+  await checkAsync('a wanderer\'s aliases stand for one command, never hide a real one, and follow the key (2026-11-03)', async () => {
+    const said = [], saved = [];
+    const db = { prepare: (sql) => ({ bind: (...a) => ({ run: async () => { saved.push([sql, ...a]); } }) }) };
+    const z = { env: { DB: db }, send: (_s, t) => said.push(t) };
+    const me = { pubkey: 'me' };
+    const run = async (t) => { said.length = 0; const took = await aliases.handle(z, me, t); return took ? said.join('\n') : null; };
+    assert.equal(await run('attack rat'), null, 'an ordinary line is not the alias verb');
+    assert.match(await run('alias'), /no aliases/, 'none to begin with');
+    assert.equal(await run('alias kr = attack rat'), 'kr = attack rat');
+    assert.deepEqual(saved.at(-1), ['UPDATE players SET aliases = ? WHERE pubkey = ?', '{"kr":"attack rat"}', 'me'], 'kept on the player row');
+    assert.equal(aliases.expand(me, 'kr'), 'attack rat', 'the word becomes the command');
+    assert.equal(aliases.expand(me, 'KR  now'), 'attack rat now', 'words after it carry on');
+    assert.equal(aliases.expand(me, "'kr"), "'kr", 'speech is left alone');
+    assert.equal(aliases.expand(me, 'say kr'), 'say kr', 'only the first word');
+    await run('alias bb = kr');
+    assert.equal(aliases.expand(me, 'bb'), 'kr', 'expanded once: an alias naming an alias is not followed');
+    for (const w of ['n', 'look', 'k', 'i', 'attack', 'quit', 'keys', 'fullscreen', 'alias']) {
+      assert.match(await run(`alias ${w} = wave`), /already a command/, `${w} stays the game's`);
+    }
+    assert.match(await run('alias fs = fullscreen'), /answered by your page/, 'a page word cannot be stood for');
+    assert.match(await run('alias xx = alias kr'), /can't make or drop/);
+    assert.match(await run('alias two words = wave'), /one word/);
+    assert.match(await run('alias kr'), /^kr = attack rat$/, 'one alias read back');
+    assert.match(await run('alias'), /bb = kr\n  kr = attack rat/, 'the list, sorted');
+    assert.equal(await run('unalias kr'), "'kr' is gone.");
+    assert.equal(aliases.expand(me, 'kr'), 'kr', 'a dropped alias is just a word again');
+    assert.deepEqual([...aliases.unpack(aliases.pack(me.aliases))], [['bb', 'kr']], 'it packs and unpacks');
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const at = zsrc.indexOf('frame.text = aliases.expand(session, frame.text);');
+    assert.ok(at > 0 && at < zsrc.indexOf('if (this.outOfWorld(session)) {'), 'expanded before the gatehouse reads the line');
+    assert.match(zsrc, /aliases: aliases\.unpack\(row\.aliases\),/, 'loaded with the wanderer');
+  });
+
+  await checkAsync('follow: fall in behind anyone, step after them, and stop only by choice or by walking off alone (2026-11-03)', async () => {
+    const said = [];
+    const luna = { pubkey: 'luna', name: 'Lunapilot', roomId: 'moor', hp: 100 };
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'moor', hp: 100 };
+    const z = {
+      sessions: new Map([['luna', luna], ['me', me]]),
+      send: (s, t) => said.push([s.pubkey, t]), sendStatus() {},
+      reachable: () => true, outOfWorld: () => false, inCombat: (s) => !!s.fighting,
+      world: { exits: new Map(), rooms: new Map() },
+      knownPaths: new Map(),
+    };
+    follow.cmdFollow(z, me, 'luna');
+    assert.equal(me.following, 'luna', 'no leave asked');
+    assert.deepEqual(said.slice(-2), [['me', 'You fall in behind Lunapilot.'], ['luna', 'Rome falls in behind you.']], 'and the leader is told once');
+    luna.roomId = 'north-moor';
+    assert.equal(follow.followRead(z, me), '', 'a look shows it only while they stand together');
+    luna.roomId = 'moor';
+    assert.equal(follow.followRead(z, me), 'They keep close behind Lunapilot.');
+    for (const [why, set, unset] of [['fighting', () => { me.fighting = true; }, () => { me.fighting = false; }], ['resting', () => { me.resting = true; }, () => { me.resting = false; }], ['at the counter', () => { me.away = true; }, () => { me.away = false; }]]) {
+      set(); said.length = 0;
+      await follow.after(z, luna, 'moor', 'north');
+      assert.equal(said.length, 0, `${why}: no step`);
+      assert.equal(me.following, 'luna', `${why}: still following`);
+      unset();
+    }
+    me.pose = 'crouch';
+    said.length = 0;
+    await follow.after(z, luna, 'moor', 'north');
+    assert.equal(said[0][1], 'You follow Lunapilot north.', 'the step is taken behind them');
+    assert.match(said[1][1], /There is no way north/, 'through cmdGo, meeting the same refusals as a typed step');
+    assert.equal(me.pose, undefined, 'a posture does not survive the step');
+    assert.equal(me.following, 'luna', 'a step you could not take leaves you following');
+    follow.walkedAlone(z, me);
+    assert.equal(me.following, undefined, 'a room entered alone ends it');
+    follow.cmdFollow(z, me, 'luna');
+    said.length = 0;
+    follow.cmdFollow(z, me, '');
+    assert.equal(me.following, undefined, "'follow' alone ends it");
+    assert.deepEqual(said, [['me', 'You stop following Lunapilot.']]);
+    const vsrc = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(vsrc, /session\.roomId = exit\.to_room;\n  if \(!led\) follow\.walkedAlone\(z, session\);/, 'cmdGo ends a follow on a step of your own, as it lands');
+    assert.match(vsrc, /z\.markSimDirty\(\);\n  await follow\.after\(z, session, from, dir\);[^\n]*\n\}/, 'and brings followers after a completed step');
+    assert.match(readFileSync(new URL('../src/follow.ts', import.meta.url), 'utf8'), /await cmdGo\(z, s, dir, true\);/, 'a step behind someone is led');
+    assert.deepEqual(parse('follow the luna'), { verb: 'follow', arg: 'luna' });
+    const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(gsrc, /if \(v === "follow"\) return gatehouseSay\(z, session, text\);/, "by the fire 'follow me' is said");
+  });
+
+  check('emotes open with the wanderer\'s name, go out as speech, and must be seen (2026-11-03)', () => {
+    assert.equal(emoteLine('Rome', 'crouches   by the fire'), 'Rome crouches by the fire');
+    assert.equal(emoteLine('Rome', "'s eyes narrow"), "Rome's eyes narrow", 'a possessive joins the name');
+    assert.equal(emoteLine('Rome', 'x'.repeat(400)).length, 'Rome '.length + 240, 'as long as a said line');
+    assert.deepEqual(parse('emote Wipes THE blade'), { verb: 'emote', arg: 'Wipes THE blade' }, 'the words as typed');
+    const said = [], fed = [];
+    let lit = true, fog = false;
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'moor' };
+    const z = { send: (s, t, c, sp) => said.push([t, c, sp]), roomFeed: (...a) => fed.push(a), litFor: () => lit, events: new Map(), world: { rooms: new Map() }, sessions: new Map() };
+    cmdEmote(z, me, 'wipes the blade');
+    assert.deepEqual(said.at(-1), ['Rome wipes the blade', 'say', { name: 'Rome', pk: 'me' }], 'the speaker sees it as speech');
+    assert.deepEqual(fed.at(-1), ['moor', 'Rome wipes the blade', 'me', false, 'say', { name: 'Rome', pk: 'me' }], 'the room too, never to a relay');
+    lit = false; fed.length = 0;
+    cmdEmote(z, me, 'wipes the blade');
+    assert.equal(fed.length, 0, 'in the dark nobody sees it');
+    assert.match(said.at(-1)[0], /too dark/);
+    const vsrc = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(vsrc, /if \(events\.foggy\(z, session\.roomId\)\) return z\.send\(session, "The fog is too thick here for anyone to see it\."\);/, 'nor in the fog');
+    const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(gsrc, /const line = emoteLine\(session\.name, cmd\.arg\);\n    z\.send\(session, line, "say", \{ name: session\.name, pk: session\.pubkey \}\);\n    return gatehouseFeed\(z, line, session\.pubkey, "say"/, 'by the fire too');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub.match(/var SPEECH_VERBS = [^\n]*/)[0], /emote: 1/, 'the page does not echo it twice');
+    assert.match(pub, /  alias: 1, unalias: 1,\n\};/, 'alias echoes as a command by the fire');
   });
 
   console.log(`\n${passed} regression checks pass`);

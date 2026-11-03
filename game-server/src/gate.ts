@@ -36,7 +36,7 @@ import * as light from "./light";
 import { parse } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
 import { MAP_QUARTERS } from "./detail";
-import { dropCarried, describePlayer, lookOnPlayer, lookKeepingItem, selfExamine, cmdCensus, cmdSkies } from "./verbs";
+import { dropCarried, describePlayer, lookOnPlayer, lookKeepingItem, selfExamine, cmdCensus, cmdSkies, emoteLine } from "./verbs";
 
 export async function cmdForge(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const world = z.world!;
@@ -3031,6 +3031,16 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   if (v === "invite") return invites.command(z, session, cmd.arg);
   if (v === "look" && await invites.read(z, session, cmd.arg)) return;
   if (v === "say") return gatehouseSay(z, session, cmd.arg);
+  // An emote by the fire is seen by the fire (the gatehouse is always lit).
+  if (v === "emote") {
+    if (!cmd.arg.trim()) return z.send(session, "emote <what you do>: the room sees your name, then your words.");
+    const line = emoteLine(session.name, cmd.arg);
+    z.send(session, line, "say", { name: session.name, pk: session.pubkey });
+    return gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
+  }
+  // There is nobody to follow out of a room with no ways out, so in here
+  // "follow me" is a thing a person says.
+  if (v === "follow") return gatehouseSay(z, session, text);
   // A no-argument command carrying trailing words was a SENTENCE, not a command:
   // "i am trying to quit" is speech, not inventory; "who knows" is speech, not
   // the roster. Bare, they still command. This is the whole fix for a chat line's

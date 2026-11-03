@@ -461,6 +461,15 @@ export const GUIDE_PAGE = `<!doctype html>
     goods down, and changing the table unshakes both hands. Anything off your body can
     cross, sealed things and journals included; what you are wearing cannot. Steel
     drawn on either side calls it off.</dd>
+    <dt><code>emote &lt;words&gt;</code></dt>
+    <dd>Show the room what you do: <code>emote crouches by the fire</code> is seen as
+    your name and then your words. It has to be seen, so in the dark or thick fog
+    nobody makes it out.</dd>
+    <dt><code>follow &lt;name&gt;</code></dt>
+    <dd>Fall in behind someone in the room: when they take a way out, you take it
+    after them, a step like any other. It holds until you say <code>follow</code> on
+    its own or go somewhere yourself. If you can't take a step (in a fight, at rest,
+    or where they went is shut to you) you stay, still following.</dd>
     <dt><code>wash</code> (scrub)</dt>
     <dd>At water, or in the rain, scrub a killing off your hands. It fades on its own;
     water takes it now. Anyone watching sees you do it.</dd>
@@ -527,6 +536,12 @@ export const GUIDE_PAGE = `<!doctype html>
     <dd>Everyone awake in the world.</dd>
     <dt><code>name &lt;new name&gt;</code></dt>
     <dd>Choose what the world calls you.</dd>
+    <dt><code>alias &lt;word&gt; = &lt;command&gt;</code> / <code>unalias &lt;word&gt;</code></dt>
+    <dd>Your own short word for something you type often: after <code>alias kr = attack rat</code>,
+    <code>kr</code> is <code>attack rat</code>. Words after it carry on, so with
+    <code>alias bb = bandage</code>, <code>bb arm</code> is <code>bandage arm</code>. One word stands
+    for one command, and a command the game already knows can't be taken.
+    <code>alias</code> on its own lists yours. They follow your key.</dd>
     <dt><code>quit</code> (leave)</dt>
     <dd>Step out. Your wanderer and everything you carry wait where you are. If
     something is fighting you when you go, your body stands and swings for 45 seconds

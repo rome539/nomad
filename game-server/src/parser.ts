@@ -96,6 +96,8 @@ export type Verb =
   | "crouch"
   | "point"
   | "beckon"
+  | "emote"
+  | "follow"
   | "whistle"
   | "wave"
   | "nod"
@@ -194,6 +196,9 @@ const VERB_ALIASES: Record<string, Verb> = {
   // `wave` is the GREETING, not the summons — a raised hand means hello before
   // it means come here, and it is the word a player reaches for first.
   beckon: "beckon",
+  // One word each, like the gestures, and for the same gatehouse reason.
+  emote: "emote",
+  follow: "follow",
   wave: "wave",
   nod: "nod",
   brow: "brow",
@@ -377,6 +382,7 @@ export function parse(input: string): ParseResult | null {
   // exactly as you capitalize it; the wall gets your words verbatim.
   if (verb === "invite") return { verb, arg: input.trim().slice(head.length).trim() };
   if (verb === "say") return { verb, arg: rest };
+  if (verb === "emote") return { verb, arg: rest }; // your words as you typed them
   if (verb === "shout") return { verb, arg: rest };
   if (verb === "tell") return { verb, arg: rest }; // "<name> <words>" — the words are theirs, verbatim
   if (verb === "name") return { verb, arg: rest };
@@ -493,6 +499,8 @@ export const HELP_TEXT = [
   "  say <words>        (') to the room",
   "  shout <words>      to the rooms around, and everything with ears",
   "  deal <name>        trade item for item",
+  "  emote <words>      the room sees your name, then your words",
+  "  follow <name>      go where they go. 'follow' alone stops",
   "  wash               scrub blood off your hands",
   "  guard, lean, crouch, point, beckon, wave, nod, brow",
   "  dance, keen, sing, whistle, ring",
@@ -509,6 +517,8 @@ export const HELP_TEXT = [
   "  invite [message]   a letter and a link for someone new",
   "  who                who is awake",
   "  name <new name>    what the world calls you",
+  "  alias <word> = <command>  your own short word for it. 'alias' lists them,",
+  "                     'unalias <word>' drops one",
   "  quit               step out (everything waits for you)",
   "  fullscreen         fill the screen",
   "",

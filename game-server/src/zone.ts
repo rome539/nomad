@@ -82,6 +82,8 @@ import * as trade from "./trade";
 import * as den from "./den";
 import * as carving from "./carving";
 import * as chronicle from "./chronicle";
+import * as aliases from "./aliases";
+import * as follow from "./follow";
 import * as campfire from "./campfire";
 import * as body from "./body";
 import * as ratking from "./ratking";
@@ -1969,6 +1971,7 @@ export class ZoneDO implements DurableObject {
       nextThrowAt: 0,
       visited: new Set<string>(),
       keeperTold: lore.keeperTold(row.keeper_told),
+      aliases: aliases.unpack(row.aliases),
       lastAmbientAt: Date.now(),
       habitAt: Date.now(), // the body does not perform the moment you arrive — the cooldown starts with you
       quirkAt: Date.now(),
@@ -2249,6 +2252,12 @@ export class ZoneDO implements DurableObject {
     // the log. Reading works anywhere, the gatehouse included.
     if (isJournal) return lore.cmdJournal(this, session, "", true);
 
+    // A wanderer's own short words (aliases.ts): made, listed and dropped here,
+    // and expanded before anything reads the line, so an alias works the same
+    // in the gatehouse, at the counter and out on the ground.
+    if (await aliases.handle(this, session, frame.text)) return;
+    frame.text = aliases.expand(session, frame.text);
+
     // IN THE GATEHOUSE (away, at a gate): the sanctuary is a ROOM now, not a
     // switch. The dungeon can't reach you and you can still be heard — known
     // verbs command, the dungeon-facing ones are refused, and anything else you
@@ -2395,6 +2404,8 @@ export class ZoneDO implements DurableObject {
       case "guard": case "lean": case "crouch": return verbs.cmdPose(this, session, cmd.verb);
       case "point": return verbs.cmdPoint(this, session, cmd.arg);
       case "beckon": return verbs.cmdBeckon(this, session, cmd.arg);
+      case "emote": return verbs.cmdEmote(this, session, cmd.arg);
+      case "follow": return follow.cmdFollow(this, session, cmd.arg);
       case "whistle": return verbs.cmdWhistle(this, session);
       case "wave": case "nod": case "brow": return verbs.cmdCourtesy(this, session, cmd.verb, cmd.arg);
       case "dance": return verbs.cmdDance(this, session, cmd.arg);

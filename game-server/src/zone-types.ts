@@ -107,6 +107,8 @@ export interface Session {
   lastAmbientAt: number; // ms of the last atmosphere line (rate-limits the dungeon's breathing)
   lastAmbientLine?: string; // the last one said — never said twice running, however small the pool
   pvpAt?: number; // ms this wanderer chose to fight other wanderers; 0/unset = out of it (players.pvp_at, mig 359)
+  following?: string; // pubkey of the wanderer this one follows (follow.ts); ends on 'follow' alone or a step of your own
+  aliases?: Map<string, string>; // the wanderer's own short words -> the command each stands for (players.aliases, aliases.ts)
   keeperTold: Map<string, number>; // template id -> how many lines of that keeper's story you have heard (persisted, players.keeper_told)
   keeperDueAt?: number; // ms the keeper gets round to saying his one line this visit; 0/unset = already said it, or you aren't behind a door
   lastFishAt?: number; // ms of the last fishing cast (a short patience between casts)

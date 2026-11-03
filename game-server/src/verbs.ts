@@ -25,6 +25,7 @@ import { DIRECTIONS } from "./parser";
 import * as ai from "./ai";
 import * as light from "./light";
 import * as events from "./events";
+import * as follow from "./follow";
 import * as pvp from "./pvp";
 import * as lore from "./lore";
 import * as conditions from "./conditions";
@@ -536,6 +537,8 @@ export function describePlayer(z: ZoneDO, session: Session, other: Session): str
   const pose = other.pose ? POSES[other.pose] : undefined;
   if (pose) out.push(`${cap(pose.read.replace("{what}", other.poseAt ?? "something"))}.`);
   else if (other.resting) out.push("They are sat down, resting.");
+  const behind = follow.followRead(z, other);
+  if (behind) out.push(behind);
   const wind = windTell(other, false);
   if (wind) out.push(wind);
 
@@ -1046,6 +1049,8 @@ export function selfExamine(z: ZoneDO, session: Session): string {
     const read = pose.read.replace("{what}", session.poseAt ?? "something").replace(/\btheir\b/g, "your");
     parts.push(`${read.startsWith("with ") ? "You stand" : "You are"} ${read}.`);
   } else if (session.resting) parts.push("You're at rest, catching your breath.");
+  const leader = session.following ? z.sessions.get(session.following) : undefined;
+  if (leader) parts.push(`You are following ${leader.name}.`);
   const wind = windTell(session, true);
   if (wind) parts.push(wind);
   if (pvp.isPvp(session)) parts.push("You carry yourself like someone ready to fight another wanderer.");
@@ -1070,7 +1075,7 @@ export function selfExamine(z: ZoneDO, session: Session): string {
   return parts.join(" ") + pvp.bloodClause(z, session.pubkey, true);
 }
 
-export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<void> {
+export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = false): Promise<void> {
   if (!dir) return z.send(session, "Go where? (north, south, east, west, up, down)");
   const world = z.world!;
   // An animal path is a way only to someone who has watched it used (paths.ts).
@@ -1463,6 +1468,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
 
   const from = session.roomId;
   session.roomId = exit.to_room;
+  if (!led) follow.walkedAlone(z, session); // a room entered on your own ends a follow (follow.ts)
   den.rattle(z, session.roomId, session.pubkey); // a bone rattle on a door here hears you come
   // ...and stakes in the ground here find you first, once a night (mig 327).
   const staked = den.stakesBite(z, session.roomId, { pubkey: session.pubkey, name: session.name, hp: session.hp, maxHp: session.maxHp });
@@ -1571,6 +1577,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string): Promise<v
   await ai.wakeListeners(z, session, session.roomId, WAKE_ENTER * stealthMult, "twists toward the sound of you and lunges!");
   await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
   z.markSimDirty();
+  await follow.after(z, session, from, dir); // whoever is following you comes after
 }
 
 // A wanderer's own words, in the world. The room hears them over the sockets —
@@ -1958,6 +1965,29 @@ export function cmdSay(z: ZoneDO, session: Session, msg: string): void {
   const wrongs = (z.riddleWrong.get(patience) ?? 0) + 1;
   z.riddleWrong.set(patience, wrongs);
   z.send(session, wrongs >= RIDDLE_MOCK_AFTER ? pick(RIDDLE_MOCK) : pick(RIDDLE_WRONG), "study");
+}
+
+// FREE-FORM EMOTES (rome, 2026-11-03; reopening the 2026-08-30 ruling that
+// there would be none). `emote crouches by the fire` and the room sees
+// "Luna crouches by the fire". The worry then was a counterfeit telling: prose
+// in the keeper's voice, worn by a player. So the line ALWAYS opens with the
+// wanderer's own name, which cannot be left off, and it goes out as speech
+// does (the "say" colour, the name in the speaker's key colour), never in the
+// world's narration. It has to be SEEN, as a look has to: in the dark or the
+// fog nobody can make it out. The room only, like `say`; nothing to a relay.
+export const EMOTE_MAX = 240;
+export function emoteLine(name: string, words: string): string {
+  const w = words.trim().replace(/\s+/g, " ").slice(0, EMOTE_MAX);
+  return /^('|,)/.test(w) ? `${name}${w}` : `${name} ${w}`; // "'s eyes narrow" -> "Luna's eyes narrow"
+}
+export function cmdEmote(z: ZoneDO, session: Session, words: string): void {
+  if (!words.trim()) return z.send(session, "emote <what you do>: the room sees your name, then your words.");
+  if (!z.litFor(session)) return z.send(session, "It is too dark here for anyone to see it.");
+  if (events.foggy(z, session.roomId)) return z.send(session, "The fog is too thick here for anyone to see it.");
+  const line = emoteLine(session.name, words);
+  const speaker = { name: session.name, pk: session.pubkey };
+  z.send(session, line, "say", speaker);
+  z.roomFeed(session.roomId, line, session.pubkey, false, "say", speaker);
 }
 
 // Shout: your words thrown hard enough to cross walls. The trade IS the verb —
