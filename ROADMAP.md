@@ -67,158 +67,92 @@ everything.*
 - **Stance in the status bar** — RULED NO (rome, 2026-07-17): the bar stays as
   it is; stance lives in the doll and the typed reads. Closed; don't re-propose.
 
-## THE WORLD GROWS OUTWARD — the surface expansion *(THE ACTIVE ARC)*
+## The world as built *(checked 2026-11-03)*
 
-The world stops being a fortress and becomes a country. Hand-authored, not
-generated — rome ruled procedural out: the rooms read well *because* they're
-written. Baseline tagged `world-v1-110` before the first new room.
+The surface expansion is done. Hand-authored, not generated (rome ruled
+procedural out: the rooms read well *because* they're written); the pre-growth
+baseline is the git tag `world-v1-110`.
 
-**Where it stands: 408 rooms, 193 spawns.** Built and live: the **west road**
-(68 rooms, with the drove fork and the three-way fen), the **wood** (171 — a
-real maze, the woodward walking it, its own crafting materials and traits), the
-**den ground** (60) and the **den system** on top of it. What's left, in order:
+**Live: 1,528 rooms, 736 spawns, 14 gates, 144 creature kinds, 401 items.**
 
-| region | rooms | mobs | shape |
-|---|---|---|---|
-| East Road | 45 | 10 | rises for a dozen rooms before the climb |
-| The Crossing | 170 | ~100 | the great water; gates the mountain by being a place, not a lock |
-| The Mountain | 380 | ~300 | five tiers; density CLIMBS with altitude (0.4 foothills → 1.2 ridge) |
-| The Summit | 1 | the dragon | |
+| region | rooms |
+|---|---|
+| the mountain | 402 |
+| the wood | 332 |
+| the road (west and east) | 249 |
+| the crossing | 239 |
+| the fortress | 118 |
+| the open ground | 82 |
+| the den ground | 60 |
+| the deep | 46 |
 
-**Build order:** east road → crossing → mountain → dragon.
+The summit's animal is the drake (`the-drake`, 150 hp; `the-pale-drake` 160).
+Creatures are saved one blob per shard (`b:creatures:<shard>`, simstore.ts),
+so the split this file used to schedule has shipped.
 
-**Rulings that bind what's left:**
+**Rulings that still bind new ground:**
 
 - **New REGIONS, not new zone-DOs.** `regionOf` gains values; `ZONES` stays
-  `["door"]`. Two always-on zone-DOs would be 162% of the included allowance and
-  billable; one is ~81% and free.
-- **The dragon is an ANIMAL, not a wyrm.** NOMAD's register is dead institutions
-  and things that used to be people — a hoard-sitting fantasy dragon would be the
-  first borrowed thing in this world. An enormous old cold-blooded thing that has
-  held the top of a mountain a very long time and needs no reason.
-- **Altitude IS the difficulty curve.** Mob density rises with height, so the high
-  ridge is worse than the deep and you can see how far up you are.
-- **The Crossing gates the mountain** — a place, not a lock. It also brings the
-  water machinery (fishing, drowning, the tide, drowners) to the surface.
-- **Roads get PATROLLERS, not residents** — you meet something *going somewhere*.
-  Roads also make natural MOUTHS, so migrants come up them and you pass them.
-- **NO progression flags on gates.** A gate is a door that's there. What keeps the
-  far country out of reach early is that you cannot survive the walk.
-- **Respawn stays RANDOM across spawn points** — nearest-gate was proposed and
-  rejected. You don't choose where you wash up and nobody camps one gate.
-- **A CORRIDOR IS A CORRIDOR.** Redundancy is not more doors, more mouths, or a
-  loop in the middle: it is independent routes END TO END. The pipeline now runs a
-  min-cut on every region it builds and reports how many people it takes to own
-  that ground (one route per 40 rooms, floor of 2). **The east road, the Crossing
-  and the mountain are each a single line off one seam by default — none of them
-  may ship that way.**
-- **A room's square is a FACT, baked in its row** (`map_x`/`map_y`). Nothing is
-  derived, nothing collides, and adding a region cannot disturb a room already
-  drawn. New ground gets its squares authored by the pipeline.
+  `["door"]`. Two always-on zone-DOs would be billable; one is free.
+- **The dragon is an ANIMAL, not a wyrm.** No hoard-sitting fantasy dragon:
+  an enormous old thing that holds the top of a mountain and needs no reason.
+- **Altitude IS the difficulty curve.** Density rises with height.
+- **Roads get PATROLLERS, not residents**, and make natural MOUTHS.
+- **NO progression flags on gates.** What keeps the far country out of reach
+  early is that you cannot survive the walk.
+- **Where you wake** (rome, 2026-11-02): any gate, or a random road room; your
+  own den 1 time in 8 on death. Never other regions unless rome asks. You
+  don't choose where you wash up.
+- **A CORRIDOR IS A CORRIDOR.** Redundancy is independent routes END TO END,
+  not more doors or a loop in the middle. The pipeline runs a min-cut on every
+  region it builds (one route per 40 rooms, floor of 2).
+- **A room's square is a FACT, baked in its row** (`map_x`/`map_y`).
+- **Rooms come from `regions/*.rooms`** via scripts/build-rooms.mjs, never hand
+  SQL; a new region needs a record (chronicle.ts RECORDS) or the tests fail.
 
-**Engineering still needed:**
+**Open ends:**
 
-- **Mob rosters** per region (stat-blocks are data; new *behaviours* are code).
-- **The dragon's mechanic** — breath, a room-wide sweep, an airborne phase. Real
-  code, not a migration.
-- **Per-region** mouths, water/forage rooms, chest tiers, ambience, map label.
-- **SPLIT `b:creatures` BY ZONE — when the mountain starts.** A dated appointment,
-  not a bug. `simstore.ts` warns at 64 KB; at 216 bytes/creature that's ~303
-  creatures. The plan lands near 625. One blob per region instead of one for the
-  world, so only the dirty region writes. **Rooms are free; monsters are the load.**
-- **The wood's map squares are 226/410 correct** — its maze cores were wired for
-  connectivity rather than geometry, so its loops don't close. Frozen-wrong beats
-  differently-wrong every deploy; correctable one door at a time.
+- **The wood's map squares** were 226/410 correct when last measured
+  (2026-08): its maze cores were wired for connectivity, not geometry, so its
+  loops don't close. Not re-measured since the wood grew to 332 rooms.
+  Correctable one door at a time.
 
-**Capacity (measured, Workers Paid):** nothing here is close to a limit. DO
-memory ~5–15 MB of 128. D1 storage ~3 MB of 5 GB. Rows read 1.5% of the monthly
-allowance. **DO duration is the one real ceiling and the calendar caps it** —
-889 hours of world-awake time against a 720-hour month, so one zone running
-24/7 lands at ~81% and still costs nothing. The world only ticks while a socket
-is connected, which is why an idle NOMAD bills zero.
+**Capacity** *(measured 2026-07 at ~400 rooms; not re-measured at 1,528)*:
+nothing was near a limit then. DO duration is the one real ceiling and the
+calendar caps it: one zone running 24/7 lands at ~81% of the included
+allowance. The world only ticks while a socket is connected.
 
-## Next up (unblocked, pre-players)
+## Next up (unblocked)
 
-- **Forge & smelt economy — the half that's left** *(rome, 2026-07-15)*. The
-  two-tier material SHIPPED: salvage yields scrap, and `SMELT_SCRAP_PER_IRON`
-  (5) smelts scrap into iron, so iron is accumulated rather than handed out.
-  What is still not done, of 43 recipes:
-  1. **Forge-EXCLUSIVE gear.** Almost every recipe makes something that also
-     drops in the world, so forging is never the only path to anything and
-     rarely worth the scrap. Add gear you can get ONLY by forging — a reason to
-     gather iron. (The wood's six recipes from mig 153 are the model: they take
-     wood trophies nothing else wanted.)
-  2. **Cut some recipes.** Trim the junk end so the slate reads as a craft menu
-     rather than a pile of starter-tier duplicates.
+- **Forge: cut some recipes** *(rome, 2026-07-15)*. Scrap, smelting and
+  forge-only gear have all shipped (migs 091, 092, 254, 265). What is left:
+  the slate has grown to 73 recipes, and the junk end could be trimmed so it
+  reads as a craft menu rather than a pile of starter-tier duplicates.
 
 - **The Hunter / Nemesis** *(now the top of the stack)* — targeted pressure:
   the world sends a named predator after the too-successful player, who has to
   get out ahead of it. Reuses grudges + `curious` tracking + the blood-on-killer
   scent primitives that PvP just proved. Also the natural long-term raid clock
-  for the shallow keep. (rome: "i love this.")
+  for the shallow keep. (rome loves this one.)
 - **Shallows heat map** — mobs harden where they're farmed (+1–2 HP, not
-  damage), decaying back for fresh players. Unblocked since curved armor.
+  damage), decaying back for fresh players. Not built. (Related, shipped: the
+  HUNTED region condition, conditions.ts, makes the prey wary where players
+  have been killing hard; it changes behaviour, not HP.)
 
 ## Shipped systems — open ends only
-
-- **THE FULL MOON CHANGES WHO IS OUT** *(rome, 2026-08-10 — BUILT)*. The moon
-  had always been a six-night modulo asked as a yes/no question, and the one
-  night it said yes it did exactly one thing: `isDark()` skipped its outdoor
-  check, so the grounds stayed lit and nothing in the world remarked on it.
-
-  The organising rule, and the reason the list is short: **the moon is light,
-  and it only falls outdoors.** It reaches things with eyes that are out in it
-  and nothing else. Six behaviours, each an existing roll made likelier or
-  unlikelier — no new machinery, one shared gate (`ai.moonlit`: outdoors, at
-  night, and genuinely lit, so a gloamed room gets none of it).
-
-  1. **The road's thieves stop working** — `THIEF_ROB_ODDS` x `MOON_THIEF_MULT`
-     (0.15). A footpad's trade is not being seen. The one that makes the moon a
-     thing worth planning a journey around.
-  2. **Ambush is spoiled outdoors** — moonlight joins torch-in-hand and
-     torch-on-the-floor in `wakeListeners`. The room description had ALWAYS
-     shown an outdoor lurker on a lit night (`lurkerUnseen` reads `litFor`
-     reads `isDark`); this is the strike side finally agreeing with it. The
-     deep's crawlers and stalkers are untouched — no sky.
-  3. **The game grazes instead of lying up** — `NAP_ODDS_MOON_OUT` (0.003):
-     ~33% bedded, against night's 65% and day's 15%.
-  4. **The pack hunts harder and gathers faster** — `MOON_PACK_HUNT_MULT` (1.5)
-     on top of night's 1.6, and `MOON_PACK_CALL_MULT` (1.6) on the call.
-     `PACK_CALLERS` only; every other predator keeps night's plain multiplier.
-  5. **The hyenas lose their boldness** — `scavengerBold`'s night clause now
-     reads `z.isDark()` instead of `isNight()`, so the moon takes the dark away
-     and the boldness with it. Rain and fog are their own weather and are
-     untouched. NOTE: `SCAVENGERS` is hyenas AND wolves, so the wolves lose it
-     too — one law, not carved. Behaviour 4 more than pays them back.
-  6. **The alarm-callers call sooner** — new `ai.alarmWatch`: on open moonlit
-     ground a roe deer barks at a person a room away, BEFORE they arrive.
-     Both rooms must be under the moon (it is seeing across, not around a
-     corner into the dark); the bark is the one the game already has, with its
-     same two audiences; the caller's own `avoids` are the cooldown.
-
-  WHAT IT DELIBERATELY DOESN'T TOUCH: the HOLLOW have no eyes and no hours, the
-  DROWNERS hold their water whatever the sky does, the LISTENERS wake to
-  movement and not light, the BROODERS keep the nest, the DRILL_SOLDIERS and
-  the cantor keep the fortress's own time (which is the horror of them), and
-  nothing in the deep or the warrens has seen a moon. A moon that changed
-  everything would be noise.
-
-  Net shape: **on a full moon the ambushers stop and the hunters start** — the
-  road gets safer, the wood gets worse, and you can see across both.
 
 - **Room events / the weather** (events.ts): the **undertow-grasper** (anti-turtle,
   designed not built — build only if the pavise-turtle proves too safe); **pack
   weight slowing the wade, exits sealing on flood, float-ups** (the tide's deferred
   second layer); the **warden's muster** (a patrol surge) and a general
-  **stillness**. **The breach is PARKED** (rome: "doesn't fit") — fully built and
+  **stillness**. **The breach is PARKED** (rome: it does not fit) — fully built and
   idle, its pool ticket one commented line; restore = uncomment.
 - **The small lives**: fleet-rat play (pure flavour), scavenger killing-floor
   rounds (mostly covered by the existing corpse-smell wander).
-- **Storied gear v2** (population-gated): deeds riding the 31573 loot cert for
-  bazaar interop, plus a journal surface. The engraving itself is live.
 - **Fire & light**: `search` for hidden exits (dark hides them, light finds them),
   and **map-blackout of dark rooms** — a room you've only seen dark shouldn't sit
   on your HUD map. Neither built.
+- **Storied gear v2 and THE SCAR are REJECTED.** Do not build or offer either.
 
 ## Watch list (don't fix until play says so)
 
@@ -237,8 +171,8 @@ is connected, which is why an idle NOMAD bills zero.
 - **Shield-wall drag (0.85) + block cap (30%)** — the fresh tuning. Watch
   whether the wall-turtle is now a real trade-off or still dominant; the audit
   says murder-vs-tank became a coin-flip, but play is the judge.
-- **Prices need players** — 063 killed the dominated buys; whether the curve
-  is right waits on strangers with tender.
+- **Prices** — 063 killed the dominated buys; whether the curve is right is
+  for play to show.
 - **Should a wielded weapon feed movement noise like plate does?** *(parked, no
   one has asked)*. `loadOf` sums every equipped slot including the weapon and
   shield, so a naked delver holding a wt-3 mace is 24% noise a move. The AMOUNT
@@ -249,13 +183,28 @@ is connected, which is why an idle NOMAD bills zero.
 
 ## Afflictions & cures — the framework *(gated)*
 
-Bleed and hobble are the two proven instances of the pattern (status + tell +
-cure path). The general framework — stacking statuses, cure-routing, mobs
-applying them — stays on paper until (1) the glanceable-status UX carries more
-than two tags comfortably and (2) play validates the fresh combat numbers.
+The pattern (status + tell + cure path) now has several live instances: bleed,
+hobble, the fever rat's fever, the rat king's cough, being wet, and being winded.
+The general framework — stacking statuses, cure-routing, mobs applying them —
+stays on paper until the glanceable-status UX carries them all comfortably and
+play validates the combat numbers.
 When it opens, the on-brand growth is **poisons, tinctures, and set traps**
 (gritty survival, never magic) — including the parked deep-poison: a stacking
 drain the longer you linger, ticks decaying when you leave/rest.
+
+- **WOUNDS BY BODY PART** *(researched 2026-11-03; rome likes it, a bigger
+  build, not yet)*. From Achaea's limb damage and the RPI MUDs' detailed
+  wounds. NOMAD already has one: the **hobbled leg** (a leg-rake creature lands
+  it, thick hide or worn mass can save you from it, you limp out of a fight
+  slowly, and rest or a gatehouse mends it). The idea is more wounds of the
+  same shape, not a new system:
+  - an **arm wound** that weakens your swing;
+  - a **head blow** that makes your next command miss (Achaea's concussion);
+  - each with its own tell on a close look, and its own save and mending.
+  Treatment today: a bandage stops a bleed, and rest mends a hobble. (`cure` is
+  NOT a wound cure here: it smokes meat on a rack.) Open: which creatures land
+  which wound, what saves each one, and whether a bandage or rest mends it.
+  Check against the balance ceilings (2-22 rounds) before any numbers.
 
 ## Extraction feel (rome-ranked above the MUD-flavor ideas)
 
@@ -264,37 +213,10 @@ drain the longer you linger, ticks decaying when you leave/rest.
   design.** NOMAD has no raid timer and no exit queue, so the walk is the only
   thing making "push on or bank it" a real decision. Anything that shortens the
   walk home, or makes banking more convenient, quietly removes the game.
-- **THE GATEHOUSE CLOSES FOR WORKS** *(rome, 2026-08-07 — designed, not built)*.
-  A gatehouse shuts for a while — under construction, being rebuilt — and while
-  it is shut the door will not open. The **gate room is untouched**: still
-  walkable, still a spawn, still on the map. What goes is everything behind the
-  door at once — the lockbox and vault, the keeper's hatch, the forge and
-  smelting, the smoke racks, the wall chart, and the safe step out of the world
-  (every gate room is `is_safe=0` itself bar the Withy Hut, so the shelter *is*
-  the gatehouse). You walked here carrying everything and there is nowhere to put
-  it and nowhere to stand. It is the walk-home pressure above, applied on a dial.
-
-  **Measured before designing — there are 4 BANKS, not 7 gates:**
-
-  | bank | doors | cost of shutting one |
-  |---|---|---|
-  | the fortress | `gate`, `sally-port`, `weeper-arch` — 5–6 rooms apart | world average walk 6.6 → 6.7. Nothing. |
-  | the road | `the-first-milestone` | 6.6 → 6.9; the fortress is 5 rooms on |
-  | the wood | `gate-arch`, `timber-stack`, `withy-hut` — 8–10 apart | 6.6 → **7.4** |
-
-  Uniform random over seven doors spends three rolls in seven on the fortress
-  cluster, where the event is invisible. **Draw from the four banks, not the seven
-  doors.** Two shut at once is where it bites: `timber-stack + withy-hut` takes the
-  world average 6.6 → **9.2** and the worst walk 21 → 25. Nothing is ever stranded
-  — every room still reaches a bank in every one- and two-closure case tested, so
-  there is no fairness cliff at two.
-
-  **Rules it needs:** never the last open bank; **announced** (the keeper names
-  the works, and it rides the gatehouse news) so it is a plan you make rather than
-  a nine-room surprise; nobody shut inside — if you are in there when the works
-  start you are let out, not trapped; hours, not minutes.
 - **Task / bounty runs** — objectives that *force* insertion: retrieve a thing,
   reach a room, hunt a marked wanderer (rides the blood-on-killer primitives).
+  (The keeper's bounty board, which pays meals for trophies, has shipped; these
+  are the other kinds.)
 - **The seal as a vulnerable moment** — claiming becomes a channeled hold: a few
   exposed ticks, sound carrying, interruptible. The gate stops being a safe
   button. *(Not built.)*
@@ -302,15 +224,13 @@ drain the longer you linger, ticks decaying when you leave/rest.
   camper; a heavy pack betrays them standing). The open end is the *passive*
   broadcast: stillness that leaks into a room's ambient with nobody listening.
 
-## Population systems (gated on actual players)
+## Player economy and society
 
-PvP is out of this bucket — it shipped (4196f5f), because the whole point was
-that it emerges the moment two players share a room, and the anti-grief stack
-is sim-native (no audience required to be correct). The rest genuinely need
-density and do NOT get built before there are people:
+Built as if the world were already full (rome, 2026-07-13). PvP has shipped
+(by choice at a gate, mig 359), and so has trade between wanderers (`deal`,
+trade.ts).
 
-- **Economy** — scarcity already exists; trade verbs when there are traders.
-  Zaps enter here (`nostr-lightning/` is on the shelf).
+- **Zaps** — `nostr-lightning/` is on the shelf.
 - **The black market / player trade layer** — hoarded gear re-enters
   circulation, prices float on supply/demand (Tarkov's flea). Completes the
   emergent-scarcity model; the hard currency for prices to settle in already
@@ -361,15 +281,37 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
-- **THE KEEPER BUYS A FULL ACCOUNT** *(parked 2026-10-24, rome: "later")*. Once
+- **THE ONE THING IN THE WORLD** *(researched 2026-11-03; rome likes the
+  sound of it, research only)*. From Carrion Fields, where each team's powers
+  live in one physical object under an NPC guard, and an enemy who kills the
+  guard can carry the powers off. In NOMAD: a single object, the first true
+  one-of-a-kind (every item today has copies), that does something while you
+  carry it. It can't be sealed, stashed, vaulted or shelved, so it never stops
+  moving; you die, it drops with everything else, and the killer takes it. The
+  carrier is the most hunted wanderer on the map. Fits the parked "new kind of
+  reward" thread. Open calls:
+  1. **What it does.** Sideways, never more damage (gear tops out at epic).
+     Offered: a light rain and wind can't put out; always knowing the way to
+     the nearest gate; hearing the rooms next to you clearly; creatures that
+     won't strike first.
+  2. **How the world knows who has it.** The keepers say roughly where it was
+     last seen; the region's record names the holder exactly (information has
+     a toll: hunters go and ask).
+  3. **The gatehouse.** It can't sit in there forever. Offered: it won't cross
+     the gate; it can, but the keeper tells everyone; it pulls you out after a
+     while.
+  4. **Logging off with it.** Unchecked: can a logged-off body be attacked
+     where it waits? If yes, nothing else is needed; if no, it has to drop.
+
+- **THE KEEPER BUYS A FULL ACCOUNT** *(parked 2026-10-24 by rome, for later)*. Once
   study by behaviour shipped, a finished journal page (every behaviour the
   animal has, plus its kills) is real work, and the only thing it pays out is
   knowing the animal. The idea: sell a full account at the hatch, for barter or
   for one of the keeper's tellings. Open questions: does the page leave your
   book (a copy, or the page itself), and is it once per kind per wanderer.
 
-- **THE HERALD — a rout that fetches the den** *(parked 2026-08-24 — rome:
-  "we can apply that behaviour to a specific mob for a better outcome")*.
+- **THE HERALD — a rout that fetches the den** *(parked 2026-08-24; rome would rather give
+  the behaviour to one specific creature)*.
   Offered as a mob-lottery trait and turned down as one, deliberately: a random
   1-in-12 animal that calls its whole den when it breaks is a thing that happens
   TO you, and you can never learn which one it was until it is too late to
@@ -410,7 +352,7 @@ Directions rome likes and wants held. Design only; no code until he says go.
   the thinking is worth keeping, the feature is not — so read the rest of this
   entry as a record of a decision, never as a queue item. The open question it
   ends on was never answered and now never needs to be.
-  *(Originally pinned 2026-08-13 — "pin the scar for later".)* Wear is currently a recurring bill and nothing
+  *(Originally pinned 2026-08-13 for later.)* Wear is currently a recurring bill and nothing
   else: repair sets condition flat back to 100 (gate.ts, REPAIR_COST by rarity),
   so a piece of gear is immortal as long as you keep paying. The scar gives that
   system a memory. The FIRST time a piece falls past GEAR_FAILING_AT (12), it
@@ -440,8 +382,8 @@ Directions rome likes and wants held. Design only; no code until he says go.
   the seal and the whole scarcity model at once. That is its own conversation,
   deliberately, not a rider on this.
 
-- **CREATURES THAT HARDEN ON UNHUNTED GROUND** *(pinned 2026-08-08 — rome: "no I
-  don't like this, pin this for now")*. Two versions were explored and BOTH are
+- **CREATURES THAT HARDEN ON UNHUNTED GROUND** *(pinned 2026-08-08; rome does not like it
+  and parked it)*. Two versions were explored and BOTH are
   parked; the idea keeps coming back, so here is the whole thing including why
   each shape failed, so it is not re-derived from scratch.
 
@@ -477,13 +419,14 @@ Directions rome likes and wants held. Design only; no code until he says go.
   same conversation as dens — design only, several are candidates for the
   new zone's population)*. `MobTemplate` only has `bleed`/`stun` (mirrors
   weapons' edge/blunt); it has no `pierce`, no `sweep`/cleave equivalent, and
-  no trait ledger the way gear does — mob abilities are hardcoded Sets
-  (`LURKERS`, `THIEVES`, `SENTINELS`, etc.), so a new mob mechanic is always a
-  real code build, never a data-only migration the way a new weapon is.
+  mob abilities are mostly hardcoded Sets (`LURKERS`, `THIEVES`, `SENTINELS`,
+  etc.), so a new mob mechanic is a real code build, never a data-only
+  migration the way a new weapon is. (Per-spawn traits now exist: the trait
+  lottery, `MOB_TRAITS` in zone-data.ts.)
   Ranged/thrown was considered and DROPPED — the room-based combat model has
   no notion of acting on a player from outside their own room, and that's too
-  much new plumbing for uncertain payoff (rome, 2026-07-22: "that will be
-  hard to get right"). What's left, roughly ordered by how much they reuse
+  much new plumbing for uncertain payoff (rome, 2026-07-22: too hard to get
+  right). What's left, roughly ordered by how much they reuse
   existing plumbing vs. need new:
   - **Armor-piercing bite** — mirrors weapon `pierce`; cheapest gap to close.
   - **Sweep attack** — hits everyone in the room on its swing, not just its
@@ -498,17 +441,11 @@ Directions rome likes and wants held. Design only; no code until he says go.
   - **Alarm call** — being hit (not just aggroed) alerts same-species
     creatures elsewhere in the zone, pulling their wander toward its room; a
     pack that actually musters instead of every mob living in isolation.
-  - **Splits on death** — dies into 2 weaker copies instead of dropping loot
-    outright (a slime/swarm type); new spawn-on-death path, doesn't exist now.
   - **Debuff on a landed heavy hit, never a disable** — a visible, temporary
     softening of your next swing (damage or accuracy), reworked from a
     fear/rout idea specifically to respect the standing law that no
     affliction may deny escape as a dice-roll — always visible, always
     timed, same shape as hobble.
-  - **Snuffs your light** — sets `session.litUntil = undefined` (the exact
-    field `light.ts` already reads) instead of dealing damage. Cheap — reuses
-    real shipped state — and plunges you straight into `isDark()`
-    consequences mid-fight, doubly relevant now that day/night is landing.
   - **Eats an item, not you** — destroys something specific out of your pack
     (a ration, a dressing, your only light) rather than stealing-and-dropping
     like the existing thief. Makes it a threat to plan around, not tank.
@@ -520,45 +457,9 @@ Directions rome likes and wants held. Design only; no code until he says go.
   - **Swaps places with you** — a blink/displace trading your position with
     the creature's mid-fight; disorienting, not damaging — you may end up cut
     off from your own exit.
-  - **Drags you off** *(distinct from the drowner's seize-in-place — nothing
-    currently moves a player's `roomId` against their will except spawn/death
-    respawn)*: wins a grapple and relocates you to a different room instead
-    of holding you still — a den, a pit, deeper in — displacement as the
-    stake instead of damage. Telegraphed the same as seize (a visible
-    grab-window to break out of before the drag completes).
-  - **Closes some of a room's exits while it's alive** *(distinct from a
-    sentinel, which is one hardcoded creature barring one hardcoded exit in
-    one hardcoded room — `SENTINEL_ROOMS`)*: a general mechanic where any
-    room with multiple exits has SOME (not all) blocked for as long as this
-    creature occupies it — kill it or drive it off and the room reopens to
-    its full exit list. A room-shaping threat that acts on the map itself,
-    not on HP/gear/position — a genuinely different category from every
-    other mechanic on this list.
-
-- **MOB TRAIT LOTTERY — a spawn rolls a trait** *(design accepted 2026-08-24;
-  this is the first use of the "trait ledger" the note above calls missing)*.
-  Gear rolls traits at mint; a mob rolls one at SPAWN — same template, different
-  instance, and the trait changes BEHAVIOR, not identity or drops (that's what
-  bloodlines are for). Rides the instance and dies with it; the next refill
-  rolls fresh. Rules: keyed to the mob's FAMILY (never a global pool — a deer
-  doesn't roll "bloodthirsty"); a trait can be a boon OR a flaw (MOB_BAD_SHARE,
-  gear's shape).
-
-  GREENLIT POOLS (by family, each on an existing lever):
-    runners  — wary · lame · hind-mother
-    hunters  — bloodthirsty · maneater · pair-bonded · den-mother · scavenger's-nose · snag-toothed
-    hollow   — splits-on-death · bell-tuned · ash-marked · dust-drinker · keeps-its-bones
-    lurkers  — light-snuffing · patient · shadow-born · mimic · thin
-    drowners — the-kept · tide-called · brine-slow · undertow
-    scavenge — corpse-laughing · bold · skittish
-    thieves  — marked · light-fingered
-
-  ON HOLD: the "general / wild card" pool (old, the-taint, false-mark,
-  iron-jawed) — no family identity, so it waits; any that return get re-homed
-  into a specific family.
-
-  BUILD ORDER: runt (stat-only proof) → maneater (one flee check) → pair-bonded
-  or splits-on-death (first genuinely new behavior, not a stat).
+  *(Since built, and so off this list: splits on death and light-snuffing, as
+  mob traits; dragging you off, by the drowned ferryman's rope; and closing a
+  room's exits, by the pack standing in the gaps, `ai.heldExits`.)*
 
 - **Far-world write cost — mostly already solved; small residual lever** *(rome,
   2026-07-20 — investigated the "lots more mobs" scaling question, found the win
@@ -569,8 +470,9 @@ Directions rome likes and wants held. Design only; no code until he says go.
   comparison (`stableCreatureCopy`), so smooth drift generates ZERO writes; a 60s
   throttle + 5-min full flush persist churn with bounded staleness. Combined with
   the bubble freezing far creatures outright, **idle far regions already cost
-  ~nothing on writes** — the headroom is already there (no build needed for the
-  planned ~400 rooms / ~800 mobs). The ONLY residual lever, and it's small: the
+  ~nothing on writes** — the headroom was there for ~400 rooms / ~800 mobs when
+  this was measured (2026-07); the world is now 1,528 rooms and 736 spawns,
+  with creatures saved per shard. The ONLY residual lever, and it's small: the
   30s ecology sweep still produces genuine STRUCTURAL far events (a mob changes
   rooms — `WANDER_MIN/MAX_MS` 45–150s — a birth, a death) that dirty legitimately.
   To cut those you'd freeze/slow far-world WANDER (unobserved mobs have no reason
@@ -581,8 +483,8 @@ Directions rome likes and wants held. Design only; no code until he says go.
   coarser far dynamics, NOT visible staleness — entry catch-up is capped by
   `CATCHUP_CAP_MS`). See [[nomad-scaling-ceiling]].
 
-- **System-hook gear — seven approved pieces** *(rome, 2026-07-19: "these all
-  sound good, note them down")*. The anti-reskin law behind them: **every new
+- **System-hook gear — seven approved pieces** *(rome, 2026-07-19: approved all
+  seven, to be noted down)*. The anti-reskin law behind them: **every new
   piece hooks a SYSTEM the sim already runs, never just a stat** — if the pitch
   is "like X but +1," it's a reskin; if it changes how a live system reads you,
   it's an item. Grid method: slots × systems (noise/load, light, traces, scent,
@@ -604,27 +506,6 @@ Directions rome likes and wants held. Design only; no code until he says go.
   Guardrails when building: stat ladders stay ≤3 tiers/slot/weight-class;
   every new power pays a legible cost (weight is the currency — the blunt
   weight-point and proportional shield drag are the precedent).
-
-- **Day and night** *(rome likes it, 2026-07-17 — "a bigger feature, more
-  thought needed"; design only)*. Today NOMAD has NO clock: "tonight" is pure
-  flavor in event prose, darkness is spatial (`DARK_ROOMS` are born-dark
-  forever), and the only day-anchored math is the bell's scheduling jitter
-  (events.ts ~602). The sketch so far: the cycle is **surface-only** — the
-  dungeon's eternal dark is its identity and must not gain a sun. At night the
-  surface band (causeway, fen, hanging-hill, old road) joins the dark rooms:
-  torch rules apply above ground, the map blacks out, crossing between gates
-  after dark becomes a real decision; dawn/dusk each get a feed line; night
-  could tilt what surfaces or prowls up top. Mechanically it's mostly one
-  `isNight()` read feeding systems that already exist (dark-gate, torch
-  economy, event weighting). **Open questions that make it "more thought
-  needed":** cycle length (real-world-anchored vs an accelerated world-clock —
-  a ~3h full day so every session sees both faces; lean accelerated, players
-  span timezones); how night interacts with the weather events (does the gloam
-  own the night? does rain at night read differently?); whether mobs keep
-  their own sleep/wake rhythm against it (warm-bloods already doze); and
-  whether the gatehouse fire becomes the night's anchor (rest/safety pull
-  after dark). Not building until the cycle-length call and the
-  night-ecology pass are designed.
 
 - **Per-browser feed key for the arena stream** *(DEFERRED — do in a login/client
   polish pass, before any wider launch)*. Problem: extension (NIP-07) and bunker
@@ -651,29 +532,20 @@ Directions rome likes and wants held. Design only; no code until he says go.
   stagger), so if it ever happens it's 1–2 opportunistic special cases (a
   heavy/reckless swing costs the *next* beat) — never a global balance bar
   retrofit onto the 4s round.
-- **Idle kick** — boot truly-AFK players after N minutes so a forgotten tab
-  doesn't hold a live session.
-- **`say` is public, and named. Nobody's told.** *(updated 2026-07-15 — the
-  mechanism CHANGED with the arena-feed ship.)* `say`/`shout` now go out under
-  the **player's OWN key** (kind 24914 via `speechOut`), no longer the
-  anonymised world key — the room copy is local (`toRelay=false`), but the wire
-  copy is signed by the speaker, in clear, their real npub. So a player thinks
-  two-of-you-alone-in-the-dark is private, and it's actually broadcast under
-  their name. The architecture question ((a) should speech be on the wire at
-  all) is effectively answered — it IS, and the public feed of overheard voices
-  is one of the most compelling things about watching NOMAD from outside. The
-  LIVE open end is (b): **the player should be told.** A room whose speech
-  broadcasts should say so, the way the gatehouse says the opposite. Don't fix
-  it by muting speech — fix it by disclosing it.
-- **Communication layer** — `tell` is the remaining gap (`shout` and
-  sound-carries shipped). Most on-brand: async **notes / dead-drops** (a
-  written scrap left in a room for whoever comes next). Low-tech, high-flavor.
+- **A shout goes out under your own name, and nobody's told.** `say` reaches
+  the room only and nothing goes to a relay (rome, 2026-07-21). `shout` still
+  publishes, signed by the speaker's own key (kind 24914, `speechOut`), so a
+  shout in the dark is public under a real npub. The open end: **the player
+  should be told**, the way the gatehouse says the opposite. Fix it by
+  disclosing it, not by muting it.
 - **World events — the long weather (days-to-a-week)** *(design, rome
   2026-07-15; timed for JUST BEFORE the ~1000-room map expansion)*. Distinct
   from the shipped ROOM events (events.ts — tide/fog/weather, minutes-scale,
   ONE room): these are **world-scale and persist DAYS to a WEEK** — a condition
-  that colours the WHOLE dungeon for a stretch: a season, a siege, a plague, a
-  drought, a migration, a red moon. Purpose: a living calendar the world runs on
+  that colours the WHOLE dungeon for a stretch: a siege, a plague, a drought, a
+  migration. (There are NO seasons in NOMAD. Shipped since: region conditions,
+  conditions.ts — boom, murrain, hunted, thick — earned per region, not rolled;
+  and the blood moon and the eclipse.) Purpose: a living calendar the world runs on
   its own — a reason for a player to check in ("what's happening this week"),
   and history the dungeon accumulates. Bigger map needs bigger weather: a
   1000-room world wants events that SWEEP it, not just per-room drizzle. Likely
@@ -709,9 +581,9 @@ Directions rome likes and wants held. Design only; no code until he says go.
   people you know, not an open server. (2) You can only act while CAUGHT UP —
   inputs past a lag horizon are rejected, so a returning player watches the world
   replay first.
-  Also: drop or hard-trim `assets.ts` (3.4MB of base64). Scale for reference —
-  761 rooms, 1,754 exits, 256 items, 94 mob templates, ~250KB of prose; size is
-  not the blocker.
+  Also: drop or hard-trim `assets.ts` (3.4MB of base64). Scale when pinned:
+  761 rooms; now 1,528 rooms, 3,762 exits, 401 items, 144 creature kinds. Size
+  is not the blocker.
   **A sibling, not a port**, sharing the engine with nomadmud.com. Weeks of work,
   and the first step is making the engine not care whether its host is a Durable
   Object or a browser tab.

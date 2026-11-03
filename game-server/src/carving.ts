@@ -94,8 +94,10 @@ const article = (w: string): string => (/^[aeiou]/.test(w) ? `an ${w}` : `a ${w}
 
 // `carve rock`. Returns false when the words were not about a rock, so the
 // graffiti carve goes on as before.
+// The words that make `carve` the carving and not the wall (the gatehouse reads it too).
+export const CARVE_ROCK = /^(the |a )?(loose )?(rock|stone)$/i;
 export async function carveRock(z: ZoneDO, session: Session, words: string): Promise<boolean> {
-  if (!/^(the |a )?(loose )?(rock|stone)$/i.test(words.trim())) return false;
+  if (!CARVE_ROCK.test(words.trim())) return false;
   const rock = session.items.find((c) => c.itemId === ROCK && !c.equipped && c.serial === null)
     ?? session.items.find((c) => c.itemId === ROCK);
   if (!rock) { z.send(session, "You have no rock to work."); return true; }

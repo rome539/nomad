@@ -130,7 +130,7 @@ export const DIRECTIONS: Record<string, string> = {
   d: "down", down: "down",
 };
 
-const VERB_ALIASES: Record<string, Verb> = {
+export const VERB_ALIASES: Record<string, Verb> = {
   look: "look", l: "look", x: "look", examine: "look", read: "look", inspect: "look",
   go: "go", walk: "go", run: "go", move: "go", head: "go", climb: "go",
   say: "say", "'": "say", talk: "say", speak: "say",

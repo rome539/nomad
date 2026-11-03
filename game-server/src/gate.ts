@@ -33,7 +33,7 @@ import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STU
 import * as den from "./den";
 import * as carving from "./carving";
 import * as light from "./light";
-import { parse } from "./parser";
+import { parse, type Command } from "./parser";
 import { mapRegionOf, worldGrid } from "./lore";
 import { MAP_QUARTERS } from "./detail";
 import { dropCarried, describePlayer, lookOnPlayer, lookKeepingItem, selfExamine, cmdCensus, cmdSkies, emoteLine } from "./verbs";
@@ -3023,24 +3023,20 @@ export async function enterGatehouse(z: ZoneDO, session: Session): Promise<void>
 // The router: every frame typed by someone standing in the gatehouse. Known
 // verbs command; the dungeon-facing ones are refused (the dungeon is outside);
 // EVERYTHING ELSE IS SPEECH. That last line is the tavern.
-export async function handleGatehouse(z: ZoneDO, session: Session, text: string): Promise<void> {
+// WHAT A LINE TYPED BY THE FIRE IS (rome, 2026-11-03: commands kept failing in
+// here). In the gatehouse the input line is a mouth, so every line is either
+// said or run, and this is the one place that decides which. handleGatehouse
+// asks it first and obeys it; the regression suite runs every command word the
+// parser knows through it, so a command can never quietly turn into speech.
+export function gatehouseHeard(text: string): { say: string } | { cmd: Command } {
   const cmd = parse(text);
   // Not a verb we know? Then it wasn't meant as one. Say it.
-  if (!cmd || "miss" in cmd) return gatehouseSay(z, session, text);
+  if (!cmd || "miss" in cmd) return { say: text };
   const v = cmd.verb;
-  if (v === "invite") return invites.command(z, session, cmd.arg);
-  if (v === "look" && await invites.read(z, session, cmd.arg)) return;
-  if (v === "say") return gatehouseSay(z, session, cmd.arg);
-  // An emote by the fire is seen by the fire (the gatehouse is always lit).
-  if (v === "emote") {
-    if (!cmd.arg.trim()) return z.send(session, "emote <what you do>: the room sees your name, then your words.");
-    const line = emoteLine(session.name, cmd.arg);
-    z.send(session, line, "say", { name: session.name, pk: session.pubkey });
-    return gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
-  }
+  if (v === "say") return { say: cmd.arg };
   // There is nobody to follow out of a room with no ways out, so in here
   // "follow me" is a thing a person says.
-  if (v === "follow") return gatehouseSay(z, session, text);
+  if (v === "follow") return { say: text };
   // A no-argument command carrying trailing words was a SENTENCE, not a command:
   // "i am trying to quit" is speech, not inventory; "who knows" is speech, not
   // the roster. Bare, they still command. This is the whole fix for a chat line's
@@ -3052,11 +3048,28 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   const rawTail = text.trim().split(/\s+/).slice(1).join(" ");
   // `carve` is bare-only in here (the wall chart), but `carve rock` is the
   // carving, and a man can sit by the fire and work a stone as well as anywhere.
-  // Read before the sentence rule below, which would otherwise say it out loud.
-  if (v === "carve" && rawTail !== "" && await carving.carveRock(z, session, cmd.arg)) return z.sendGateCtx(session);
-  if (GATEHOUSE_NOARG.has(v) && rawTail !== "") return gatehouseSay(z, session, text);
+  if (v === "carve" && rawTail !== "" && carving.CARVE_ROCK.test(cmd.arg.trim())) return { cmd };
+  if (GATEHOUSE_NOARG.has(v) && rawTail !== "") return { say: text };
   // "fill me in" is a man talking; "fill lantern" is a man with fat and a lantern.
-  if (v === "fill" && !/^(lantern|lamp|well)?$/i.test(cmd.arg.trim()) && !/lantern|lamp/i.test(cmd.arg)) return gatehouseSay(z, session, text);
+  if (v === "fill" && !/^(lantern|lamp|well)?$/i.test(cmd.arg.trim()) && !/lantern|lamp/i.test(cmd.arg)) return { say: text };
+  return { cmd };
+}
+
+export async function handleGatehouse(z: ZoneDO, session: Session, text: string): Promise<void> {
+  const heard = gatehouseHeard(text);
+  if ("say" in heard) return gatehouseSay(z, session, heard.say);
+  const cmd = heard.cmd;
+  const v = cmd.verb;
+  if (v === "invite") return invites.command(z, session, cmd.arg);
+  if (v === "look" && await invites.read(z, session, cmd.arg)) return;
+  // An emote by the fire is seen by the fire (the gatehouse is always lit).
+  if (v === "emote") {
+    if (!cmd.arg.trim()) return z.send(session, "emote <what you do>: the room sees your name, then your words.");
+    const line = emoteLine(session.name, cmd.arg);
+    z.send(session, line, "say", { name: session.name, pk: session.pubkey });
+    return gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
+  }
+  if (v === "carve" && cmd.arg.trim() && await carving.carveRock(z, session, cmd.arg)) return z.sendGateCtx(session);
   if (v === "enter") return z.send(session, "You're already inside.");
   if (v === "look") {
     const target = cmd.arg.trim();

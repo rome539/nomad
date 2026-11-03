@@ -44,6 +44,8 @@ try {
         "export {ratHoards, godMet, godRemembers} from './ai';",
         "export * as chronicle from './chronicle';",
         "export * as aliases from './aliases';",
+        "export { VERB_ALIASES } from './parser';",
+        "export { gatehouseHeard } from './gate';",
         "export * as follow from './follow';",
         "export { cmdEmote, emoteLine } from './verbs';",
         "export {nextBellAt} from './events';",
@@ -82,7 +84,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -3424,8 +3426,7 @@ try {
     assert.match(vsrc, /z\.markSimDirty\(\);\n  await follow\.after\(z, session, from, dir\);[^\n]*\n\}/, 'and brings followers after a completed step');
     assert.match(readFileSync(new URL('../src/follow.ts', import.meta.url), 'utf8'), /await cmdGo\(z, s, dir, true\);/, 'a step behind someone is led');
     assert.deepEqual(parse('follow the luna'), { verb: 'follow', arg: 'luna' });
-    const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
-    assert.match(gsrc, /if \(v === "follow"\) return gatehouseSay\(z, session, text\);/, "by the fire 'follow me' is said");
+    assert.deepEqual(gatehouseHeard('follow me lads'), { say: 'follow me lads' }, "by the fire 'follow me' is said");
   });
 
   check('emotes open with the wanderer\'s name, go out as speech, and must be seen (2026-11-03)', () => {
@@ -3451,6 +3452,35 @@ try {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub.match(/var SPEECH_VERBS = [^\n]*/)[0], /emote: 1/, 'the page does not echo it twice');
     assert.match(pub, /  alias: 1, unalias: 1,\n\};/, 'alias echoes as a command by the fire');
+  });
+
+  check('every command goes through in the gatehouse: none turns into speech unless meant to, and every one has a handler (2026-11-03)', () => {
+    // Said, not run, by design: speech itself, follow (no ways out of the
+    // gatehouse), and the no-argument verbs with words after them (a sentence).
+    const SAID = new Set(['say', 'follow']);
+    const failures = [];
+    for (const [word, verb] of Object.entries(VERB_ALIASES)) {
+      const bare = gatehouseHeard(word);
+      if (SAID.has(verb)) { if (!('say' in bare)) failures.push(`${word}: should be said`); continue; }
+      if ('say' in bare) failures.push(`'${word}' was said, not run`);
+      else if (bare.cmd.verb !== verb && bare.cmd.verb !== 'go') failures.push(`'${word}' ran ${bare.cmd.verb}`);
+      const arg = verb === 'carve' ? 'rock' : verb === 'fill' ? 'lantern' : 'wolf';
+      const withArg = gatehouseHeard(`${word} ${arg}`);
+      const sentence = GATEHOUSE_NOARG.has(verb) && verb !== 'carve'; // carve rock is the carving
+      if (sentence && !('say' in withArg)) failures.push(`'${word} ${arg}' should be a sentence`);
+      if (!sentence && 'say' in withArg) failures.push(`'${word} ${arg}' was said, not run`);
+    }
+    assert.deepEqual(failures, [], 'gatehouse routing');
+    assert.deepEqual(gatehouseHeard('emote hugs Luna'), { cmd: { verb: 'emote', arg: 'hugs Luna' } }, 'an emote is run, words as typed');
+    assert.ok('say' in gatehouseHeard('hello there'), 'and words that are no command are said');
+    assert.ok('say' in gatehouseHeard('carve my name in the table') && 'cmd' in gatehouseHeard('carve rock'), 'carve: the wall bare, the carving with a rock, else a sentence');
+    // ...and nothing falls on the floor: every verb the parser knows has a case
+    // in the world's dispatch, which is where the gatehouse hands on whatever
+    // it does not answer itself.
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const disp = zsrc.slice(zsrc.indexOf('public async dispatch('), zsrc.indexOf('\n  }\n', zsrc.indexOf('public async dispatch(')));
+    const orphans = [...new Set(Object.values(VERB_ALIASES))].filter((v) => !disp.includes(`case "${v}"`));
+    assert.deepEqual(orphans, [], 'every verb has a handler');
   });
 
   console.log(`\n${passed} regression checks pass`);
