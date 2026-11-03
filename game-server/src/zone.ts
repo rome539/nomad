@@ -8400,6 +8400,10 @@ export class ZoneDO implements DurableObject {
   // Where the chest is right now — placed on first ask (so a warm world scatters
   // its chests the moment this ships, no reseed).
   public cacheRoomId(cache: Cache): string {
+    // A door box is where its row says, always: a saved spot would outlive a
+    // migration that moves it (the casket sat in the Grey Lie ten days after
+    // mig 333 put it back in the glade).
+    if (!this.cacheRoams(cache)) return cache.roomId;
     let room = this.cacheRoom.get(cache.id);
     if (!room) { this.placeCache(cache); room = this.cacheRoom.get(cache.id)!; }
     return room;

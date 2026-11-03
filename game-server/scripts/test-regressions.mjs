@@ -3335,6 +3335,15 @@ try {
     assert.match(verbs, /if \(!holder && c\.itemId === LANTERN_ITEM\) tags\.push\(light\.wellCount\(c\.fuel \?\? 0\)\);/, 'and the typed lockbox list says it too');
   });
 
+  check('a door box stands where its row says, not where the world last saved it (2026-11-03)', () => {
+    const z = new ZoneDO({}, {});
+    z.world = { rooms: new Map(), safeRooms: new Set(), entryRooms: new Set() };
+    z.cacheRoom.set('box-glade', 'the-grey-lie');
+    assert.equal(z.cacheRoomId({ id: 'box-glade', roomId: 'the-moon-glade' }), 'the-moon-glade', 'the casket is in the glade');
+    z.cacheRoom.set('box-roams', 'somewhere');
+    assert.equal(z.cacheRoomId({ id: 'box-roams', roomId: 'home' }), 'somewhere', 'a roaming chest keeps its saved spot');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });
