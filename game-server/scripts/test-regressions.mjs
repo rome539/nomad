@@ -595,6 +595,23 @@ try {
     const where = () => db.prepare("SELECT container FROM player_items ORDER BY id").all().map((r) => r.container);
     return { z, me, db, wolf, said, where };
   }
+  check('a keeper speaks only of what is on his own ground (2026-11-02)', () => {
+    // the fever: wood gate yes, fortress and road gates no
+    const at = (pubkey, roomId) => ({ pubkey, roomId, name: pubkey });
+    const folk = [at('fort', 'gate'), at('wood', 'the-gate-arch'), at('road', 'the-relay-house')];
+    const heard = new Map();
+    const z = { sessions: new Map(folk.map((s) => [s.pubkey, s])), inGatehouse: new Set(folk.map((s) => s.pubkey)),
+      creatures: new Map([['r', { templateId: FEVER_RAT, hp: 10 }]]),
+      world: { rooms: new Map([['gate', { region: '' }], ['the-gate-arch', { region: 'wood' }], ['the-relay-house', { region: 'road' }]]) },
+      send: (s, t) => heard.set(s.pubkey, t) };
+    const rnd = crypto.getRandomValues; crypto.getRandomValues = (a) => { a.fill(0); return a; };
+    try { feverrat.keeper(z, 5_000_000); } finally { crypto.getRandomValues = rnd; } // an early clock: the keeper's minute gate is module state the later fever test shares
+    assert.deepEqual([...heard.keys()], ['wood'], 'only the wood\'s keeper speaks of the fever');
+    // the king is the fortress's, the roe the wood's
+    const src = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
+    assert.match(src('ratking.ts'), /if \(z\.inGatehouse\.has\(s\.pubkey\)\) \{[\s\S]{0,400}if \(z\.world\?\.rooms\?\.get\(s\.roomId\)\?\.region\) continue;[\s\S]{0,400}RAT_KING_KEEPER_LINES/, 'the king only at a fortress gate');
+    assert.match(src('whiteroe.ts'), /if \(z\.world!\.rooms\.get\(s\.roomId\)\?\.region !== "wood"\) continue;[\s\S]{0,300}WHITE_ROE_KEEPER_LINES/, 'the roe only at a wood gate');
+  });
   await checkAsync('the road keeps its record under the names on the first milestone (2026-11-02)', async () => {
     const { db, D1 } = sqliteD1();
     db.exec(readFileSync(new URL('../migrations/363_the_world_remembers.sql', import.meta.url), 'utf8'));
@@ -3067,9 +3084,9 @@ try {
 
   check('players hear of the fever rat: the keeper, the status line and the old village (2026-11-02)', () => {
     const z = {
-      world: { rooms: new Map([['graves-x', { id: 'graves-x', region: 'den' }]]), mobTemplates: new Map() },
+      world: { rooms: new Map([['graves-x', { id: 'graves-x', region: 'den' }], ['gate-w', { id: 'gate-w', region: 'wood' }]]), mobTemplates: new Map() },
       events: new Map([['fever', { phase: 'active', until: Date.now() + 3_600_000 }]]), creatures: new Map(),
-      sessions: new Map([['me', { pubkey: 'me' }], ['out', { pubkey: 'out' }]]), inGatehouse: new Set(['me']),
+      sessions: new Map([['me', { pubkey: 'me', roomId: 'gate-w' }], ['out', { pubkey: 'out' }]]), inGatehouse: new Set(['me']), // behind a wood gate: the fever is on his ground
       said: [], send(s, t) { this.said.push([s.pubkey, t]); }, regionOf(r) { return this.world.rooms.get(r)?.region ?? ''; },
     };
     // no rat up: the keeper says nothing, the old village has only the fever's own lines

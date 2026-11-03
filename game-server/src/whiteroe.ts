@@ -114,6 +114,9 @@ const keeperSaid = new Map<string, number>(); // pubkey -> when the keeper last 
 function keeper(z: ZoneDO, now: number): void {
   for (const s of z.sessions.values()) {
     if (!z.inGatehouse.has(s.pubkey)) continue;
+    // His own ground only (rome, 2026-11-02): the roe is the wood's, so only a
+    // keeper at a wood gate speaks of it (roomId is the gate you came in by).
+    if (z.world!.rooms.get(s.roomId)?.region !== "wood") continue;
     if (now - (keeperSaid.get(s.pubkey) ?? 0) < WHITE_ROE_KEEPER_GAP_MS || !chance(WHITE_ROE_KEEPER_PER_MIN)) continue;
     keeperSaid.set(s.pubkey, now);
     z.send(s, pick(WHITE_ROE_KEEPER_LINES), "amb");

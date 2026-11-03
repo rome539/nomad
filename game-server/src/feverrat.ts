@@ -12,7 +12,7 @@ import type { Session, Creature } from "./zone-types";
 import { chance, pick, randInt, uuid } from "./rng";
 import {
   FEVER_RAT, FEVER_RAT_HOME, FEVER_CLOTH_TRAIT, WANDER_MIN_MS, WANDER_MAX_MS,
-  FEVER_RAT_KEEPER_PER_MIN, FEVER_RAT_KEEPER_GAP_MS, FEVER_RAT_KEEPER_LINES,
+  FEVER_RAT_KEEPER_PER_MIN, FEVER_RAT_KEEPER_GAP_MS, FEVER_RAT_KEEPER_LINES, FEVER_BANDS,
 } from "./zone-data";
 
 export function rat(z: ZoneDO): Creature | null {
@@ -57,6 +57,10 @@ export function keeper(z: ZoneDO, now: number): void {
   if (!rat(z)) return;
   for (const s of z.sessions.values()) {
     if (!z.inGatehouse.has(s.pubkey)) continue;
+    // His own ground only (rome, 2026-11-02): the fever sits over the old
+    // village and the wood (FEVER_BANDS), so only a keeper at a gate on that
+    // ground speaks of it (roomId is the gate you came in by).
+    if (!FEVER_BANDS.has(z.world!.rooms.get(s.roomId)?.region ?? "")) continue;
     if (now - (keeperSaid.get(s.pubkey) ?? 0) < FEVER_RAT_KEEPER_GAP_MS || !chance(FEVER_RAT_KEEPER_PER_MIN)) continue;
     keeperSaid.set(s.pubkey, now);
     z.send(s, pick(FEVER_RAT_KEEPER_LINES), "amb");

@@ -102,6 +102,11 @@ function omens(z: ZoneDO, now: number): void {
   const k = sickness(z, now);
   for (const s of z.sessions.values()) {
     if (z.inGatehouse.has(s.pubkey)) {
+      // HIS OWN GROUND ONLY (rome, 2026-11-02): the king is the fortress's, so
+      // only a keeper at a fortress gate speaks of it. Behind the door, roomId
+      // is still the gate you came in by, and the fortress's gates carry no
+      // region of their own.
+      if (z.world?.rooms?.get(s.roomId)?.region) continue;
       const said = keeperSaid.get(s.pubkey) ?? 0;
       if (Date.now() - said >= RAT_KING_KEEPER_GAP_MS && chance(RAT_KING_KEEPER_PER_MIN)) {
         keeperSaid.set(s.pubkey, Date.now());
