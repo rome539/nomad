@@ -2,6 +2,7 @@
 // journal (study + blood fill the bestiary). zone.ts keeps the instanced-floor
 // plumbing (journals dropping/lifting rides the get/drop/death paths); this
 // file owns what the knowledge SAYS and how it reaches the client.
+import * as chronicle from "./chronicle";
 import * as carving from "./carving";
 import type { ZoneDO } from "./zone";
 import type { Region, World, Exit } from "./world";
@@ -1047,6 +1048,9 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
     z.send(session, keeperVoiced(pick(ARC_TELLINGS[pick(live)]!)), "lore");
     return true;
   }
+  // NEWS (rome, 2026-11-02): what has happened lately, from anywhere, as he
+  // heard it and as well as he still remembers it (chronicle.ts).
+  if (chronicle.keeperNews(z, session, now)) { session.keeperDueAt = 0; return true; }
   const aside = DOOR_TELLINGS[band as Region];
   if (aside?.length && chance(DOOR_TELLING_ODDS)) {
     session.keeperDueAt = 0;

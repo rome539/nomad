@@ -1,3 +1,4 @@
+import * as chronicle from "./chronicle";
 import { hpLabel } from "./util";
 // Room events — the world's weather. The law, for every event this file will
 // ever hold: TELEGRAPH -> ACTIVE -> AFTERMATH, nothing hits a player the world
@@ -82,7 +83,7 @@ import {
   PACK_TELEGRAPH_MS, PACK_ACTIVE_MIN_MS, PACK_ACTIVE_MAX_MS, PACK_AFTERMATH_MS,
   PACK_DOGS, PACK_WOLVES, PACK_HYENAS, PACK_HEAD_ODDS, PACK_HEADS_BAD,
   PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
-  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_RAT_HOLD_MS, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
+  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_RAT_HOLD_MS, FEVER_RAT_HOME, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
   DAY_CYCLE_MS, BUGLE_EVERY_DAYS, BUGLE_SALUTERS, BUGLE_REVEILLE, BUGLE_TAPS, BUGLE_FAR, BUGLE_SALUTE_ONE, BUGLE_SALUTE_MANY,
 } from "./zone-data";
 
@@ -625,6 +626,7 @@ export function feverLifts(z: ZoneDO, now = Date.now()): void {
   st.until = now + FEVER_AFTERMATH_MS;
   st.data = undefined;
   z.roomFeedBands(FEVER_BANDS, "The wind comes round off the fen, cold and clean, all at once, and the ground lets go of the fever as if it had been holding it in its teeth.", "evt");
+  chronicle.fever(z, FEVER_RAT_HOME, true);
 }
 
 // THE SHADOW is over the mountain: the drake's passage, and only while it runs.
@@ -2542,6 +2544,7 @@ export async function tickFever(z: ZoneDO, now: number): Promise<void> {
       st.data = String(now + FEVER_RAT_HOLD_MS); // the latest the rat can hold it
       z.roomFeedBands(FEVER_BANDS, "It settles over the whole ground. Sleep will not take, food does you no good, and a dressing may as well be a rag. Out in the old village, among the graves, something is digging its way up.", "evt");
       feverrat.comes(z, now);
+      chronicle.fever(z, FEVER_RAT_HOME, false);
       break;
     }
     case "active": {
@@ -2556,6 +2559,7 @@ export async function tickFever(z: ZoneDO, now: number): Promise<void> {
       st.phase = "aftermath";
       st.until = now + FEVER_AFTERMATH_MS;
       z.roomFeedBands(FEVER_BANDS, "The wind comes round again off the fen, cold and clean, and the ground lets go of it.", "evt");
+      chronicle.fever(z, FEVER_RAT_HOME, true);
       break;
     }
     case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
@@ -3079,13 +3083,21 @@ export function mudDeepens(z: ZoneDO, roomId: string, kind: string): number {
 // and if he's mid-respawn, it waits for that too. The bell-cote itself STAYS
 // off his patrol (PATROLS["last-watchman"], zone-data.ts) — he rings it from
 // below, the cote stays the one perch the watch never checks.
-function nextBellAt(now: number): number {
+// ONE RINGING TO AN HOUR (rome, 2026-11-02: heard it twice in one night). This
+// runs again the moment a ringing settles, and it used to roll a fresh jitter
+// for the very hour that had just rung: ring twenty minutes early, settle ten
+// minutes later, and the same hour rolled again could still lie ahead, so the
+// bell rang a second time. A slot whose hour is within one jitter of now has
+// either just rung or is too close to be the next one, so it is skipped.
+export function nextBellAt(now: number): number {
   const day = Math.floor(now / 86_400_000) * 86_400_000;
   let best = NEVER;
-  for (const d of [0, 1]) {
+  for (const d of [0, 1, 2]) {
     for (const h of BELL_HOURS_UTC) {
-      const t = day + d * 86_400_000 + h * 3_600_000 + randInt(-BELL_JITTER_MS, BELL_JITTER_MS);
-      if (t > now + 60_000 && t < best) best = t;
+      const slot = day + d * 86_400_000 + h * 3_600_000;
+      if (slot <= now + BELL_JITTER_MS) continue;
+      const t = slot + randInt(-BELL_JITTER_MS, BELL_JITTER_MS);
+      if (t < best) best = t;
     }
   }
   return best;

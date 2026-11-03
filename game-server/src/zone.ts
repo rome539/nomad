@@ -81,6 +81,7 @@ import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
 import * as carving from "./carving";
+import * as chronicle from "./chronicle";
 import * as campfire from "./campfire";
 import * as body from "./body";
 import * as ratking from "./ratking";
@@ -718,6 +719,7 @@ export class ZoneDO implements DurableObject {
     this.spawnKeptMemo = undefined; // the world's spawn rows just changed under it (reset + reload takes this path too)
     this.dens = await den.loadDens(this);
     this.carvings = await carving.loadCarvings(this);
+    await chronicle.load(this); // what the keeper might still be telling (chronicle.ts)
     this.denBlood = await den.loadDenBlood(this);
     this.buildWorldMaps(world);
     // LURKERS THAT PREDATE THEIR OWN LAW. `hidden` is stamped at CREATION, so a
@@ -7090,6 +7092,7 @@ export class ZoneDO implements DurableObject {
     if (creature.templateId === RAT_KING) ratking.fell(this); // its rats go leaderless (ratking.ts)
     if (creature.templateId === WHITE_ROE) whiteroe.slain(this, killer); // the wood turns on its killer (whiteroe.ts)
     if (creature.templateId === FEVER_RAT) events.feverLifts(this); // the fever goes with it (feverrat.ts)
+    chronicle.slain(this, killer, tmpl, creature.roomId); // a boss, or one of the named few, goes on the record
     this.noteCreaturesChanged(); // a throw can kill between beats
     for (const s of this.sessions.values()) {
       if (s.target === creature.id) s.target = null;
@@ -7453,6 +7456,7 @@ export class ZoneDO implements DurableObject {
 
   private async onPlayerDeathInner(victim: Session, tmpl: MobTemplate | null, slayerName?: string, vital = false): Promise<void> {
     const slayer = slayerName ?? (tmpl ? tmpl.name : "their own wounds"); // tmpl null = bled out (or a wanderer's steel), no beast on the blow
+    chronicle.died(this, victim, tmpl, slayerName); // every death goes on the record where it fell, before the body is moved
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
     }

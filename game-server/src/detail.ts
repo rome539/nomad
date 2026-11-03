@@ -1774,6 +1774,21 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
     "toll board|board|figures|numbers":
       "A board on two posts, boarded and battened and painted, and the paint has gone except where it was thickest, which was the numbers. What survives is a column of figures with nothing to say what they were for. Somebody has scratched a fifth line under the last one, freehand, and doubled it.",
   },
+  // THE RECORDS THAT HAD NO CLOSE LOOK (rome, 2026-11-02): the deep's, the
+  // waste's and the road's, each read with its region's record under it
+  // (chronicle.ts RECORDS).
+  "the-lock-keepers-room": {
+    "peg-board|pegboard|board|pegs|peg|tallies|tally":
+      "A board of pierced oak on the wall by the window, a peg to every hole, and on each peg a twist of tarred cord knotted once for every barge that went through below. The knotted pegs run along the rows and stop partway along one. The peg after the last is still in its hole.",
+  },
+  "the-old-road": {
+    "gibbet|hill|chain|arm":
+      "One post and one arm on the rise behind the toll-house, and a chain off the arm that moves in a wind you cannot feel down here. The post is cut from the ground to head height with short strokes in fives. Nothing hangs from it now, and the count on it has not stopped.",
+  },
+  "the-first-milestone": {
+    "milestone|stone|pillar|names|marks|scratches":
+      "Grey stone, waist-high, cut flat on the road-facing side, and the old cut on it has weathered past reading. Under it the stone is crowded with names scratched shallow by people who wanted the road to know they had come this far. Some of them have a second line under them, in a hand that is not theirs.",
+  },
   "the-capstan-round": {
     "capstan round|capstan|bar holes|groove":
       "A circle of hard-trodden ground with a timber capstan at the centre, waist high, six bar-holes, and a groove worn round the base by the feet of the people who walked it. Boats were hauled up out of the water here by six men going round and round.",

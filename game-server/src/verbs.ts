@@ -1,3 +1,4 @@
+import * as chronicle from "./chronicle";
 import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
 // The player's verbs, out of the spine. zone.ts keeps dispatch, transport, and
@@ -942,7 +943,8 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const placed = carving.lookPlaced(z, session, arg);
     if (placed) return z.send(session, placed, "study");
     const feature = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
-    if (feature) return z.send(session, feature, "study");
+    // A region's record reads its newest rows under its own close look (chronicle.ts).
+    if (feature) return z.send(session, feature + await chronicle.under(z, session.roomId, feature), "study");
   }
   // In the dark, "nothing like that here" would be a lie dressed as an answer —
   // you didn't fail to find it, you failed to SEE. Say which.

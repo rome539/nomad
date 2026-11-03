@@ -41,6 +41,7 @@
 // THE BAR TO CLEAR (rome): "does having a den make leaving it feel MORE
 // dangerous." A den holds what you did not dare carry, it is a fixed point an
 // enemy can learn, and the walk home is a walk you now have a reason to survive.
+import * as chronicle from "./chronicle";
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
 import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow, insertLoot, itemAcquiredAt, savePlayer } from "./world";
@@ -503,6 +504,7 @@ export async function cmdSettle(z: ZoneDO, session: Session, arg: string): Promi
     `Step through it with 'in', and back out to the ground with 'out'. You can put ${DEN_BUNKS} other nomads under this roof — hand them a key face to face ('bunk <name>'). Inside, 'build' lists what else a den can have.`,
   ].join("\n"));
   z.roomFeed(roomId, `${session.name} raises a den here — a frame going up, and a door hung on it.`, session.pubkey, false);
+  chronicle.denRaised(z, session.name, roomId);
   z.sendCtx(session);
 }
 
@@ -613,6 +615,7 @@ export async function cmdAbandon(z: ZoneDO, session: Session): Promise<void> {
   await drop(z, den);
   z.send(session, `You let ${z.world!.rooms.get(den.roomId)!.name} go. The door stands open behind you.${kept.length ? ` Your ${kept.length} thing${kept.length === 1 ? "" : "s"} on the shelf stay${kept.length === 1 ? "s" : ""} where ${kept.length === 1 ? "it is" : "they are"}, still yours — 'fetch' from this ground takes ${kept.length === 1 ? "it" : "them"} back.` : ""}`);
   z.roomFeed(den.roomId, `${session.name} gives up the hold here.`, session.pubkey, false);
+  chronicle.denLeft(z, session.name, den.roomId);
   z.sendCtx(session);
 }
 
@@ -624,6 +627,7 @@ export async function cmdAbandon(z: ZoneDO, session: Session): Promise<void> {
 // belongings still in it.
 async function lapse(z: ZoneDO, den: Den): Promise<void> {
   await drop(z, den);
+  chronicle.denFell(z, den.holderName, den.roomId);
   const s = z.sessions.get(den.holder);
   if (s) z.send(s, `Word reaches you, in the way it does out here: the hold on ${z.world!.rooms.get(den.roomId)!.name} has fallen in. You stopped going back.`);
 }

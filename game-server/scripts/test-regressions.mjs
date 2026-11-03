@@ -42,6 +42,9 @@ try {
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
         "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine} from './ai';",
         "export {ratHoards, godMet, godRemembers} from './ai';",
+        "export * as chronicle from './chronicle';",
+        "export {nextBellAt} from './events';",
+        "export {ROOM_FEATURES} from './detail';",
         "export {starvingHunts, huntsAt} from './ai';",
         "export * as whiteroe from './whiteroe';",
         "export {cmdDive} from './verbs';",
@@ -75,7 +78,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -591,6 +594,97 @@ try {
     const where = () => db.prepare("SELECT container FROM player_items ORDER BY id").all().map((r) => r.container);
     return { z, me, db, wolf, said, where };
   }
+  check('the bell rings once to its hour, never twice in one night (2026-11-02)', () => {
+    const H = 3_600_000, day = Date.UTC(2026, 10, 3);
+    for (let i = 0; i < 500; i++) {
+      // settled ten minutes after ringing twenty minutes early for 01:00
+      const after = nextBellAt(day + 1 * H - 20 * 60_000 + 12 * 60_000);
+      assert.ok(after >= day + 13 * H - 20 * 60_000 && after <= day + 13 * H + 20 * 60_000, 'the next ringing is the 13:00 one, not 01:00 again');
+      // and after the 13:00 ringing, the next night's 01:00
+      const night = nextBellAt(day + 13 * H + 15 * 60_000);
+      assert.ok(night >= day + 25 * H - 20 * 60_000 && night <= day + 25 * H + 20 * 60_000, 'then the next night');
+      // from the middle of the morning, that day's 13:00 still comes
+      const noon = nextBellAt(day + 6 * H);
+      assert.ok(noon >= day + 13 * H - 20 * 60_000 && noon <= day + 13 * H + 20 * 60_000);
+    }
+  });
+  check('every region keeps a record, on a thing that already answers a close look (2026-11-02)', () => {
+    const regions = new Set(['']); // the fortress: its rooms predate the region files
+    for (const f of readdirSync(new URL('../regions/', import.meta.url))) {
+      const m = readFileSync(new URL('../regions/' + f, import.meta.url), 'utf8').match(/^!region (\S+)/m);
+      if (m) regions.add(m[1] === 'upper' ? '' : m[1]); // built as upper, blanked to the fortress's '' (mig 356)
+    }
+    for (const r of regions) {
+      const rec = chronicle.RECORDS[r];
+      assert.ok(rec, `region "${r}" keeps no record`);
+      assert.ok(ROOM_FEATURES[rec.room]?.[rec.feature], `the ${r || 'fortress'} record (${rec.room}) has no close look for "${rec.feature}"`);
+    }
+  });
+  await checkAsync('the world remembers: every death and every boss is written where it happened, and the keeper forgets (2026-11-02)', async () => {
+    const { db, D1 } = sqliteD1();
+    db.exec(readFileSync(new URL('../migrations/363_the_world_remembers.sql', import.meta.url), 'utf8'));
+    const rooms = new Map([['the-bounds-house', { name: 'The Bounds House', region: 'wood' }], ['the-black-mud', { name: 'The Black Mud', region: 'wood' }],
+      ['the-roll-room', { name: 'The Roll Room', region: '' }], ['the-scraped-hall', { name: 'The Scraped Hall', region: 'deep' }]]);
+    const said = [];
+    const z = { env: { DB: D1 }, world: { rooms }, send: (_s, t) => said.push(t) };
+    await chronicle.load(z);
+    const ash = { pubkey: 'a', name: 'Ashwren', roomId: 'the-black-mud' };
+    const thes = { pubkey: 't', name: 'Thessaly', roomId: 'the-black-mud' };
+    chronicle.slain(z, ash, { id: 'woodward', name: 'the woodward', is_boss: 1 }, 'the-black-mud');
+    chronicle.slain(z, ash, { id: 'rat', name: 'a scabby rat', is_boss: 0 }, 'the-black-mud');
+    chronicle.died(z, thes, { id: 'rat', name: 'a scabby rat', is_boss: 0 });
+    chronicle.died(z, { ...thes, roomId: 'the-scraped-hall' }, null, 'Ashwren');
+    chronicle.denRaised(z, 'Corran', 'the-black-mud');
+    await new Promise((r) => setTimeout(r, 0));
+    const rows = db.prepare('SELECT region, kind, who, what, notable FROM chronicle ORDER BY id').all();
+    assert.deepEqual(rows.map((r) => r.kind), ['slain', 'died', 'killed', 'den-raised'], 'a rat killed is not news; every death is');
+    assert.deepEqual(rows.map((r) => r.region), ['wood', 'wood', 'deep', 'wood'], 'filed under the region it happened in');
+    assert.deepEqual(rows.map((r) => r.notable), [1, 0, 1, 0], 'a boss and a wanderer\'s steel are the keeper\'s news; a rat death is not');
+    // the rods read the wood's rows, newest first, and only under the rods
+    const rods = ROOM_FEATURES['the-bounds-house']['shelf|shelves|rods|hazel|bundles|tallies|tally'];
+    const read = await chronicle.under(z, 'the-bounds-house', rods);
+    assert.match(read, /^ The newest bundle is not tied yet/);
+    assert.ok(read.indexOf('A den raised at the Black Mud by Corran.') < read.indexOf('Thessaly, dead at the Black Mud, to a scabby rat.'), 'newest first');
+    assert.match(read, /The woodward, killed by Ashwren at the Black Mud\./);
+    assert.doesNotMatch(read, /killed by Ashwren at the Scraped Hall/, 'the deep\'s death is not on the wood\'s rods');
+    assert.equal(await chronicle.under(z, 'the-bounds-house', ROOM_FEATURES['the-bounds-house']['table|stool|seat']), '', 'the table carries no record');
+    assert.equal(await chronicle.under(z, 'the-roll-room', ROOM_FEATURES['the-roll-room']['rolls|roll|pigeon-holes|holes|muster']), '', 'an empty record adds nothing');
+    for (let i = 0; i < 7; i++) chronicle.died(z, thes, null);
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal((await chronicle.under(z, 'the-bounds-house', rods)).match(/Thessaly, dead at/g).length, chronicle.RECORD_SHOWS, 'only the newest few');
+    // the keeper: exact, then half a name, then no name, then nothing
+    const e = { at: 0, region: 'wood', room: 'the-black-mud', kind: 'slain', who: 'Ashwren', what: 'the woodward', notable: true };
+    assert.match(chronicle.keeperLine(e, 1000), /"The woodward is dead," the keeper says\. "Ashwren put it down, out in the wood\./);
+    assert.match(chronicle.keeperLine(e, chronicle.KEEPER_FRESH_MS + 1), /Ashw-something/);
+    assert.doesNotMatch(chronicle.keeperLine(e, chronicle.KEEPER_ROUGH_MS + 1), /Ash/);
+    assert.equal(chronicle.keeperLine(e, chronicle.KEEPER_FORGETS_MS + 1), null);
+    // he tells news once, and never your own deed back to you
+    const rnd = crypto.getRandomValues; crypto.getRandomValues = (a) => { a.fill(0); return a; }; // every die lands
+    try {
+      const listener = { pubkey: 'l', name: 'Pilgrim' };
+      assert.ok(chronicle.keeperNews(z, listener, Date.now()), 'news to someone who has not heard it');
+      assert.match(said.at(-1), /the keeper says/);
+      said.length = 0;
+      assert.ok(chronicle.keeperNews(z, listener, Date.now()), 'the other piece of news');
+      assert.ok(!chronicle.keeperNews(z, listener, Date.now()), 'and then he has nothing new');
+      said.length = 0;
+      assert.ok(!chronicle.keeperNews(z, ash, Date.now()), 'never your own deed told back to you');
+    } finally { crypto.getRandomValues = rnd; }
+    // and the hooks are where the things happen
+    const src = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
+    const zs = src('zone.ts');
+    assert.ok(zs.indexOf('chronicle.slain(this, killer, tmpl, creature.roomId)') > zs.indexOf('rising.fall(this, killer, creature, tmpl'), 'a revenant\'s false fall is not a kill');
+    assert.match(zs, /const slayer = slayerName[^\n]*\n\s*chronicle\.died\(this, victim, tmpl, slayerName\);/, 'every death, before the body is moved');
+    assert.match(zs, /await chronicle\.load\(this\);/);
+    assert.match(src('den.ts'), /chronicle\.denRaised\(z, session\.name, roomId\);/);
+    assert.match(src('den.ts'), /chronicle\.denLeft\(z, session\.name, den\.roomId\);/);
+    assert.match(src('den.ts'), /chronicle\.denFell\(z, den\.holderName, den\.roomId\);/);
+    assert.match(src('works.ts'), /chronicle\.boarded\(z, gate\);/);
+    assert.match(src('works.ts'), /chronicle\.opened\(z, gate\);/);
+    assert.equal(src('events.ts').match(/chronicle\.fever\(z, FEVER_RAT_HOME, (true|false)\);/g).length, 3, 'settled, lifted, and lifted by the rat\'s death');
+    assert.match(src('verbs.ts'), /feature \+ await chronicle\.under\(z, session\.roomId, feature\)/);
+    assert.match(src('lore.ts'), /if \(chronicle\.keeperNews\(z, session, now\)\)/);
+  });
   await checkAsync('by the gatehouse fire you can look at yourself by name and at one piece of what another wears (2026-11-02)', async () => {
     const { D1 } = sqliteD1();
     const said = [];

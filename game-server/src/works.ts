@@ -57,6 +57,7 @@
 // The safety rules are measured the same way and cannot rot: a closure is
 // rejected if it would strand any room, and a door is never shut if it is the
 // last one open. Both are computed against the graph as it is, not as it was.
+import * as chronicle from "./chronicle";
 import type { ZoneDO } from "./zone";
 import type { World } from "./world";
 import {
@@ -246,6 +247,7 @@ export function tickWorks(z: ZoneDO, now: number): void {
   for (const [gate, until] of [...z.works.entries()]) {
     if (until > now) continue;
     z.works.delete(gate);
+    chronicle.opened(z, gate);
     const name = world.rooms.get(gate)?.name ?? "the gatehouse";
     z.roomFeedBands(
       SURFACE_BANDS,
@@ -292,6 +294,7 @@ export function tickWorks(z: ZoneDO, now: number): void {
  */
 function closeTheDoor(z: ZoneDO, gate: string): void {
   const world = z.world!;
+  chronicle.boarded(z, gate);
   const name = world.rooms.get(gate)?.name ?? "the gatehouse";
   for (const s of z.sessions.values()) {
     if (s.roomId !== gate || !z.outOfWorld(s)) continue;
