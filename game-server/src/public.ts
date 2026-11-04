@@ -12375,6 +12375,7 @@ var SKY_LAYERED = {
 })();
 var SKY_NIGHT_MS = 2 * 3600000, SKY_DAY_CYCLE_MS = 4 * 3600000; // zone-data DAY_CYCLE_MS: the second half is night
 var SKY_BACK_PACE = .55;  // the farther of two strips drifts at this share of the pace
+var SKY_CLOUD_SIZE = .8;  // every cloud strip, in every room, drawn at this share of its size (rome, 2026-11-04: smaller)
 // Every way a sky can wear its strips (rome, 2026-11-04): each strip alone, and
 // every pair of them together, back to front, each with its pace.
 function skyCloudSets(list) {
@@ -12553,7 +12554,7 @@ var skyDrift = (function () {
     // tonight's clouds, the farther strip first, each at its pace
     var pick = skyCloudsTonight(lay.clouds), tonight = pick.set;
     for (var k = 0; k < tonight.length; k++) {
-      var cl = tonight[k][0], cs = s * (cl[2] || lay.cloudScale || 1), im = layArt[cl[0]].im, tw = cl[1][0] * cs, th = cl[1][1] * cs, top = skyTop(h, th);
+      var cl = tonight[k][0], cs = s * (cl[2] || lay.cloudScale || 1) * SKY_CLOUD_SIZE, im = layArt[cl[0]].im, tw = cl[1][0] * cs, th = cl[1][1] * cs, top = skyTop(h, th);
       var m = (t * w * SKY_DRIFT * tonight[k][1] * pick.dir) % tw, x0 = -((m + tw) % tw);
       // enough copies that the row's own ends are always off the box
       var copies = Math.ceil(w / tw) + 1, row = layCloudRow(cl[0], copies, cl[3] || lay.cloudTint || (lay.dark ? "rgba(2,5,16," + lay.dark + ")" : ""), lay.cloudHue);
