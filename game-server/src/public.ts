@@ -10395,11 +10395,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "131";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "56";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "57";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "75";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "18";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "38";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "19";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "39";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
