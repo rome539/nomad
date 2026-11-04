@@ -1723,16 +1723,12 @@ try {
     }
     for (const g of ['the-pits', 'camp-tail', 'back-lands', 'waste-fields']) assert.match(pub, new RegExp(`^  "${g}": 6\\d,$`, 'm'), g + ' has its mob line');
   });
-  check('a lit room never shows the black unlit picture: only dark rooms list night with night-torch (2026-10-31)', () => {
+  check('the warrens and the deep show their night picture without a torch, not the torchlit one (2026-11-04)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const rp = pub.slice(pub.indexOf('var ROOM_PLATE'), pub.indexOf('\n};', pub.indexOf('var ROOM_PLATE')));
-    const bad = [];
-    for (const m of rp.matchAll(/^  "([^"]+)":\s*"([^"]+)",/gm)) {
-      const have = m[2].split(' ');
-      if (!have.includes('day') && have.includes('night') && have.includes('night-torch') && !DARK_ROOMS.has(m[1])) bad.push(m[1]);
-    }
-    assert.deepEqual(bad, [], 'lit rooms that would show the black frame without a torch');
-    for (const r of ['the-old-adit', 'the-scrape']) assert.match(rp, new RegExp('^  "' + r + '":\\s*"night-torch",$', 'm'), r + ' shows lit');
+    const torchOnly = [...rp.matchAll(/^  "([^"]+)":\s*"night-torch",$/gm)].map((m) => m[1]);
+    assert.deepEqual(torchOnly, [], 'rooms that show the torchlit picture with no torch');
+    for (const r of ['the-old-adit', 'the-scrape', 'the-descent', 'the-tide-gate', 'the-cooperage']) assert.match(rp, new RegExp('^  "' + r + '":\\s*"night night-torch",$', 'm'), r + ' has its night picture');
   });
   check('the redrawn grave-hyena stands at the size the old one did, not 10% smaller (2026-10-30)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
