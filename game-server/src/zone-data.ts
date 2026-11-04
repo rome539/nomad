@@ -3653,9 +3653,13 @@ export const ECLIPSE_TELL_LINES = [
   "The light thins. Not cloud — the grey lid itself is going darker, the way a lamp goes when something stands between it and the flame.",
   "The day dims, slowly, and everything outside goes the colour of an old bruise. Nothing in the sky has changed, and that is what is wrong.",
 ];
+// THE WORDS SAY WHAT THE PICTURE SHOWS (rome, 2026-11-04): totality draws the
+// night's own sky at midday, stars out in it, and the sun up there as a black
+// disc in a burning ring. Lines about a lid gone black and no sun to look at
+// were written for a sky that is not drawn any more.
 export const ECLIPSE_TOTAL_LINES = [
-  "The light is failing. It is midday, and the country is going dark under a lid gone black, and the things that go bold in the dark are going bold in it.",
-  "The grey lid has gone black, and the day with it. It is not night — night is honest about what it is. This is the light being taken away.",
+  "It is midday, and the sky has gone the deep blue of night with stars out in it. The sun hangs up there black, a ring of fire round its edge, and the things that go bold in the dark are going bold in it.",
+  "The day has gone out. The sky is night-blue at noon, pricked with stars, and where the sun was there is a black disc with its light burning round the rim. It is not night — night is honest about what it is. This is the light being taken away.",
 ];
 export const ECLIPSE_AFTER_LINES = [
   "The light comes back slowly, the way a lamp comes back when whatever stood before it moves on, and the country returns to its usual grey.",
@@ -3666,8 +3670,8 @@ export const ECLIPSE_MOUNTAIN_LINES = [
   "The shadow is not the drake's shadow. It is the sun's own — a black circle closing over the light, and the whole hill holding its breath under it.",
 ];
 export const ECLIPSE_SUN_LINES = [
-  "The sun is being eaten. A black shape sits over it, taking more of it by the moment, and the light is going out of the day. You are watching the one thing the lid never let you see.",
-  "There is no sun to look at — only a black disc where it was, and a ring of failing light around it. The day has been cancelled, and nobody consulted you.",
+  "The sun has gone black. A dark disc sits square over it, and all that is left of it is a ring of light burning round the edge. You are looking straight at the one thing the lid never let you see.",
+  "The sun is a black disc with a ring of fire round it, hanging in a sky gone dark enough for stars. The day has been cancelled, and nobody consulted you.",
 ];
 export const ECLIPSE_AMBIENT = [
   "Somewhere a bird settles in the wrong hour, and goes quiet.",
@@ -8677,7 +8681,7 @@ export const MOON_NIGHTS = [
 // The counting is still yours, and you still have to be outdoors, at night,
 // with something over your head that is not rock.
 export const MOON_SKY = [
-  "The moon is full — the whole white round of it, high and holding still. There is light enough out here tonight to do without a torch.",
+  "The moon is full — the whole white round of it. There is light enough out here tonight to do without a torch.",
   "The moon is one night past full: a shaving gone off the one edge and the rest of it still bright. It is going down the month from here.",
   "The moon is going. A clear bite out of the one side now, and what is left of it still lights the ground, but not the way it did.",
   "Half a moon, and the shadow has the other half of it. Whatever it lights, it is lighting less of each night now.",
