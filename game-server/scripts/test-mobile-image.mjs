@@ -211,8 +211,9 @@ try{
  assert.equal(await page.evaluate(()=>demo.painted()),oldScene,'ground alone cannot replace the scene');
  assert.equal(await page.$eval('#sky',e=>e.style.backgroundImage),oldSky,'old sky stays with old ground');
  await page.evaluate(()=>decodeStops.get('/sky/moon.webp').release());
- await page.waitForFunction(()=>demo.painted()==='/room-bg/scree-night.webp'&&document.getElementById('scene-fade'));
- assert.equal(await page.$eval('#scene-fade',e=>getComputedStyle(e).pointerEvents),'none');
+ // read the fade's style in the same breath that finds it: a second call can land after the fade has finished and gone
+ const fadePe=await (await page.waitForFunction(()=>{const f=document.getElementById('scene-fade');return demo.painted()==='/room-bg/scree-night.webp'&&f&&getComputedStyle(f).pointerEvents;})).jsonValue();
+ assert.equal(fadePe,'none');
  if(process.env.TRANSITION_SCREENSHOT)await page.screenshot({path:process.env.TRANSITION_SCREENSHOT});
  await page.waitForFunction(()=>!document.getElementById('scene-fade'));
  // Fast travel: a slow previous room cannot replace the latest one.

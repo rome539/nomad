@@ -12384,17 +12384,21 @@ function skyCloudSets(list) {
   for (i = 0; i < list.length; i++) for (j = i + 1; j < list.length; j++) sets.push([[list[i], SKY_BACK_PACE], [list[j], 1]]);
   return sets;
 }
-// Tonight's set and which way it drifts, off the server's day count (skyRoll),
-// so every page agrees. One day in SKY_CLEAR_EVERY is clear, with no cloud at
-// all (rome, 2026-11-04) - the last of each run, the same day the world's words
-// call clear (zone-util skyClear) - and the cloudy days between step through
-// every set in turn, going one way and then the other.
+// Tonight's set and which way it drifts, drawn at random off the server's day
+// count (skyRoll), so every page agrees and asking again changes nothing. About
+// one day in SKY_CLEAR_EVERY comes up clear, with no cloud at all (rome,
+// 2026-11-04) - the same days the world's words call clear (zone-util skyClear,
+// the same hash) - and any other day is any set, either way.
 var SKY_CLEAR_EVERY = 7; // zone-data SKY_CLEAR_EVERY
+function skyDayHash(d) { // zone-util skyDayHash, line for line
+  var h = Math.imul(d ^ 0x2545f491, 0x9e3779b1);
+  h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
+  return h >>> 0;
+}
 function skyCloudsTonight(list) {
-  var d = skyRoll, e = SKY_CLEAR_EVERY;
-  if (((d % e) + e) % e === e - 1) return { set: [], dir: 1 };
-  var sets = skyCloudSets(list), n = sets.length * 2;
-  var k = d - Math.floor((d + 1) / e), i = ((k % n) + n) % n; // the cloudy days, counted
+  var h = skyDayHash(skyRoll);
+  if (h % SKY_CLEAR_EVERY === 0) return { set: [], dir: 1 };
+  var sets = skyCloudSets(list), i = (h >>> 3) % (sets.length * 2);
   return { set: sets[i % sets.length], dir: i < sets.length ? 1 : -1 };
 }
 // How many the sky now showing has (the preview's R goes round that many).

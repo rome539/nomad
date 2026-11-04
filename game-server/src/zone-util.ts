@@ -164,10 +164,16 @@ export function lidOpen(now = Date.now()): boolean {
   for (let i = 1; i <= LID_MAX_SHUT; i++) if (lidRaw(slot - i)) return false;
   return true;
 }
-// THE CLEAR DAY: the last day-cycle of every SKY_CLEAR_EVERY, the same day the
-// page draws its sky with no cloud (public.ts skyCloudsTonight, off worldDay).
+// THE CLEAR DAY: about one day-cycle in SKY_CLEAR_EVERY, drawn at random off
+// the day count, the same days the page draws its sky with no cloud (public.ts
+// skyCloudsTonight reads skyDayHash, kept line for line with this one).
+export function skyDayHash(d: number): number {
+  let h = Math.imul(d ^ 0x2545f491, 0x9e3779b1);
+  h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
+  return h >>> 0;
+}
 export function skyClear(now = Date.now()): boolean {
-  return worldDay(now) % SKY_CLEAR_EVERY === SKY_CLEAR_EVERY - 1;
+  return skyDayHash(worldDay(now)) % SKY_CLEAR_EVERY === 0;
 }
 // The raw window, before the streak ceiling. A cheap avalanche so consecutive
 // windows do not run in a visible pattern — the sky must not be a stripe you can

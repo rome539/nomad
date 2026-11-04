@@ -8784,9 +8784,9 @@ export const STARS_DAY = "Nothing to see. Whatever is up there is on the far sid
 export const LID_SLOT_MS = 45 * 60_000;
 export const LID_OPEN_SHARE = 0.35;
 export const LID_MAX_SHUT = 5; // ~3h45m — a ceiling on the run, so no streak eats four nights of a six-night month
-// THE CLEAR DAY (rome, 2026-11-04): one day-cycle in this many the sky has no
-// cloud in it at all, the last of each run of them. The page's picture reads the
-// same rule off the same day count (public.ts skyCloudsTonight), so the words and
+// THE CLEAR DAY (rome, 2026-11-04): about one day-cycle in this many, at random,
+// the sky has no cloud in it at all. The page's picture reads the same rule off
+// the same day count (public.ts skyCloudsTonight), so the words and
 // the sky agree: the lid is off for the whole of it, day and night.
 export const SKY_CLEAR_EVERY = 7;
 export const SKY_CLEAR = "The lid is off. The sky is clear from one edge of the world to the other — not a cloud in it anywhere, only the colour, and it looks further away than a sky has any right to.";

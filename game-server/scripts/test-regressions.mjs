@@ -3700,20 +3700,24 @@ try {
     const src = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const grab = (name) => { const i = src.indexOf('function ' + name + '('); return src.slice(i, src.indexOf('\n}\n', i) + 2); };
     const every = Number((src.match(/var SKY_CLEAR_EVERY = (\d+);/) || [])[1]);
-    const page = new Function('SKY_CLEAR_EVERY', 'SKY_BACK_PACE', grab('skyCloudSets') + grab('skyCloudsTonight') +
+    const page = new Function('SKY_CLEAR_EVERY', 'SKY_BACK_PACE', grab('skyDayHash') + grab('skyCloudSets') + grab('skyCloudsTonight') +
       'return function (d, list) { skyRoll = d; return skyCloudsTonight(list); }; var skyRoll;')(every, .55);
     const list = [['a', [1, 1]], ['b', [1, 1]], ['c', [1, 1]], ['d', [1, 1]]];
     let clear = 0;
-    for (let d = 0; d < 140; d++) {
+    const DAYS = 2100;
+    for (let d = 0; d < DAYS; d++) {
       const noon = d * DAY_CYCLE_MS + DAY_CYCLE_MS / 4;
       const pageClear = page(d, list).set.length === 0;
       assert.equal(pageClear, skyClear(noon), 'day ' + d + ': page and world agree');
       if (pageClear) { clear++; assert.ok(lidOpen(noon) && lidOpen(d * DAY_CYCLE_MS + DAY_CYCLE_MS * .75), 'no lid on a clear day or its night'); }
     }
-    assert.equal(clear, 140 / SKY_CLEAR_EVERY, 'one day in ' + SKY_CLEAR_EVERY);
-    // ...and every cloudy look still comes round between them: 10 sets each way
+    // about one day in seven, at random (rome: one in seven, not every seventh)
+    assert.ok(Math.abs(clear - DAYS / SKY_CLEAR_EVERY) < DAYS / SKY_CLEAR_EVERY * .2, clear + ' clear of ' + DAYS);
+    let fixed = 0; for (let d = 0; d + 7 < DAYS; d++) if ((page(d, list).set.length === 0) === (page(d + 7, list).set.length === 0) && page(d, list).set.length === 0) fixed++;
+    assert.ok(fixed < clear * .5, 'not on a weekly clock');
+    // ...and every cloudy look still comes up: 10 sets each way
     const seen = new Set();
-    for (let d = 0; d < 140; d++) { const c = page(d, list); if (c.set.length) seen.add(c.set.map((s) => s[0][0]).join('+') + c.dir); }
+    for (let d = 0; d < DAYS; d++) { const c = page(d, list); if (c.set.length) seen.add(c.set.map((s) => s[0][0]).join('+') + c.dir); }
     assert.equal(seen.size, 20, 'every set, both ways');
   });
 
