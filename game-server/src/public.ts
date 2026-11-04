@@ -3126,6 +3126,7 @@ function stopAmb() {
 var scape = null;          // the live layers, built on first need
 var scapeAmb = null;       // the last soundscape the world sent
 var scapeHpFrac = 1;       // health as a fraction, for the heartbeat
+var scapeStaLeft = 50;     // stamina left of 50, for the breathing
 var sndGround = "";        // what the next footstep lands in
 var SCAPE_GLIDE = 1.2;     // seconds a layer takes to settle on a new level
 // EVERY NEW SOUND AT 70% (rome, 2026-10-13): the whole place came down by
@@ -3199,7 +3200,7 @@ function scapeBuild() {
   // swell, the run of the water. Four times a second is plenty for levels
   // that glide over a second or more.
   scape.timers.push(setInterval(scapeBreathe, 250));
-  scapeDrips(); scapeCrackle(); scapeCreak(); scapeDrop(); scapeHeart(); scapeSongs(); scapeNight();
+  scapeDrips(); scapeCrackle(); scapeCreak(); scapeDrop(); scapeHeart(); scapeWinded(); scapeSongs(); scapeNight();
 }
 function scapeBreathe() {
   if (!scape || !scapeAmb) return;
@@ -3341,6 +3342,59 @@ function scapeHeart() {
     gap = 1000 - 420 * k;
   }
   scapeEvery(gap, gap, scapeHeart);
+}
+// AND WHEN YOU ARE SPENT YOU ARE HEARD BREATHING (rome, 2026-11-03: a noise
+// when stamina gets low; of three tried he chose the ragged gasp, kept quiet).
+// From 10 of 50 (the red on the bar) a rough catching gasp in and a shaky breath
+// out come in under everything, quicker and harder as the last of it goes. The
+// heart's twin: one is your blood running out, the other your wind. Before that,
+// from 25 down to 11, one slow heavy breath at the same quiet
+// level, the way you hear yourself after a long climb (rome, 2026-11-03).
+var STA_WINDED = 10, STA_HEAVY = 25;
+function windNoise() {
+  if (actx.__wb) return actx.__wb;
+  var b = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate), d = b.getChannelData(0), last = 0;
+  for (var i = 0; i < d.length; i++) { var w = Math.random() * 2 - 1; last = (last + 0.06 * w) / 1.06; d[i] = w * 0.55 + last * 3.2; }
+  actx.__wb = b;
+  return b;
+}
+// One breath: shaped noise with a mouth-like resonance, a smooth rise and fall,
+// and (for the gasp) a shake in it, which is what makes it ragged, not calm.
+function windBreath(t, o) {
+  var s = actx.createBufferSource(); s.buffer = windNoise(); s.loop = true;
+  var hp = actx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 180;
+  var lp = actx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 0.5;
+  lp.frequency.setValueAtTime(o.lp0, t); lp.frequency.linearRampToValueAtTime(o.lp1, t + o.dur);
+  var pk = actx.createBiquadFilter(); pk.type = "peaking"; pk.frequency.value = o.formant; pk.Q.value = 1.4; pk.gain.value = 7;
+  var g = actx.createGain(), up = o.dur * o.rise;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(o.gain, t + up);
+  g.gain.setValueAtTime(o.gain, t + up + o.dur * 0.08); g.gain.linearRampToValueAtTime(0.0001, t + o.dur);
+  s.connect(hp); hp.connect(lp); lp.connect(pk); pk.connect(g);
+  if (o.shake) {
+    var tr = actx.createGain(); tr.gain.value = 1;
+    var lfo = actx.createOscillator(); lfo.frequency.value = o.shake;
+    var ld = actx.createGain(); ld.gain.value = 0.45;
+    lfo.connect(ld); ld.connect(tr.gain); g.connect(tr); tr.connect(aout());
+    lfo.start(t); lfo.stop(t + o.dur + 0.05);
+  } else g.connect(aout());
+  s.start(t, Math.random() * 1.5); s.stop(t + o.dur + 0.05);
+}
+function scapeWinded() {
+  var gap = 1000;
+  if (scapeStaLeft <= STA_WINDED) {
+    var t = actx.currentTime + 0.02, k = 1 - scapeStaLeft / STA_WINDED;
+    var v = (0.04 + 0.028 * k) * SCAPE_VOL;
+    windBreath(t, { dur: 0.42, rise: 0.2, lp0: 2600, lp1: 3200, formant: 1800, gain: v * 0.85, shake: 22 });
+    windBreath(t + 0.55, { dur: 1.1 - 0.3 * k, rise: 0.18, lp0: 1500, lp1: 700, formant: 650, gain: v, shake: 9 });
+    gap = 2800 - 1200 * k;
+  } else if (scapeStaLeft <= STA_HEAVY) {
+    // One breath, the same all the way from 25 down to 11 (rome, 2026-11-03).
+    var t2 = actx.currentTime + 0.02, v2 = 0.04 * SCAPE_VOL;
+    windBreath(t2, { dur: 0.9, rise: 0.55, lp0: 1600, lp1: 2200, formant: 1300, gain: v2 * 0.7 });
+    windBreath(t2 + 1.0, { dur: 1.2, rise: 0.25, lp0: 1400, lp1: 800, formant: 700, gain: v2 });
+    gap = 3000;
+  }
+  scapeEvery(gap, gap + 250, scapeWinded);
 }
 // ---- THE SMALL LIFE (rome, 2026-10-16) ----
 // What sings, chirps and croaks in a place without ever being met: songbirds
@@ -3554,6 +3608,8 @@ function scapeSet(amb) {
   if (soundOn && actx && soundFull()) { scapeBuild(); scapeApply(); }
 }
 function scapeHp(hp, max) { if (max > 0) scapeHpFrac = Math.max(0, hp) / max; }
+// The same number the bar shows: 50 less the fatigue (renderVitals).
+function scapeSta(fatigue) { scapeStaLeft = 50 - Math.round(Math.max(0, Math.min(50, +fatigue || 0))); }
 function scapeStart() { if (!actx || !soundFull()) return; scapeBuild(); scapeApply(); }
 function scapeStop() {
   if (!scape) return;
@@ -5789,6 +5845,7 @@ async function connect() {
       renderFx(f.fx);
       dollPulse(f.hp, f.max_hp);
       scapeHp(f.hp, f.max_hp);
+      scapeSta(f.fatigue);
       scapeSet(f.amb);
       lastName = f.name;
       lastNamed = !!f.named;

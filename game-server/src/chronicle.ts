@@ -29,7 +29,7 @@ import type { MobTemplate } from "./world";
 import { ROOM_FEATURES } from "./detail";
 import { chance, pick } from "./rng";
 import { cap } from "./zone-util";
-import { RAT_KING, WHITE_ROE, FEVER_RAT } from "./zone-data";
+import { RAT_KING, WHITE_ROE, FEVER_RAT, MIGRATION_FACTOR } from "./zone-data";
 
 export type Kind = "slain" | "killed" | "died" | "den-raised" | "den-left" | "den-fell" | "boarded" | "opened" | "fever" | "fever-lifted";
 export interface Entry { at: number; region: string; room: string; kind: Kind; who: string; what: string; notable: boolean }
@@ -68,12 +68,37 @@ export const RECORD_SHOWS = 5; // the newest this many; the rest are further dow
 export const NAMED_KILLS = new Set([RAT_KING, WHITE_ROE, FEVER_RAT]);
 
 // How the keeper's memory goes. Exact while it is fresh, half a name for a few
-// days, no name after that, and then he has stopped telling it.
+// days, no name after that, and then he has stopped telling it. (A kill goes by
+// its creature's own clock instead: KEEPER_SLAIN_DEFAULT_MS and slainClock.)
 export const KEEPER_FRESH_MS = 6 * 3600_000;
 export const KEEPER_ROUGH_MS = 3 * 86_400_000;
 export const KEEPER_FORGETS_MS = 14 * 86_400_000;
 export const KEEPER_NEWS_ODDS = 0.5; // when he has news you haven't heard, how often it is the news he picks
 const KEEPER_KEEPS = 200;           // notable rows held in memory, newest kept
+// A KILL IS NEWS ON THE CREATURE'S OWN CLOCK (rome, 2026-11-03: a boss comes
+// back within hours, so a fortnight of "the old grey is dead" made no sense).
+// The clock is how long it stays dead (respawn_secs x MIGRATION_FACTOR, the
+// boss's fixed return: about 7 hours for the old grey, 2 for the Forgotten King,
+// 20 for the drake). The name is exact for the first third of it, half a name
+// for the second, gone for the last; once it is back on its feet, or the clock
+// has run, he stops. One piece of news per creature: only its latest kill.
+// A creature that comes back by its own rules (the rat king, the fever rat:
+// respawn_secs 0) takes this instead.
+export const KEEPER_SLAIN_DEFAULT_MS = 6 * 3600_000;
+export function slainClock(z: ZoneDO | null, what: string): number {
+  for (const t of z?.world?.mobTemplates?.values() ?? []) {
+    if (t.name === what) return (t.respawn_secs || 0) > 0 ? t.respawn_secs * MIGRATION_FACTOR * 1000 : KEEPER_SLAIN_DEFAULT_MS;
+  }
+  return KEEPER_SLAIN_DEFAULT_MS;
+}
+// ...and whether it is back: one of its kind standing alive in the world again.
+function slainIsBack(z: ZoneDO, what: string): boolean {
+  const ids = new Set<string>();
+  for (const t of z.world?.mobTemplates?.values() ?? []) if (t.name === what) ids.add(t.id);
+  if (!ids.size) return false;
+  for (const c of z.creatures?.values() ?? []) if (ids.has(c.templateId) && c.hp > 0) return true;
+  return false;
+}
 
 const recentOf = new WeakMap<ZoneDO, Entry[]>();
 const toldOf = new Map<string, Set<Entry>>(); // pubkey -> what the keeper has already told them
@@ -108,9 +133,19 @@ export function record(z: ZoneDO, roomId: string, kind: Kind, who: string, what:
   }
   try {
     z.env.DB.prepare("INSERT INTO chronicle (at, region, room_id, kind, who, what, notable) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .bind(e.at, e.region, e.room, e.kind, e.who, e.what, notable ? 1 : 0).run().catch(() => {});
+      .bind(e.at, e.region, e.room, e.kind, e.who, e.what, notable ? 1 : 0).run()
+      .then(() => trim(z, e.region, now)).catch(() => {});
   } catch { /* no database to write to: the line is lost, the tick is not */ }
   return e;
+}
+
+// ONLY WHAT CAN BE READ IS KEPT (rome, 2026-11-03: trim it). A record shows its
+// region's newest RECORD_SHOWS lines and nothing ever reads further back, so a
+// row past those is kept only while the keeper might still tell it (notable,
+// and younger than he forgets). Everything else goes the moment it falls off.
+export function trim(z: ZoneDO, region: string, now = Date.now()): Promise<unknown> {
+  return z.env.DB.prepare("DELETE FROM chronicle WHERE region = ? AND id NOT IN (SELECT id FROM chronicle WHERE region = ? ORDER BY at DESC, id DESC LIMIT ?) AND (notable = 0 OR at < ?)")
+    .bind(region, region, RECORD_SHOWS, now - KEEPER_FORGETS_MS).run().catch(() => {});
 }
 
 // ---- the hooks ----
@@ -189,11 +224,13 @@ function rough(name: string): string {
   return name.length <= 4 ? name : name.slice(0, Math.ceil(name.length / 2)) + "-something";
 }
 
-export function keeperLine(e: Entry, now: number): string | null {
+export function keeperLine(e: Entry, now: number, clock = KEEPER_SLAIN_DEFAULT_MS): string | null {
   const age = now - e.at;
-  if (age >= KEEPER_FORGETS_MS) return null;
+  const span = e.kind === "slain" ? clock : KEEPER_FORGETS_MS;
+  if (age >= span) return null;
   const where = REGION_AT[e.region] ?? "out there";
-  const fresh = age < KEEPER_FRESH_MS, old = age >= KEEPER_ROUGH_MS;
+  const fresh = e.kind === "slain" ? age < span / 3 : age < KEEPER_FRESH_MS;
+  const old = e.kind === "slain" ? age >= (span * 2) / 3 : age >= KEEPER_ROUGH_MS;
   switch (e.kind) {
     case "slain":
       return fresh ? `"${cap(e.what)} is dead," the keeper says. "${e.who} put it down, ${where}. Not long ago."`
@@ -222,11 +259,16 @@ export function keeperNews(z: ZoneDO, session: Session, now: number): boolean {
   const told = toldOf.get(session.pubkey) ?? new Set<Entry>();
   for (const e of told) if (!all.includes(e)) told.delete(e); // forgotten rows leave the set with him
   const yours = (e: Entry) => e.who === session.name || e.what === session.name;
-  const fresh = all.filter((e) => !told.has(e) && !yours(e) && now - e.at < KEEPER_FORGETS_MS && keeperLine(e, now));
+  // A kill is told only as its creature's LATEST, and only while it is still down.
+  const latest = new Map<string, Entry>();
+  for (const e of all) if (e.kind === "slain") latest.set(e.what, e); // oldest first, so the last one wins
+  const clockOf = (e: Entry) => (e.kind === "slain" ? slainClock(z, e.what) : KEEPER_FORGETS_MS);
+  const live = (e: Entry) => e.kind !== "slain" || (latest.get(e.what) === e && !slainIsBack(z, e.what));
+  const fresh = all.filter((e) => !told.has(e) && !yours(e) && live(e) && keeperLine(e, now, clockOf(e)));
   if (!fresh.length || !chance(KEEPER_NEWS_ODDS)) return false;
   const e = pick(fresh.slice(-3)); // the newest few: what is being talked about
   told.add(e);
   toldOf.set(session.pubkey, told);
-  z.send(session, keeperLine(e, now)!, "lore");
+  z.send(session, keeperLine(e, now, clockOf(e))!, "lore");
   return true;
 }

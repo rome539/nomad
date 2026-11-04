@@ -520,6 +520,16 @@ try {
     assert.match(keep, /## the-old-adit \| The Old Adit\n!floor -2\n/, 'the Old Adit is the warrens');
   });
 
+  check('low stamina is heard: a ragged breath under everything from the red on the bar (2026-11-03)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /scapeHp\(f\.hp, f\.max_hp\);\n      scapeSta\(f\.fatigue\);/, 'the status frame feeds the breath');
+    assert.match(pub, /scapeHeart\(\); scapeWinded\(\);/, 'and it is started with the soundscape');
+    assert.match(pub, /var STA_WINDED = 10, STA_HEAVY = 25;/, 'gasps from the red on the bar, heavy breathing from half');
+    assert.match(pub, /\} else if \(scapeStaLeft <= STA_HEAVY\) \{/, 'and the heavy breathing has its own branch');
+    assert.match(pub, /if \(scapeStaLeft <= STA_WINDED\) \{/, 'heavy breathing down to 11, the gasps from 10');
+    assert.match(pub, /var t2 = actx\.currentTime \+ 0\.02, v2 = 0\.04 \* SCAPE_VOL;/, 'and the heavy breath is one breath, the same all the way down');
+  });
+
   console.log('the smithy gate');
   check('the Weeper\'s Arch is no gate and the Village Smithy is (2026-11-03, mig 366)', () => {
     const mig = readFileSync(new URL('../migrations/366_the_smithy_is_a_gate.sql', import.meta.url), 'utf8');
@@ -824,12 +834,20 @@ try {
     for (let i = 0; i < 7; i++) chronicle.died(z, thes, null);
     await new Promise((r) => setTimeout(r, 0));
     assert.equal((await chronicle.under(z, 'the-bounds-house', rods)).match(/Thessaly, dead at/g).length, chronicle.RECORD_SHOWS, 'only the newest few');
+    // ...and only what can be read is kept (2026-11-03): the region's newest few,
+    // plus news the keeper might still tell. The rest is gone from the table.
+    const wood = db.prepare("SELECT kind, notable FROM chronicle WHERE region = 'wood'").all();
+    assert.equal(wood.filter((r) => !r.notable).length <= chronicle.RECORD_SHOWS, true, 'rows nobody can read are not kept');
+    assert.ok(wood.some((r) => r.kind === 'slain'), 'but the boss the keeper may still tell of is');
     // the keeper: exact, then half a name, then no name, then nothing
     const e = { at: 0, region: 'wood', room: 'the-black-mud', kind: 'slain', who: 'Ashwren', what: 'the woodward', notable: true };
-    assert.match(chronicle.keeperLine(e, 1000), /"The woodward is dead," the keeper says\. "Ashwren put it down, out in the wood\./);
-    assert.match(chronicle.keeperLine(e, chronicle.KEEPER_FRESH_MS + 1), /Ashw-something/);
-    assert.doesNotMatch(chronicle.keeperLine(e, chronicle.KEEPER_ROUGH_MS + 1), /Ash/);
-    assert.equal(chronicle.keeperLine(e, chronicle.KEEPER_FORGETS_MS + 1), null);
+    // A kill fades on the creature's own clock (2026-11-03): thirds of how long it stays dead.
+    const C = 7 * 3600_000;
+    assert.match(chronicle.keeperLine(e, 1000, C), /"The woodward is dead," the keeper says\. "Ashwren put it down, out in the wood\./);
+    assert.match(chronicle.keeperLine(e, C / 3 + 1, C), /Ashw-something/);
+    assert.doesNotMatch(chronicle.keeperLine(e, (2 * C) / 3 + 1, C), /Ash/);
+    assert.equal(chronicle.keeperLine(e, C + 1, C), null, 'and not past the time it takes to come back');
+    assert.equal(chronicle.slainClock({ world: { mobTemplates: new Map([['old-grey', { id: 'old-grey', name: 'the old grey', respawn_secs: 2520 }]]) } }, 'the old grey'), 2520 * 10 * 1000, 'its clock is how long it stays dead');
     // he tells news once, and never your own deed back to you
     const rnd = crypto.getRandomValues; crypto.getRandomValues = (a) => { a.fill(0); return a; }; // every die lands
     try {
@@ -842,6 +860,30 @@ try {
       said.length = 0;
       assert.ok(!chronicle.keeperNews(z, ash, Date.now()), 'never your own deed told back to you');
     } finally { crypto.getRandomValues = rnd; }
+    // ONE PIECE OF NEWS PER BOSS, and none once it is back (2026-11-03).
+    {
+      const said2 = [];
+      const z2 = { env: { DB: D1 }, world: { rooms, mobTemplates: new Map([['old-grey', { id: 'old-grey', name: 'the old grey', respawn_secs: 2520, is_boss: 1 }]]) },
+        creatures: new Map(), send: (_s, t) => said2.push(t) };
+      await chronicle.load(z2);
+      const g = { id: 'old-grey', name: 'the old grey', is_boss: 1 };
+      chronicle.slain(z2, { name: 'Irongate' }, g, 'the-black-mud');
+      chronicle.slain(z2, { name: 'Lunapilot' }, g, 'the-black-mud');
+      const rnd2 = crypto.getRandomValues; crypto.getRandomValues = (a) => { a.fill(0); return a; };
+      try {
+        const hearer = { pubkey: 'h', name: 'Hearer' };
+        const before = said2.length;
+        while (chronicle.keeperNews(z2, hearer, Date.now())) {}
+        const grey = said2.slice(before).filter((l) => /old grey/.test(l));
+        assert.equal(grey.length, 1, 'two kills of one boss are one piece of news');
+        assert.match(grey[0], /Lunapilot/, 'and it is the latest');
+        chronicle.slain(z2, { name: 'Ashwren' }, g, 'the-black-mud');
+        z2.creatures.set('c1', { id: 'c1', templateId: 'old-grey', roomId: 'the-black-mud', hp: 40 });
+        const heard = said2.length;
+        while (chronicle.keeperNews(z2, hearer, Date.now())) {}
+        assert.ok(!said2.slice(heard).some((l) => /old grey/.test(l)), 'once it is back on its feet he stops telling it dead');
+      } finally { crypto.getRandomValues = rnd2; }
+    }
     // and the hooks are where the things happen
     const src = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
     const zs = src('zone.ts');
