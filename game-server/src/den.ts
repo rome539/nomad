@@ -58,7 +58,7 @@ import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_
   CURE_RECIPES, COOK_RECIPES, FOOD_KEEPS, GATE_CURE_MS,
   DEN_BUILD_WORK, DEN_BUILD_BEAT_MS, DEN_TOOL_WORD, type DenTool,
   DEN_CELLAR_AGE_MULT, DEN_CELLAR_ROOM, DEN_SNARE_EVERY_MS, DEN_SNARE_ODDS, DEN_SNARE_CATCH } from "./zone-data";
-import { nameMatches, shortName, isNight, foodState, cap } from "./zone-util";
+import { nameMatches, shortName, isNight, foodState, foodGone, cap } from "./zone-util";
 import { MOUNTAIN_QUARTER_ROOMS, WOOD_QUARTERS } from "./detail";
 
 export interface Den {
@@ -960,7 +960,14 @@ export async function rustShelf(z: ZoneDO, held: CarriedItem[], den?: Den): Prom
       continue;
     }
   }
-  return held;
+  // ...and food past rotten is gone from the shelf, read after the larder has
+  // slowed its clock (rome, 2026-11-04; events.tickFoodRot for the pack).
+  const kept: CarriedItem[] = [];
+  for (const c of held) {
+    if (events.perishes(z, c.itemId) && foodGone(c.acquiredAt, c.itemId)) await removeItemRow(z.env.DB, c.rowId);
+    else kept.push(c);
+  }
+  return kept;
 }
 
 // EVERY PLACE YOU HAVE THINGS. The one query that makes the guarantee below

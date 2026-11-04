@@ -10702,6 +10702,11 @@ export const DEEP_DOOR_OPEN_MS = 20 * 60_000;
 // scraps (ROT_MS, 4h).
 export const FOOD_FRESH_SEC = 60 * 60;                // fresh for the first hour
 export const FOOD_SPOIL_SEC = 150 * 60;               // reads spoiled after ~2.5h; the hour between is "on the turn"
+// AND THEN IT IS GONE (rome, 2026-11-04): rotten food no longer lies in a pack
+// or a store forever. It rots to nothing at the hour floor food rots to scraps
+// (ROT_MS), so a ration ends the same way wherever it was left; cooked food
+// takes twice as long, as it does for every other stage.
+export const FOOD_GONE_SEC = 4 * 60 * 60;
 export const FOOD_SPOIL_HEAL_MULT = 0.5;              // spoiled food is HONEST: it heals this fraction (never nothing — min 1; still edible in a pinch). "turning" is unpenalized — the warning tier. FOOD_KEEPS never spoils.
 // Cured, dried, salted — or just water: these keep, and never read as spoiling.
 // Preservation is the whole point of the smoker, the salt barrel, the hardtack

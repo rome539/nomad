@@ -57,6 +57,7 @@ import {
   hasTrait,
   parseTraits,
   loadLeaderboard,
+  setRottedAway,
 } from "./world";
 import * as invites from "./invites";
 import { parse, HELP_TEXT, type Command } from "./parser";
@@ -706,6 +707,7 @@ export class ZoneDO implements DurableObject {
     console.log("world wakes", zone, "build", BUILD_ID, "sockets", this.state.getWebSockets().length);
     const world = await loadWorld(this.env.DB, zone);
     this.world = world;
+    setRottedAway((itemId, at, container) => events.rottedAway(this, itemId, at, container));
     this.spawnKeptMemo = undefined; // the world's spawn rows just changed under it (reset + reload takes this path too)
     this.dens = await den.loadDens(this);
     this.carvings = await carving.loadCarvings(this);
@@ -5561,6 +5563,7 @@ export class ZoneDO implements DurableObject {
     // closing back over, and a lantern's last burn spending the lantern.
     await light.tickLights(this, now);
     mark("lights");
+    await events.tickFoodRot(this); // rotten food goes to nothing (events.ts)
 
     // The sky turns (events.ts): rain telegraphs, falls, and leaves mud —
     // and its kin to come. The spine just winds the clock.

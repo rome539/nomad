@@ -530,9 +530,25 @@ export async function setEquipped(db: D1Database, rowId: string, equipped: boole
   await db.prepare("UPDATE player_items SET equipped = ? WHERE id = ?").bind(equipped ? 1 : 0, rowId).run();
 }
 
+// FOOD ROTS AWAY IN STORE TOO (rome, 2026-11-04). The zone sets this once it
+// has its item templates (events.rottedAway): true for a stored row that has
+// rotted to nothing, which is taken out of the store as it is read.
+let rottedAway: ((itemId: string, acquiredAt: number | undefined, container: string) => boolean) | null = null;
+export function setRottedAway(fn: typeof rottedAway): void { rottedAway = fn; }
+
 // What rests in a gate container ('lockbox' | 'vault'): beyond the reach of
 // anything that happens to the body that owns it. Condition is preserved.
 export async function loadContainer(db: D1Database, pubkey: string, container: string): Promise<CarriedItem[]> {
+  const held = await readContainer(db, pubkey, container);
+  if (!rottedAway) return held;
+  const kept: CarriedItem[] = [];
+  for (const c of held) {
+    if (rottedAway(c.itemId, c.acquiredAt, container)) await removeItemRow(db, c.rowId);
+    else kept.push(c);
+  }
+  return kept;
+}
+async function readContainer(db: D1Database, pubkey: string, container: string): Promise<CarriedItem[]> {
   const res = await db
     .prepare("SELECT id, item_id, signed_serial, condition, journal_id, invite_code, lore_id, acquired_at, rolled_traits, container_at, fuel FROM player_items WHERE pubkey = ? AND container = ? ORDER BY acquired_at")
     .bind(pubkey, container)

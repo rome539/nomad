@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, SKY_CLEAR_EVERY, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
+import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, FOOD_GONE_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, SKY_CLEAR_EVERY, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -293,6 +293,12 @@ export function foodState(at: number | undefined, itemId?: string, now = Math.fl
   if (age >= FOOD_SPOIL_SEC * m) return "spoiled";
   if (age >= FOOD_FRESH_SEC * m) return "turning";
   return "fresh";
+}
+// Rotted to nothing: past rotten, and gone from wherever it is (FOOD_GONE_SEC).
+export function foodGone(at: number | undefined, itemId?: string, now = Math.floor(Date.now() / 1000)): boolean {
+  if (at === undefined) return false;
+  const m = itemId !== undefined && COOKED_FOODS.has(itemId) ? COOKED_SPOIL_MULT : 1;
+  return now - at >= FOOD_GONE_SEC * m;
 }
 // The shelf-word: fresh food shows NOTHING (no "— fresh" noise on every ration);
 // only aging food flags itself, so the tag reads as a warning, not decoration.

@@ -18,8 +18,8 @@ import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
 import * as feverrat from "./feverrat";
-import { cap, foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand, skyClear } from "./zone-util";
-import { setItemAcquiredAt } from "./world";
+import { cap, foodState, foodGone, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand, skyClear } from "./zone-util";
+import { setItemAcquiredAt, removeItemRow } from "./world";
 import {
   QUICKSAND_ROOMS, QUICKSAND_GRIP_ODDS, HOBBLE_FLEE_MS,
   OUTDOOR_ROOMS, WARRENS_ROOMS, TRACE_LIFE_MS, FISHING_SURFACE, HOLLOW,
@@ -52,7 +52,7 @@ import {
   BREACH_PAIRS, BREACH_TELEGRAPH_MS, BREACH_ACTIVE_MS, BREACH_AFTERMATH_MS,
   SEA_ROOMS, SEA_INSTRUMENTS, TIDE_SHUT, SEA_CREST_NORMAL, SEA_CREST_SPRING, SEA_HEARD_BANDS, ROAD_HEARD_BANDS, SEA_BITE, SEA_STATES,
   TIDE_SILT_COURSES, TIDE_SILT_PER_TIDE, TIDE_SILT_MAX,
-  FOOD_KEEPS, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT,
+  FOOD_KEEPS, FOOD_SPOIL_SEC, DEEP_HEART, COLD_CONTAINER, COOKED_FOODS, COOKED_SPOIL_MULT,
   SEA_TELEGRAPH_MS, SEA_MAKE_MS, SEA_STAND_MIN_MS, SEA_STAND_MAX_MS, SEA_EBB_MS,
   TIDEWAYS_ROOMS, TIDE_LEVELS, TIDE_HIGH_ODDS, TIDE_MOON_SPRING,
   TIDE_EVERY_MIN_MS, TIDE_EVERY_MAX_MS, TIDE_FIRST_MIN_MS, TIDE_FIRST_MAX_MS, TIDE_GRACE_MS,
@@ -744,6 +744,33 @@ export async function wetRations(z: ZoneDO, s: Session): Promise<void> {
   await setItemAcquiredAt(z.env.DB, ration.rowId, at);
   const t = z.world!.itemTemplates.get(ration.itemId)!;
   z.send(s, `The water gets into ${t.name} — waterlogged. It will still fill you, but not as far.`, "dmgin");
+}
+
+// ROTTEN FOOD ROTS AWAY (rome, 2026-11-04). Past rotten, a ration goes to
+// nothing wherever it is: out of the pack with a word, and out of a store when
+// the store is next read (world.loadContainer). The cold store keeps food as
+// young as it went in, so nothing in it rots; a den shelf is read through its
+// larder first (den.rustShelf), which slows the clock, so it rots there.
+export function perishes(z: ZoneDO, itemId: string): boolean {
+  return itemId !== DEEP_HEART && !FOOD_KEEPS.has(itemId) && !!z.world?.itemTemplates.get(itemId)?.edible;
+}
+export function rottedAway(z: ZoneDO, itemId: string, at: number | undefined, container: string): boolean {
+  if (container === COLD_CONTAINER || container.startsWith("den:")) return false;
+  return perishes(z, itemId) && foodGone(at, itemId);
+}
+export async function tickFoodRot(z: ZoneDO): Promise<void> {
+  for (const s of z.sessions.values()) {
+    const gone = s.items.filter((c) => perishes(z, c.itemId) && foodGone(c.acquiredAt, c.itemId));
+    if (!gone.length) continue;
+    for (const c of gone) {
+      s.items.splice(s.items.indexOf(c), 1);
+      await removeItemRow(z.env.DB, c.rowId);
+    }
+    const names = [...new Set(gone.map((c) => z.world!.itemTemplates.get(c.itemId)?.name ?? c.itemId))];
+    z.send(s, `${cap(names.join(", "))} ${gone.length === 1 ? "has" : "have"} rotted to nothing in your pack, and you shake ${gone.length === 1 ? "it" : "them"} out.`, "dmgin");
+    z.sendStatus(s);
+    z.sendCtx(s);
+  }
 }
 
 // Which wall is (or is about to be) down — null when no breach runs.
