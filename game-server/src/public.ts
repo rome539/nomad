@@ -10396,7 +10396,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 var MOB_V  = "131";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "57";      // /room-bg/  the room plates - 91MB, the expensive one
-var SKY_V  = "75";      // /sky/      the ten skies
+var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "19";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
 var FX_V   = "39";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
@@ -12332,7 +12332,7 @@ var SKY_LAYERED = {
           clouds: [["moon-clouds2", [2206, 713]], ["moon-clouds", [2143, 734]]] },
   // A night with no moon (rome, 2026-11-03): the moon sky's own far sky and
   // clouds, taken down by "dark", and more stars where there is no moonlight.
-  night: { far: "moon-far", stars: 380, cloudScale: .6, dark: .42,
+  night: { far: "moon-far", stars: 380, cloudScale: .6, dark: .42, cloudTint: "rgba(2,5,16,.6)",
            clouds: [["moon-clouds2", [2206, 713]], ["moon-clouds", [2143, 734]]] },
   // The red moon: its own disc, and the night's own far sky and clouds stained
   // red (farTint, cloudTint). Its painted red-to-black sky read wrong (rome,
@@ -12344,7 +12344,7 @@ var SKY_LAYERED = {
   // The eclipse is the night sky at midday (rome, 2026-11-03), and the sun
   // keeps the eclipse's own hour, not the night's (path).
   eclipse: { far: "moon-far", disc: "eclipse-disc", path: "eclipse", discSize: .15, stars: 110, glow: "255,222,160", cloudScale: .6,
-             cloudTint: "rgba(2,5,16,.38)",
+             cloudTint: "rgba(2,5,16,.6)",
              clouds: [["moon-clouds2", [2206, 713]], ["moon-clouds", [2143, 734]]] },
 };
 // THE DAY IS LAYERED TOO (rome, 2026-11-03): a far sky and its clouds, and no
@@ -12361,8 +12361,15 @@ var SKY_LAYERED = {
   var day = { far: "day-far", stars: 0, cloudScale: 1,
               clouds: [["day-clouds2", [2188, 718]], ["day-clouds", [2185, 720]],
                        ["moon-clouds2", [2206, 713], .6, SKY_MOON_BY_DAY], ["moon-clouds", [2143, 734], .6, SKY_MOON_BY_DAY]] };
+  // The clouds are darker by night (rome, 2026-11-04), and the day's, painted
+  // bright, darker again when the night borrows them. The full moon keeps its own.
+  // The eclipse's clouds are the night's (rome, 2026-11-04).
+  var SKY_DAY_BY_NIGHT = "rgba(2,5,16,.72)";
+  ["night", "eclipse"].forEach(function (k) {
+    SKY_LAYERED[k].clouds = SKY_LAYERED[k].clouds.concat([["day-clouds2", [2188, 718], 1, SKY_DAY_BY_NIGHT], ["day-clouds", [2185, 720], 1, SKY_DAY_BY_NIGHT]]);
+  });
   SKY_LAYERED.moon.clouds = SKY_LAYERED.moon.clouds.concat([["day-clouds2", [2188, 718], 1], ["day-clouds", [2185, 720], 1]]);
-  ["night", "blood", "eclipse"].forEach(function (k) {
+  ["blood"].forEach(function (k) {
     SKY_LAYERED[k].clouds = SKY_LAYERED[k].clouds.concat([["day-clouds2", [2188, 718], 1], ["day-clouds", [2185, 720], 1]]);
   });
   // Dawn and dusk wear clouds of their own, as painted (rome, 2026-11-04).
