@@ -289,20 +289,27 @@ try{
  assert.equal(await page.evaluate(()=>demo.fxState().mist),0);assert.equal(await page.evaluate(()=>demo.fxState().wet),0);
  assert.equal(await page.$eval('#scene-sparks',e=>e.style.display),'none','hand torch does not inherit wall embers');
  console.log('PASS animated mist/reflections prepared before image swap; first frame commits together; obsolete successes/failures cannot transfer effects');
- // No animation frame may expose the previous sky's tiles or stars.
+ // No animation frame may expose the previous sky's tiles, stars or layers.
+ // Night, moon and the day skies are layered (2026-11-03, SKY_LAYERED): one
+ // canvas, redrawn in the same call as the swap, or hidden until its pictures
+ // are in. after-rain is still one sliding picture, so the tiles are checked on it.
  const skySwap=await page.evaluate(()=>{
-  const cv=document.getElementById('sky-stars'),ctx=cv.getContext('2d');
-  let clears=0;const clear=ctx.clearRect;ctx.clearRect=function(...args){clears++;return clear.apply(this,args);};
-  demo.skyDrift.show('/sky/night.webp');clears=0;
+  const lay=document.getElementById('sky-layers');
+  demo.skyDrift.show('/sky/night.webp');
+  const lctx=lay.getContext('2d');let clears=0;const clear=lctx.clearRect;lctx.clearRect=function(...args){clears++;return clear.apply(this,args);};
   demo.skyDrift.show('/sky/moon.webp');
-  const result={tiles:[...document.querySelectorAll('#sky-drift > i')].map(e=>e.style.backgroundImage),clears,stars:cv.style.display};
-  demo.skyDrift.show('/sky/day.webp');result.dayStars=cv.style.display;
-  demo.skyDrift.show('');result.hidden=document.getElementById('sky-drift').style.display;
-  ctx.clearRect=clear;return result;
+  const result={layers:lay.style.display,clears,driftOnMoon:document.getElementById('sky-drift').style.display,starsOnMoon:document.getElementById('sky-stars').style.display};
+  demo.skyDrift.show('/sky/after-rain.webp');
+  result.tiles=[...document.querySelectorAll('#sky-drift > i')].map(e=>e.style.backgroundImage);
+  result.layersOnRain=lay.style.display;result.rainStars=document.getElementById('sky-stars').style.display;
+  demo.skyDrift.show('');result.hidden=document.getElementById('sky-drift').style.display;result.layersHidden=lay.style.display;
+  lctx.clearRect=clear;return result;
  });
- assert(skySwap.tiles.every(s=>s.includes('/sky/moon.webp')),'moving sky tiles switch synchronously');
- assert(skySwap.clears>0,'old star pixels replaced synchronously');assert.equal(skySwap.stars,'block');
- assert.equal(skySwap.dayStars,'none');assert.equal(skySwap.hidden,'none');
+ assert(skySwap.layers==='none'||skySwap.clears>0,'a layered sky is redrawn in the same call, or hidden until it can be: '+JSON.stringify(skySwap));
+ assert.equal(skySwap.driftOnMoon,'none','the old sliding picture is not shown under a layered sky');assert.equal(skySwap.starsOnMoon,'none');
+ assert(skySwap.tiles.every(s=>s.includes('/sky/after-rain.webp')),'moving sky tiles switch synchronously');
+ assert.equal(skySwap.layersOnRain,'none','the layers go the moment a single-picture sky goes up');assert.equal(skySwap.rainStars,'none');
+ assert.equal(skySwap.hidden,'none');assert.equal(skySwap.layersHidden,'none');
  // Keep outdoor weather with a delayed outdoor image, then remove it at the
  // exact indoor commit. A stale rainy request cannot restart it indoors.
  await page.evaluate(()=>demo.paintScene('mountain','rain','scree','wet-outside',false,1,'',0,0,false));

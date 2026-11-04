@@ -3625,7 +3625,7 @@ try {
     assert.deepEqual(gatehouseHeard('follow me lads'), { say: 'follow me lads' }, "by the fire 'follow me' is said");
   });
 
-  check('emotes open with the wanderer\'s name, go out as speech, and must be seen (2026-11-03)', () => {
+  check('emotes open with the wanderer\'s name, read as plain narration like wave, and must be seen (2026-11-03)', () => {
     assert.equal(emoteLine('Rome', 'crouches   by the fire'), 'Rome crouches by the fire');
     assert.equal(emoteLine('Rome', "'s eyes narrow"), "Rome's eyes narrow", 'a possessive joins the name');
     assert.ok(emoteLine('Rome', 'waits ' + 'a'.repeat(400)).length <= 'Rome '.length + 240, 'as long as a said line');
@@ -3649,8 +3649,8 @@ try {
     const me = { pubkey: 'me', name: 'Rome', roomId: 'moor' };
     const z = { send: (s, t, c, sp) => said.push([t, c, sp]), roomFeed: (...a) => fed.push(a), litFor: () => lit, events: new Map(), world: { rooms: new Map() }, sessions: new Map() };
     cmdEmote(z, me, 'wipes the blade');
-    assert.deepEqual(said.at(-1), ['Rome wipes the blade', 'say', { name: 'Rome', pk: 'me' }], 'the speaker sees it as speech');
-    assert.deepEqual(fed.at(-1), ['moor', 'Rome wipes the blade', 'me', false, 'say', { name: 'Rome', pk: 'me' }], 'the room too, never to a relay');
+    assert.deepEqual(said.at(-1), ['Rome wipes the blade', undefined, undefined], 'the doer sees it as narration, not speech');
+    assert.deepEqual(fed.at(-1), ['moor', 'Rome wipes the blade', 'me', false], 'the room the same way wave reaches it (2026-11-03)');
     lit = false; fed.length = 0;
     cmdEmote(z, me, 'wipes the blade');
     assert.equal(fed.length, 0, 'in the dark nobody sees it');

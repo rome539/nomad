@@ -2018,9 +2018,9 @@ export function cmdEmote(z: ZoneDO, session: Session, words: string): void {
   if (events.foggy(z, session.roomId)) return z.send(session, "The fog is too thick here for anyone to see it.");
   const folk = [...z.sessions.values()].filter((s) => s.roomId === session.roomId && s.pubkey !== session.pubkey && z.reachable(s)).map((s) => s.name);
   const line = emoteLine(session.name, words, folk);
-  const speaker = { name: session.name, pk: session.pubkey };
-  z.send(session, line, "say", speaker);
-  z.roomFeed(session.roomId, line, session.pubkey, false, "say", speaker);
+  // Plain narration, as wave and dance are: what someone does, not what they say.
+  z.send(session, line);
+  z.roomFeed(session.roomId, line, session.pubkey, false);
 }
 
 // Shout: your words thrown hard enough to cross walls. The trade IS the verb —

@@ -1155,6 +1155,8 @@ export const PAGE = `<!doctype html>
   body[data-view="image"] #sky[data-sky="wet-dawn"]  { filter: brightness(.44) saturate(.60) contrast(1.04); }
   #sky-drift > i { position: absolute; display: block; background-size: 100% 100%; background-repeat: no-repeat; }
   #sky-stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
+  body[data-view="image"] #sky[data-layered] { background-image: var(--skyfar) !important; background-size: cover !important; background-position: center 55% !important; }
+  #sky-layers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: none; pointer-events: none; }
   /* THE SKY'S LIFE (skyLife): far birds over the sky, inside #sky so the scene hides them behind its skyline */
   /* z-index 1: over the drifting sky and its stars whichever of them was built first */
   #sky-life { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: none; pointer-events: none; z-index: 1; }
@@ -10394,7 +10396,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 var MOB_V  = "131";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "56";      // /room-bg/  the room plates - 91MB, the expensive one
-var SKY_V  = "32";      // /sky/      the ten skies
+var SKY_V  = "48";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "18";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
 var FX_V   = "38";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
@@ -11816,7 +11818,9 @@ var SKY_POOL = {
   // THE DAY SKY STAYS RIGHT SIDE UP (rome, 2026-10-23, with his repainted
   // day-seamless): mirrored for variety, never turned over.
   day:   ["day", "day/x"],
-  night: ["night", "night/x", "night/y", "night/xy"],
+  // Layered since 2026-11-03 (SKY_LAYERED): its far sky lightens toward the
+  // horizon, so it is never turned over, only mirrored.
+  night: ["night", "night/x"],
   // THE DUSK SKY WAS REPLACED, NOT ADDED TO (rome, 2026-09-08). The one it
   // replaced ran 24 31 40 49 86 from the top of the frame down; this one runs
   // 21 26 28 28 25 — flat, and half as bright overall. That is a departure from
@@ -12289,7 +12293,7 @@ var SKY_DRIFT = .004;
 // (skyScale), so a two-screen strip simply takes twice as long to come round.
 var SKY_SIZE = {
   day: [1584, 993], dawn: [2167, 726], "dawn-2": [1584, 993], dusk: [1584, 993], "dusk-2": [1584, 993],
-  "after-rain": [1584, 993], night: [2149, 732], moon: [2142, 734], blood: [2171, 724], eclipse: [2172, 724],
+  "after-rain": [1584, 993], "moon-far": [1584, 993], night: [2149, 732], moon: [2142, 734], blood: [2171, 724], eclipse: [2172, 724],
 };
 // THE STARS PAINTED IN EACH SKY THAT HAS ANY, found in the picture: x, y on a
 // 1584 x 993 frame, brightness 2-9, and the star's own colour, so a blood-moon
@@ -12314,8 +12318,96 @@ function skyHandover(old, oldT, oldDir, next, now) {
   return k ? { t: k[0] + Math.max(0, now - k[2]) / 1000, dir: k[1] }
            : { t: Math.random() * 600, dir: Math.random() < .5 ? -1 : 1 };
 }
+// THE MOON IS NOT PAINTED ON THE CLOUDS (rome, 2026-11-03: Luna saw the moon
+// going by as fast as the clouds). A layered sky is drawn back to front on one
+// canvas: the far sky, still; stars the page places itself; the moon, crossing
+// once over the whole night on the game's own clock, so everyone sees it in the
+// same place; then the clouds. A sky has more than one cloud strip for variety:
+// a night wears one of them, and now and then two together, the farther one
+// slower (rome, 2026-11-03). Which, is the night's own, the same for everyone. The sky's old single picture stays under it, and is
+// what shows when nothing moves (reduced motion) or until the layers are in.
+var SKY_LAYERED = {
+  // cloudScale: these strips are painted with big clouds, so they are drawn
+  // smaller than the one scale every other sky takes
+  moon: { far: "moon-far", disc: "moon-disc", stars: 240, cloudScale: .6,
+          clouds: [["moon-clouds2", [2206, 713]], ["moon-clouds", [2143, 734]]] },
+  // A night with no moon (rome, 2026-11-03): the moon sky's own far sky and
+  // clouds, taken down by "dark", and more stars where there is no moonlight.
+  night: { far: "moon-far", stars: 380, cloudScale: .6, dark: .42,
+           clouds: [["moon-clouds2", [2206, 713]], ["moon-clouds", [2143, 734]]] },
+  // The red moon: its own disc, and the night's own far sky and clouds stained
+  // red (farTint, cloudTint). Its painted red-to-black sky read wrong (rome,
+  // 2026-11-03); the night turned red reads as the same sky on a worse night.
+  // Recoloured, not laid over (farHue): red over the navy mixed to purple.
+  blood: { far: "moon-far", farHue: "rgb(150,22,10)", farTint: "rgba(20,2,0,.45)", disc: "blood-disc", stars: 140, starRgb: "255,196,180", glow: "190,60,40", cloudScale: .6,
+           cloudHue: "rgb(120,30,18)", cloudTint: "rgba(20,2,0,.52)",
+           clouds: [["moon-clouds2", [2206, 713]], ["moon-clouds", [2143, 734]]] },
+  // The eclipse is the night sky at midday (rome, 2026-11-03), and the sun
+  // keeps the eclipse's own hour, not the night's (path).
+  eclipse: { far: "moon-far", disc: "eclipse-disc", path: "eclipse", discSize: .15, stars: 110, glow: "255,222,160", cloudScale: .6,
+             cloudTint: "rgba(2,5,16,.38)",
+             clouds: [["moon-clouds2", [2206, 713]], ["moon-clouds", [2143, 734]]] },
+};
+// THE DAY IS LAYERED TOO (rome, 2026-11-03): a far sky and its clouds, and no
+// sun (rome: no sun in the day skies). Both pictures of dawn and of dusk wear
+// the same layers. Each has two cloud strips for variety (2026-11-04), worn
+// one or two at a time as the night's are (skyCloudsTonight).
+// Their clouds are drawn at the one scale every sky takes (cloudScale 1), so
+// their pixels are the plates' size and they hang as low as they were painted.
+(function () {
+  var day = { far: "day-far", stars: 0, cloudScale: 1,
+              clouds: [["day-clouds2", [2174, 723]], ["day-clouds", [2184, 720]]] };
+  // Dawn wears the DAY's clouds too, warmed for the morning (rome, 2026-11-04).
+  var dawn = { far: "dawn-far", stars: 0, cloudScale: 1,
+               cloudHue: "rgb(176,150,118)", cloudTint: "rgba(30,26,44,.32)",
+               clouds: [["day-clouds2", [2174, 723]], ["day-clouds", [2184, 720]]] };
+  // Dusk wears the DAY's clouds, recoloured for the evening (rome, 2026-11-04),
+  // the way the blood moon wears the night's.
+  var dusk = { far: "dusk-far", stars: 0, cloudScale: 1,
+               cloudHue: "rgb(140,78,46)", cloudTint: "rgba(24,12,20,.6)",
+               clouds: [["day-clouds2", [2174, 723]], ["day-clouds", [2184, 720]]] };
+  SKY_LAYERED.day = day; SKY_LAYERED.dawn = dawn; SKY_LAYERED["dawn-2"] = dawn;
+  SKY_LAYERED.dusk = dusk; SKY_LAYERED["dusk-2"] = dusk;
+})();
+var SKY_NIGHT_MS = 2 * 3600000, SKY_DAY_CYCLE_MS = 4 * 3600000; // zone-data DAY_CYCLE_MS: the second half is night
+var SKY_BOTH_CLOUDS = 4;   // one night in this many wears two strips at once
+var SKY_BACK_PACE = .55;  // ...and the farther of them drifts at this share of the pace
+// Which cloud strips tonight wears, back to front, each with its pace. Off the
+// server's day count (skyRoll), hashed as skyPick does, so every page agrees,
+// and the preview's R steps it with the sky's other versions.
+function skyCloudsTonight(list) {
+  var h = mix32(plateHash("clouds:" + skyRoll));
+  if (list.length > 1 && h % SKY_BOTH_CLOUDS === 0) return [[list[0], SKY_BACK_PACE], [list[1], 1]];
+  return [[list[(h >>> 8) % list.length], 1]];
+}
+// How far through the eclipse it is, 0 as the light starts to thin to 1 when it
+// is back (zone-util eclipsePhase: totality round midday, the thinning and the
+// return either side of it, from zone-data's ECLIPSE_* times).
+var SKY_ECLIPSE_SPAN = { tell: 10 * 60000, total: 40 * 60000, after: 10 * 60000 };
+function skyEclipseThrough(now) {
+  var e = SKY_ECLIPSE_SPAN, start = SKY_DAY_CYCLE_MS / 4 - e.total / 2 - e.tell;
+  var f = ((now % SKY_DAY_CYCLE_MS) - start) / (e.tell + e.total + e.after);
+  return f < 0 ? 0 : f > 1 ? 1 : f;
+}
+// The eclipsed sun stands high and only creeps across in the hour it lasts.
+function skyEclipseAt(f) { return { x: 0.40 + 0.20 * f, y: 0.20 }; }
+// How far through the night it is, 0 at dusk to 1 at dawn (zone-util isNight).
+function skyNightThrough(now) {
+  var f = ((now % SKY_DAY_CYCLE_MS) - SKY_NIGHT_MS) / SKY_NIGHT_MS;
+  return f < 0 ? 0 : f > 1 ? 1 : f;
+}
+// The moon's place, as shares of the sky's BOX (what is on screen, not the far
+// picture, which runs off the top of it): low on the left at dusk, highest at
+// midnight, low on the right at dawn, and always inside the box. The box runs
+// up under the page's top bar, so its top tenth is never seen; and the hills
+// stand into the sky lower down, so the moon low at dusk or dawn has to ride
+// above them or nobody sees it.
+function skyMoonAt(f) {
+  return { x: 0.08 + 0.84 * f, y: 0.22 - 0.08 * Math.sin(Math.PI * f) };
+}
 var skyDrift = (function () {
   var layer = null, tiles = [], starCv = null, starCtx = null, stars = {};
+  var layCv = null, layCtx = null, lay = null, layArt = {}, layStars = {}, layRow = {};
   var name = "", dir = 1, frame = null, stamp = 0, t = 0, geo = null, img = "";
   var still = typeof window !== "undefined" && window.matchMedia
     ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
@@ -12326,8 +12418,113 @@ var skyDrift = (function () {
     for (var k = 0; k < 2; k++) { var d = document.createElement("i"); layer.appendChild(d); tiles.push(d); }
     starCv = document.createElement("canvas"); starCv.id = "sky-stars";
     starCtx = starCv.getContext && starCv.getContext("2d");
-    skyEl.appendChild(layer); skyEl.appendChild(starCv);
+    layCv = document.createElement("canvas"); layCv.id = "sky-layers";
+    layCtx = layCv.getContext && layCv.getContext("2d");
+    skyEl.appendChild(layer); skyEl.appendChild(starCv); skyEl.appendChild(layCv);
     return true;
+  }
+  // A layered sky's pictures, fetched once each; drawn only when all are in.
+  function layImg(n) {
+    if (!layArt[n]) {
+      var im = new Image(); layArt[n] = { im: im, ok: false };
+      im.onload = function () { layArt[n].ok = true; if (lay) run(); };
+      im.src = "/sky/" + n + ".webp?v=" + SKY_V;
+    }
+    return layArt[n];
+  }
+  function layReady() {
+    if (!lay) return false;
+    var all = [lay.far].concat(lay.disc ? [lay.disc] : [], lay.clouds.map(function (c) { return c[0]; })), ok = true;
+    for (var i = 0; i < all.length; i++) if (!layImg(all[i]).ok) ok = false; // every fetch starts, not just the first
+    return ok;
+  }
+  // The stars are the page's own, in the same places for everyone (a fixed
+  // seed), thinning toward the low sky where the air is lighter.
+  function layStarList(n, count) {
+    if (layStars[n]) return layStars[n];
+    var s = 9173, rnd = function () { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+    var out = [];
+    for (var i = 0; i < count; i++) {
+      var y = 0.78 * Math.pow(rnd(), 1.5), b = rnd();
+      out.push([rnd(), y, b * b, rnd() * 6.3, .5 + rnd() * 1.6]);
+    }
+    return (layStars[n] = out);
+  }
+  // A CLOUD STRIP IS LAID END TO END AT ITS OWN SIZE, THEN SHRUNK ONCE (rome,
+  // 2026-11-03: a black line where the copies met). Shrinking each copy on its
+  // own softens its edge to see-through, and the dark sky showed in the join.
+  // Joined first at full size, the join is inside one picture and has none.
+  function layCloudRow(n, copies, tint, hue) {
+    var key = n + "x" + copies + "|" + (tint || "") + "|" + (hue || ""), row = layRow[key];
+    if (row) return row;
+    var im = layArt[n].im, cv = document.createElement("canvas");
+    cv.width = im.naturalWidth * copies; cv.height = im.naturalHeight;
+    var x = cv.getContext && cv.getContext("2d");
+    if (!x) return null;
+    for (var i = 0; i < copies; i++) x.drawImage(im, i * im.naturalWidth, 0);
+    // recoloured the same way as the far sky, then cut back to the cloud's own shape
+    if (hue) {
+      // (the shape kept aside first: cut back one copy at a time, each cut wipes the rest)
+      var shape = document.createElement("canvas"); shape.width = cv.width; shape.height = cv.height;
+      shape.getContext("2d").drawImage(cv, 0, 0);
+      x.globalCompositeOperation = "color"; x.fillStyle = hue; x.fillRect(0, 0, cv.width, cv.height);
+      x.globalCompositeOperation = "destination-in"; x.drawImage(shape, 0, 0);
+      x.globalCompositeOperation = "source-over";
+    }
+    // a darker or redder sky stains its cloud too, only where there is cloud
+    if (tint) { x.globalCompositeOperation = "source-atop"; x.fillStyle = tint; x.fillRect(0, 0, cv.width, cv.height); }
+    for (var k in layRow) if (k.indexOf(n + "x") === 0) delete layRow[k]; // one row per strip at a time (two skies sharing a strip just rebuild it)
+    return (layRow[key] = cv);
+  }
+  function drawLayers() {
+    if (!layCtx || !geo || !lay) return;
+    var c = layCtx, w = geo.w, h = geo.h, s = geo.px;
+    c.setTransform(geo.sc, 0, 0, geo.sc, 0, 0); c.clearRect(0, 0, w, h);
+    // the far sky, still, centred
+    var far = layArt[lay.far].im, fw = 1584 * s, fh = 993 * s, ft = skyTop(h, fh);
+    c.drawImage(far, (w - fw) / 2, ft, fw, fh);
+    // farHue takes the sky's colour and keeps its light and dark, so no blue is left in it
+    if (lay.farHue) { c.globalCompositeOperation = "color"; c.fillStyle = lay.farHue; c.fillRect(0, 0, w, h); c.globalCompositeOperation = "source-over"; }
+    var farTint = lay.farTint || (lay.dark ? "rgba(2,5,16," + lay.dark + ")" : "");
+    if (farTint) { c.fillStyle = farTint; c.fillRect(0, 0, w, h); }
+    // the moon's place tonight, and how big
+    var at = lay.path === "eclipse" ? skyEclipseAt(skyEclipseThrough(Date.now())) : skyMoonAt(skyNightThrough(Date.now()));
+    var md = h * (lay.discSize || 0.16);
+    var mx = at.x * w, my = at.y * h;
+    if (!lay.disc) { mx = -1e6; my = -1e6; } // no moon tonight: nothing for the stars to fade near
+    // the stars, fading out in the moon's light
+    var list = layStarList(name, lay.stars), px = Math.max(1, s);
+    for (var i = 0; i < list.length; i++) {
+      var st = list[i], v = Math.sin(t * st[4] + st[3]);
+      if (v <= 0) continue;
+      var sx = (w - fw) / 2 + st[0] * fw, sy = ft + st[1] * fh;
+      if (sx < 0 || sx > w || sy > h) continue;
+      var near = Math.min(1, Math.max(0, (Math.hypot(sx - mx, sy - my) - md) / (md * 2.5)));
+      var a = .85 * v * (.35 + .65 * st[2]) * near;
+      if (a < .02) continue;
+      var r = px * (1 + 1.6 * v * (.5 + st[2]));
+      var g = c.createRadialGradient(sx, sy, 0, sx, sy, r);
+      var sr = lay.starRgb || "232,238,255";
+      g.addColorStop(0, "rgba(" + sr + "," + a.toFixed(3) + ")"); g.addColorStop(1, "rgba(" + sr + ",0)");
+      c.fillStyle = g; c.fillRect(sx - r, sy - r, r * 2, r * 2);
+    }
+    // the moon's cold light round it, then the disc
+    if (lay.disc) {
+    var halo = c.createRadialGradient(mx, my, md * .45, mx, my, md * 2.6);
+    var gl = lay.glow || "190,205,232";
+    halo.addColorStop(0, "rgba(" + gl + ",.30)"); halo.addColorStop(.35, "rgba(" + gl + ",.12)"); halo.addColorStop(1, "rgba(" + gl + ",0)");
+    c.fillStyle = halo; c.fillRect(mx - md * 2.6, my - md * 2.6, md * 5.2, md * 5.2);
+    c.drawImage(layArt[lay.disc].im, mx - md / 2, my - md / 2, md, md);
+    }
+    // tonight's clouds, the farther strip first, each at its pace
+    var tonight = skyCloudsTonight(lay.clouds), cs = s * (lay.cloudScale || 1);
+    for (var k = 0; k < tonight.length; k++) {
+      var cl = tonight[k][0], im = layArt[cl[0]].im, tw = cl[1][0] * cs, th = cl[1][1] * cs, top = skyTop(h, th);
+      var m = (t * w * SKY_DRIFT * tonight[k][1] * dir) % tw, x0 = -((m + tw) % tw);
+      // enough copies that the row's own ends are always off the box
+      var copies = Math.ceil(w / tw) + 1, row = layCloudRow(cl[0], copies, lay.cloudTint || (lay.dark ? "rgba(2,5,16," + lay.dark + ")" : ""), lay.cloudHue);
+      if (row) c.drawImage(row, x0, top, tw * copies, th);
+    }
   }
   function active() { return !!name && viewMode === "image" && !document.hidden && !still.matches; }
   function stop() {
@@ -12335,6 +12532,7 @@ var skyDrift = (function () {
     frame = null; stamp = 0;
     if (layer) layer.style.display = "none";
     if (starCv) starCv.style.display = "none";
+    if (layCv) layCv.style.display = "none";
   }
   function refit() {
     if (!layer || !name) return;
@@ -12354,6 +12552,12 @@ var skyDrift = (function () {
       var sc = Math.min(1, 1280 / w);
       starCv.width = Math.max(1, Math.round(w * sc)); starCv.height = Math.max(1, Math.round(h * sc));
       geo.sc = sc;
+    }
+    if (lay && layCv) {
+      // the clouds are big soft shapes, so a little more than the stars' canvas
+      var lc = Math.min(1, 1600 / w);
+      layCv.width = Math.max(1, Math.round(w * lc)); layCv.height = Math.max(1, Math.round(h * lc));
+      geo.sc = lc;
     }
   }
   function offset() {
@@ -12395,7 +12599,8 @@ var skyDrift = (function () {
     t += stamp ? Math.min(.2, (now - stamp) / 1000) : 0;
     stamp = now;
     if (!geo) refit();
-    if (geo) {
+    if (geo && lay) { if (layReady()) drawLayers(); }
+    else if (geo) {
       var x = offset();
       layer.style.transform = "translate3d(" + x.toFixed(2) + "px,0,0)";
       if (SKY_STARS[name]) drawStars(x);
@@ -12403,6 +12608,16 @@ var skyDrift = (function () {
     frame = requestAnimationFrame(tick);
   }
   function run() {
+    // With motion turned down a layered sky is still drawn whole, once: its
+    // still picture is only the far sky.
+    if (lay && still.matches && name && viewMode === "image" && !document.hidden && build()) {
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null; stamp = 0;
+      if (!geo) refit();
+      layer.style.display = "none"; if (starCv) starCv.style.display = "none";
+      if (geo && layReady()) { drawLayers(); layCv.style.display = "block"; } else layCv.style.display = "none";
+      return;
+    }
     if (!active() || !build()) { stop(); return; }
     // Replace tiles and star pixels before revealing a changed or resumed sky.
     if (!geo || frame === null) {
@@ -12410,8 +12625,12 @@ var skyDrift = (function () {
       stamp = 0;
       tick(performance.now());
     }
-    layer.style.display = "block";
-    if (starCv) starCv.style.display = SKY_STARS[name] ? "block" : "none";
+    // A layered sky shows only once all its pictures are in; until then the
+    // still picture under it is the sky.
+    var layOn = !!lay && layReady();
+    layer.style.display = lay ? "none" : "block";
+    if (starCv) starCv.style.display = !lay && SKY_STARS[name] ? "block" : "none";
+    if (layCv) layCv.style.display = layOn ? "block" : "none";
   }
   // The sky picture the room just put up, as its url, or "" for none.
   function show(url) {
@@ -12422,7 +12641,9 @@ var skyDrift = (function () {
       var kept = skyHandover(name, t, dir, next, performance.now());
       name = next; geo = null; t = kept.t; dir = kept.dir;
       img = name ? "url(/sky/" + name + ".webp?v=" + SKY_V + ")" : "";
+      lay = SKY_LAYERED[name] || null;
       build();
+      if (lay) layReady(); // start the fetches
     }
     if (!name) { stop(); return; }
     run();
@@ -13187,6 +13408,14 @@ function skyCopy(node) {
     }
     node.appendChild(d);
   }
+  var layd = document.getElementById("sky-layers");
+  if (layd && layd.style.display !== "none" && layd.width && layd.height) {
+    var lc = document.createElement("canvas"), lx = lc.getContext && lc.getContext("2d");
+    lc.width = layd.width; lc.height = layd.height;
+    lc.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none";
+    if (lx) lx.drawImage(layd, 0, 0);
+    node.appendChild(lc);
+  }
   var stars = document.getElementById("sky-stars");
   if (stars && stars.style.display !== "none" && stars.width && stars.height) {
     var c = document.createElement("canvas"), x = c.getContext && c.getContext("2d");
@@ -13649,6 +13878,12 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     sceneEl.style.setProperty("--sceneimg", url);
     if (skyEl) {
       skyEl.style.backgroundImage = sky ? "url(" + sky + "?v=" + SKY_V + ")" : "";
+      // A LAYERED SKY STANDS ON ITS FAR SKY (rome, 2026-11-03: the old moon showed
+      // for a moment while the layers came in). The picture keeps the sky's own
+      // name; the stylesheet paints the far sky in its place (#sky[data-layered]).
+      var layN = typeof SKY_LAYERED !== "undefined" ? SKY_LAYERED[skyName(sky)] : null;
+      skyEl.style.setProperty("--skyfar", layN ? "url(/sky/" + layN.far + ".webp?v=" + SKY_V + ")" : "none");
+      if (layN) skyEl.setAttribute("data-layered", "1"); else skyEl.removeAttribute("data-layered");
       // RAIN AFTER DARK HAS ITS OWN, DARKER NIGHT SKY (rome, 2026-10-26), apart
       // from the after-rain and fog nights, which keep the wet night's.
       skyEl.setAttribute("data-sky", lastSky === "rain" && hour === "wet-night" ? "rain-night"

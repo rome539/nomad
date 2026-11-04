@@ -245,7 +245,8 @@ console.log("one sky, turned, is more than one sky");
   // No short period: the old version repeated every pool.length days exactly.
   let repeats = 0;
   for (let d = 0; d < 400; d++) if (at(d) === at(d + pool.length)) repeats++;
-  t("no cycle at the pool's own length", repeats > 40 && repeats < 160, repeats + "/400 match (chance is 100)");
+  const chance = 400 / pool.length; // night is two since it was layered (2026-11-03): never turned over
+  t("no cycle at the pool's own length", repeats > chance * 0.4 && repeats < chance * 1.6, repeats + "/400 match (chance is " + chance + ")");
   // ...and the same day is the same sky, every time it is asked.
   t("the same day always gives the same sky", at(37) === at(37) && at(37) === at(37));
   const now = at(37); at(38); t("...and asking again after a different day still agrees", at(37) === now);
