@@ -2717,12 +2717,17 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   // their target, wounds keep bleeding) — but resolves straight to text
   // instead of opening a modal. Only the gate's door (below) is safe.
   if (!atGate || boarded) {
+    // The lockbox rides with you, so the crouch shows it too, as the bench
+    // modal's Lockbox column does anywhere; the deep keep stays at the gates.
+    const lockbox = await loadContainer(z.env.DB, session.pubkey, "lockbox");
+    for (const [row, n] of await lore.copyCounts(z, session, lockbox)) counts.set(row, n);
     z.roomFeed(session.roomId, `${session.name} crouches to dig through a lockbox.`, session.pubkey, false);
     return z.send(session, [
       ...(boarded ? [boarded, ""] : []),
       ...keepingLines(z, session.items, `You carry (${z.slotsUsed(session.items)}/${z.packCap(session)}):`, session, "pack", counts),
       ...kit,
       ...loud,
+      ...keepingLines(z, lockbox, `Lockbox (${z.slotsUsed(lockbox, "lockbox")}/${LOCKBOX_CAP}):`, undefined, undefined, counts),
       "('burn <item>' to destroy it, 'drop <item>' to shed it, 'equip'/'remove' to swap gear.)",
     ].join("\n"));
   }

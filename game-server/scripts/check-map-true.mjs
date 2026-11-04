@@ -32,12 +32,8 @@ if (bad.length) {
   for (const e of bad.slice(0, 40)) console.error(`  ${e.a} --${e.d}--> ${e.b}   drawn (${e.bx - e.ax}, ${e.by - e.ay})`);
   process.exit(1);
 }
-// The one stair the floors disagree with, as built: the Sewer Mouth is a drain
-// in the marsh, reached by climbing UP from the Black Fen, but it is a warrens
-// room, two floors down. Listed so the check holds everything else; take it off
-// this list when the stair or the floor is put right.
-const STAIR_EXCEPT = new Set(['the-black-fen>up>sewer', 'sewer>down>the-black-fen']);
-const wrongStairs = rows.filter((e) => (e.d === 'up' || e.d === 'down') && !STAIR_EXCEPT.has(`${e.a}>${e.d}>${e.b}`)
+// (The Sewer Mouth's stair was the one exception until mig 369 turned it round.)
+const wrongStairs = rows.filter((e) => (e.d === 'up' || e.d === 'down')
   && (e.d === 'up' ? (e.bz ?? 0) < (e.az ?? 0) : (e.bz ?? 0) > (e.az ?? 0)));
 if (wrongStairs.length) {
   console.error(`${wrongStairs.length} stairs go the wrong way between floors:`);

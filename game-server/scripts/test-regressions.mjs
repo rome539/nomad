@@ -31,7 +31,7 @@ try {
         "export {cmdGo} from './verbs';",
         "export {handleGatehouse} from './gate';",
         "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, glutMult, tickGlut, offerCore, cmdOffer} from './gate';",
-        "export {cmdLook, keepingLines, cmdSmoke} from './verbs';",
+        "export {cmdLook, keepingLines, cmdSmoke, cmdInventory} from './verbs';",
         "export * as light from './light';",
         "export * as body from './body';",
         "export * as ratking from './ratking';",
@@ -71,6 +71,7 @@ try {
         "export {FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT} from './zone-data';",
         "export * as pvp from './pvp';",
         "export {PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, GATEHOUSE_NOARG, MOUTHS, WITNESSED_LINES} from './zone-data';",
+        "export {OUTDOOR_REGIONS, INDOOR_ROOMS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon, terrainOf} from './zone-util';",
@@ -84,7 +85,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -530,6 +531,33 @@ try {
     assert.match(pub, /var t2 = actx\.currentTime \+ 0\.02, v2 = 0\.04 \* SCAPE_VOL;/, 'and the heavy breath is one breath, the same all the way down');
   });
 
+  check('the weeper\'s arch is open ground, so its lantern keeps its night (2026-11-03)', () => {
+    const mig = readFileSync(new URL('../migrations/368_the_arch_stands_outside.sql', import.meta.url), 'utf8');
+    assert.match(mig, /UPDATE rooms SET region = 'out' WHERE id = 'weeper-arch';/);
+    // not a gate, so only its region can make it outdoors: 'out' must be an outdoor band
+    assert.ok(OUTDOOR_REGIONS.has('out'), 'the open ground is outdoors');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /if \(world\.entryRooms\.has\(room\.id\)\) OUTDOOR_ROOMS\.add\(room\.id\);\n\s*else if \(INDOOR_ROOMS\.has\(room\.id\)\) OUTDOOR_ROOMS\.delete\(room\.id\);\n\s*else if \(OUTDOOR_REGIONS\.has\(room\.region\)\) OUTDOOR_ROOMS\.add\(room\.id\);/);
+    assert.ok(!INDOOR_ROOMS.has('weeper-arch'), 'and nothing roofs it over');
+  });
+  await checkAsync('the sewer mouth is under the fen: down into it, up out of it (2026-11-03)', async () => {
+    const mig = readFileSync(new URL('../migrations/369_the_grate_is_overhead.sql', import.meta.url), 'utf8');
+    // Run it on the old ways and read back where each one goes.
+    const db = new (await import('node:sqlite')).DatabaseSync(':memory:');
+    db.exec("CREATE TABLE exits(room_id TEXT, dir TEXT, to_room TEXT, key_item TEXT, PRIMARY KEY(room_id, dir))");
+    db.exec("INSERT INTO exits(room_id, dir, to_room) VALUES ('the-black-fen','up','sewer'), ('sewer','down','the-black-fen'), ('sewer','up','scullery'), ('scullery','down','sewer'), ('sewer','east','the-sewer-slip')");
+    db.exec(mig);
+    const way = (a, d) => db.prepare('SELECT to_room FROM exits WHERE room_id = ? AND dir = ?').get(a, d)?.to_room;
+    assert.equal(way('the-black-fen', 'down'), 'sewer', 'down through the grate');
+    assert.equal(way('the-black-fen', 'up'), undefined, 'no climbing up into a drain');
+    assert.equal(way('sewer', 'up'), 'the-black-fen', 'up and out');
+    assert.equal(way('sewer', 'down'), undefined);
+    assert.equal(way('sewer', 'north'), 'scullery', 'the drain runs back to the scullery');
+    assert.equal(way('scullery', 'down'), 'sewer');
+    assert.equal(way('sewer', 'east'), 'the-sewer-slip', 'the slip untouched');
+    // and the map check holds it like every other stair now
+    assert.ok(!readFileSync(new URL('./check-map-true.mjs', import.meta.url), 'utf8').includes('STAIR_EXCEPT'), 'no stair is excused');
+  });
   console.log('the smithy gate');
   check('the Weeper\'s Arch is no gate and the Village Smithy is (2026-11-03, mig 366)', () => {
     const mig = readFileSync(new URL('../migrations/366_the_smithy_is_a_gate.sql', import.meta.url), 'utf8');
@@ -719,6 +747,23 @@ try {
     const where = () => db.prepare("SELECT container FROM player_items ORDER BY id").all().map((r) => r.container);
     return { z, me, db, wolf, said, where };
   }
+  await checkAsync('the typed inventory shows the lockbox out in the world, as the window does (2026-11-03)', async () => {
+    const z = new ZoneDO({}, {});
+    const { db, D1 } = sqliteD1(); z.env = { DB: D1 };
+    z.world = new Proxy({ itemTemplates: new Map([['knife', { id: 'knife', name: 'a knife', slot: 'weapon', rarity: 'common' }],
+      ['pale-pelt', { id: 'pale-pelt', name: 'a pale pelt', slot: '', rarity: 'rare' }]]),
+      rooms: new Map([['moor', { id: 'moor', name: 'The Moor' }]]), entryRooms: new Set(['gate']) },
+      { get: (t, k) => k in t ? t[k] : (typeof k === 'string' ? (t[k] = new Map()) : undefined) });
+    const me = { pubkey: 'me', name: 'Rome', roomId: 'moor', items: [{ rowId: 'r1', itemId: 'knife', serial: null, equipped: true, condition: 100 }] };
+    z.sessions.set('me', me);
+    db.prepare("INSERT INTO player_items(id, item_id, pubkey, equipped, container) VALUES ('r1', 'knife', 'me', 1, ''), ('r2', 'pale-pelt', 'me', 0, 'lockbox')").run();
+    const said = []; z.send = (_s, t) => said.push(t); z.roomFeed = () => {};
+    await cmdInventory(z, me);
+    const out = said.join('\n');
+    assert.match(out, /You carry[\s\S]*a knife/, 'the pack is listed');
+    assert.match(out, /Lockbox \(1\/\d+\):\n  a pale pelt/, 'and the lockbox under it, away from a gate');
+    assert.doesNotMatch(out, /deep keep/, 'the deep keep stays at the gates');
+  });
   check('a keeper speaks only of what is on his own ground (2026-11-02)', () => {
     // the fever: wood gate yes, fortress and road gates no
     const at = (pubkey, roomId) => ({ pubkey, roomId, name: pubkey });
