@@ -293,14 +293,19 @@ console.log("one sky, turned, is more than one sky");
     const only = [...got].every((v) => v === "none" || v === "scaleX(-1)");
     t(locked + " is mirrored and never flipped", only && got.size === 2, [...got].join(" "));
   }
-  const ar = new Set(); const arFiles = new Set();
-  for (let d = 0; d < 60; d++) {
-    ctx.paint("mountain", "after-rain", "scree", "a" + d, 0, d);
-    ar.add(skyEl.style.transform || "none");
-    arFiles.add(strip(skyEl.style.backgroundImage));
+  // The rain's skies stay right side up (rome, 2026-11-04): mirrored, never
+  // turned over, after-rain and the three wet hours alike.
+  for (const wet of ["after-rain", "wet-night", "wet-dusk", "wet-dawn"]) {
+    const ar = new Set(); const arFiles = new Set();
+    for (let d = 0; d < 60; d++) {
+      ctx.paint("mountain", wet, "scree", "a" + wet + d, 0, d);
+      ar.add(skyEl.style.transform || "none");
+      arFiles.add(strip(skyEl.style.backgroundImage));
+    }
+    const upright = [...ar].every((v) => v === "none" || v === "scaleX(-1)");
+    t(wet + " is mirrored and never turned over", upright && ar.size === 2, [...ar].join("  "));
+    t("...without ever changing picture", arFiles.size === 1, [...arFiles].join(" "));
   }
-  t("after-rain turns four ways", ar.size === 4, [...ar].join("  "));
-  t("...without ever changing picture", arFiles.size === 1, [...arFiles].join(" "));
 }
 
 console.log("the flag is sticky");

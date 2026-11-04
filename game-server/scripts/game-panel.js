@@ -469,7 +469,13 @@
     else if (k === "w" || k === "W") { farNext(); }
     // R: the next version of this hour's sky. The game turns its sky over on
     // the server's roll; with no server here every hour sat on one version.
-    else if (k === "r" || k === "R") { skyRollN++; paint(); heardL.textContent = "sky roll " + skyRollN + " - keep pressing R to see every version"; }
+    else if (k === "r" || k === "R") {
+      // round the sky's versions and no further: past the last it starts again
+      var rolls = typeof skyPreviewRolls === "function" ? skyPreviewRolls() : [0];
+      var at = rolls.indexOf(skyRollN), nx = (at + 1) % rolls.length;
+      skyRollN = rolls[nx]; paint();
+      heardL.textContent = "sky roll " + (nx + 1) + " of " + rolls.length;
+    }
     else if (k === "k" || k === "K") { fallNow(); }
     else if (k === "t" || k === "T") { torchB.onclick(); }
     else if (k === "p" || k === "P") { actB.onclick(); }

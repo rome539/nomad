@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
+import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, SKY_CLEAR_EVERY, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -150,6 +150,7 @@ export function isDawn(now = Date.now()): boolean {
 //
 // Pure modulo, nothing persisted, nothing rolled: same shape as moonPhase above.
 export function lidOpen(now = Date.now()): boolean {
+  if (skyClear(now)) return true; // the clear day has no lid at all
   const slot = Math.floor(now / LID_SLOT_MS);
   if (lidRaw(slot)) return true;
   // AND IT CANNOT STAY SHUT FOREVER. Measured on the raw hash, the longest run
@@ -162,6 +163,11 @@ export function lidOpen(now = Date.now()): boolean {
   // nothing to farm — it is a ceiling on the weather, not a die.
   for (let i = 1; i <= LID_MAX_SHUT; i++) if (lidRaw(slot - i)) return false;
   return true;
+}
+// THE CLEAR DAY: the last day-cycle of every SKY_CLEAR_EVERY, the same day the
+// page draws its sky with no cloud (public.ts skyCloudsTonight, off worldDay).
+export function skyClear(now = Date.now()): boolean {
+  return worldDay(now) % SKY_CLEAR_EVERY === SKY_CLEAR_EVERY - 1;
 }
 // The raw window, before the streak ceiling. A cheap avalanche so consecutive
 // windows do not run in a visible pattern — the sky must not be a stripe you can

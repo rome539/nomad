@@ -74,7 +74,8 @@ try {
         "export {OUTDOOR_REGIONS, INDOOR_ROOMS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
-        "export {isNight, isFullMoon, terrainOf} from './zone-util';",
+        "export {isNight, isFullMoon, terrainOf, skyClear, lidOpen} from './zone-util';",
+        "export {SKY_CLEAR_EVERY} from './zone-data';",
         "export * as roomSound from './sound';",
       ].join('\n'),
       resolveDir: root, loader: 'ts',
@@ -85,7 +86,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, SKY_CLEAR_EVERY } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -3691,6 +3692,29 @@ try {
     const disp = zsrc.slice(zsrc.indexOf('public async dispatch('), zsrc.indexOf('\n  }\n', zsrc.indexOf('public async dispatch(')));
     const orphans = [...new Set(Object.values(VERB_ALIASES))].filter((v) => !disp.includes(`case "${v}"`));
     assert.deepEqual(orphans, [], 'every verb has a handler');
+  });
+
+  check('the clear day is the same day in the words and the picture (2026-11-04)', () => {
+    // The page draws a sky with no cloud on its own day count; the world says the
+    // lid is off on its own. Both must name the same days, or the words lie.
+    const src = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const grab = (name) => { const i = src.indexOf('function ' + name + '('); return src.slice(i, src.indexOf('\n}\n', i) + 2); };
+    const every = Number((src.match(/var SKY_CLEAR_EVERY = (\d+);/) || [])[1]);
+    const page = new Function('SKY_CLEAR_EVERY', 'SKY_BACK_PACE', grab('skyCloudSets') + grab('skyCloudsTonight') +
+      'return function (d, list) { skyRoll = d; return skyCloudsTonight(list); }; var skyRoll;')(every, .55);
+    const list = [['a', [1, 1]], ['b', [1, 1]], ['c', [1, 1]], ['d', [1, 1]]];
+    let clear = 0;
+    for (let d = 0; d < 140; d++) {
+      const noon = d * DAY_CYCLE_MS + DAY_CYCLE_MS / 4;
+      const pageClear = page(d, list).set.length === 0;
+      assert.equal(pageClear, skyClear(noon), 'day ' + d + ': page and world agree');
+      if (pageClear) { clear++; assert.ok(lidOpen(noon) && lidOpen(d * DAY_CYCLE_MS + DAY_CYCLE_MS * .75), 'no lid on a clear day or its night'); }
+    }
+    assert.equal(clear, 140 / SKY_CLEAR_EVERY, 'one day in ' + SKY_CLEAR_EVERY);
+    // ...and every cloudy look still comes round between them: 10 sets each way
+    const seen = new Set();
+    for (let d = 0; d < 140; d++) { const c = page(d, list); if (c.set.length) seen.add(c.set.map((s) => s[0][0]).join('+') + c.dir); }
+    assert.equal(seen.size, 20, 'every set, both ways');
   });
 
   console.log(`\n${passed} regression checks pass`);

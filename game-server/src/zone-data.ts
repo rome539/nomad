@@ -8784,6 +8784,21 @@ export const STARS_DAY = "Nothing to see. Whatever is up there is on the far sid
 export const LID_SLOT_MS = 45 * 60_000;
 export const LID_OPEN_SHARE = 0.35;
 export const LID_MAX_SHUT = 5; // ~3h45m — a ceiling on the run, so no streak eats four nights of a six-night month
+// THE CLEAR DAY (rome, 2026-11-04): one day-cycle in this many the sky has no
+// cloud in it at all, the last of each run of them. The page's picture reads the
+// same rule off the same day count (public.ts skyCloudsTonight), so the words and
+// the sky agree: the lid is off for the whole of it, day and night.
+export const SKY_CLEAR_EVERY = 7;
+export const SKY_CLEAR = "The lid is off. The sky is clear from one edge of the world to the other — not a cloud in it anywhere, only the colour, and it looks further away than a sky has any right to.";
+export const STARS_CLEAR = "Stars, and no lid over them tonight — the whole of the sky full of them, more than anyone down here has any use for, and none of them going anywhere.";
+// The low country's sun on a clear day, by the five bands of the day (SUN_LOW's).
+export const SUN_CLEAR = [
+  "The lid is off today, and the sun is coming up through the clear of it, low and red along the edge of the world. For once the day has a place it started from.",
+  "The sun is up and climbing a clear sky, and everything on the ground has a shadow under it. They look wrong here.",
+  "The sun stands high in a sky with nothing in it. There is no lid today, and the light comes straight down and sits on you.",
+  "The sun is on its way down the clear sky, and the shadows are getting long and leaning all one way.",
+  "The sun is going down the edge of a clear sky, red, and you can watch it go.",
+];
 // WHEN THERE IS NO SKY TO ASK (rome, 2026-08-31, standing in the Stripped
 // Armory — two floors down inside a fortress — and being told about the cloud).
 //

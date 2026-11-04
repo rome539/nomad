@@ -18,7 +18,7 @@ import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
 import * as feverrat from "./feverrat";
-import { cap, foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand } from "./zone-util";
+import { cap, foodState, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand, skyClear } from "./zone-util";
 import { setItemAcquiredAt } from "./world";
 import {
   QUICKSAND_ROOMS, QUICKSAND_GRIP_ODDS, HOBBLE_FLEE_MS,
@@ -73,7 +73,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_END_ODDS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -1109,9 +1109,10 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   if (/\bsun\b/i.test(arg ?? "")) {
     const band = skyBand();
     if (highGround) return isNight() ? SUN_HILL_NIGHT[nightBand(band)]! : SUN_HILL[band]!;
+    if (!isNight() && skyClear()) return SUN_CLEAR[band]!; // the lid is off: a real sun, for once
     return isNight() ? SUN_LOW_NIGHT[nightBand(band)]! : SUN_LOW[band]!;
   }
-  if (!highGround && /\bstars?\b/i.test(arg ?? "")) return isNight() ? STARS_NIGHT : STARS_DAY;
+  if (!highGround && /\bstars?\b/i.test(arg ?? "")) return isNight() ? (skyClear() ? STARS_CLEAR : STARS_NIGHT) : STARS_DAY;
   // The mountain's two weather arcs, then its presence.
   if (z.world!.rooms.get(roomId)?.region === "mountain") {
     switch (phaseOf(z, "clouddown")) {
@@ -1205,6 +1206,9 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   // the sky in the rain gets the rain, which is the sky's most urgent news. On
   // a quiet night the news is the month, and that is worth having.
   if (isNight()) return MOON_SKY[isFullMoon() ? 0 : moonPhase()] ?? MOON_SKY[6];
+  // THE CLEAR DAY says so, rather than falling through to the lid the region's
+  // own line describes: the picture has no cloud in it today, so neither do the words.
+  if (skyClear()) return SKY_CLEAR;
   return null;
 }
 

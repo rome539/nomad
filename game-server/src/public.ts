@@ -10396,7 +10396,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 var MOB_V  = "131";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "56";      // /room-bg/  the room plates - 91MB, the expensive one
-var SKY_V  = "48";      // /sky/      the ten skies
+var SKY_V  = "75";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "18";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
 var FX_V   = "38";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
@@ -11857,14 +11857,13 @@ var SKY_POOL = {
   // can safely rearrange. The two measure 17.5 apart of 255, which is real
   // variety rather than a mirror: same hour, different evening.
   dusk:  ["dusk", "dusk/x", "dusk-2", "dusk-2/x"],
-  // One file, four arrangements. It never borrows and is never borrowed — an
-  // aftermath sky over a midday is the one swap that would still be a lie.
-  "after-rain": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
-  // The night one is shown turned over (rome, 2026-10-15): darkened, its
-  // heavy cloud reads right along the horizon. Still mirrored for variety.
-  "wet-night": ["after-rain/y", "after-rain/xy"],
-  "wet-dusk": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
-  "wet-dawn": ["after-rain", "after-rain/x", "after-rain/y", "after-rain/xy"],
+  // One file, right side up and mirrored, and never turned over (rome,
+  // 2026-11-04), the wet hours with it. It never borrows and is never borrowed —
+  // an aftermath sky over a midday is the one swap that would still be a lie.
+  "after-rain": ["after-rain", "after-rain/x"],
+  "wet-night": ["after-rain", "after-rain/x"],
+  "wet-dusk": ["after-rain", "after-rain/x"],
+  "wet-dawn": ["after-rain", "after-rain/x"],
   // THE THREE CALENDAR SKIES GET THE MIRROR AND NOTHING ELSE (rome, 2026-09-09).
   // They were left out of turning entirely, and only because nobody had asked.
   //
@@ -12351,34 +12350,69 @@ var SKY_LAYERED = {
 // THE DAY IS LAYERED TOO (rome, 2026-11-03): a far sky and its clouds, and no
 // sun (rome: no sun in the day skies). Both pictures of dawn and of dusk wear
 // the same layers. Each has two cloud strips for variety (2026-11-04), worn
-// one or two at a time as the night's are (skyCloudsTonight).
+// alone or together as the night's are (skyCloudsTonight).
 // Their clouds are drawn at the one scale every sky takes (cloudScale 1), so
 // their pixels are the plates' size and they hang as low as they were painted.
 (function () {
+  // The moon and the day lend each other their clouds, for variety (rome,
+  // 2026-11-04): a borrowed strip keeps its own sky's scale (its third field),
+  // and the night's clouds are lit for the day (its fourth: the tint it wears).
+  var SKY_MOON_BY_DAY = "rgba(214,226,246,.42)";
   var day = { far: "day-far", stars: 0, cloudScale: 1,
-              clouds: [["day-clouds2", [2174, 723]], ["day-clouds", [2184, 720]]] };
-  // Dawn wears the DAY's clouds too, warmed for the morning (rome, 2026-11-04).
+              clouds: [["day-clouds2", [2188, 718]], ["day-clouds", [2185, 720]],
+                       ["moon-clouds2", [2206, 713], .6, SKY_MOON_BY_DAY], ["moon-clouds", [2143, 734], .6, SKY_MOON_BY_DAY]] };
+  SKY_LAYERED.moon.clouds = SKY_LAYERED.moon.clouds.concat([["day-clouds2", [2188, 718], 1], ["day-clouds", [2185, 720], 1]]);
+  ["night", "blood", "eclipse"].forEach(function (k) {
+    SKY_LAYERED[k].clouds = SKY_LAYERED[k].clouds.concat([["day-clouds2", [2188, 718], 1], ["day-clouds", [2185, 720], 1]]);
+  });
+  // Dawn and dusk wear clouds of their own, as painted (rome, 2026-11-04).
   var dawn = { far: "dawn-far", stars: 0, cloudScale: 1,
-               cloudHue: "rgb(176,150,118)", cloudTint: "rgba(30,26,44,.32)",
-               clouds: [["day-clouds2", [2174, 723]], ["day-clouds", [2184, 720]]] };
-  // Dusk wears the DAY's clouds, recoloured for the evening (rome, 2026-11-04),
-  // the way the blood moon wears the night's.
+               clouds: [["dawn-clouds2", [2179, 722]], ["dawn-clouds", [2178, 722]]] };
   var dusk = { far: "dusk-far", stars: 0, cloudScale: 1,
-               cloudHue: "rgb(140,78,46)", cloudTint: "rgba(24,12,20,.6)",
-               clouds: [["day-clouds2", [2174, 723]], ["day-clouds", [2184, 720]]] };
+               clouds: [["dusk-clouds2", [2206, 713]], ["dusk-clouds", [2172, 724]]] };
   SKY_LAYERED.day = day; SKY_LAYERED.dawn = dawn; SKY_LAYERED["dawn-2"] = dawn;
   SKY_LAYERED.dusk = dusk; SKY_LAYERED["dusk-2"] = dusk;
 })();
 var SKY_NIGHT_MS = 2 * 3600000, SKY_DAY_CYCLE_MS = 4 * 3600000; // zone-data DAY_CYCLE_MS: the second half is night
-var SKY_BOTH_CLOUDS = 4;   // one night in this many wears two strips at once
-var SKY_BACK_PACE = .55;  // ...and the farther of them drifts at this share of the pace
-// Which cloud strips tonight wears, back to front, each with its pace. Off the
-// server's day count (skyRoll), hashed as skyPick does, so every page agrees,
-// and the preview's R steps it with the sky's other versions.
+var SKY_BACK_PACE = .55;  // the farther of two strips drifts at this share of the pace
+// Every way a sky can wear its strips (rome, 2026-11-04): each strip alone, and
+// every pair of them together, back to front, each with its pace.
+function skyCloudSets(list) {
+  var sets = [], i, j;
+  for (i = 0; i < list.length; i++) sets.push([[list[i], 1]]);
+  for (i = 0; i < list.length; i++) for (j = i + 1; j < list.length; j++) sets.push([[list[i], SKY_BACK_PACE], [list[j], 1]]);
+  return sets;
+}
+// Tonight's set and which way it drifts, off the server's day count (skyRoll),
+// so every page agrees. One day in SKY_CLEAR_EVERY is clear, with no cloud at
+// all (rome, 2026-11-04) - the last of each run, the same day the world's words
+// call clear (zone-util skyClear) - and the cloudy days between step through
+// every set in turn, going one way and then the other.
+var SKY_CLEAR_EVERY = 7; // zone-data SKY_CLEAR_EVERY
 function skyCloudsTonight(list) {
-  var h = mix32(plateHash("clouds:" + skyRoll));
-  if (list.length > 1 && h % SKY_BOTH_CLOUDS === 0) return [[list[0], SKY_BACK_PACE], [list[1], 1]];
-  return [[list[(h >>> 8) % list.length], 1]];
+  var d = skyRoll, e = SKY_CLEAR_EVERY;
+  if (((d % e) + e) % e === e - 1) return { set: [], dir: 1 };
+  var sets = skyCloudSets(list), n = sets.length * 2;
+  var k = d - Math.floor((d + 1) / e), i = ((k % n) + n) % n; // the cloudy days, counted
+  return { set: sets[i % sets.length], dir: i < sets.length ? 1 : -1 };
+}
+// How many the sky now showing has (the preview's R goes round that many).
+var skyLayNow = null; // the layered sky on screen, or null
+function skyCloudSetCount() { return skyLayNow ? skyCloudSets(skyLayNow.clouds).length * 2 + 1 : 1; }
+// The rolls the preview's R steps through for the sky now showing: the first
+// day that brings up each different look - a layered sky's every cloud set each
+// way and its clear day; a still sky's (after the rain, the wet hours) versions.
+function skyPreviewRolls() {
+  var i, out = [], seen = {}, keep = skyRoll, want = skyLayNow ? skyCloudSetCount() : (SKY_POOL[lastSky] || []).length;
+  for (i = 0; i < 5000 && out.length < want; i++) {
+    skyRoll = i;
+    var k;
+    if (skyLayNow) { var c = skyCloudsTonight(skyLayNow.clouds); k = c.set.map(function (s) { return s[0][0]; }).join("+") + "|" + c.dir; if (!c.set.length) k = "clear"; }
+    else { var p = skyPick(lastSky); k = p.file + "|" + p.turn; }
+    if (!seen[k]) { seen[k] = 1; out.push(i); }
+  }
+  skyRoll = keep;
+  return out.length ? out : [0];
 }
 // How far through the eclipse it is, 0 as the light starts to thin to 1 when it
 // is back (zone-util eclipsePhase: totality round midday, the thinning and the
@@ -12517,12 +12551,12 @@ var skyDrift = (function () {
     c.drawImage(layArt[lay.disc].im, mx - md / 2, my - md / 2, md, md);
     }
     // tonight's clouds, the farther strip first, each at its pace
-    var tonight = skyCloudsTonight(lay.clouds), cs = s * (lay.cloudScale || 1);
+    var pick = skyCloudsTonight(lay.clouds), tonight = pick.set;
     for (var k = 0; k < tonight.length; k++) {
-      var cl = tonight[k][0], im = layArt[cl[0]].im, tw = cl[1][0] * cs, th = cl[1][1] * cs, top = skyTop(h, th);
-      var m = (t * w * SKY_DRIFT * tonight[k][1] * dir) % tw, x0 = -((m + tw) % tw);
+      var cl = tonight[k][0], cs = s * (cl[2] || lay.cloudScale || 1), im = layArt[cl[0]].im, tw = cl[1][0] * cs, th = cl[1][1] * cs, top = skyTop(h, th);
+      var m = (t * w * SKY_DRIFT * tonight[k][1] * pick.dir) % tw, x0 = -((m + tw) % tw);
       // enough copies that the row's own ends are always off the box
-      var copies = Math.ceil(w / tw) + 1, row = layCloudRow(cl[0], copies, lay.cloudTint || (lay.dark ? "rgba(2,5,16," + lay.dark + ")" : ""), lay.cloudHue);
+      var copies = Math.ceil(w / tw) + 1, row = layCloudRow(cl[0], copies, cl[3] || lay.cloudTint || (lay.dark ? "rgba(2,5,16," + lay.dark + ")" : ""), lay.cloudHue);
       if (row) c.drawImage(row, x0, top, tw * copies, th);
     }
   }
@@ -12641,7 +12675,7 @@ var skyDrift = (function () {
       var kept = skyHandover(name, t, dir, next, performance.now());
       name = next; geo = null; t = kept.t; dir = kept.dir;
       img = name ? "url(/sky/" + name + ".webp?v=" + SKY_V + ")" : "";
-      lay = SKY_LAYERED[name] || null;
+      lay = skyLayNow = SKY_LAYERED[name] || null;
       build();
       if (lay) layReady(); // start the fetches
     }
