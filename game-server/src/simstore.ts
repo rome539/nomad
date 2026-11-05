@@ -10,7 +10,8 @@
 // both: FOUR blobs in the same sim_kv table —
 //   b:creatures — every creature, one JSON array (sorted by id)
 //   b:ground    — every room's floor state, one JSON object (sorted rooms)
-//   b:walked    — every player's walked rooms and wall marks, one JSON object
+//   b:walk:<pk> — ONE player's walked rooms and wall marks, a row each (was
+//                 b:walked, every player in one object, until 2026-11-05)
 //   b:meta      — every SimState singleton, one JSON object
 // A save re-serializes each category and writes ONLY the dirty blobs: a
 // beat of creature churn is 1 row written, not one per mob. Steady state
@@ -102,9 +103,19 @@ const B_META = "b:meta";
 // remove it as soon as rollback is not a thing; a second shadow for lore is
 // weight, not safety.
 const B_WALKED = "b:walked";
+// ...AND THE WALK SPLIT AGAIN, BY PLAYER (rome, 2026-11-05). b:walked held
+// every player's two maps in one row: 240KB and growing with every room any
+// of 44 players first set foot in, so one wanderer's step into new ground
+// rewrote everybody's. Each player now has their own row, b:walk:<pubkey>,
+// and a save writes only the players whose maps moved. The old b:walked is
+// read once at the crossover and swept by the same transaction that writes
+// the rows; as before, no rollback shadow - the walk is testimony.
+const B_WALK_PREFIX = "b:walk:";
+const isWalkShard = (k: string) => k.startsWith(B_WALK_PREFIX);
 const isCreatureShard = (k: string) => k.startsWith(B_CREATURES_PREFIX);
-// A row this store owns and must never sweep as a stray.
-const isOurs = (k: string) => k === B_GROUND || k === B_META || k === B_WALKED || isCreatureShard(k)
+// A row this store owns and must never sweep as a stray. b:walked is not one
+// any more: it is the pre-split shape, swept at the crossover.
+const isOurs = (k: string) => k === B_GROUND || k === B_META || isWalkShard(k) || isCreatureShard(k)
   || (ROLLBACK_SHADOW && k === B_CREATURES); // the shadow is ours while it stands, and must never be swept
 // Where a creature with no shard goes. Only reachable if a caller passes no
 // sharder at all (tests, or a future caller that does not care) — the world
@@ -291,8 +302,16 @@ function metaBlob(state: SimState): string {
 
 // The two player maps, alone in their blob. No churn sub-fields to strip: the
 // whole content IS the dirt, so the stable form is the blob itself.
-function walkedBlob(state: SimState): string {
-  return JSON.stringify({ walked: state.walked ?? null, wallMarks: state.wallMarks ?? null });
+// One row per player who has either map; sorted, so the same world always
+// gives the same rows.
+function walkedBlobs(state: SimState): Map<string, string> {
+  const walked = (state.walked ?? {}) as Record<string, string[]>;
+  const marks = (state.wallMarks ?? {}) as Record<string, string[]>;
+  const out = new Map<string, string>();
+  for (const pk of [...new Set([...Object.keys(walked), ...Object.keys(marks)])].sort()) {
+    out.set(B_WALK_PREFIX + pk, JSON.stringify({ walked: walked[pk] ?? [], wallMarks: marks[pk] ?? [] }));
+  }
+  return out;
 }
 
 function stableMeta(state: SimState): string {
@@ -337,6 +356,7 @@ function expandBundle(state: Record<string, unknown>, roomId: string, b: RoomBun
 
 function unshardBlobs(rows: Map<string, string>): SimState {
   const state = emptyState();
+  const walkSplit = [...rows.keys()].some(isWalkShard);
   // Every shard, plus the pre-split single blob if this world has not crossed
   // over yet. Reading both is what makes the crossover a non-event: a world
   // mid-migration (which cannot exist — one transaction — but be thorough)
@@ -370,16 +390,30 @@ function unshardBlobs(rows: Map<string, string>): SimState {
     // b:meta. Read them from there exactly once — the first save writes
     // b:walked and strips them from meta in one transaction, after which
     // b:walked is the only copy and wins below.
-    if (!rows.has(B_WALKED)) {
+    if (!rows.has(B_WALKED) && !walkSplit) {
       if (parsed.walked !== null && parsed.walked !== undefined) state.walked = parsed.walked;
       if (parsed.wallMarks !== null && parsed.wallMarks !== undefined) state.wallMarks = parsed.wallMarks;
     }
   }
-  const w = rows.get(B_WALKED);
-  if (w) {
-    const parsed = JSON.parse(w) as Record<string, unknown>;
-    if (parsed.walked !== null && parsed.walked !== undefined) state.walked = parsed.walked;
-    if (parsed.wallMarks !== null && parsed.wallMarks !== undefined) state.wallMarks = parsed.wallMarks;
+  // THE PLAYER ROWS WIN; the old one-row b:walked is read only by a world that
+  // has not crossed over to them yet.
+  if (walkSplit) {
+    const walked: Record<string, string[]> = {}, marks: Record<string, string[]> = {};
+    for (const [k, v] of rows) {
+      if (!isWalkShard(k)) continue;
+      const pk = k.slice(B_WALK_PREFIX.length), parsed = JSON.parse(v) as { walked?: string[]; wallMarks?: string[] };
+      if (parsed.walked?.length) walked[pk] = parsed.walked;
+      if (parsed.wallMarks?.length) marks[pk] = parsed.wallMarks;
+    }
+    state.walked = walked;
+    state.wallMarks = marks;
+  } else {
+    const w = rows.get(B_WALKED);
+    if (w) {
+      const parsed = JSON.parse(w) as Record<string, unknown>;
+      if (parsed.walked !== null && parsed.walked !== undefined) state.walked = parsed.walked;
+      if (parsed.wallMarks !== null && parsed.wallMarks !== undefined) state.wallMarks = parsed.wallMarks;
+    }
   }
   return state as unknown as SimState;
 }
@@ -416,7 +450,7 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
   cache.vals.clear();
   const now = Date.now();
   const hasBlobs = rows.has(B_CREATURES) || rows.has(B_GROUND) || rows.has(B_META)
-    || rows.has(B_WALKED) || [...rows.keys()].some(isCreatureShard);
+    || rows.has(B_WALKED) || [...rows.keys()].some((k) => isCreatureShard(k) || isWalkShard(k));
   let state: SimState;
   if (hasBlobs) {
     state = unshardBlobs(rows);
@@ -439,10 +473,20 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
     // and B_META unseeded so the first save writes the stripped meta and the
     // new walk blob in one transaction, and set both write-stamps to 0 so the
     // throttles cannot swallow that first write.
-    if (rows.has(B_WALKED)) {
-      cache.vals.set(B_WALKED, walkedBlob(state));
+    // THE PLAYER ROWS, same discipline: a world that has them seeds each from
+    // the loaded state and judges dirt normally. A world with only the old
+    // b:walked has crossed the first split (meta is stripped, so seed it) but
+    // not this one: its player rows stay unseeded and the walk stamp at 0, so
+    // the first save writes every player's row and sweeps b:walked (a stray
+    // now) in the same transaction.
+    if ([...rows.keys()].some(isWalkShard)) {
+      for (const [k, v] of walkedBlobs(state)) cache.vals.set(k, v);
       cache.vals.set(B_META, stableMeta(state));
       cache.walkedWroteAt = now;
+      cache.metaWroteAt = now;
+    } else if (rows.has(B_WALKED)) {
+      cache.vals.set(B_META, stableMeta(state));
+      cache.walkedWroteAt = 0;
       cache.metaWroteAt = now;
     } else {
       cache.walkedWroteAt = 0;
@@ -528,14 +572,21 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   // paying, moved off the disk and onto the CPU. Nothing is lost by asking
   // late: the write is throttled either way, so comparing more often than once
   // a minute cannot change what lands.
+  // ...ONE ROW PER PLAYER (2026-11-05), and only the players whose maps moved
+  // are written - the full flush included, since the cache only ever believes
+  // what the disk took. A player whose maps are gone loses their row.
   let wroteWalked = false;
+  const walkDels: string[] = [];
   if (fullFlush || now - cache.walkedWroteAt >= META_THROTTLE_MS) {
-    const wBlob = walkedBlob(state);
-    if (fullFlush || cache.vals.get(B_WALKED) !== wBlob) {
-      puts.push([B_WALKED, wBlob]);
-      cacheAs.push([B_WALKED, wBlob]);
-      wroteWalked = true;
+    const blobs = walkedBlobs(state);
+    for (const [k, v] of blobs) {
+      if (cache.vals.get(k) !== v) {
+        puts.push([k, v]);
+        cacheAs.push([k, v]);
+      }
     }
+    for (const k of cache.vals.keys()) if (isWalkShard(k) && !blobs.has(k)) walkDels.push(k);
+    wroteWalked = true;   // checked: the next look is a minute off whether or not anything moved
   }
 
   // Anything cached that isn't one of the four blobs is a stale row from an
@@ -545,14 +596,17 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   // after a crossover, and any shard that has EMPTIED. That last one matters —
   // a region whose creatures all died or walked out would otherwise leave its
   // last population on disk forever, and the next load would hydrate ghosts.
-  const dels: string[] = [];
+  const dels: string[] = [...walkDels];
   const live = new Set([...shards.keys()].map((s) => B_CREATURES_PREFIX + s));
   for (const k of cache.vals.keys()) {
     if (!isOurs(k)) dels.push(k);
     else if (isCreatureShard(k) && !live.has(k)) dels.push(k);
   }
 
-  if (!puts.length && !dels.length) return;
+  if (!puts.length && !dels.length) {
+    if (wroteWalked) cache.walkedWroteAt = now;   // looked and found nothing to write: still a minute to the next look
+    return;
+  }
   storage.transactionSync(() => {
     for (const [k, v] of puts) {
       storage.sql.exec("INSERT INTO sim_kv (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v", k, v);

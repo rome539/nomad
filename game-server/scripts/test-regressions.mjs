@@ -57,7 +57,7 @@ try {
         "export * as herds from './herds';",
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
-        "export {biggestFields} from './simstore';",
+        "export {biggestFields, saveSim, loadSim, newCache} from './simstore';",
         "export {wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn} from './events';",
         "export * as study from './study';",
         "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
@@ -89,7 +89,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -4088,6 +4088,41 @@ try {
     const build = src.slice(src.indexOf('private buildSession('), src.indexOf('private buildSession(') + 600);
     assert.match(build, /const pending = bodyNewerThanSave\(this\.bodyJournal\.get\(row\.pubkey\), row\);/, 'a fresh connect never builds a wanderer from a left copy older than the save');
     assert.match(hyd, /if \(!bodyNewerThanSave\(body, row\)\) \{\s*this\.bodyJournal\.delete\(body\.pubkey\);\s*await this\.state\.storage\.delete\("body:" \+ body\.pubkey\);\s*continue;/, 'and an old left-over copy is dropped, never written back over the save');
+  });
+
+  check('the walked maps are one row per player, and a step rewrites only that player (2026-11-05)', () => {
+    // b:walked held all 44 players' maps in one 240KB row, rewritten whenever
+    // anyone first stood somewhere new.
+    const rows = new Map(), written = [];
+    const storage = { sql: { exec(q, ...a) {
+      if (/^SELECT k, v FROM sim_kv/.test(q)) return [...rows].map(([k, v]) => ({ k, v }));
+      if (/^INSERT INTO sim_kv/.test(q)) { rows.set(a[0], a[1]); written.push(a[0]); return []; }
+      if (/^DELETE FROM sim_kv/.test(q)) { rows.delete(a[0]); return []; }
+      return [];
+    } }, transactionSync(fn) { fn(); } };
+    // A world saved before this split: one b:walked row, and meta already stripped.
+    rows.set('b:meta', JSON.stringify({}));
+    rows.set('b:walked', JSON.stringify({ walked: { a: ['r1', 'r2'], b: ['r3'] }, wallMarks: { a: ['r1'] } }));
+    let cache = newCache();
+    const state = loadSim(storage, cache);
+    assert.deepEqual(state.walked, { a: ['r1', 'r2'], b: ['r3'] }, 'the old row is read at the crossover');
+    saveSim(storage, state, cache);
+    assert.ok(!rows.has('b:walked'), 'the old one-row block is swept');
+    assert.deepEqual(JSON.parse(rows.get('b:walk:a')), { walked: ['r1', 'r2'], wallMarks: ['r1'] }, 'a has a row of their own');
+    assert.deepEqual(JSON.parse(rows.get('b:walk:b')), { walked: ['r3'], wallMarks: [] }, 'and so does b');
+    // One player steps somewhere new: only that row is written.
+    state.walked.b = ['r3', 'r4'];
+    cache.walkedWroteAt = 0; written.length = 0;
+    saveSim(storage, state, cache);
+    assert.deepEqual(written.filter((k) => k.startsWith('b:walk')), ['b:walk:b'], 'only the walker is rewritten');
+    // A fresh load reads every player back from their own rows.
+    cache = newCache();
+    const back = loadSim(storage, cache);
+    assert.deepEqual(back.walked, { a: ['r1', 'r2'], b: ['r3', 'r4'] }, 'every walk comes back');
+    assert.deepEqual(back.wallMarks, { a: ['r1'] }, 'and every wall mark');
+    written.length = 0;
+    saveSim(storage, back, cache);
+    assert.deepEqual(written.filter((k) => k.startsWith('b:walk')), [], 'and nothing is rewritten that did not move');
   });
 
   console.log(`\n${passed} regression checks pass`);
