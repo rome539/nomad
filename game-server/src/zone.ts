@@ -5810,6 +5810,7 @@ export class ZoneDO implements DurableObject {
     // speed. First tick of a fresh DO (lastTickAt 0) uses the nominal step, and
     // an abnormal gap (a cold wake with parked sockets, before catchUp's own
     // fast-forward) is capped so it can't dump one giant appetite jump.
+    mark("world");
     const sinceTick = this.lastTickAt ? now - this.lastTickAt : TICK_MS;
     this.lastTickAt = now;
     const stepMs = Math.min(sinceTick, IDLE_TICK_MS * 2); // capped real elapsed — see note above
@@ -5984,12 +5985,14 @@ export class ZoneDO implements DurableObject {
     // The far world's heartbeat: past the bubbles, time advances in slow whole
     // strides instead of beats. (First beat after a restart just stamps the
     // clock — the gap before it isn't this world's to replay.)
+    mark("beasts");
     if (liveRooms && now - this.lastEcologyAt >= SLOW_ECOLOGY_MS) {
       const elapsed = this.lastEcologyAt ? Math.min(now - this.lastEcologyAt, CATCHUP_CAP_MS) : 0;
       this.lastEcologyAt = now;
       if (elapsed > 0) await this.slowEcology(now, elapsed, liveRooms);
     }
 
+    mark("ecology");
     // The damp works on carried steel: provisional weapons and armor rust a
     // hair each tick (very slowly). Sealed gear is held out of the dungeon's
     // reach. Iterate a copy — a piece can rust through and splice itself out.
@@ -6015,6 +6018,7 @@ export class ZoneDO implements DurableObject {
       }
     }
 
+    mark("rust");
     // Players heal only on purpose: resting, or sheltered in a gatehouse
     // (bench or hatch open AT a gate — out of the world, mending). Ducking
     // aside mid-dungeon with the lockbox is hiding, not healing.
@@ -6150,6 +6154,11 @@ export class ZoneDO implements DurableObject {
       if (events.raining(this, session.roomId)) pvp.rainThinsBlood(this, session);
     }
 
+    // THE OLD "saves" MARK COVERED ALL OF THIS (2026-11-05): beats of 8-14s were
+    // logged as saves while the span also held every creature's turn, the slow
+    // ecology, rust and mending. Each now has its own name, so a slow beat says
+    // which part waited.
+    mark("mend");
     // Flush every live session's mutable state (hp, room) to D1 on a slow clock,
     // so a DO restart — a deploy or a Cloudflare eviction — is a reconnect blip,
     // not a revert. Combat/move/eat already write through; this catches the
