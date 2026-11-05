@@ -4211,6 +4211,27 @@ try {
     assert.match(ev.slice(ev.indexOf('async function tickCold'), ev.indexOf('// THE MELT (8f)')), /paleDrakeSnows\(z, now\);/, 'the beat that keeps the snow asks after the pale drake');
   });
 
+  await checkAsync('the sky cut takes the specks in the leaves and leaves purple on the land alone (2026-11-05)', async () => {
+    const { keySky } = await import(new URL('./key-sky.mjs', import.meta.url));
+    const SKY = [250, 2, 250], GAP = [180, 90, 190], FLOWER = [150, 90, 170], LAND = [90, 80, 60];
+    const w = 60, h = 12, rows = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) rows.push(y < 4 ? SKY : LAND);
+    const at = (x, y) => y * w + x;
+    for (const [x, y] of [[19, 1], [21, 1], [20, 0], [20, 2]]) rows[at(x, y)] = LAND; // leaves
+    rows[at(20, 1)] = GAP;      // a blurred gap in them: not true sky, and not touching it
+    rows[at(40, 10)] = FLOWER;  // out on the land, far from any sky
+    rows[at(1, 10)] = SKY;      // a window: true sky with land all round it
+    const data = new Uint8ClampedArray(w * h * 4);
+    rows.forEach((c, i) => data.set([...c, 255], i * 4));
+    keySky(data, w, h);
+    const px = (x, y) => [...data.slice(at(x, y) * 4, at(x, y) * 4 + 4)];
+    assert.equal(px(4, 0)[3], 0, 'the sky goes');
+    assert.equal(px(20, 1)[3], 0, 'the gap in the leaves goes, no pink speck');
+    assert.equal(px(1, 10)[3], 0, 'a window of true sky goes');
+    assert.deepEqual(px(40, 10), [...FLOWER, 255], 'the flower stays, and keeps its colour');
+    assert.deepEqual(px(40, 8), [...LAND, 255], 'the land is untouched');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

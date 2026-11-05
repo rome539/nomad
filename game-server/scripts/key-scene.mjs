@@ -6,10 +6,8 @@
 // behind every one of them (see scene-art.md, and paintScene in public.ts).
 // This is the one step between those two states.
 //
-// MAGENTA IS KEYED BY HUE, not by matching one colour: alpha drops wherever
-// min(r-g, b-g) > 30, which survives the compression fringing a flat #FF00FF
-// test would leave behind as a halo. The same amount is then subtracted from
-// red and blue, which is what stops a pink rim along a skyline.
+// ABOVE THE LAND ALL MAGENTA GOES; BELOW IT ONLY TRUE SKY (key-sky.mjs), so a
+// tree has no pink specks and purple flowers on the ground stay whole.
 //
 // THE CUT IS THE PART THAT MUST NOT MOVE. When a plate already exists for the
 // same ground under another condition, this compares the two skylines and says
@@ -25,6 +23,7 @@
 // a file the world already has means bumping BG_V in public.ts or every
 // browser keeps the one it cached.
 import sharp from "sharp";
+import { keySky } from "./key-sky.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,13 +45,7 @@ const src = srcArg.startsWith("~") ? path.join(process.env.HOME, srcArg.slice(1)
 if (!fs.existsSync(src)) { console.error("no such source: " + src); process.exit(2); }
 
 const { data, info } = await sharp(src).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-let cut = 0;
-for (let p = 0; p < data.length; p += 4) {
-  const r = data[p], g = data[p + 1], b = data[p + 2];
-  const spill = Math.min(r - g, b - g);
-  if (spill > 30) { data[p] = data[p + 1] = data[p + 2] = data[p + 3] = 0; cut++; continue; }
-  if (spill > 0) { data[p] = Math.max(0, r - spill); data[p + 2] = Math.max(0, b - spill); }
-}
+const cut = keySky(data, info.width, info.height);
 const total = info.width * info.height;
 const pct = (100 * cut) / total;
 console.log(`${name}  ${info.width}x${info.height}  sky ${pct.toFixed(1)}%`);

@@ -1,9 +1,9 @@
 # Plate prompts: the format
 
 How every NOMAD room plate prompt is written, so a new plate can be made from any
-account or machine. The blocks below are copied word for word from the newest
-prompts actually used (the fold redo, 2026-11-04; indoor wording from the dens
-set). `scene-art.md` covers wiring a finished plate into the game.
+account or machine. The blocks below come from the newest prompts actually used
+(the fold redo, 2026-11-04; indoor wording from the dens set), with the fixed
+footing block taken out on 2026-11-05. `scene-art.md` covers wiring a finished plate into the game.
 
 ## The rules
 
@@ -18,13 +18,27 @@ set). `scene-art.md` covers wiring a finished plate into the game.
 - **The subject names only what the ground's rooms describe.** Read every room the
   plate will serve; name only their common ground, nothing that belongs to one
   named room. End the subject with a "No ..." line ruling out what must not be
-  drawn (no ruins, no house, no tools, nothing lying about, no symmetry) and a
-  Palette line.
+  drawn (no ruins, no house, no tools, nothing lying about, no symmetry).
+- **Every subject ends with a Palette line.** It names this place's own dull colours,
+  material by material ("Palette: dull green grass, grey chalk, brown earth, dark
+  grey fortress stone."). Without it the colours drift brighter than the rest of the game.
+- **Every plate needs room for creatures to stand, and that room must look natural.**
+  Several creatures and their dead stand side by side on the near ground, so it has
+  to be broad, open and easy to walk on, with what stands up placed further back or
+  off to one side. Say it in the subject, in this place's own ground, the way the
+  place really is, and word it differently for every room ("underfoot the ploughing
+  has long since worn away, and the old field spreads out broad and hard and easy to
+  walk on, rough short grass with thin patches of bare earth"). Never use a shared
+  footing paragraph, and never stage directions like "a strip from edge to edge",
+  "its far edge at the middle" or "nothing standing on it": those make every room
+  the same picture. Check every subject for this before using it, and if the feature
+  the room is named for would fill the near ground, move it further out.
 - **A redo keeps the original subject word for word** (the originals are in The
   Plate Book artifact). Remove only the thing that was asked; never redesign, and
-  never add footing or apron lines to a redo.
+  never add a staged footing or apron line to a redo. If a redo has no room for
+  creatures, reword its near ground the natural way described below.
 - **The torch has no direction.** Light comes from the camera's own position.
-- **Never change the constants.** The head, FOOTING, SKY and Door Rule blocks below are fixed.
+- **Never change the constants.** The head, SKY and Door Rule blocks below are fixed.
 - File names: `<ground>-day.png`, `<ground>-night.png`, `<ground>-night-torch.png`,
   `<ground>-snow.png`.
 
@@ -57,10 +71,10 @@ No visible player character, hands, weapon, HUD, text, labels, icons, borders, w
 
 SUBJECT: <THE GROUND> - <what it is, in one line>. One shared backdrop for every room on this ground. Only their common ground - nothing that belongs to one named room.
 
-<Standing in ... : the near ground first (open, level, easy to stand on), then what
-is around it, then the distance. Only things the rooms describe.> No <...>, no symmetry. Palette: <...>.
-
-FOOTING: creatures are put into this picture afterwards, side by side in one row, so somewhere in the near ground there must be a strip of open, level footing running the full width of the picture, from the left edge to the right edge, deep enough to stand a large animal on and clear of anything standing up out of it. Where that strip lies and what surrounds it belong to this place - do not rearrange the scene to make it, and do not empty the rest of the picture.
+<Standing in ... : the near ground first, said the way this place really is, broad,
+open and easy to walk on with room for creatures to stand, then what is around it
+further out or off to one side, then the distance "small with distance". Only things
+the rooms describe.> No <...>, no symmetry. Palette: <the muted colours of this place's own materials>.
 
 SKY: every patch of sky - above the skyline and in every gap between branches - is a perfectly uniform flat opaque #FF00FF field. No real sky, clouds, gradient, sun, moon or light in the magenta. Every sky pixel exact #FF00FF, and magenta, pink and purple nowhere in the ground, bark, leaves or flowers.
 ```
@@ -97,7 +111,7 @@ REPLACE THE MAGENTA WITH REAL SKY - heavy grey snow sky, no magenta anywhere in 
 
 ## 2. Indoor room (roofed, no sky)
 
-Day prompt: the same head and SUBJECT layout as above, then FOOTING, and in place
+Day prompt: the same head and SUBJECT layout as above, and in place
 of the SKY block:
 
 ```
@@ -123,7 +137,7 @@ place of the sky line.
 One night plate only. Same head; the subject says the room is "at night, lit only
 by two iron wall-torches on the side walls" (or "one on each side wall"), then the
 room, then "The near floor is ... level ... running unbroken from the bottom of the
-frame to the back wall", then the "No ..." line, then the indoor NO SKY block.
+frame to the back wall", then the "No ..." line and the Palette line, then the indoor NO SKY block.
 
 ## 4. Gates
 
@@ -134,7 +148,7 @@ snow), from the newest gate made (the village smithy, 2026-11-03). File names:
 ### Day (full prompt)
 
 The outdoor head (section 1, everything before SUBJECT), then the Door Rule, then
-the gate's subject, then FOOTING and SKY exactly as in section 1.
+the gate's subject, then SKY exactly as in section 1.
 
 ```
 THIS PLATE IS A DOOR, AND THE DOOR IS THE SUBJECT. It is one of fourteen places in the world where a wanderer can get in out of the weather, and four rules govern all fourteen.
@@ -160,7 +174,7 @@ named landmark beside it (only what the room's text describes). In the wall faci
 the camera, a low doorway standing open and dark into a room behind, and beside
 that doorway a small square shuttered hatch with a lamp burning on a bracket above
 it. Open ground in the near ground, running off both side edges. Daylight on the
-ground.> No <...>.
+ground.> No <...>. Palette: <the muted colours of this place's own materials>.
 ```
 
 ### Night (hand back the day picture)
