@@ -226,6 +226,14 @@ t("everything else still flinches on idle",inv["hill-wolf"][ctx.poseAt(a,Date.no
 
 a=mk("great-vulture");ctx.set([a]);ctx.mobBeat(null,null,null,["great-vulture"]);
 t("a scavenger drops its head to the body",a.phase==="feed"&&inv["great-vulture"][ctx.poseAt(a,Date.now()).k]==="feed");
+// A LONG MEAL SHOWS FOR AS LONG AS THE WORDS SAY SO, and not on one held frame
+// (2026-11-05: a vulture read "head down in a carcass" standing upright).
+a=mk("carrion-vulture");a.state="eat";a.next=Date.now()+1e9;ctx.set([a]);
+{ const seen=new Set(); for(let i=0;i<70;i++){a.t=i/10;seen.add(inv["carrion-vulture"][ctx.poseAt(a,Date.now()).k]);}
+  t("an animal at a long meal shows its feed frame",seen.has("feed"),[...seen].join());
+  t("...and lifts its head, it does not hold it the whole time",seen.size>1,[...seen].join()); }
+{ const r=mk("rat");r.state="graze";r.grazeAt="graze";r.t=0.5;ctx.set([r]);
+  t("a grazing meal shows the graze frame",inv["rat"][ctx.poseAt(r,Date.now()).k]==="graze"); }
 // A GRAZER EATS TOO, AND ITS FRAME IS NOT CALLED "feed" (2026-09-18). The fed
 // beat used to name that pose literally, so everything drawn with its head down
 // in the ground was sent the signal and had nothing to answer it with.

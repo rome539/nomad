@@ -4855,6 +4855,20 @@ export function eatingNow(c: Creature, now = Date.now()): boolean {
   if (c.eatingIn !== c.roomId) c.eatingUntil = undefined; // moved some other way: the meal stays behind for good
   return (c.eatingUntil ?? 0) > now;
 }
+// WHAT THE PICTURE SHOWS WHILE THE WORDS SAY IT IS EATING (rome, 2026-11-05: a
+// vulture read "head down in a carcass" standing upright). The feed frame used to
+// play once, at the bite, and the words go on for EAT_SHOW_MS; this is the same
+// question creatureTell asks, for the sprite. "" = not eating.
+export function eatingShown(z: ZoneDO, c: Creature, now = Date.now()): "" | "eat" | "graze" {
+  if (eatingNow(c, now)) return c.eatingOn === "graze" ? "graze" : "eat";
+  if (SCAVENGERS.has(c.templateId)) {
+    const tmpl = z.world?.mobTemplates.get(c.templateId);
+    const spareKin = c.templateId === "grave-hyena";
+    if ((z.traces.get(c.roomId) ?? []).some((tr) => CORPSE_TRACES.has(tr.kind) && !(spareKin && tr.label === tmpl?.name))) return "eat";
+  }
+  return "";
+}
+
 export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "kill"): void {
   c.eatingOn = on;
   c.eatingUntil = now + EAT_SHOW_MS;

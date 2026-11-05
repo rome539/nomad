@@ -16209,6 +16209,18 @@ function poseAt(a, now) {
     name = a.calm && Math.floor(t / 4) % 3 === 0 ? calmNow(t / 4) : "idle";
     air = -0.012;
     s *= 1 + Math.sin(t * 1.1) * BREATH * 2.6;
+  } else if (a.state === "eat" || a.state === "graze") {
+    // AT ITS MEAL FOR AS LONG AS THE WORDS SAY SO (rome, 2026-11-05), and not one
+    // frame held the whole time: head down at it, up to look round, down again.
+    // Offset by slot so two at one carcass do not lift together.
+    var meal = (t + (a.slot | 0) * 2.3) % EAT_CYCLE_S;
+    if (meal < EAT_DOWN_S) {
+      name = (a.state === "graze" && a.grazeAt) || a.eat || "idle";
+      x = Math.sin(t * 3.4) * SWAY * 0.10;
+    } else {
+      name = a.watch || "idle";
+      s *= 1 + Math.sin(t * 1.6) * BREATH;
+    }
   } else if (a.state === "eyeing" || a.state === "watch") {
     // Head up, fixed on something: the floor gear it means to take, or the room
     // the noise came from. It has stopped doing anything else.
@@ -16308,6 +16320,7 @@ function runAnims() {
 // which is where they were designed. A creature with no attack frame drawn just
 // keeps doing what it was doing.
 var ATTACK_S = 1.7, HIT_S = 0.9, DEATH_S = 1.1, FEED_S = 2.4;
+var EAT_CYCLE_S = 7, EAT_DOWN_S = 4.5; // a long meal: head down, then up to look round
 var POSE_S = 2.6;         // how long an event pose (the salute, the rise) is held
 var ROUND_S = 4;          // COMBAT_ROUND_MS, and the beat everything here answers to
 var STAGGER_S = 0.75;     // how far apart blows in the same round are spread

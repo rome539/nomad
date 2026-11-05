@@ -243,10 +243,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         // sleep is the wake clock, not `asleep`, so the picture asks the same
         // thing the room line asks.
         : SENTINELS.has(creature.templateId) && !z.sentinelAwake(creature) ? "rest"
-        : creature.eyeing ? "eyeing"
+        : ai.eatingShown(z, creature, now) || (creature.eyeing ? "eyeing"
         : creature.hp < (tmpl.max_hp * 0.35) ? "hurt"
         : creature.curious ? "watch"
-        : "";
+        : "");
       doing.push(state);
       eyes.push(HOLLOW.has(creature.templateId) && exhale ? "frost" : "");
     }

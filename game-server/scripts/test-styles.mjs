@@ -134,9 +134,24 @@ try {
     const rats = [1, 2, 3, 4].map((i) => ({ id: 'r' + i, templateId: 'rat', roomId: 'r', hp: 11, target: 'you' }));
     const { z, feed } = world(rats);
     assert.equal(S.creatureBlow(z, rats[0], tmpl('rat'), you(), now).mult, 1.75, 'three others on you: each bite is worse');
+    assert.equal(feed.filter((l) => l.includes('press in together')).length, 1, 'the room hears it close in');
+    S.creatureBlow(z, rats[1], tmpl('rat'), you(), now);
+    assert.equal(feed.filter((l) => l.includes('press in together')).length, 1, 'once, not on every bite');
     z.creatures.delete('r4'); z.creatures.delete('r3');
     assert.equal(S.creatureBlow(z, rats[0], tmpl('rat'), you(), now + 4000).mult, 1.25, 'thinned out: the bite weakens');
     assert.equal(feed.filter((l) => l.includes('less sure')).length, 1, 'and the room hears it');
+    { // one alone says nothing, and past the top count another adds nothing to say
+      const lone = [{ id: 'a', templateId: 'rat', roomId: 'r', hp: 11, target: 'you' }];
+      const w1 = world(lone);
+      S.creatureBlow(w1.z, lone[0], tmpl('rat'), you(), now);
+      assert.equal(w1.feed.filter((l) => l.includes('press in together')).length, 0, 'one rat is no swarm');
+      const six = [1, 2, 3, 4, 5, 6].map((i) => ({ id: 's' + i, templateId: 'rat', roomId: 'r', hp: 11, target: i < 6 ? 'you' : null }));
+      const w2 = world(six);
+      S.creatureBlow(w2.z, six[0], tmpl('rat'), you(), now);
+      six[5].target = 'you';
+      S.creatureBlow(w2.z, six[0], tmpl('rat'), you(), now);
+      assert.equal(w2.feed.filter((l) => l.includes('press in together')).length, 1, 'a sixth makes it no worse, so it is not told');
+    }
     console.log('PASS: swarm bites worse in numbers and weaker as it thins.');
   }
 

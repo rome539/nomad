@@ -63,7 +63,7 @@ export function creatureBlow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
   }
 
   if (SWARMS.has(id)) {
-    swarmThins(z, creature.roomId, victim.pubkey);
+    swarmShift(z, creature.roomId, victim.pubkey);
     const others = swarmOn(z, creature.roomId, victim.pubkey) - 1;
     // The king's rats bite harder together while it lives (ratking.ts).
     out.mult *= 1 + Math.min(SWARM_MAX_OTHERS, Math.max(0, others)) * (SWARM_STEP + (ratking.bold(z, creature) ? RAT_KING_SWARM_BONUS : 0));
@@ -222,15 +222,17 @@ export function playerSwing(z: ZoneDO, session: Session, creature: Creature, tmp
   return { mult };
 }
 
-// The room hears it when a swarm thins: tracked per victim, told on the drop.
+// The room hears it when a swarm grows or thins: tracked per victim, told on the
+// change, and only up to the count where another one stops making the bite worse.
 const swarmCount = new WeakMap<ZoneDO, Map<string, number>>();
-export function swarmThins(z: ZoneDO, roomId: string, pubkey: string): void {
+export function swarmShift(z: ZoneDO, roomId: string, pubkey: string): void {
   let m = swarmCount.get(z);
   if (!m) { m = new Map(); swarmCount.set(z, m); }
   const key = `${roomId}:${pubkey}`;
   const n = swarmOn(z, roomId, pubkey);
   const was = m.get(key) ?? 0;
   if (n > 0 && n < was) z.roomFeed(roomId, "The rest of them are less sure now.", undefined, false);
+  else if (n > was && n >= 2 && n <= SWARM_MAX_OTHERS + 1) z.roomFeed(roomId, "They press in together, and the bites come harder.", undefined, false);
   if (n) m.set(key, n); else m.delete(key);
 }
 
