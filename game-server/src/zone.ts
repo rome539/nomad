@@ -1,6 +1,18 @@
 import { hpLabel, wholeHp } from "./util";
 import { BUILD_ID } from "./public";
 const BUILD_RESTART_EVERY_MS = 120_000;
+// THE WORLD'S COPY OF A BODY NEVER OUTRANKS A NEWER SAVE (rome, 2026-11-05: a
+// deploy's rebuild put him back where he had stood the day before, and a
+// refresh put him right). The copy is written every beat, so a live one is
+// within moments of the player row (the row is written just after it, and a
+// slow save can take a while); one well older than the row's last save is
+// left over, and building the wanderer from it moves them back in time. A
+// minute of slack covers the slowest save and nothing a left-over copy is.
+const BODY_SAVE_SLACK_MS = 60_000;
+export function bodyNewerThanSave<B extends { savedAt: number }>(body: B | undefined, row: { last_seen?: number | null }): B | undefined {
+  if (!body) return undefined;
+  return body.savedAt + BODY_SAVE_SLACK_MS >= (row.last_seen ?? 0) * 1000 ? body : undefined;
+}
 import * as exhaustion from "./exhaustion";
 import * as herds from "./herds";
 import * as conditions from "./conditions";
@@ -1937,7 +1949,7 @@ export class ZoneDO implements DurableObject {
   // body journal to preserve fatigue, recovery mode and an unfinished fight.
   private buildSession(ws: WebSocket, row: PlayerRow, items: CarriedItem[]): Session {
     const world = this.world!;
-    const pending = this.bodyJournal.get(row.pubkey);
+    const pending = bodyNewerThanSave(this.bodyJournal.get(row.pubkey), row);   // never a copy older than the save
     if (pending?.offlineAt !== undefined) row = { ...row, hp: pending.hp, room_id: pending.roomId, exhaustion: JSON.stringify(pending.exhaustion) };
     const roomId = world.rooms.has(row.room_id) ? row.room_id : this.randomGate();
     const fatigue = exhaustion.readExhaustion(row.exhaustion, Date.now());
@@ -2011,7 +2023,7 @@ export class ZoneDO implements DurableObject {
       const { row } = await getOrCreatePlayer(this.env.DB, pubkey, this.randomGate());
       const items = await loadInventory(this.env.DB, pubkey);
       const rebuilt = this.buildSession(ws, row, items);
-      const body = this.bodyJournal.get(pubkey);
+      const body = bodyNewerThanSave(this.bodyJournal.get(pubkey), row);
       if (body && body.offlineAt === undefined) {
         Object.assign(rebuilt, body);
         this.lastCombatRound = Math.max(this.lastCombatRound, body.roundAt);
@@ -2056,6 +2068,13 @@ export class ZoneDO implements DurableObject {
       if (this.sessions.has(body.pubkey)) continue;
       if (!this.world) await this.init("door");
       const { row } = await getOrCreatePlayer(this.env.DB, body.pubkey, this.randomGate());
+      // A copy older than the last real save is not this body any more: drop it
+      // rather than stand it up and write its old room back over the save.
+      if (!bodyNewerThanSave(body, row)) {
+        this.bodyJournal.delete(body.pubkey);
+        await this.state.storage.delete("body:" + body.pubkey);
+        continue;
+      }
       const items = await loadInventory(this.env.DB, body.pubkey);
       const absent = { send() {}, close() {} } as unknown as WebSocket;
       const s = this.buildSession(absent, row, items);

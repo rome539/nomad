@@ -24,7 +24,7 @@ try {
   await build({
     stdin: {
       contents: [
-        "export {ZoneDO} from './zone';",
+        "export {ZoneDO, bodyNewerThanSave} from './zone';",
         "export {parse} from './parser';",
         "export * as den from './den';",
         "export {cmdMap, copyCounts, worldGrid} from './lore';",
@@ -89,7 +89,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -4070,6 +4070,24 @@ try {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /var newPicture = scene !== scenePainted/, 'a step into another picture is known');
     assert.match(pub, /if \(newPicture && sceneEl\.style\) \{\s*sceneEl\.style\.transition = "none";\s*sceneEl\.className = /, 'and its grade goes on with no fade');
+  });
+
+  check('a deploy rebuild never puts a wanderer back where an old copy stood (2026-11-05)', () => {
+    // After a deploy the world rebuilt a player from its own copy of the body,
+    // a day old, over the player row saved minutes before: he stood where he
+    // had been the day before until a refresh read the row.
+    const now = Date.now(), row = { last_seen: Math.floor(now / 1000) };
+    const old = { savedAt: now - 24 * 3600 * 1000, roomId: 'yesterday' };
+    const live = { savedAt: now - 3000, roomId: 'today' };
+    assert.equal(bodyNewerThanSave(old, row), undefined, 'a day-old copy is not used');
+    assert.equal(bodyNewerThanSave(live, row), live, 'a copy written moments before the save is');
+    assert.equal(bodyNewerThanSave({ savedAt: now + 4000 }, row)?.savedAt, now + 4000, 'and one written after it');
+    const src = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const hyd = src.slice(src.indexOf('private async hydrateSessions'), src.indexOf('async webSocketMessage'));
+    assert.match(hyd, /const body = bodyNewerThanSave\(this\.bodyJournal\.get\(pubkey\), row\);/, 'a live socket is rebuilt only from a copy newer than the save');
+    const build = src.slice(src.indexOf('private buildSession('), src.indexOf('private buildSession(') + 600);
+    assert.match(build, /const pending = bodyNewerThanSave\(this\.bodyJournal\.get\(row\.pubkey\), row\);/, 'a fresh connect never builds a wanderer from a left copy older than the save');
+    assert.match(hyd, /if \(!bodyNewerThanSave\(body, row\)\) \{\s*this\.bodyJournal\.delete\(body\.pubkey\);\s*await this\.state\.storage\.delete\("body:" \+ body\.pubkey\);\s*continue;/, 'and an old left-over copy is dropped, never written back over the save');
   });
 
   console.log(`\n${passed} regression checks pass`);
