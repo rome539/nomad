@@ -29,7 +29,7 @@ import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STU
   GATEHOUSE_RAIN, GATEHOUSE_AFTER_RAIN, GATEHOUSE_FOG, GATEHOUSE_COLD, GATEHOUSE_CROWS, GATEHOUSE_NIGHT, GATEHOUSE_DAY,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
   POSES, COURTESIES, WAVE_ARMED, DANCE_ALONE, DANCE_ALONE_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM, SING_SELF, SING_ROOM,
-  KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS, REGION_LABELS, HARD_FROST, MOON_FULL_EVERY } from "./zone-data";
+  KEEPER_NODS, KEEPER_NODS_BUSY, KEEPER_NOD_ODDS, KEEPER_NOD_EVERY_MS, REGION_LABELS, HARD_FROST, MOON_FULL_EVERY, HAMLET_ROOMS, HAMLET_CAPTIONS } from "./zone-data";
 import * as den from "./den";
 import * as carving from "./carving";
 import * as light from "./light";
@@ -3505,7 +3505,8 @@ export function wallStudy(z: ZoneDO, session: Session): void {
       gate: world.entryRooms.has(id) ? 1 : 0, // a door draws as a door on the wall too
       safe: world.safeRooms.has(id) && !world.entryRooms.has(id) ? 1 : 0, // ...and a bolthole as a bolthole
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
-      q: MAP_QUARTERS[id], // the room's quarter — see the same field in lore.sendMap
+      q: HAMLET_CAPTIONS[id] ?? MAP_QUARTERS[id], // the room's quarter — see the same field in lore.sendMap
+      hamlet: HAMLET_ROOMS.has(id) ? 1 : 0, // ...and a hamlet in the village's green, as on a carried map
       // (was WOOD_QUARTERS, which is a subset: the wall never captioned the east
       // road's four, the Crossing's seven or the open ground's four.)
       x: at?.x, y: at?.y, z: at?.z, // ...and on its floor, as the surveyor's map has it

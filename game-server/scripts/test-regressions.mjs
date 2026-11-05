@@ -1093,18 +1093,41 @@ try {
     assert.ok(first.t >= 0 && first.t < 600, 'a sky not seen yet starts anywhere');
     assert.match(pub, /var kept = skyHandover\(name, t, dir, next, performance\.now\(\)\);\n      name = next; geo = null; t = kept\.t; dir = kept\.dir;/, 'the drift uses it');
   });
+  check('the two hamlets have their names on the map, and the Crossing\'s name comes off them (2026-11-04)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const data = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const lore = readFileSync(new URL('../src/lore.ts', import.meta.url), 'utf8');
+    const gate = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    const detail = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    assert.match(data, /for \(const id of SALT_HAMLET_ROOMS\) HAMLET_CAPTIONS\[id\] = "salthamlet";/);
+    assert.match(data, /for \(const id of SHIELING_HAMLET_ROOMS\) HAMLET_CAPTIONS\[id\] = "shieling";/);
+    assert.match(pub, /  salthamlet: "THE SALT HAMLET",\n  shieling: "THE SHIELING HAMLET",/, 'the page has both names');
+    // the anchor the server measures, and the quarter each room carries (which
+    // takes the hamlet out of the rooms the Crossing's and the mountain's names sit over)
+    assert.match(lore, /const quarter = HAMLET_CAPTIONS\[id\] \?\? MAP_QUARTERS\[id\];\n    if \(quarter\) region = quarter;/, 'each hamlet has its own caption spot');
+    assert.match(lore, /q: HAMLET_CAPTIONS\[id\] \?\? MAP_QUARTERS\[id\],/, 'a carried map knows a hamlet room is its hamlet');
+    assert.match(gate, /q: HAMLET_CAPTIONS\[id\] \?\? MAP_QUARTERS\[id\],/, 'and so does the wall chart');
+    assert.match(gate, /hamlet: HAMLET_ROOMS\.has\(id\) \? 1 : 0,/, 'which draws them green too');
+    assert.match(pub, /if \(nr === ba\.region && !nd\.q\) \{ bareX \+= pl\.x; bareY \+= pl\.y; bare\+\+; \}/, 'a region\'s name sits over its rooms with no quarter');
+    for (const id of ['the-salt-cross', 'the-hill-cross', 'the-hard-lane', 'the-drove-cut'])
+      assert.ok(!detail.includes(`"${id}"`), `${id} is kept out of the quarters that run the game`);
+  });
   check('the two hamlets are drawn green on the map, as Assart End is (2026-11-04)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const data = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
     const lore = readFileSync(new URL('../src/lore.ts', import.meta.url), 'utf8');
-    const listed = new Set(data.match(/export const HAMLET_ROOMS = new Set<string>\(\[([\s\S]*?)\]\);/)[1].match(/"[a-z-]+"/g).map((s) => s.slice(1, -1)));
-    for (const f of ['the-salt-hamlet', 'the-shieling-hamlet']) {
+    const listOf = (name) => data.match(new RegExp(`export const ${name} = \\[([\\s\\S]*?)\\];`))[1].match(/"[a-z-]+"/g).map((s) => s.slice(1, -1));
+    const listed = new Set();
+    for (const [f, name] of [['the-salt-hamlet', 'SALT_HAMLET_ROOMS'], ['the-shieling-hamlet', 'SHIELING_HAMLET_ROOMS']]) {
+      const own = new Set(listOf(name));
       const ids = readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8').split('\n')
         .filter((l) => l.startsWith('## ') && !l.includes('attachment')).map((l) => l.slice(3).split(' |')[0].trim());
       assert.equal(ids.length, 29, f);
-      for (const id of ids) assert.ok(listed.has(id), `${id} is on the map as a hamlet`);
+      for (const id of ids) { assert.ok(own.has(id), `${id} is on the map as its hamlet`); listed.add(id); }
+      assert.equal(own.size, 29, `${name} holds nothing else`);
     }
     assert.equal(listed.size, 58, 'and nothing else is');
+    assert.match(data, /export const HAMLET_ROOMS = new Set<string>\(\[\.\.\.SALT_HAMLET_ROOMS, \.\.\.SHIELING_HAMLET_ROOMS\]\);/);
     assert.match(lore, /hamlet: HAMLET_ROOMS\.has\(id\) \? 1 : 0,/, 'the map frame says which rooms are hamlet');
     assert.match(pub, /hamlet: !!rm\.hamlet,/, 'the page keeps it');
     const src = pub.match(/function mapRegionColor\(region, isGate, isHamlet\) \{[\s\S]*?\n\}\n/)[0];

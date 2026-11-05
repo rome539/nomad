@@ -11885,12 +11885,19 @@ export const REGION_LABELS: Record<string, string> = {
 // two copies of the old village belong to the Crossing and the mountain, so the
 // fever, the ground and the region caption stay theirs, but on the paper they
 // are drawn as what they are, a village, in the village's green.
-export const HAMLET_ROOMS = new Set<string>([
-  // the Salt Hamlet (the Crossing)
+export const SALT_HAMLET_ROOMS = [
   "the-hard-lane", "the-pump-green", "the-sea-furrows", "the-row-foot", "the-salt-pound", "the-marsh-field", "the-salters-row", "the-smiths-yard", "the-sea-smithy", "the-yard-backs", "the-salt-cross", "the-saltmasters-yard", "the-saltmasters-house", "the-burnt-cot", "the-chapel-hard", "the-row-head", "the-far-cot", "the-far-house", "the-salt-chapel", "the-wind-orchard", "the-net-green", "the-bare-toft", "the-sallow-rows", "the-turf-hut", "the-dipping-well", "the-strand-graves", "the-marsh-end", "the-old-hearths", "the-gorse-corner",
-  // the Shieling Hamlet (the mountain)
+];
+export const SHIELING_HAMLET_ROOMS = [
   "the-drove-cut", "the-spring-green", "the-terrace-strips", "the-shiel-foot", "the-fold-pound", "the-in-field", "the-shiel-street", "the-forge-yard", "the-hill-smithy", "the-shiel-backs", "the-hill-cross", "the-herds-yard", "the-herds-house", "the-burnt-shiel", "the-chapel-shelf", "the-shiel-head", "the-high-croft", "the-high-house", "the-hill-chapel", "the-thorn-garth", "the-fleece-green", "the-lost-toft", "the-rowan-rows", "the-peat-hut", "the-hill-spring", "the-hill-graves", "the-scree-end", "the-cold-hearths", "the-thorn-nook",
-]);
+];
+export const HAMLET_ROOMS = new Set<string>([...SALT_HAMLET_ROOMS, ...SHIELING_HAMLET_ROOMS]);
+// AND EACH HAS ITS NAME ON THE MAP (rome, 2026-11-04). Caption only, and kept
+// out of detail.MAP_QUARTERS on purpose: a quarter there also decides the
+// mountain's creature shards, a room's sounds and where animals settle.
+export const HAMLET_CAPTIONS: Record<string, string> = {};
+for (const id of SALT_HAMLET_ROOMS) HAMLET_CAPTIONS[id] = "salthamlet";
+for (const id of SHIELING_HAMLET_ROOMS) HAMLET_CAPTIONS[id] = "shieling";
 
 export const MAP_BAND_OF: Record<string, number> = {
   sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, den: 1, crossing: 1, upper: 2, warrens: 3, deep: 4,

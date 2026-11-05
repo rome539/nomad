@@ -8460,6 +8460,9 @@ var MAP_REGION_LABELS = {
   eyots: "THE EYOTS",
   farstrand: "THE FAR STRAND",
   saltings: "THE SALTINGS",
+  // THE TWO HAMLETS (rome, 2026-11-04), caption-only like the quarters: zone-data.HAMLET_CAPTIONS.
+  salthamlet: "THE SALT HAMLET",
+  shieling: "THE SHIELING HAMLET",
 };
 function buildMapGraph(f) {
   var nodes = {}, order = [];
@@ -10396,13 +10399,13 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "131";      // /mob/      strips and their eye layers
+var MOB_V  = "132";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "57";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "58";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "20";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "40";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "21";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "41";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11982,6 +11985,9 @@ var MOB_LINE = {
   // fence; the furrows and the in-field are walkable nearly from the lock.
   "salt-street": 63, "salt-fields": 60, "salt-common": 63,
   "shiel-street": 63, "shiel-fields": 57, "shiel-common": 68,
+  // THE FOLD, redrawn (2026-11-04): open turf from the foot of the hut and the
+  // pen (~62%) down, so the row stands on the grass in front of them.
+  "fold": 63,
   // The arch's picture is a gate's, a wall with its door, so people stand out on
   // the paving in front of it as they did when it was one: MOB_LINE_GATE's line.
   "gate-weeper-arch": 63,
@@ -15062,7 +15068,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
-  "fever-rat":   { n: 8, aspect: 1.506, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"death":7} },
+  "fever-rat":   { n: 8, aspect: 1.478, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"death":7} },
   "the-cook":   { n: 8, aspect: 0.928, f: {"idle":0,"hone-the-blade":1,"wipe-the-blade":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-king":   { n: 9, aspect: 0.894, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"call-the-rats":6,"feed":7,"death":8} },
   "coyote":   { n: 8, aspect: 1.172, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },

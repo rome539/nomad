@@ -23,7 +23,7 @@ import {
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM, MOB_TRAIT_DOES, MOB_TRAITS, MOB_FAMILY_NAME,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
-  MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF, HAMLET_ROOMS,
+  MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF, HAMLET_ROOMS, HAMLET_CAPTIONS,
   GATE_TELLINGS, DOOR_TELLINGS, DOOR_TELLING_ODDS, ARC_TELLINGS, ARC_TELLING_ODDS, ARC_BAND,
 } from "./zone-data";
 
@@ -301,7 +301,7 @@ export function worldGrid(z: ZoneDO): WorldGrid {
     // the gate telling, the spawn tables and every rule keyed on region are
     // untouched. Nothing here moves a square either; a room's place is baked in
     // its row and this only decides what gets written above it.
-    const quarter = MAP_QUARTERS[id];
+    const quarter = HAMLET_CAPTIONS[id] ?? MAP_QUARTERS[id];
     if (quarter) region = quarter;
     const key = `${region}|${p.z}`;
     (pts.get(key) ?? pts.set(key, []).get(key)!).push(p);
@@ -533,7 +533,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // a quarter's caption back until you have walked some of it — same law the
       // region captions already keep: a name floating over ground your copy has
       // never charted would be telling you a place exists.
-      q: MAP_QUARTERS[id],
+      q: HAMLET_CAPTIONS[id] ?? MAP_QUARTERS[id],
       x: at?.x, y: at?.y, z: at?.z,
     });
   }
