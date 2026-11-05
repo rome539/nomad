@@ -3007,7 +3007,7 @@ export const SIGNPOSTS: Record<string, { post: string; reads: string[] }> = {
     post: "A fingerpost stands square in the middle of the gap with four arms on it, and it is the most useful object on this road.",
     reads: [
       "WEST — THE WOOD. The eaves, and the rides past them. The wood is not marked further in.",
-      "NORTH — THE DENS, by the hurdle gate. Roofs, and other people under them.",
+      "NORTH — ASSART END, by the hurdle gate. Roofs, and other people under them.",
       "SOUTH — THE WASTE. The den ground's poor end.",
       "EAST — THE ROAD, and the fortress at the end of it.",
     ],

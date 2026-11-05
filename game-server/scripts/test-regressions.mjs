@@ -75,7 +75,8 @@ try {
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon, terrainOf, skyClear, lidOpen, foodGone} from './zone-util';",
-        "export {tickFoodRot, rottedAway} from './events';",
+        "export {tickFoodRot, rottedAway, feverPhase, feverGravesOf} from './events';",
+        "export {FEVER_GRAVES} from './zone-data';",
         "export {loadContainer, setRottedAway} from './world';",
         "export {SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC} from './zone-data';",
         "export * as roomSound from './sound';",
@@ -88,7 +89,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -775,6 +776,7 @@ try {
     const z = { sessions: new Map(folk.map((s) => [s.pubkey, s])), inGatehouse: new Set(folk.map((s) => s.pubkey)),
       creatures: new Map([['r', { templateId: FEVER_RAT, hp: 10 }]]),
       world: { rooms: new Map([['gate', { region: '' }], ['the-gate-arch', { region: 'wood' }], ['the-relay-house', { region: 'road' }]]) },
+      bandOf(r) { return this.world.rooms.get(r)?.region || (r === 'gate' ? 'gate' : 'upper'); },
       send: (s, t) => heard.set(s.pubkey, t) };
     const rnd = crypto.getRandomValues; crypto.getRandomValues = (a) => { a.fill(0); return a; };
     try { feverrat.keeper(z, 5_000_000); } finally { crypto.getRandomValues = rnd; } // an early clock: the keeper's minute gate is module state the later fever test shares
@@ -943,7 +945,7 @@ try {
     assert.match(src('den.ts'), /chronicle\.denFell\(z, den\.holderName, den\.roomId\);/);
     assert.match(src('works.ts'), /chronicle\.boarded\(z, gate\);/);
     assert.match(src('works.ts'), /chronicle\.opened\(z, gate\);/);
-    assert.equal(src('events.ts').match(/chronicle\.fever\(z, FEVER_RAT_HOME, (true|false)\);/g).length, 3, 'settled, lifted, and lifted by the rat\'s death');
+    assert.equal(src('events.ts').match(/chronicle\.fever\(z, (?:st\.where|feverRoom\(z, graves\)), (true|false)\);/g).length, 3, 'settled, lifted, and lifted by the rat\'s death');
     assert.match(src('verbs.ts'), /feature \+ await chronicle\.under\(z, session\.roomId, feature\)/);
     assert.match(src('lore.ts'), /if \(chronicle\.keeperNews\(z, session, now\)\)/);
   });
@@ -3229,13 +3231,14 @@ try {
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     const pool = ev.match(/const POOL: \[string, number, string\]\[\] = \[[\s\S]*?\n\];/)[0];
     assert.doesNotMatch(pool, /\["pack",/, 'the dogs no longer come in by the roll');
-    assert.match(pool, /\["fever", 2, "den"\]/, 'the fever is still drawn');
+    assert.doesNotMatch(pool, /\["fever",/, 'the fever keeps its own clock now, off the roll (2026-11-04)');
     assert.match(ev, /await tickPack\(z, now\)|tickPack\(z, now\)/, 'one already running still ends');
   });
 
   await checkAsync('the fever rat: the fever reaches the wood, comes up with its rat, holds while it lives, and lifts when it dies (2026-11-01)', async () => {
     const rooms = new Map([[FEVER_RAT_HOME, { id: FEVER_RAT_HOME, region: 'den' }], ['ride', { id: 'ride', region: 'wood' }], ['lane', { id: 'lane', region: 'road' }]]);
     const z = {
+      bandOf(r) { return this.world.rooms.get(r)?.region ?? ''; },
       world: { rooms, mobTemplates: new Map([[FEVER_RAT, { id: FEVER_RAT, name: 'the fever rat', max_hp: 85, is_boss: 1 }]]) },
       events: new Map(), creatures: new Map(), worn: new Set(),
       noteCreaturesChanged() {}, refreshRoomCtx() {}, fed: [], roomFeed(_r, t) { this.fed.push(t); },
@@ -3276,14 +3279,118 @@ try {
     assert.equal(feverrat.rat(z), null, 'left alone, it goes back into the graves');
     assert.equal(z.events.get('fever').phase, 'aftermath', 'and the fever ends');
     // the killing blow reaches it, and its three mending sites ask through the cloth
-    assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /if \(creature\.templateId === FEVER_RAT\) events\.feverLifts\(this\);/);
+    assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /if \(creature\.templateId === FEVER_RAT\) events\.feverLifts\(this, creature\.home\);/);
     const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.equal((verbs.match(/events\.feverBites\(z, session\)/g) ?? []).length, 2, 'food and the dressing');
     assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /events\.feverBites\(this, session\) \? FEVER_MEND_MULT/, 'and rest');
   });
 
+  await checkAsync('each graves has a fever of its own on its own clock - the old village, both hamlets and the fortress - all can be up at once, and each rat lifts only its own (2026-11-04)', async () => {
+    const rooms = new Map([
+      ['the-fever-graves', { region: 'den' }], ['the-strand-graves', { region: 'crossing' }], ['the-hill-graves', { region: 'mountain' }],
+      ['ride', { region: 'wood' }], ['marsh', { region: 'crossing' }], ['slope', { region: 'mountain' }], ['lane', { region: 'road' }],
+      ['ossuary', { region: '' }], ['catacomb', { region: '' }], ['the-plague-trench', { region: 'out' }], ['hall', { region: '' }], ['the-deep-stair', { region: 'deep' }],
+    ]);
+    const z = {
+      bandOf(r) { return this.world.rooms.get(r)?.region || 'upper'; },
+      world: { rooms, mobTemplates: new Map([[FEVER_RAT, { id: FEVER_RAT, name: 'the fever rat', max_hp: 85, is_boss: 1 }]]) },
+      events: new Map(), creatures: new Map(), noteCreaturesChanged() {}, refreshRoomCtx() {}, roomFeed() {},
+      feeds: [], roomFeedBands(b) { this.feeds.push([...b].sort().join(',')); },
+    };
+    const ground = { 'the-fever-graves': ['ride', 'the-fever-graves'], 'the-strand-graves': ['marsh', 'the-strand-graves'], 'the-hill-graves': ['slope', 'the-hill-graves'] };
+    const t0 = Date.now();
+    // a fresh world: every graves sets its own first clock, an hour or more out
+    await tickFever(z, t0);
+    for (const f of Object.values(FEVER_GRAVES)) {
+      const st = z.events.get(f.key);
+      assert.ok(st && st.phase === 'idle' && st.until >= t0 + 3_600_000 && st.until <= t0 + 6 * 3_600_000, f.key + ' keeps its own clock');
+    }
+    // all three due together: all three come up, each rat in its own graves
+    for (const f of Object.values(FEVER_GRAVES)) z.events.get(f.key).until = t0;
+    await tickFever(z, t0); await tickFever(z, t0 + 61_000);
+    assert.deepEqual(z.feeds.slice(0, 4).sort(), ['crossing', 'den,wood', 'gate,out,upper', 'mountain'], 'each warning goes to its own ground');
+    for (const g of ['the-fever-graves', 'the-strand-graves', 'the-hill-graves']) assert.equal(feverrat.rat(z, g)?.roomId, g, 'a rat up out of ' + g);
+    assert.ok(['ossuary', 'catacomb', 'the-plague-trench'].includes(feverrat.rat(z, 'the-fortress')?.roomId), 'the fortress rat up out of one of its three');
+    assert.equal([...z.creatures.values()].length, 4, 'four rats, one to each');
+    for (const r of ['ride', 'marsh', 'slope', 'the-fever-graves', 'the-strand-graves', 'the-hill-graves', 'hall', 'the-plague-trench']) assert.equal(fevered(z, r), true, r + ' under a fever');
+    assert.equal(fevered(z, 'lane'), false, 'and not the road');
+    assert.equal(fevered(z, 'the-deep-stair'), false, 'nor the deep, which is its own ground');
+    // the fortress rises at random among its three
+    const rose = new Set();
+    for (let i = 0; i < 40; i++) {
+      z.creatures.delete(feverrat.rat(z, 'the-fortress').id); feverLifts(z, 'ossuary', t0);
+      const fst = z.events.get('fever-fortress'); fst.phase = 'idle'; fst.until = t0;
+      await tickFever(z, t0); await tickFever(z, t0 + 61_000);
+      rose.add(feverrat.rat(z, 'the-fortress').roomId);
+    }
+    assert.deepEqual([...rose].sort(), ['catacomb', 'ossuary', 'the-plague-trench'], 'its rat comes up in any of the three');
+    // kill the Crossing's rat: only the Crossing lifts
+    z.creatures.delete(feverrat.rat(z, 'the-strand-graves').id);
+    feverLifts(z, 'the-strand-graves', t0 + 62_000);
+    assert.equal(fevered(z, 'marsh'), false, 'its own fever lifts');
+    assert.equal(fevered(z, 'ride'), true, 'the old village\'s runs on');
+    assert.equal(fevered(z, 'slope'), true, 'and the mountain\'s');
+    assert.equal(feverPhase(z, 'crossing'), 'aftermath');
+    // ...and when its aftermath ends its clock starts again, 18 to 30 hours out
+    const t1 = t0 + 62_000 + 13 * 60_000;
+    await tickFever(z, t1);
+    const st = z.events.get('fever-strand');
+    assert.ok(st.phase === 'idle' && st.until >= t1 + 18 * 3_600_000 && st.until <= t1 + 30 * 3_600_000, 'its next one is a day or so off');
+    assert.equal(feverGravesOf('wood'), 'the-fever-graves'); assert.equal(feverGravesOf('road'), undefined);
+    // and the hamlets stand on grounds of their own, graves and all (their pictures, 2026-11-04)
+    for (const [f, region, graves, pre] of [['the-salt-hamlet', 'crossing', 'the-strand-graves', 'salt'], ['the-shieling-hamlet', 'mountain', 'the-hill-graves', 'shiel']]) {
+      const ids = readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8').split('\n')
+        .filter((l) => /^## [a-z-]+ \| /.test(l) && !/\| attachment/.test(l)).map((l) => l.slice(3).split(' | ')[0]);
+      assert.equal(ids.length, 29, f);
+      assert.ok(ids.includes(graves) && FEVER_GRAVES[graves].bands[0] === region, graves + ' is in its hamlet');
+      for (const id of ids) assert.ok([pre + '-street', pre + '-fields', pre + '-common'].includes(terrainOf(id, '', region)), id + ' stands on its hamlet\'s own ground');
+      const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+      for (const g of ['street', 'fields', 'common']) {
+        assert.match(pub, new RegExp('^  "' + pre + '-' + g + '":\\s+"day night night-torch snow",$', 'm'), pre + '-' + g + ' has its four pictures');
+        assert.match(pub, new RegExp('"' + pre + '-' + g + '": \\["' + pre + '-' + g + '"\\]'), pre + '-' + g + ' is a ground the page draws');
+      }
+    }
+  });
+
+  check('the villages are rat-heavy and the hunters round them come in for the rats: the hamlets, the old village, every row with its own id (2026-11-04)', () => {
+    const sql = readFileSync(new URL('../migrations/371_the_hamlets_are_lived_in.sql', import.meta.url), 'utf8');
+    const rows = [...sql.matchAll(/VALUES \('([^']+)', '([^']+)', '([^']+)'\);/g)].map((m) => ({ id: m[1], t: m[2], room: m[3] }));
+    for (const [f, want] of [['the-salt-hamlet', 19], ['the-shieling-hamlet', 25]]) {
+      const ids = new Set(readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8').split('\n')
+        .filter((l) => /^## [a-z-]+ \| /.test(l) && !/\| attachment/.test(l)).map((l) => l.slice(3).split(' | ')[0]));
+      const here = rows.filter((r) => ids.has(r.room));
+      assert.equal(here.length, want, f + ' at its ground\'s density');
+      assert.equal(here.filter((r) => r.t === 'rat').length, 12, f + ' has its rats');
+    }
+    assert.equal(rows.length, 44);
+    const dens = [...readFileSync(new URL('../migrations/372_the_old_village_is_rat_heavy.sql', import.meta.url), 'utf8')
+      .matchAll(/VALUES \('([^']+)', '([^']+)', '([^']+)'\);/g)].map((m) => ({ id: m[1], t: m[2], room: m[3] }));
+    assert.equal(dens.filter((r) => r.t === 'rat').length, 12, 'the old village doubles its rats');
+    for (const r of [...rows, ...dens]) assert.equal(r.id, `spawn-${r.t}@${r.room}`, 'every spawn row carries its own id');
+    assert.equal(new Set([...rows, ...dens].map((r) => r.id)).size, rows.length + dens.length, 'and no two the same');
+    const pub = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const preys = pub.slice(pub.indexOf('export const PREYS_ON'), pub.indexOf('\n]);', pub.indexOf('export const PREYS_ON')));
+    for (const h of ['masterless-dog', 'lead-dog', 'tawny-owl', 'marsh-hound', 'great-gull', 'black-backed-gull', 'hill-fox', 'snow-fox', 'wildcat', 'ermine', 'eagle-owl'])
+      assert.match(preys, new RegExp('\\["' + h + '", new Set\\(\\["rat"'), h + ' comes in for the rats');
+  });
+
+  check('the hamlets have their finds and a set of gear from their own region, the old village three uncommons, and nothing in a chapel but a torch (2026-11-04)', () => {
+    const sql = readFileSync(new URL('../migrations/373_the_hamlets_have_their_finds.sql', import.meta.url), 'utf8');
+    const rows = [...sql.matchAll(/VALUES \('([^']+)', '([^']+)', 1\);/g)].map((m) => ({ item: m[1], room: m[2] }));
+    for (const [f, n] of [['the-salt-hamlet', 18], ['the-shieling-hamlet', 21]]) {
+      const ids = new Set(readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8').split('\n')
+        .filter((l) => /^## [a-z-]+ \| /.test(l) && !/\| attachment/.test(l)).map((l) => l.slice(3).split(' | ')[0]));
+      assert.equal(rows.filter((r) => ids.has(r.room)).length, n, f + ' has its finds');
+    }
+    const dens = new Set(['the-bark-heap', 'the-lodge-loft', 'the-north-house']);
+    assert.deepEqual(rows.filter((r) => dens.has(r.room)).map((r) => r.item).sort(), ['kindling-hatchet', 'moss-packed-cap', 'wolfskin-hood'], 'the old village gains three of the wood\'s uncommons');
+    for (const r of rows) if (/chapel/.test(r.room)) assert.equal(r.item, 'torch', 'everything in a chapel was carried out');
+    assert.equal(new Set(rows.map((r) => r.item + '@' + r.room)).size, rows.length, 'no find laid twice');
+  });
+
   check('players hear of the fever rat: the keeper, the status line and the old village (2026-11-02)', () => {
     const z = {
+      bandOf(r) { return this.world.rooms.get(r)?.region ?? ''; },
       world: { rooms: new Map([['graves-x', { id: 'graves-x', region: 'den' }], ['gate-w', { id: 'gate-w', region: 'wood' }]]), mobTemplates: new Map() },
       events: new Map([['fever', { phase: 'active', until: Date.now() + 3_600_000 }]]), creatures: new Map(),
       sessions: new Map([['me', { pubkey: 'me', roomId: 'gate-w' }], ['out', { pubkey: 'out' }]]), inGatehouse: new Set(['me']), // behind a wood gate: the fever is on his ground
@@ -3305,7 +3412,7 @@ try {
     const seen = new Set(); for (let i = 0; i < 200; i++) seen.add(eventAmbient(z, 'graves-x'));
     assert.ok([...seen].some((l) => /facing the graves|loose earth|breathing among the graves/.test(l)), 'the old village sounds of it');
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
-    assert.match(ev, /case "active": return feverrat\.rat\(z\)\n\s+\? " The fever sits over the whole ground, on a wind off the fever graves/, 'the status line names the graves while it is up');
+    assert.match(ev, /case "active": return feverrat\.rat\(z, FEVER_RAT_HOME\)\n\s+\? " The fever sits over the whole ground, on a wind off the fever graves/, 'the status line names the graves while it is up');
     assert.match(ev, /The fever sits over the wood, on a wind off the old village's graves/);
     assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /feverrat\.keeper\(this, now\);/, 'the keeper is asked every beat');
   });

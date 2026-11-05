@@ -1,0 +1,194 @@
+# THE SALT HAMLET (rome, 2026-11-04): 29 rooms, a copy of the Dens' core.
+#
+# Built cheap on purpose, from the old village by the wood: the same street,
+# crofts, chapel, well and fever graves, the same pictures, worded for the hard
+# ground beyond the salt marsh. Its purpose is the fever: these are the second
+# of the fever rat's three graves (zone-data FEVER_GRAVES), and when the fever
+# comes up out of them it sits over the Crossing.
+#
+# WHERE IT IS. South off the Decoy Wood, the middle of the Crossing's south
+# side (rome, 2026-11-04, moved in from the far end before it shipped).
+#
+# WHAT IT IS. The people who boiled salt out of the marsh and grazed the hard
+# ground lived here, and it emptied the way the old village did: doors shut on
+# the way out, nothing burned but the one cot, nothing fought over.
+#
+# GEOGRAPHY (x east, y south from the Decoy Wood; the Dens' layout, turned so
+# its street runs away from the way in):
+#   y=1  the-hard-lane . the-pump-green
+#   y=2  the-sea-furrows . the-row-foot . the-salt-pound
+#   y=3  the-marsh-field . the-salters-row . the-smiths-yard . the-sea-smithy
+#   y=4  the-yard-backs . the-salt-cross . the-saltmasters-yard . the-saltmasters-house
+#   y=5  the-burnt-cot . the-chapel-hard . the-row-head . the-far-cot . the-far-house
+#   y=6  the-wind-orchard . the-salt-chapel . the-net-green . the-bare-toft . the-sallow-rows
+#   y=7  the-turf-hut . the-dipping-well . the-strand-graves . the-marsh-end
+#   y=8  the-old-hearths . the-gorse-corner
+
+!region crossing
+
+## the-decoy-wood | attachment: the way south onto the hard
+!existing
+> south the-hard-lane
+
+## the-hard-lane | The Hard Lane
+The track up off the marsh onto the hard ground, cut down by feet and carts until it runs a body's depth below the turf on either hand, with salt crusted white along the foot of both banks. Walking it you see nothing but sky and the two walls of earth, and nothing can see you.
+> north the-decoy-wood
+> south the-row-foot
+> east the-pump-green
+
+## the-pump-green | The Pump Green
+A shelf of short salt-bitten grass with the hamlet's well in the middle of it, a stone ring capped with a slab somebody dragged on and left crooked. The water under the slab is sweet, which out here was worth building a village round, and the bucket rope has rotted off at the windlass.
+> west the-hard-lane
+> south the-salt-pound
+
+## the-sea-furrows | The Sea Furrows
+The ground runs in long parallel waves, a stride from crest to crest, ploughed for a few hundred years on the one patch of hard land the sea left alone. The crests are bleached and the hollows hold water after rain, and the wind comes off the marsh across the top of them without anything to stop it.
+> east the-row-foot
+> south the-marsh-field
+
+## the-row-foot | The Row Foot
+Where the furrows stop and the houses start. There is no boundary except that the grass gives way to a hard rutted surface of shell and grit and the first walls stand up beside you. Somebody lit a fire against a gable end here and put it out badly, and the scorch is still black.
+> west the-sea-furrows
+> north the-hard-lane
+> south the-salters-row
+> east the-salt-pound
+
+## the-salt-pound | The Salt Pound
+A round stone pen with a gate that still swings, built to hold stock found straying on the marsh until their owner paid to have them back. It is dry-laid and four courses high and in better repair than anything with a roof on it. Whatever was last shut in here got out over the top.
+> west the-row-foot
+> north the-pump-green
+
+## the-marsh-field | The Marsh Field
+The big field, open, no hedge in it, worked in strips by everybody at once and grazed by everybody's sheep after harvest. It has been neither since. What is left is a wide flat meadow that goes grey-green in a wind off the sea, and the geese come down onto it in the evening because nothing here objects.
+> north the-sea-furrows
+> east the-salters-row
+> south the-yard-backs
+
+## the-salters-row | The Salters' Row
+The one street, wide enough for two carts, with the cots standing back off it behind their own low walls. The surface is laid shell where somebody laid it and mud where nobody did. Every door in sight is shut, and that is the thing you notice and then cannot stop noticing: they were shut on the way out, by people who expected to want them shut.
+> north the-row-foot
+> west the-marsh-field
+> south the-salt-cross
+> east the-smiths-yard
+
+## the-smiths-yard | The Smith's Yard
+A yard black underfoot with hammer-scale trodden into it, and it will never grow anything again. A stone trough stands at the wall, cracked through and white with salt where the water dried, and the iron smell still comes up out of the ground when the sea fret gets into it.
+> west the-salters-row
+> east the-sea-smithy
+> south the-saltmasters-yard
+
+## the-sea-smithy | The Sea Smithy
+Inside, the roof holds and the light comes through the door and one small window. The hearth is a stone box with a hood over it, the anvil block is still bolted down though the anvil went with somebody, and there is a wall of hooks with nothing on them, every one of them rusted thick by the salt air.
+> west the-smiths-yard
+
+## the-yard-backs | The Yard Backs
+Behind the cots, the long thin gardens that came with them, each walled off from the next and all of them gone to sea-kale and nettle and a few wind-bent elder still flowering out of habit. There are gaps worn into the back walls where people took the short way to the field.
+> north the-marsh-field
+> east the-salt-cross
+> south the-chapel-hard
+
+## the-salt-cross | The Salt Cross
+The middle of the place: a stone cross on three steps, the head broken off level and the stump worn round by weather off the sea. People met here and were told things here, and the steps are dished where they sat. Somebody scratched a tally into the bottom step, a great many strokes, and then stopped.
+> north the-salters-row
+> west the-yard-backs
+> south the-row-head
+> east the-saltmasters-yard
+
+## the-saltmasters-yard | The Saltmaster's Yard
+The biggest yard on the row, cobbled, with a boiling-house on one side that has lost half its roof and a house on the other that has lost none of its. The saltmaster answered for everybody else's pans to whoever owned the marsh, which made him neither one thing nor the other, and he got a better house for it.
+> west the-salt-cross
+> north the-smiths-yard
+> east the-saltmasters-house
+> south the-far-cot
+
+## the-saltmasters-house | The Saltmaster's House
+Two rooms and a floor above, which was wealth here. The hearth is a proper one against a stone gable, with a lintel and a hook still in it. There is a bench built into the wall, a bedstead frame with nothing on it, and a shuttered window that still shuts. Somebody swept this floor before they left it.
+> west the-saltmasters-yard
+
+## the-burnt-cot | The Burnt Cot
+One cot did burn, and only one, a long time before the rest of it emptied. The walls stand to shoulder height with the fire's black still on the inside face, and a thorn has grown up through where the hearth was. Nobody built here again, and whatever the story was, everybody who knew it agreed about it.
+> east the-chapel-hard
+> south the-wind-orchard
+
+## the-chapel-hard | The Chapel Hard
+A patch of level laid stone in front of the chapel, kept clear of graves and used for everything else, worn bare in the middle by whatever it was used for. Two yews stand on it, both enormous and both bent landward by the wind, older than the chapel and standing where yews always stand.
+> west the-burnt-cot
+> north the-yard-backs
+> east the-row-head
+> south the-salt-chapel
+
+## the-row-head | The Row Head
+The street ends at a gate in a wall, and past the gate the ground goes on south toward the far waste. From here you can see the whole place at once, back up the length of it to the marsh, and count the roofs, and see that they are all still on.
+> north the-salt-cross
+> west the-chapel-hard
+> east the-far-cot
+> south the-net-green
+
+## the-far-cot | The Far Cot
+The last yard before the wall, and the poorest: a cot with a byre built onto the end of it under the same roof, so the family and the cow lived a partition apart and kept each other warm. The muck channel still runs out through the wall and away toward the marsh.
+> west the-row-head
+> north the-saltmasters-yard
+> east the-far-house
+
+## the-far-house | The Far House
+One room, and the byre through the gap where a partition was. The floor is beaten earth with a hearth-stone set in the middle and no chimney at all. The smoke went up through the thatch, and the underside of the thatch is black with it and hard as a shell, and that is what has kept the rain out this long.
+> west the-far-cot
+
+## the-salt-chapel | The Salt Chapel
+!safe
+Stone, and small, and the roof is stone too, the only stone roof for a long way, which is why it is the one building here that will certainly still be standing in another hundred years. Everything that could be carried was carried out. What is left is a font cut from a single block, a stone bench along the wall, and a door that shuts on the world and is thick enough to mean it.
+> north the-chapel-hard
+
+## the-wind-orchard | The Wind Orchard
+The chapel's orchard, every tree in it leaning the same way off the sea, and half of it standing dead with the bark coming off in sheets while the other half goes on fruiting out of the same soil for no reason anyone could explain. Windfalls rot in the grass under the living half every year, and something comes for them every night.
+> north the-burnt-cot
+
+## the-net-green | The Net Green
+Level ground with lines of low posts across it, and between the posts nothing now but the weather. Nets were hung here to mend and hides were pegged out here, side by side, because the ground was common and nobody could stop either. The grass under the old lines is a different green from the rest.
+> north the-row-head
+> east the-bare-toft
+> south the-dipping-well
+
+## the-bare-toft | The Bare Toft
+A house-sized rectangle of levelled ground with a low bank round it, and inside the bank not one stone standing. The walls went to somebody else's walls and the roof went for firewood, and what is left is the shape of a home printed on the ground. There is a doorstep, still, worn hollow.
+> west the-net-green
+> east the-sallow-rows
+> south the-strand-graves
+
+## the-sallow-rows | The Sallow Rows
+Willow grown as a crop in the wet ground, cut to the stool every year for the long rods that made baskets and eel-traps and lobster pots. Nobody has cut these in decades, so each stool has become a small mad tree of its own, forty trunks out of one root, and the rows are still straight underneath.
+> west the-bare-toft
+> south the-marsh-end
+
+## the-turf-hut | The Turf Hut
+Turf walls two feet thick, a roof of turf on bent driftwood, no window, and a door you go through bent double. Inside it is black, smoke-black floor to roof, from a fire that had no chimney and did not need one. It is bone dry and warm the moment you are out of the wind, and there is old bracken bedding along one wall.
+> east the-dipping-well
+
+## the-dipping-well | The Dipping Well
+Not a well so much as a hole with a barrel sunk in it, where the sweet water sits close under the turf on top of the salt. The barrel staves are still sound and the water inside is clear and about three feet down and full of the sky. There is a hoof-print in the mud on every side of it.
+> north the-net-green
+> west the-turf-hut
+> east the-strand-graves
+> south the-old-hearths
+
+## the-strand-graves | The Strand Graves
+Twenty-odd low mounds in rows, unmarked except by the sea-pinks growing thicker over them, on ground outside every boundary there was. When something went through here quickly they buried the dead quickly and away from everyone, which is what this is. It is a tidier piece of ground than anything else on the hard.
+> west the-dipping-well
+> north the-bare-toft
+> east the-marsh-end
+> south the-gorse-corner
+
+## the-marsh-end | The Marsh End
+The hard ground gives out eastward into creek and sedge and standing water with no way through that a person would choose. You can see a long way over the top of it and there is nothing to see: more of the same, going on until it meets the sea.
+> west the-strand-graves
+> north the-sallow-rows
+
+## the-old-hearths | The Old Hearths
+A ring of flat stones set in the turf, black with fire, and round them the low marks of shelters that were put up and taken down here season after season. Somebody cooked for a lot of people at once here, for a long time, and the stones are still the warmest thing on the ground at the end of a sunny day.
+> north the-dipping-well
+> east the-gorse-corner
+
+## the-gorse-corner | The Gorse Corner
+The last corner of the common, where the gorse has come in off the waste and taken it, dense and yellow and sharp. There is a path through it worn by animals, low down, and the bushes close over the top of it so that it is a tunnel if you are small enough.
+> west the-old-hearths
+> north the-strand-graves

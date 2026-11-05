@@ -83,7 +83,7 @@ import {
   PACK_TELEGRAPH_MS, PACK_ACTIVE_MIN_MS, PACK_ACTIVE_MAX_MS, PACK_AFTERMATH_MS,
   PACK_DOGS, PACK_WOLVES, PACK_HYENAS, PACK_HEAD_ODDS, PACK_HEADS_BAD,
   PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
-  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_RAT_HOLD_MS, FEVER_RAT_HOME, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
+  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_GRAVES, FEVER_RISES, FEVER_EVERY_MIN_MS, FEVER_EVERY_MAX_MS, FEVER_FIRST_MIN_MS, FEVER_FIRST_MAX_MS, FEVER_RAIN_SOON_MIN_MS, FEVER_RAIN_SOON_MAX_MS, FEVER_RAT_HOLD_MS, FEVER_RAT_HOME, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
   DAY_CYCLE_MS, BUGLE_EVERY_DAYS, BUGLE_SALUTERS, BUGLE_REVEILLE, BUGLE_TAPS, BUGLE_FAR, BUGLE_SALUTE_ONE, BUGLE_SALUTE_MANY,
 } from "./zone-data";
 
@@ -131,7 +131,8 @@ const POOL: [string, number, string][] = [
   // threatened nobody's home and only landed a second pack on the hamlet's own
   // dogs. It is no longer drawn; tickPack still runs, so one already going when
   // this shipped plays out and ends as it always did.
-  ["fever", 2, "den"],
+  // THE FEVER IS NOT DRAWN FOR (rome, 2026-11-04): each of its three graves
+  // keeps its own clock now (tickFever), so the three can be up together.
   // THE MOUNTAIN — the shadow is not drawn for (see below); its two WEATHER
   // arcs are the cloud that comes down the hill (8a) and the slope that lets
   // go (8d).
@@ -251,7 +252,7 @@ function rainLeaves(z: ZoneDO, st: EventState, band: string, now: number): strin
   // used to charge only where it happened to be when it stopped, and a rain
   // that sat all day on the road and then drifted off left the beck dry.
   if (st.data === "settled" && band === "road") chargeBand(z, "road", "spate");
-  if (st.data === "settled" && band === "den") chargeBand(z, "den", "fever");
+  if (st.data === "settled") feverSooner(z, band, now); // and soaks the graves on that ground
   return going ? undefined : sky;
 }
 // THE SKY CLEARING, IN WORDS (rome, 2026-10-20: text players get the same world
@@ -611,22 +612,55 @@ export function quieted(z: ZoneDO, roomId: string): boolean {
 // 2026-11-01: with the dens gone out onto open ground, a fever kept to the
 // village bit nobody), and only while it runs.
 export function fevered(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "fever") === "active" && FEVER_BANDS.has(z.world!.rooms.get(roomId)?.region ?? "");
+  return feverPhase(z, z.bandOf(roomId)) === "active";
+}
+// WHICH GRAVES SIT OVER THIS GROUND (rome, 2026-11-04): each graves has a fever
+// of its own, and each ground is under at most one of them.
+export function feverGravesOf(region: string): string | undefined {
+  for (const [g, f] of Object.entries(FEVER_GRAVES)) if (f.bands.includes(region)) return g;
+  return undefined;
+}
+// ...and where its fever has got to: idle, coming, on, or lifting.
+export function feverPhase(z: ZoneDO, region: string): EventState["phase"] {
+  const g = feverGravesOf(region);
+  return g ? phaseOf(z, FEVER_GRAVES[g]!.key) : "idle";
+}
+const feverBandsOf = (graves: string): Set<string> => new Set(FEVER_GRAVES[graves]?.bands ?? FEVER_BANDS);
+// A RAIN SETTLING ON A GRAVES' GROUND SOAKS THEM: its next fever comes on soon.
+// Bias, never a trigger - a fever already coming or running is untouched.
+function feverSooner(z: ZoneDO, band: string, now: number): void {
+  const g = feverGravesOf(band);
+  const st = g ? z.events.get(FEVER_GRAVES[g]!.key) : undefined;
+  if (st && st.phase === "idle") st.until = Math.min(st.until, now + randInt(FEVER_RAIN_SOON_MIN_MS, FEVER_RAIN_SOON_MAX_MS));
 }
 // Does the fever cut this wanderer's mending where they stand? Not through the
 // fever rat's grave-cloth (feverrat.ts).
 export function feverBites(z: ZoneDO, s: Session): boolean {
   return fevered(z, s.roomId) && !feverrat.spared(z, s);
 }
-// THE FEVER RAT IS KILLED, and the fever lifts with it, then and there.
-export function feverLifts(z: ZoneDO, now = Date.now()): void {
-  const st = z.events.get("fever");
+// The graves a room's rat belongs to: the room itself, or the graves whose
+// rises it is one of (the fortress's three).
+export function feverGravesAt(roomId: string | undefined): string {
+  if (roomId && FEVER_GRAVES[roomId]) return roomId;
+  for (const g of Object.keys(FEVER_GRAVES)) if (roomId && FEVER_RISES(g).includes(roomId)) return g;
+  return FEVER_RAT_HOME;
+}
+// THE FEVER RAT IS KILLED, and the fever off ITS graves lifts with it, then
+// and there; the others run on. Given the rat's home or the graves itself.
+export function feverLifts(z: ZoneDO, home: string = FEVER_RAT_HOME, now = Date.now()): void {
+  const graves = feverGravesAt(home);
+  const st = z.events.get(FEVER_GRAVES[graves]?.key ?? "fever");
   if (!st || st.phase !== "active") return;
   st.phase = "aftermath";
   st.until = now + FEVER_AFTERMATH_MS;
   st.data = undefined;
-  z.roomFeedBands(FEVER_BANDS, "The wind comes round off the fen, cold and clean, all at once, and the ground lets go of the fever as if it had been holding it in its teeth.", "evt");
-  chronicle.fever(z, FEVER_RAT_HOME, true);
+  z.roomFeedBands(feverBandsOf(graves), "The wind comes round, cold and clean, all at once, and the ground lets go of the fever as if it had been holding it in its teeth.", "evt");
+  chronicle.fever(z, feverRoom(z, graves), true);
+}
+// The room a fever is on record at: where its rat came up.
+function feverRoom(z: ZoneDO, graves: string): string {
+  const w = z.events.get(FEVER_GRAVES[graves]?.key ?? "")?.where;
+  return w && FEVER_RISES(graves).includes(w) ? w : FEVER_RISES(graves)[0]!;
 }
 
 // THE SHADOW is over the mountain: the drake's passage, and only while it runs.
@@ -804,6 +838,18 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       default: break;
     }
   }
+  // THE FORTRESS'S FEVER (2026-11-04), in and out, ahead of the keep's own: a
+  // bad bandage has to say why, here as on the hamlets' ground.
+  const fortBand = z.bandOf(roomId);
+  if (fortBand === "upper" || fortBand === "gate" || fortBand === "out") {
+    switch (feverPhase(z, fortBand)) {
+      case "telegraph": return " A warm breath has got into the stone from somewhere below, off the old burials, and it smells faintly of the pit.";
+      case "active": return feverrat.rat(z, "the-fortress")
+        ? " The fever sits over the whole fortress, on a breath off its dead, where something has broken up out of them. Sleep will not take here, and nothing you eat or bind does you any good."
+        : " The fever sits over the whole fortress. Sleep will not take here, and nothing you eat or bind does you any good.";
+      default: break;
+    }
+  }
   if (keepRoom(z, roomId)) {
     const gst = z.events.get("gloam");
     if (gst && gst.data === roomId) {
@@ -941,7 +987,7 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     }
     // The fever reaches the wood too (FEVER_BANDS), and cuts mending as hard
     // here as in the village, so it says so here as it does there.
-    switch (phaseOf(z, "fever")) {
+    switch (feverPhase(z, "wood")) {
       case "telegraph": return " The wind through the trees is coming off the old village's graves, warm and wrong.";
       case "active": return " The fever sits over the wood, on a wind off the old village's graves. Sleep will not take here, and nothing you eat or bind does you any good.";
       default: break;
@@ -956,10 +1002,20 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     // The one of the five with teeth in it: rest, food and dressings are all
     // cut to FEVER_MEND_MULT on this ground and every one of them says nothing
     // about why. Without this line a bad bandage reads as a bug.
-    switch (phaseOf(z, "fever")) {
+    switch (feverPhase(z, "den")) {
       case "telegraph": return " The wind is off the graves, warm and wrong, and this ground smells faintly of the pit.";
-      case "active": return feverrat.rat(z)
+      case "active": return feverrat.rat(z, FEVER_RAT_HOME)
         ? " The fever sits over the whole ground, on a wind off the fever graves, where the earth has been broken open from below. Sleep will not take here, and nothing you eat or bind does you any good."
+        : " The fever sits over the whole ground. Sleep will not take here, and nothing you eat or bind does you any good.";
+      default: break;
+    }
+  }
+  // ...AND THE HAMLETS' GROUND, when the fever is off their graves (2026-11-04).
+  if (region === "crossing" || region === "mountain") {
+    switch (feverPhase(z, region)) {
+      case "telegraph": return " The wind is off the old hamlet's graves, warm and wrong, and this ground smells faintly of the pit.";
+      case "active": return feverrat.rat(z, feverGravesOf(region))
+        ? " The fever sits over the whole ground, on a wind off the old hamlet's graves, where the earth has been broken open from below. Sleep will not take here, and nothing you eat or bind does you any good."
         : " The fever sits over the whole ground. Sleep will not take here, and nothing you eat or bind does you any good.";
       default: break;
     }
@@ -1397,6 +1453,11 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
   if (TIDEWAYS_ROOMS.has(roomId) && phaseOf(z, "tide") === "active") {
     return tideFlooded(z, roomId) ? pick(TIDE_FLOOD_AMBIENT) : pick(TIDE_WING_AMBIENT);
   }
+  // the fortress under its fever, in and out (2026-11-04)
+  const fortBand = z.bandOf(roomId);
+  if ((fortBand === "upper" || fortBand === "gate" || fortBand === "out") && feverPhase(z, fortBand) === "active") {
+    return feverrat.rat(z, "the-fortress") && chance(FEVER_RAT_AMBIENT_ODDS) ? pick(FEVER_RAT_AMBIENT) : pick(FEVER_AMBIENT);
+  }
   if (deepRoom(z, roomId)) {
     if (phaseOf(z, "exhale") === "active") return pick(EXHALE_AMBIENT);
     if (phaseOf(z, "song") === "active") return pick(SONG_AMBIENT);
@@ -1414,13 +1475,16 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
       return rutWolvesOut(z, Date.now()) && chance(0.3) ? pick(RUT_WOLF_AMBIENT) : pick(RUT_AMBIENT);
     }
     if (phaseOf(z, "mast") === "active") return pick(MAST_AMBIENT);
-    if (phaseOf(z, "fever") === "active") return pick(FEVER_AMBIENT);
+    if (feverPhase(z, "wood") === "active") return pick(FEVER_AMBIENT);
   } else if (region === "den") {
     if (phaseOf(z, "pack") === "active") return pick(PACK_AMBIENT);
-    if (phaseOf(z, "fever") === "active") {
+    if (feverPhase(z, "den") === "active") {
       // the fever rat up in the graves: the old village sounds of it
-      return feverrat.rat(z) && chance(FEVER_RAT_AMBIENT_ODDS) ? pick(FEVER_RAT_AMBIENT) : pick(FEVER_AMBIENT);
+      return feverrat.rat(z, FEVER_RAT_HOME) && chance(FEVER_RAT_AMBIENT_ODDS) ? pick(FEVER_RAT_AMBIENT) : pick(FEVER_AMBIENT);
     }
+  } else if ((region === "crossing" || region === "mountain") && feverPhase(z, region) === "active") {
+    // the hamlets' ground, under a fever off their own graves (2026-11-04)
+    return feverrat.rat(z, feverGravesOf(region)) && chance(FEVER_RAT_AMBIENT_ODDS) ? pick(FEVER_RAT_AMBIENT) : pick(FEVER_AMBIENT);
   } else if (region === "mountain") {
     if (phaseOf(z, "shadow") === "active") return pick(SHADOW_AMBIENT);
     if (phaseOf(z, "clouddown") === "active") return pick(CLOUDDOWN_AMBIENT);
@@ -2553,10 +2617,18 @@ async function tickPack(z: ZoneDO, now: number): Promise<void> {
   }
 }
 
-// ---- THE FEVER (dens) ----
+// ---- THE FEVER (dens, and the two hamlets) ----
+// Each of the three graves keeps a fever of its own on its own clock (rome,
+// 2026-11-04), so one, two or all three can be up at once: one tick apiece.
 export async function tickFever(z: ZoneDO, now: number): Promise<void> {
-  let st = z.events.get("fever");
-  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("fever", st); }
+  for (const graves of Object.keys(FEVER_GRAVES)) if (FEVER_RISES(graves).some((r) => z.world!.rooms.has(r))) tickOneFever(z, now, graves);
+}
+function tickOneFever(z: ZoneDO, now: number, graves: string): void {
+  const key = FEVER_GRAVES[graves]!.key, bands = feverBandsOf(graves);
+  let st = z.events.get(key);
+  if (!st) { st = { phase: "idle", until: now + randInt(FEVER_FIRST_MIN_MS, FEVER_FIRST_MAX_MS) }; z.events.set(key, st); }
+  // A save from when the roll owned it has it parked forever: give it its clock.
+  if (st.phase === "idle" && st.until >= NEVER) st.until = now + randInt(FEVER_FIRST_MIN_MS, FEVER_FIRST_MAX_MS);
   if (now < st.until) return;
   switch (st.phase) {
     case "idle": {
@@ -2566,34 +2638,36 @@ export async function tickFever(z: ZoneDO, now: number): Promise<void> {
       // the graves" and the wake is the graves answering. A fever beginning
       // loads the warrens' die — bias, never a trigger.
       chargeBand(z, "warrens", "wake");
-      z.roomFeedBands(FEVER_BANDS, "The wind turns and comes off the graves, and it is warm, and it is wrong. Everything on this ground smells faintly of the pit.", "evt");
+      z.roomFeedBands(bands, "The wind turns and comes off the graves, and it is warm, and it is wrong. Everything on this ground smells faintly of the pit.", "evt");
       break;
     }
     case "telegraph": {
       st.phase = "active";
       st.until = now + randInt(FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS);
       st.data = String(now + FEVER_RAT_HOLD_MS); // the latest the rat can hold it
-      z.roomFeedBands(FEVER_BANDS, "It settles over the whole ground. Sleep will not take, food does you no good, and a dressing may as well be a rag. Out in the old village, among the graves, something is digging its way up.", "evt");
-      feverrat.comes(z, now);
-      chronicle.fever(z, FEVER_RAT_HOME, false);
+      st.where = pick(FEVER_RISES(graves).filter((r) => z.world!.rooms.has(r))); // where its rat comes up
+      z.roomFeedBands(bands, FEVER_GRAVES[graves]!.rise ?? "It settles over the whole ground. Sleep will not take, food does you no good, and a dressing may as well be a rag. Out in the old village, among the graves, something is digging its way up.", "evt");
+      feverrat.comes(z, now, st.where);
+      chronicle.fever(z, st.where, false);
       break;
     }
     case "active": {
-      // THE RAT HOLDS IT: while the fever rat lives the fever does not lift,
+      // THE RAT HOLDS IT: while this graves' rat lives its fever does not lift,
       // until its long course runs out and it goes back down (feverrat.ts). A
       // rat in a fight is not sent back mid-fight: look again in a minute.
-      if (feverrat.rat(z) && (now < Number(st.data ?? 0) || !feverrat.goesBack(z))) {
+      if (feverrat.rat(z, graves) && (now < Number(st.data ?? 0) || !feverrat.goesBack(z, graves))) {
         st.until = now + 60_000;
         break;
       }
       st.data = undefined;
       st.phase = "aftermath";
       st.until = now + FEVER_AFTERMATH_MS;
-      z.roomFeedBands(FEVER_BANDS, "The wind comes round again off the fen, cold and clean, and the ground lets go of it.", "evt");
-      chronicle.fever(z, FEVER_RAT_HOME, true);
+      z.roomFeedBands(bands, "The wind comes round again, cold and clean, and the ground lets go of it.", "evt");
+      chronicle.fever(z, feverRoom(z, graves), true);
       break;
     }
-    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
+    // ...and its clock starts again for the next one.
+    case "aftermath": { st.phase = "idle"; st.until = now + randInt(FEVER_EVERY_MIN_MS, FEVER_EVERY_MAX_MS); break; }
   }
 }
 

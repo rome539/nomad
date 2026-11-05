@@ -12,33 +12,46 @@ import type { Session, Creature } from "./zone-types";
 import { chance, pick, randInt, uuid } from "./rng";
 import {
   FEVER_RAT, FEVER_RAT_HOME, FEVER_CLOTH_TRAIT, WANDER_MIN_MS, WANDER_MAX_MS,
-  FEVER_RAT_KEEPER_PER_MIN, FEVER_RAT_KEEPER_GAP_MS, FEVER_RAT_KEEPER_LINES, FEVER_BANDS,
+  FEVER_RAT_KEEPER_PER_MIN, FEVER_RAT_KEEPER_GAP_MS, FEVER_RAT_KEEPER_LINES, FEVER_BANDS, FEVER_GRAVES, FEVER_RISES,
 } from "./zone-data";
 
-export function rat(z: ZoneDO): Creature | null {
-  for (const c of z.creatures.values()) if (c.templateId === FEVER_RAT && c.hp > 0) return c;
+// One rat to each graves (2026-11-04): the one up out of these graves (or any
+// room it can rise in), or with none named, any of them. A rat from before
+// there were several is the old village's.
+export function rat(z: ZoneDO, graves?: string): Creature | null {
+  const at = graves === undefined ? null : new Set(FEVER_RISES(graves));
+  for (const c of z.creatures.values()) {
+    if (c.templateId !== FEVER_RAT || c.hp <= 0) continue;
+    if (!at || at.has(c.home ?? FEVER_RAT_HOME)) return c;
+  }
   return null;
 }
+// ...and which graves a rise belongs to.
+function gravesOfRise(room: string): string {
+  if (FEVER_GRAVES[room]) return room;
+  return Object.keys(FEVER_GRAVES).find((g) => FEVER_RISES(g).includes(room)) ?? FEVER_RAT_HOME;
+}
 
-// Up out of the graves, if there is not one already.
-export function comes(z: ZoneDO, now: number): Creature | null {
+// Up out of the graves, if there is not one already: the old village's, or
+// whichever of the three the fever came off (events.feverAt, 2026-11-04).
+export function comes(z: ZoneDO, now: number, graves = FEVER_RAT_HOME): Creature | null {
   const tmpl = z.world!.mobTemplates.get(FEVER_RAT);
-  if (!tmpl || !z.world!.rooms.has(FEVER_RAT_HOME) || rat(z)) return null;
+  if (!tmpl || !z.world!.rooms.has(graves) || rat(z, gravesOfRise(graves))) return null;
   const c: Creature = {
-    id: uuid(), templateId: FEVER_RAT, roomId: FEVER_RAT_HOME, home: FEVER_RAT_HOME,
+    id: uuid(), templateId: FEVER_RAT, roomId: graves, home: graves,
     hp: tmpl.max_hp, hunger: 0, grudges: [], target: null,
     nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
   };
   z.creatures.set(c.id, c);
   z.noteCreaturesChanged();
-  z.roomFeed(FEVER_RAT_HOME, "The ground over one of the graves heaves, and breaks, and something the size of a hound drags itself up out of it.");
-  z.refreshRoomCtx(FEVER_RAT_HOME);
+  z.roomFeed(graves, "The ground over one of the graves heaves, and breaks, and something the size of a hound drags itself up out of it.");
+  z.refreshRoomCtx(graves);
   return c;
 }
 
 // Back down, unkilled: the fever has run its long course. Not in a fight.
-export function goesBack(z: ZoneDO): boolean {
-  const c = rat(z);
+export function goesBack(z: ZoneDO, graves = FEVER_RAT_HOME): boolean {
+  const c = rat(z, graves);
   if (!c || c.target) return false;
   z.creatures.delete(c.id);
   z.noteCreaturesChanged();
@@ -57,13 +70,15 @@ export function keeper(z: ZoneDO, now: number): void {
   if (!rat(z)) return;
   for (const s of z.sessions.values()) {
     if (!z.inGatehouse.has(s.pubkey)) continue;
-    // His own ground only (rome, 2026-11-02): the fever sits over the old
-    // village and the wood (FEVER_BANDS), so only a keeper at a gate on that
-    // ground speaks of it (roomId is the gate you came in by).
-    if (!FEVER_BANDS.has(z.world!.rooms.get(s.roomId)?.region ?? "")) continue;
+    // His own ground only (rome, 2026-11-02): each fever sits over the ground
+    // its graves stand on (FEVER_GRAVES), so only a keeper at a gate on that
+    // ground speaks of its rat (roomId is the gate you came in by).
+    const region = z.bandOf(s.roomId);
+    const mine = Object.entries(FEVER_GRAVES).find(([, f]) => f.bands.includes(region))?.[0];
+    if (!mine || !rat(z, mine)) continue;
     if (now - (keeperSaid.get(s.pubkey) ?? 0) < FEVER_RAT_KEEPER_GAP_MS || !chance(FEVER_RAT_KEEPER_PER_MIN)) continue;
     keeperSaid.set(s.pubkey, now);
-    z.send(s, pick(FEVER_RAT_KEEPER_LINES), "amb");
+    z.send(s, pick(FEVER_GRAVES[mine]!.keeper ?? FEVER_RAT_KEEPER_LINES), "amb");
   }
 }
 

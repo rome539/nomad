@@ -62,7 +62,7 @@ import {
   PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, OWN_FORAGE_MEAL_LEFT,
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
-  RAT_KING, WHITE_ROE, FEVER_RAT, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
+  RAT_KING, WHITE_ROE, FEVER_RAT, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
   EAT_SHOW_MS,
   RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS,
 } from "./zone-data";
@@ -369,7 +369,7 @@ export function reconcilePopulation(z: ZoneDO, world: World): number {
       // this every deploy would cull it as an overstock of nothing. One, never more.
       // The white roe is the same: no row, one at most. And the fever rat
       // (feverrat.ts), which comes up with the fever.
-      const cap = line === RAT_KING || line === WHITE_ROE || line === FEVER_RAT ? 1 : caps.get(line) ?? 0;
+      const cap = line === RAT_KING || line === WHITE_ROE ? 1 : line === FEVER_RAT ? Object.keys(FEVER_GRAVES).length : caps.get(line) ?? 0; // one fever rat to each graves
       if (list.length <= cap) continue;
       const homes = dens.get(line) ?? [];
       const distToDen = (c: Creature) => homes.length

@@ -3484,7 +3484,7 @@ export function wallStudy(z: ZoneDO, session: Session): void {
     deep: { key: "deep", label: "The Deep", rooms: [] },
     road: { key: "road", label: "The Roads", rooms: [] },
     wood: { key: "wood", label: "The Wood", rooms: [] },
-    den: { key: "den", label: "The Dens", rooms: [] },
+    den: { key: "den", label: "Assart End", rooms: [] }, // the old village (rome, 2026-11-04: renamed from the Dens)
     mountain: { key: "mountain", label: "The Mountain", rooms: [] },
     // The wall chart needs the Crossing for the same reason the surveyor's map
     // does — and here it matters twice over, because the ferry house IS a gate,

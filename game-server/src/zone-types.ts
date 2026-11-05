@@ -294,6 +294,7 @@ export interface EventState {
   phase: "idle" | "telegraph" | "active" | "aftermath";
   until: number; // ms epoch this phase ends
   data?: string; // event-specific payload (the keeper's want: which item he's asking after)
+  where?: string; // THE FEVER: the room its rat came up out of, where a graves has several (FEVER_GRAVES rises)
   bands?: string[]; // WEATHER ONLY: the grounds it is over right now (none = the old all-over weather)
   since?: Record<string, number>; // RAIN: when it reached each ground, for how long the ground stays wet after
   moveAt?: number; // STORM: when it next rolls to drift onto the raining ground next door

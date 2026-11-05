@@ -7098,7 +7098,7 @@ export class ZoneDO implements DurableObject {
     this.creatures.delete(creature.id);
     if (creature.templateId === RAT_KING) ratking.fell(this); // its rats go leaderless (ratking.ts)
     if (creature.templateId === WHITE_ROE) whiteroe.slain(this, killer); // the wood turns on its killer (whiteroe.ts)
-    if (creature.templateId === FEVER_RAT) events.feverLifts(this); // the fever goes with it (feverrat.ts)
+    if (creature.templateId === FEVER_RAT) events.feverLifts(this, creature.home); // its graves' fever goes with it (feverrat.ts)
     chronicle.slain(this, killer, tmpl, creature.roomId); // a boss, or one of the named few, goes on the record
     this.noteCreaturesChanged(); // a throw can kill between beats
     for (const s of this.sessions.values()) {

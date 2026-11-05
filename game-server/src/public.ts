@@ -8413,7 +8413,7 @@ var MAP_REGION_LABELS = {
   deep: "THE DEEP",
   road: "THE WEST ROAD",
   wood: "THE WOOD",
-  den: "THE DENS",
+  den: "ASSART END", // the old village (rome, 2026-11-04: renamed from the Dens)
   mountain: "THE MOUNTAIN",
   crossing: "THE CROSSING",
   // THE WOOD'S SEVEN QUARTERS. It is 170 rooms — 42% of the world — and it
@@ -10398,8 +10398,8 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "57";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "19";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "39";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "20";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "40";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10519,6 +10519,10 @@ var TERRAIN_PLATE = {
   // THE DENS (2026-09-30). Their warren end stands on "heath" above - the
   // wood's picture, the same country.
   "the-dens": ["the-dens"], fields: ["fields"], common: ["common"],
+  // THE TWO HAMLETS' OWN GROUNDS (rome, 2026-11-04): the old village's three,
+  // drawn again for the salt marsh's edge and for the mountain's warm side.
+  "salt-street": ["salt-street"], "salt-fields": ["salt-fields"], "salt-common": ["salt-common"],
+  "shiel-street": ["shiel-street"], "shiel-fields": ["shiel-fields"], "shiel-common": ["shiel-common"],
   // THE BEAR CAVES (mig 319): the mouth in daylight and weather, the passage
   // and the chamber in the dark behind it.
   "cave-mouth": ["cave-mouth"], "cave-passage": ["cave-passage"], cave: ["cave"],
@@ -10748,6 +10752,17 @@ var ROOM_PLATE = {
   "the-black-hut":         "day night night-torch",
   "the-warreners-lodge":   "day night night-torch",
   "the-lodge-loft":        "day night night-torch",
+  // the two hamlets copied from the dens (2026-11-04)
+  "the-sea-smithy":       "day night night-torch",
+  "the-hill-smithy":      "day night night-torch",
+  "the-saltmasters-house":"day night night-torch",
+  "the-herds-house":      "day night night-torch",
+  "the-far-house":        "day night night-torch",
+  "the-high-house":       "day night night-torch",
+  "the-salt-chapel":      "day night night-torch",
+  "the-hill-chapel":      "day night night-torch",
+  "the-turf-hut":         "day night night-torch",
+  "the-peat-hut":         "day night night-torch",
   // ---- THE FORTRESS, 108 ROOMS ON 31 PLATES (2026-09-23). The Door is the
   // oldest region in the game and the last with no picture of itself. Its four
   // doors already had gate plates; everything behind them was painted as a kind
@@ -11028,6 +11043,17 @@ var ROOM_PLATE = {
 // horn and a skull — which is the Bone Ground's own sentence, word for word.
 var PLATE_OF = {
   "weeper-arch": "gate-weeper-arch",
+  // THE TWO HAMLETS COPIED FROM THE DENS (2026-11-04) wear its roofs' pictures.
+  "the-sea-smithy": "the-smithy",
+  "the-hill-smithy": "the-smithy",
+  "the-saltmasters-house": "the-reeves-house",
+  "the-herds-house": "the-reeves-house",
+  "the-far-house": "the-north-house",
+  "the-high-house": "the-north-house",
+  "the-salt-chapel": "the-bare-chapel",
+  "the-hill-chapel": "the-bare-chapel",
+  "the-turf-hut": "the-black-hut",
+  "the-peat-hut": "the-black-hut",
   "the-bone-ground": "the-dry-bones",
   // BEHIND THE MOON DOOR IS ONE PLACE (rome, 2026-10-23): the four rooms the
   // old grey's ground added past the glade had fallen back to plain wood
@@ -11311,6 +11337,16 @@ var SHELTERED = {
   "the-black-hut": 1,
   "the-warreners-lodge": 1,
   "the-lodge-loft": 1,
+  "the-sea-smithy": 1,
+  "the-hill-smithy": 1,
+  "the-saltmasters-house": 1,
+  "the-herds-house": 1,
+  "the-far-house": 1,
+  "the-high-house": 1,
+  "the-salt-chapel": 1,
+  "the-hill-chapel": 1,
+  "the-turf-hut": 1,
+  "the-peat-hut": 1,
   // ...and the open ground's four roofs (2026-09-30): the mine, where the two
   // galleries met, the dovecote and the bone shed.
   "the-mine-gallery": 1,
@@ -11606,6 +11642,13 @@ var TERRAIN_SCENES = {
   "the-dens":    "day night night-torch fog rain snow",
   fields:        "day night night-torch fog rain snow",
   common:        "day night night-torch fog rain snow",
+  // the two hamlets' (2026-11-04): four pictures, rain and fog laid over them
+  "salt-street":  "day night night-torch snow",
+  "salt-fields":  "day night night-torch snow",
+  "salt-common":  "day night night-torch snow",
+  "shiel-street": "day night night-torch snow",
+  "shiel-fields": "day night night-torch snow",
+  "shiel-common": "day night night-torch snow",
   // THE BEAR CAVES (2026-10-21). The mouth stands open to the sky and takes the
   // full six; past it the rock has no hour and no weather, like the sea cave.
   "cave-mouth":   "day night night-torch fog rain snow",
@@ -11931,6 +11974,11 @@ var MOB_FLOOR = { "keep-passage": [14, 86] };
 // number only ever shows in the preview. It is here because a plate that
 // breaks the lock should say so wherever it is drawn.
 var MOB_LINE = {
+  // THE TWO HAMLETS (2026-11-04), read off their day plates: the street, the
+  // common and the salt common start low, past the cots, the creek and the
+  // fence; the furrows and the in-field are walkable nearly from the lock.
+  "salt-street": 63, "salt-fields": 60, "salt-common": 63,
+  "shiel-street": 63, "shiel-fields": 57, "shiel-common": 68,
   // The arch's picture is a gate's, a wall with its door, so people stand out on
   // the paving in front of it as they did when it was one: MOB_LINE_GATE's line.
   "gate-weeper-arch": 63,

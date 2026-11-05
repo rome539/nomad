@@ -1,0 +1,196 @@
+# THE SHIELING HAMLET (rome, 2026-11-04): 29 rooms, a copy of the Dens' core.
+#
+# Built cheap on purpose, from the old village by the wood: the same street,
+# crofts, chapel, well and fever graves, the same pictures, worded for the warm
+# south side of the mountain. Its purpose is the fever: these are the third of
+# the fever rat's three graves (zone-data FEVER_GRAVES), and when the fever
+# comes up out of them it sits over the mountain.
+#
+# WHERE IT IS. East off the Mid Shelf, low on the mountain's south flank
+# (rome, 2026-11-04, moved in from the far end before it shipped). It lies on
+# its side: the street runs east, away from the shelf.
+#
+# WHAT IT IS. A summer shieling, huts the herders came up to with the flocks,
+# that somebody turned into a place to stay the winter in stone. It emptied the
+# way the old village did: doors shut on the way out, nothing burned but the one
+# shiel, nothing fought over.
+#
+# GEOGRAPHY (rows run EAST from the Mid Shelf, each row north to south; the
+# Dens' layout, turned so its street runs away from the way in):
+#   y=1  the-drove-cut . the-spring-green
+#   y=2  the-terrace-strips . the-shiel-foot . the-fold-pound
+#   y=3  the-in-field . the-shiel-street . the-forge-yard . the-hill-smithy
+#   y=4  the-shiel-backs . the-hill-cross . the-herds-yard . the-herds-house
+#   y=5  the-burnt-shiel . the-chapel-shelf . the-shiel-head . the-high-croft . the-high-house
+#   y=6  the-thorn-garth . the-hill-chapel . the-fleece-green . the-lost-toft . the-rowan-rows
+#   y=7  the-peat-hut . the-hill-spring . the-hill-graves . the-scree-end
+#   y=8  the-cold-hearths . the-thorn-nook
+
+!region mountain
+
+## the-mid-shelf | attachment: the way east onto the warm side
+!existing
+> east the-drove-cut
+
+## the-drove-cut | The Drove Cut
+The way the flocks came up, cut down into the slope by hooves and rain until it runs a body's depth below the turf on either hand, roots and stones showing in both banks. Walking it you see nothing but sky and the two walls of earth, and nothing can see you.
+> west the-mid-shelf
+> east the-shiel-foot
+> south the-spring-green
+
+## the-spring-green | The Spring Green
+A shelf of level grass on the slope with a spring in the middle of it, walled into a stone ring and capped with a slab somebody dragged on and left crooked. The water comes up under the slab cold enough to hurt the teeth, and the bucket rope has rotted off at the windlass.
+> north the-drove-cut
+> east the-fold-pound
+
+## the-terrace-strips | The Terrace Strips
+The slope here was cut into long level steps, each held up by a dry-stone wall, so that something could be grown on a hill that did not want it. Oats, by the look of the old stubble ridges. The walls are still standing and the strips are grass, and every one of them catches the sun all day.
+> south the-shiel-foot
+> east the-in-field
+
+## the-shiel-foot | The Shiel Foot
+Where the strips stop and the houses start. There is no boundary except that the grass gives way to a hard rutted surface of trodden stone and the first walls stand up beside you. Somebody lit a fire against a gable end here and put it out badly, and the scorch is still black.
+> north the-terrace-strips
+> west the-drove-cut
+> east the-shiel-street
+> south the-fold-pound
+
+## the-fold-pound | The Fold Pound
+A round stone pen with a gate that still swings, built to hold sheep found straying on the hill until their owner paid to have them back. It is dry-laid and four courses high and in better repair than anything with a roof on it. Whatever was last shut in here got out over the top.
+> north the-shiel-foot
+> west the-spring-green
+
+## the-in-field | The In-Field
+The one field near the houses that was kept and mucked and ploughed every year, while the hill above was left to the sheep. It has been neither since. What is left is a steep meadow that goes gold in the late sun, and the deer come down onto it in the evening because nothing here objects.
+> west the-terrace-strips
+> south the-shiel-street
+> east the-shiel-backs
+
+## the-shiel-street | The Shiel Street
+The one street, running down the slope, wide enough for a sledge, with the shiels standing back off it behind their own low walls. The surface is stone where somebody laid stone and bare rock where the hill did. Every door in sight is shut, and that is the thing you notice and then cannot stop noticing: they were shut on the way out, by people who expected to want them shut.
+> west the-shiel-foot
+> north the-in-field
+> east the-hill-cross
+> south the-forge-yard
+
+## the-forge-yard | The Forge Yard
+A yard black underfoot with hammer-scale trodden into it, and it will never grow anything again. There is a stone trough at the wall, cracked through by the frost and empty, and a heap of clinker gone half to earth, and the smell of old iron still coming up out of the ground when it rains.
+> north the-shiel-street
+> south the-hill-smithy
+> east the-herds-yard
+
+## the-hill-smithy | The Hill Smithy
+Inside, the roof holds and the light comes through the door and one wind-eye. The hearth is a stone box with a hood over it, the anvil block is still bolted down though the anvil went with somebody, and there is a wall of hooks with nothing on them. Somebody carried every piece of iron in this room up the hill on their back.
+> north the-forge-yard
+
+## the-shiel-backs | The Shiel Backs
+Behind the houses, the long thin plots that came with them, each walled off from the next and all of them gone to nettle and bilberry and a few gaunt rowans still berrying out of habit. There are gaps worn into the back walls where people took the short way to the field.
+> west the-in-field
+> south the-hill-cross
+> east the-chapel-shelf
+
+## the-hill-cross | The Hill Cross
+The middle of the place: a stone cross on three steps, the head broken off level and the stump worn round by the weather off the tops. People met here and were told things here, and the steps are dished where they sat. Somebody scratched a tally into the bottom step, a great many strokes, and then stopped.
+> west the-shiel-street
+> north the-shiel-backs
+> east the-shiel-head
+> south the-herds-yard
+
+## the-herds-yard | The Herd's Yard
+The biggest yard on the street, cobbled, with a byre on one side that has lost half its roof and a house on the other that has lost none of its. The herd answered for everybody else's flocks to whoever owned the hill, which made him neither one thing nor the other, and he got a better house for it.
+> north the-hill-cross
+> west the-forge-yard
+> south the-herds-house
+> east the-high-croft
+
+## the-herds-house | The Herd's House
+Two rooms and a floor above, which was wealth up here. The hearth is a proper one against a stone gable, with a lintel and a hook still in it. There is a bench built into the wall, a bedstead frame with nothing on it, and a shuttered window that still shuts. Somebody swept this floor before they left it.
+> north the-herds-yard
+
+## the-burnt-shiel | The Burnt Shiel
+One shiel did burn, and only one, a long time before the rest of it emptied. The walls stand to shoulder height with the fire's black still on the inside face, and a rowan has grown up through where the hearth was. Nobody built here again, and whatever the story was, everybody who knew it agreed about it.
+> south the-chapel-shelf
+> east the-thorn-garth
+
+## the-chapel-shelf | The Chapel Shelf
+A level shelf cut into the slope in front of the chapel, kept clear of graves and used for everything else, worn bare in the middle by whatever it was used for. Two yews grow out of the wall at its edge, both enormous and both older than the chapel, standing where yews always stand.
+> north the-burnt-shiel
+> west the-shiel-backs
+> south the-shiel-head
+> east the-hill-chapel
+
+## the-shiel-head | The Shiel Head
+The street ends at a gate in a wall, and past the gate the hill falls away toward country you can see for miles. From here you can see the whole place at once, back along the length of it to the shelf, and count the roofs, and see that they are all still on.
+> west the-hill-cross
+> north the-chapel-shelf
+> south the-high-croft
+> east the-fleece-green
+
+## the-high-croft | The High Croft
+The last yard before the wall, and the poorest: a house with a byre built onto the end of it under the same roof, so the family and the beasts lived a partition apart and kept each other warm. The muck channel still runs out through the wall and away down the hill.
+> north the-shiel-head
+> west the-herds-yard
+> south the-high-house
+
+## the-high-house | The High House
+One room, and the byre through the gap where a partition was. The floor is beaten earth with a hearth-stone set in the middle and no chimney at all. The smoke went up through the thatch, and the underside of the thatch is black with it and hard as a shell, and that is what has kept the rain out this long.
+> north the-high-croft
+
+## the-hill-chapel | The Hill Chapel
+!safe
+Stone, and small, and the roof is stone too, the only stone roof on this side of the hill, which is why it is the one building here that will certainly still be standing in another hundred years. Everything that could be carried was carried out. What is left is a font cut from a single block, a stone bench along the wall, and a door that shuts on the world and is thick enough to mean it.
+> west the-chapel-shelf
+
+## the-thorn-garth | The Thorn Garth
+The chapel's garden, walled against the sheep, and half of what grew in it is standing dead, bare grey trunks with the bark coming off in sheets, while the other half goes on fruiting out of the same thin soil for no reason anyone could explain. Windfalls rot in the grass under the living half every year, and something comes for them every night.
+> west the-burnt-shiel
+
+## the-fleece-green | The Fleece Green
+Level ground with lines of low posts across it, and between the posts nothing now but the weather. Fleeces were dried here after the washing and hides were pegged out here, side by side, because the ground was common and nobody could stop either. The grass under the old lines is a different green from the rest.
+> west the-shiel-head
+> south the-lost-toft
+> east the-hill-spring
+
+## the-lost-toft | The Lost Toft
+A house-sized rectangle of levelled ground with a low bank round it, and inside the bank not one stone standing. The walls went to somebody else's walls and the roof went for firewood, and what is left is the shape of a home printed on the hillside. There is a doorstep, still, worn hollow.
+> north the-fleece-green
+> south the-rowan-rows
+> east the-hill-graves
+
+## the-rowan-rows | The Rowan Rows
+Rowans planted in a row along the edge of the common, the way people up here always planted them, against whatever it is rowans are planted against. Nobody has cut them back in decades, so each has become a crooked tree with a dozen trunks, and the row is still straight underneath.
+> north the-lost-toft
+> east the-scree-end
+
+## the-peat-hut | The Peat Hut
+Turf walls two feet thick, a roof of turf on bent birch, no window, and a door you go through bent double. Inside it is black, smoke-black floor to roof, from a peat fire that had no chimney and did not need one. It is bone dry and warm the moment you are out of the wind, and there is old bracken bedding along one wall.
+> south the-hill-spring
+
+## the-hill-spring | The Hill Spring
+Not a well so much as a hole with a barrel sunk in it, where the water comes out of the hill close under the turf. The barrel staves are still sound and the water inside is clear and about three feet down and full of the sky. There is a hoof-print in the mud on every side of it.
+> west the-fleece-green
+> north the-peat-hut
+> south the-hill-graves
+> east the-cold-hearths
+
+## the-hill-graves | The Hill Graves
+Twenty-odd low mounds in rows, unmarked except by the grass growing greener over them, on ground outside every wall there was. When something went through here quickly they buried the dead quickly and away from everyone, which is what this is. It is a tidier piece of ground than anything else on the hill.
+> north the-hill-spring
+> west the-lost-toft
+> south the-scree-end
+> east the-thorn-nook
+
+## the-scree-end | The Scree End
+The common gives out eastward into scree and juniper and a slope of loose stone with no way across it that a person would choose. You can see a long way over the top of it and there is nothing to see: more of the same, going on down the hill until the light stops.
+> north the-hill-graves
+> west the-rowan-rows
+
+## the-cold-hearths | The Cold Hearths
+A ring of flat stones set in the turf, black with fire, and round them the low marks of shelters that were put up and taken down here summer after summer, before anyone built in stone. The first herders cooked here, and the stones are still the warmest thing on the hill at the end of a sunny day.
+> west the-hill-spring
+> south the-thorn-nook
+
+## the-thorn-nook | The Thorn Nook
+The last corner of the common, where the thorn has come in off the hill and taken it, dense and low and sharp. There is a path through it worn by animals, low down, and the bushes close over the top of it so that it is a tunnel if you are small enough.
+> north the-cold-hearths
+> west the-hill-graves

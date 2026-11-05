@@ -471,7 +471,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
     deep: { key: "deep", label: "The Deep", rooms: [] },
     road: { key: "road", label: "The Roads", rooms: [] },
     wood: { key: "wood", label: "The Wood", rooms: [] },
-    den: { key: "den", label: "The Dens", rooms: [] },
+    den: { key: "den", label: "Assart End", rooms: [] }, // the old village (rome, 2026-11-04: renamed from the Dens)
     mountain: { key: "mountain", label: "The Mountain", rooms: [] },
     // THIS TABLE IS THE MAP'S REAL REGION LIST and a new band is not on the map
     // until it is in here (rome, 2026-08-11: the Crossing still drew gold). The

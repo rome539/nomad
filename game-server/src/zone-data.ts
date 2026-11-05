@@ -2837,6 +2837,41 @@ export const FEVER_BANDS = new Set(["den", "wood"]);  // the ground the fever si
 export const FEVER_RAT = "fever-rat";
 export const FEVER_RAT_HOME = "the-fever-graves";
 export const FEVER_RAT_HOLD_MS = 4 * 3_600_000;       // left alone this long, it goes back into the graves
+// THE FEVER GOES FURTHER (rome, 2026-11-04): three graves now, the old
+// village's and one in each hamlet copied from it, and EACH HAS A FEVER OF ITS
+// OWN, on its own clock, with its own rat - so one, two or all three can be up
+// at once. Each sits over the ground its graves stand on, and only that ground.
+// key: its entry in z.events (the old village's keeps "fever"). bands: the
+// ground it sits over (zone.bandOf). rises: where its rat can come up, one
+// picked each time; a graves with none comes up out of itself. rise: the line
+// that says so, where the old village's does not fit.
+// THE FORTRESS HAS ONE TOO (rome, 2026-11-04): its rat comes up out of the
+// Ossuary, the Catacomb or the Plague Trench, and its fever lies over the
+// inside and the open ground round it - not the deep, which is its own ground.
+export const FEVER_GRAVES: Record<string, { key: string; bands: string[]; rises?: string[]; rise?: string; keeper?: string[] }> = {
+  "the-fever-graves": { key: "fever", bands: ["den", "wood"] },
+  "the-strand-graves": { key: "fever-strand", bands: ["crossing"] },
+  "the-hill-graves": { key: "fever-hill", bands: ["mountain"] },
+  "the-fortress": { key: "fever-fortress", bands: ["upper", "gate", "out"], rises: ["ossuary", "catacomb", "the-plague-trench"],
+    rise: "It settles over the whole fortress, in and out. Sleep will not take, food does you no good, and a dressing may as well be a rag. Somewhere among the fortress's dead, something is digging its way up.",
+    keeper: [
+      "The keeper says, to nobody in particular: \"Something's opened one of the old burials. Not dug it. Opened it. From underneath.\"",
+      "\"Fever's up out of the dead again.\" The keeper doesn't look up. \"Last time it sat like this there was something come up with it, and it didn't lift till somebody went down there.\"",
+      "The keeper sniffs at the hatch and makes a face. \"That's the bone rooms on the air. The garrison tied a cloth over their faces when it came like this. They tied them on their dead too.\"",
+    ] },
+};
+// ...and from a graves' rooms back to it: where its rat can come up.
+export const FEVER_RISES = (graves: string): string[] => FEVER_GRAVES[graves]?.rises ?? [graves];
+// ITS OWN CLOCK, off the shared roll (rome, 2026-11-04), as the escape's: each
+// graves waits this long between fevers, about once a day, so now and then all
+// three are up together. A rain settling on a graves' ground brings its next one
+// on within the hour (FEVER_RAIN_SOON).
+export const FEVER_EVERY_MIN_MS = 18 * 3_600_000;
+export const FEVER_EVERY_MAX_MS = 30 * 3_600_000;
+export const FEVER_FIRST_MIN_MS = 1 * 3_600_000;   // the first after this ships, or after a fresh world
+export const FEVER_FIRST_MAX_MS = 6 * 3_600_000;
+export const FEVER_RAIN_SOON_MIN_MS = 10 * 60_000;
+export const FEVER_RAIN_SOON_MAX_MS = 60 * 60_000;
 export const FEVER_CLOTH_TRAIT = "grave-clothed";      // the grave-cloth's own; on nothing else in the world
 // HOW ANYONE KNOWS IT IS UP (rome, 2026-11-02): the keeper speaks of it at the
 // gatehouse, as he does of the king and the roe; the fever's status line names
@@ -3337,7 +3372,7 @@ export const GORGE_NAP_ODDS = 0.5;    // a hyena that just fed likely lies down 
 // and everywhere else in the world.
 export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-drowned-orchard", "well", "the-dry-moat",
   "the-shallow-ford", "the-flooded-quarry",
-  "the-mill-dam", "the-shallow-well", "the-marl-water",
+  "the-mill-dam", "the-shallow-well", "the-marl-water", "the-dipping-well", "the-hill-spring",
   // The fen, which is water with paths across it rather than land with water in
   // it. Every thirsty thing west of the fortress can now drink somewhere that
   // isn't the road's one ford — which was the only drinkable thing for a dozen
@@ -4732,6 +4767,11 @@ export const LURKER_DRIFT_MS = 3 * 3_600_000;
 // Effect: predators thin the herds the brood-mothers swell, and a player can
 // throw bait to start a scrap and slip past. Read/applied in ai.ts (predation).
 export const PREYS_ON = new Map<string, Set<string>>([
+  // THE VILLAGES ARE AN EASY MEAL (rome, 2026-11-04): the Dens and the two
+  // hamlets are rat-heavy, and the hunters around them take rats now - the dogs
+  // and the tawny owl by the wood, the hounds and gulls on the Crossing, the
+  // foxes, wildcat, ermine and eagle owl on the mountain - so a hungry one with
+  // nothing at home walks in for them (huntGround). Each outstats a rat alone.
   // THE MOUNTAIN'S FOOT (mig 227). The band is not in MIGRATE_BANDS, so nothing
   // walks up here to feed anything: this web has to close on its own ground or
   // the whole tier sits at the hunger cap. Statlines, by the law this table has
@@ -4746,8 +4786,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // NOTHING IS GIVEN THE HIND OR THE STAG. At 30 and 48hp they are out of reach
   // of everything on this tier, which is true of a grown red deer and is also
   // the tier telling you what it is: the animals that can take one live higher.
-  ["hill-fox", new Set(["mountain-hare", "ptarmigan"])],
-  ["wildcat", new Set(["mountain-hare", "ptarmigan"])],
+  ["hill-fox", new Set(["rat", "mountain-hare", "ptarmigan"])],
+  ["wildcat", new Set(["rat", "mountain-hare", "ptarmigan"])],
   // THE TOM (mig 247) hunts what the wildcat hunts. Variants do NOT inherit their
   // base's feeding sets — every one of them has to be listed by hand, and eight
   // of the mountain's nine were. This one was missed, so an 8% roll produced an
@@ -4763,11 +4803,11 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // The owl takes the stoat, which is the one honest way to put a predator on
   // top of another predator at this size: 40hp/5-8 against 18hp/3-5, at night,
   // silently, is not a fight the stoat is in.
-  ["eagle-owl", new Set(["mountain-hare", "snow-hare", "ptarmigan", "ermine"])],
+  ["eagle-owl", new Set(["rat", "mountain-hare", "snow-hare", "ptarmigan", "ermine"])],
   // THE WOOD'S OWL (mig 321) eats the two small things it was brought in for: the
   // sloth that will not run and the hedgehog that will not open.
-  ["tawny-owl", new Set(["wood-sloth", "hedgehog"])],
-  ["ermine", new Set(["mountain-hare", "snow-hare", "ptarmigan"])],
+  ["tawny-owl", new Set(["rat", "wood-sloth", "hedgehog"])],
+  ["ermine", new Set(["rat", "mountain-hare", "snow-hare", "ptarmigan"])],
   // TIER THREE (mig 231). THE STAG STOPS BEING UNTOUCHABLE, and the two notes
   // above have been promising exactly this since the foot shipped. One hill wolf
   // is a smaller animal than a lynx and takes what a fox takes; what changes is
@@ -4786,7 +4826,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // TIER FOUR (mig 233). One row, because one of the tier's four new lines
   // hunts at all. 26hp/3-5 against a chough at 12/1-2 and a hare at 12/1-2 is
   // clean, and it is still not how the fox mostly eats — SCAVENGERS is.
-  ["snow-fox", new Set(["mountain-chough", "mountain-hare", "snow-hare", "ptarmigan"])],
+  ["snow-fox", new Set(["rat", "mountain-chough", "mountain-hare", "snow-hare", "ptarmigan"])],
   // TIER FIVE (mig 235). One row again. The adder takes what crosses its rock
   // and nothing else — 22hp/4-7 against a 12hp bird is not a contest, and it is
   // the only way a thing that never moves gets to eat something that does.
@@ -4929,8 +4969,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // a stray is 24hp/3-5 against the roe's 16hp/1-2, which is a clean solo take;
   // it is UNDER the goat's 26hp, so the goat needs the pack (PACK_PREY). The
   // lead dog is 36hp/4-7 and needs nobody's help for either.
-  ["masterless-dog", new Set(["roe-deer", "white-roe", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])],
-  ["lead-dog", new Set(["masterless-dog", "roe-deer", "white-roe", "feral-goat", "old-billy", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat and the gull the pack needs numbers for
+  ["masterless-dog", new Set(["rat", "roe-deer", "white-roe", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])],
+  ["lead-dog", new Set(["rat", "masterless-dog", "roe-deer", "white-roe", "feral-goat", "old-billy", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat and the gull the pack needs numbers for
   // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
   // and range toward the rat-runs (lurkerDrifts), run one down (predation), and
   // go quiet again. A stretch of dark with no rats left is what starves one onto
@@ -4945,15 +4985,15 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["grey-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
   ["conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
   ["bittern", new Set(["ford-eel", "silver-eel"])],
-  ["great-gull", new Set(["wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],       // it has taken a rat off the parapet, and it did not need to land
-  ["marsh-hound", new Set(["oystercatcher", "bittern", "wrack-crab", "devil-crab"])],
+  ["great-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],       // it has taken a rat off the parapet, and it did not need to land
+  ["marsh-hound", new Set(["rat", "oystercatcher", "bittern", "wrack-crab", "devil-crab"])],
   // THE RARE BLOOD HUNTS WHAT ITS OWN LINE HUNTS (mig 212). Listed out rather
   // than resolved through variantBase, because that is how this table has
   // always worked — the roe and the white roe, the rat and the fleet rat are
   // both written down, and a reader should be able to see the whole web here
   // without holding the variant map in their head.
   ["dog-otter", new Set(["rat", "fleet-rat"])],
-  ["black-backed-gull", new Set(["wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],
+  ["black-backed-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],
   ["a-lymer", new Set(["oystercatcher", "bittern", "wrack-crab", "devil-crab"])],
   ["bull-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
   ["old-conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
@@ -6899,7 +6939,7 @@ export const WRECK_LOOT: { item: string; chance: number }[] = [
 // The cart ruts hold standing rainwater. And half the wood says "every spring"
 // meaning the season. None of those are here; every room below says, in its own
 // text, that there is clean water in it right now.
-export const WELL_ROOMS = new Set(["the-well-court", "the-shallow-well",
+export const WELL_ROOMS = new Set(["the-well-court", "the-shallow-well", "the-dipping-well", "the-hill-spring",
   "the-well-yard",       // the crossing house's: a windlass, a chain, and "the only sweet water within a mile of anywhere"
 ]);
 // ...and the water that is not a well, which is most of it: a trough set under
@@ -6957,6 +6997,7 @@ export const FORGE_ROOMS = new Set([
   "the-forge-pit",       // the siege lines' own: a dug hollow, a stone hearth, a bellows-block bedded in clay
   "the-village-smithy",  // open-fronted, the hearth still in the back wall
   "the-smithy",          // the den's: a stone box with a hood over it, and a wall of hooks with nothing on them
+  "the-sea-smithy", "the-hill-smithy", // its copies in the two hamlets (2026-11-04)
 ]);
 // THE VANTAGE POINTS (rome, 2026-09-04). Twenty-three rooms in the world tell
 // you, in their own text, that you can see from them — and none of them let you.
@@ -6990,6 +7031,7 @@ export const VANTAGE_ROOMS = new Set([
   // the dens
   "the-lodge-loft",     // "sitting in the dark, seeing everything, and being seen by nothing"
   "the-street-head", "the-scrub-end",
+  "the-row-head", "the-marsh-end", "the-shiel-head", "the-scree-end", // the two hamlets (2026-11-04)
   // the crossing
   "the-bridge-approach", "the-bridge-strand", "the-far-ferry-steps",
   // the road and the lines
@@ -7192,6 +7234,7 @@ export const DARK_ROOMS = new Set([
   // canopy dark: a turf hut has no window by construction, and the wheel pit is
   // under the mill's floor. Everything else in the dens has sky or a shutter.
   "the-black-hut", "the-wheel-pit",
+  "the-turf-hut", "the-peat-hut", // the black hut's copies in the two hamlets (2026-11-04)
   // The fen's two lightless places, and unlike everywhere else in the world
   // being caught here without a light is a drowning rather than a delay: the
   // dead alders stand thick enough to shut out noon, and the grave drain is a
@@ -7445,6 +7488,9 @@ export const SURFACE_FORAGE = new Set([
   // — the most food per room on the surface, in the place people left.
   "the-common-field", "the-cow-pasture", "the-drying-green", "the-chapel-green",
   "the-well-green", "the-gorse-common", "the-dead-orchard", "the-warren-bank",
+  // ...and the two hamlets copied from them (2026-11-04)
+  "the-marsh-field", "the-net-green", "the-chapel-hard", "the-pump-green", "the-wind-orchard",
+  "the-in-field", "the-fleece-green", "the-chapel-shelf", "the-spring-green", "the-thorn-garth",
   // THE OUTWORKS (rome, 2026-08-17, and he was right to be angry). The band got
   // forty-two rooms and a roster and NOT ONE MOUTHFUL: `out` is the only surface
   // band absent from FORAGE_REGIONS, and the fortress's own larder is the warrens
@@ -7985,6 +8031,12 @@ export function seesArt(pubkey: string): boolean { return ART_FOR_ALL || ART_KEY
 // shore road's own corners before the ford and ferry can claim them by name, the
 // ferry's channel before the ford's, and the wide categories last.
 export const CROSSING_RULES: [string, RegExp][] = [
+  // THE HAMLET COPIED FROM THE DENS (rome, 2026-11-04) stands on its own three
+  // grounds, the old village's drawn again for this country, by name, ahead of
+  // everything.
+  ["salt-fields", /^the-(hard-lane|salt-pound|sea-furrows|marsh-field|wind-orchard)$/],
+  ["salt-common", /^the-(net-green|bare-toft|sallow-rows|dipping-well|strand-graves|marsh-end|old-hearths|gorse-corner)$/],
+  ["salt-street", /^the-(pump-green|row-foot|salters-row|smiths-yard|yard-backs|salt-cross|saltmasters-yard|burnt-cot|chapel-hard|row-head|far-cot|sea-smithy|saltmasters-house|far-house|salt-chapel|turf-hut)$/],
   // THE CAVE IS SEVEN ROOMS, NOT FOUR (2026-09-15). This table's own note says
   // it is complete and nothing falls through, and that was true of the 212 rooms
   // the crossing had when it was written. Migration 279 cut the sea cave
@@ -8193,6 +8245,12 @@ export const DEN_RULES: [string, RegExp][] = [
   ["the-dens", /^/],
 ];
 export const TERRAIN_RULES: [string, RegExp][] = [
+  // THE HAMLET COPIED FROM THE DENS (rome, 2026-11-04) stands on its own three
+  // grounds, the old village's drawn again for this country, by name, ahead of
+  // everything.
+  ["shiel-fields", /^the-(drove-cut|fold-pound|terrace-strips|in-field|thorn-garth)$/],
+  ["shiel-common", /^the-(fleece-green|lost-toft|rowan-rows|hill-spring|hill-graves|scree-end|cold-hearths|thorn-nook)$/],
+  ["shiel-street", /^the-(spring-green|shiel-foot|shiel-street|forge-yard|shiel-backs|hill-cross|herds-yard|burnt-shiel|chapel-shelf|shiel-head|high-croft|hill-smithy|herds-house|high-house|hill-chapel|peat-hut)$/],
   // THE HIGH FEEDING (mig 340): bare rock with the green in its cracks, which is
   // what all three of them are. By name, ahead of everything, or "moss" would
   // stand them in an alder wood above the cloud and "ledge" among cairns on a
@@ -8276,6 +8334,8 @@ export const ART_ROOMS = new Set<string>([
   "the-smithy", "the-bare-chapel", "the-mill", "the-wheel-pit",
   "the-reeves-house", "the-reeves-loft", "the-north-house",
   "the-black-hut", "the-warreners-lodge", "the-lodge-loft",
+  // ...and the two hamlets copied from it (2026-11-04), in its pictures.
+  "the-sea-smithy", "the-hill-smithy", "the-saltmasters-house", "the-herds-house", "the-far-house", "the-high-house", "the-salt-chapel", "the-hill-chapel", "the-turf-hut", "the-peat-hut",
   // ---- THE WOOD'S ROOMS OF THEIR OWN (2026-09-29). The black door in its wall
   // of fused trees and the glade it opens on; the two bosses' rooms; the bounds
   // house, which is the only roof in the wood; and the wolf earth under its root
@@ -8560,6 +8620,7 @@ export const INDOOR_ROOMS = new Set<string>([
   "the-smithy", "the-reeves-house", "the-reeves-loft", "the-north-house", // the Field End
   "the-bare-chapel", "the-mill", "the-wheel-pit",
   "the-black-hut", "the-warreners-lodge", "the-lodge-loft",             // the Waste
+  "the-sea-smithy", "the-hill-smithy", "the-saltmasters-house", "the-herds-house", "the-far-house", "the-high-house", "the-salt-chapel", "the-hill-chapel", "the-turf-hut", "the-peat-hut", // the two hamlets copied from it (2026-11-04)
   // ---- THE EAST ROAD (mig 187): everything out there with something over it.
   // The folds are walls with no roof and stay outdoors, which is the difference
   // between a fold and a bothy and the reason only one of them is worth running to.
@@ -11815,7 +11876,7 @@ export const REGION_LABELS: Record<string, string> = {
   deep: "The Deep",
   road: "The Roads",
   wood: "The Wood",
-  den: "The Dens",
+  den: "Assart End", // the old village (rome, 2026-11-04: renamed from the Dens)
   mountain: "The Mountain",
   crossing: "The Crossing",
 };
@@ -12027,7 +12088,7 @@ export const ARC_BAND: Record<string, Region | null> = {
   carrier: "road", spate: "road",
   clouddown: "mountain", scree: "mountain", shadow: "mountain",
   sea: "crossing", lights: "crossing",
-  pack: "den", fever: "den",
+  pack: "den", fever: "den", "fever-strand": "crossing", "fever-hill": "mountain", "fever-fortress": "gate",
 };
 // Two each. He is a man leaning on a counter, not a lecturer: one line that says
 // what the thing is, one that says what it costs, and both in the voice of
@@ -12166,6 +12227,19 @@ export const ARC_TELLINGS: Record<string, string[]> = {
   fever: [
     "\"The wind has come round off the graves. It comes warm.\" The rag stops. \"That is the wrong thing for it to be.\"",
     "\"Sleep will not take in it, and a dressing does you no good. Nothing for it but to wait for the wind to come back round off the fen. It always does. The waiting is the cost.\"",
+  ],
+  // ...and the hamlets' own, told by the keepers on their ground (2026-11-04)
+  "fever-strand": [
+    "\"The wind has come round off the graves on the hard. It comes warm.\" The rag stops. \"That is the wrong thing for it to be.\"",
+    "\"Sleep will not take in it, and a dressing does you no good. Nothing for it but to wait for the wind to come back round. It always does. The waiting is the cost.\"",
+  ],
+  "fever-fortress": [
+    "\"There's a warm breath come up out of the old burials.\" The rag stops. \"That is the wrong thing for stone to do.\"",
+    "\"Sleep will not take in it, and a dressing does you no good. Nothing for it but to wait for it to go back down. It always does. The waiting is the cost.\"",
+  ],
+  "fever-hill": [
+    "\"The wind has come round off the graves up at the shiels. It comes warm.\" The rag stops. \"That is the wrong thing for it to be.\"",
+    "\"Sleep will not take in it, and a dressing does you no good. Nothing for it but to wait for the wind to come back round. It always does. The waiting is the cost.\"",
   ],
 };
 export const DOOR_TELLING_ODDS = 0.07; // about one visit in fourteen
