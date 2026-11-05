@@ -4063,6 +4063,15 @@ try {
     assert.equal(torch.length, 3, 'a torch under the blood moon lays its light over the red ground (room, gate, terrain)');
   });
 
+  check('a new picture takes its grade at once, not over the hour fade (2026-11-05)', () => {
+    // The blood moon's red faded on leaving the gatehouse and off going in: the
+    // plate's filter transition, meant for the hour turning in place, ran on
+    // every step into another picture.
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /var newPicture = scene !== scenePainted/, 'a step into another picture is known');
+    assert.match(pub, /if \(newPicture && sceneEl\.style\) \{\s*sceneEl\.style\.transition = "none";\s*sceneEl\.className = /, 'and its grade goes on with no fade');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

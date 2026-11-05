@@ -13988,7 +13988,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   var lampSrc = lampMap ? "/room-bg/" + lampM[1] + "-night-torch.webp?v=" + BG_V : "";
   var put = function () {
     if (mine !== sceneSeq || viewMode !== "image") return;
-    var fade = scene !== scenePainted ? fadeScene() : null;
+    var newPicture = scene !== scenePainted, fade = newPicture ? fadeScene() : null;
     sceneEl.style.backgroundImage = url;
     // CONTAIN, AND SET INLINE BECAUSE THE PAINT IS INLINE. The stylesheet says
     // contain; this line said cover on every repaint and an inline style wins,
@@ -14020,7 +14020,16 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     }
     // No overlay on a layered room — the sky is real. The only thing that
     // changes is how the ground is lit, and that is a filter that respects the cut.
-    sceneEl.className = singleLayer ? singleClass : tint ? "t-" + tint : "";
+    // A NEW PICTURE TAKES ITS GRADE AT ONCE (rome, 2026-11-05: the blood moon's
+    // red faded on as you left the gatehouse and off as you went in). The
+    // filter's slow fade is for the hour turning while you stand in one place;
+    // stepping into another picture is a cut, and its light comes with it.
+    if (newPicture && sceneEl.style) {
+      sceneEl.style.transition = "none";
+      sceneEl.className = singleLayer ? singleClass : tint ? "t-" + tint : "";
+      void sceneEl.offsetWidth;
+      sceneEl.style.transition = "";
+    } else sceneEl.className = singleLayer ? singleClass : tint ? "t-" + tint : "";
     // WHAT IS STANDING THERE IS STANDING IN THE SAME LIGHT — but it does not
     // take the same class, and sharing one was the bug. The scene's tint is a
     // CORRECTION: it is only set when the ground is borrowed, because a plate
