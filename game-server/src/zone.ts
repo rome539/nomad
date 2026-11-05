@@ -62,7 +62,7 @@ import {
 import * as invites from "./invites";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed } from "./zone-util";
+import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed, skyCovered } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -5633,7 +5633,7 @@ export class ZoneDO implements DurableObject {
     // above), and this one is a man's, and worse for it.
     if (this.lastNightPhase !== undefined && this.lastNightPhase !== nightNow && nightNow) {
       const watch = [...this.creatures.values()].find((c) => c.templateId === "last-watchman" && !c.target);
-      if (watch) this.roomFeedBands(FORTRESS_BANDS, pick(WATCH_CALLS), "evt", true, "watch");
+      if (watch) this.roomFeedBands(FORTRESS_BANDS, pick(WATCH_CALLS), "evt", true); // a voice, not the bugle (rome, 2026-11-05)
     }
     this.lastNightPhase = nightNow;
 
@@ -9295,8 +9295,10 @@ export class ZoneDO implements DurableObject {
     const seesOut = openSkyForArt || roofed;
     // grey while the ground is wet, unless its sky cleared off the rain (AFTER_RAIN_CLEARS);
     // rain next door is grey whatever, its cloud is overhead
+    // ...and the covered spells, which are the same grey sky without the rain
+    // (zone-util skyCovered: no sun, no moon, no stars; `look sky` says so too)
     const wet = (events.wxPhase(this, "rain", session.roomId) === "aftermath" && !events.afterRainCleared(this, session.roomId))
-      || !!events.rainNearby(this, session.roomId);
+      || !!events.rainNearby(this, session.roomId) || skyCovered();
     return (!OUTDOOR_ROOMS.has(session.roomId) && !seesOut) ? "in"
     : (seesOut ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId)) ? "snow"
     : (seesOut ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId)) ? "fog"

@@ -3066,8 +3066,10 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   if (v === "emote") {
     if (!cmd.arg.trim()) return z.send(session, "emote <what you do>: the room sees your name, then your words.");
     const line = emoteLine(session.name, cmd.arg, gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey).map((s) => s.name));
-    z.send(session, line, "say", { name: session.name, pk: session.pubkey });
-    return gatehouseFeed(z, line, session.pubkey, "say", { name: session.name, pk: session.pubkey });
+    // Plain narration, as dance and wave are by the fire (rome, 2026-11-05): it
+    // was sent as speech, which painted the name and the words like a said line.
+    z.send(session, line);
+    return gatehouseFeed(z, line, session.pubkey);
   }
   if (v === "carve" && cmd.arg.trim() && await carving.carveRock(z, session, cmd.arg)) return z.sendGateCtx(session);
   if (v === "enter") return z.send(session, "You're already inside.");

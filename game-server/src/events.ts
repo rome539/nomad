@@ -18,7 +18,7 @@ import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
 import * as feverrat from "./feverrat";
-import { cap, foodState, foodGone, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand, skyClear } from "./zone-util";
+import { cap, foodState, foodGone, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand, skyClear, skyCovered, isDawn, isDusk } from "./zone-util";
 import { setItemAcquiredAt, removeItemRow } from "./world";
 import {
   QUICKSAND_ROOMS, QUICKSAND_GRIP_ODDS, HOBBLE_FLEE_MS,
@@ -73,7 +73,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_END_ODDS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -385,7 +385,8 @@ function tickBugle(z: ZoneDO, now: number): void {
       && BUGLE_SALUTERS.has(c.templateId) && !c.target && !c.asleep && !c.hidden);
     const inKeep = keepRoom(z, roomId);
     if (!inKeep && !standing.length) continue;
-    z.roomFeed(roomId, inKeep ? call : BUGLE_FAR, undefined, false, "evt");
+    // ...and the bugle is heard, as well as read (rome, 2026-11-05): FAR.bugle
+    z.roomFeed(roomId, inKeep ? call : BUGLE_FAR, undefined, false, "evt", undefined, undefined, "bugle");
     if (!standing.length) continue;
     // Counted by what they are called, not their template (two wardens of two
     // kinds are still "two hollow wardens").
@@ -1167,11 +1168,25 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   const ecl = eclipsePhase();
   if (ecl !== "idle") {
     if (ecl === "active" && /sun/.test(arg ?? "")) return pick(ECLIPSE_SUN_LINES);
+    // each word its own answer in totality (rome, 2026-11-05); either side of it
+    // the stars and the moon are the day's, and the sky and clouds the dimming
+    if (/\bstars?\b/i.test(arg ?? "")) return ecl === "active" ? ECLIPSE_STARS : STARS_DAY;
+    if (/moon/i.test(arg ?? "")) return ecl === "active" ? ECLIPSE_MOON : MOON_DAY;
+    if (ecl === "active" && /^(the )?clouds?$/i.test((arg ?? "").trim())) return ECLIPSE_CLOUDS;
     if (ecl === "telegraph") return pick(ECLIPSE_TELL_LINES);
     if (ecl === "active") return z.world!.rooms.get(roomId)?.region === "mountain" ? pick(ECLIPSE_MOUNTAIN_LINES) : pick(ECLIPSE_TOTAL_LINES);
     return pick(ECLIPSE_AFTER_LINES);
   }
-  if (isNight() && isBloodMoon()) return pick(BLOOD_MOON_LINES);
+  // THE RED NIGHT answers what you looked at (rome, 2026-11-05: sky, clouds,
+  // stars and moon all gave the same moon line). The moon is the moon's line;
+  // the rest say what the picture shows under it. The sun falls through to its own.
+  if (isNight() && isBloodMoon()) {
+    const w = (arg ?? "").trim().toLowerCase().replace(/^the /, "");
+    if (/^(stars?)$/.test(w)) return BLOOD_MOON_STARS;
+    if (/^(clouds?)$/.test(w)) return BLOOD_MOON_CLOUDS;
+    if (/^(sky|weather|lid|overcast)?$/.test(w)) return BLOOD_MOON_SKY;
+    if (!/^sun$/.test(w)) return pick(BLOOD_MOON_LINES);
+  }
   // ASKING AFTER A BODY GETS THE BODY, ahead of the weather — every other probe
   // below is the sky doing something to YOU (rain, cloud, cold) while these are
   // questions about the hour and the month, which the weather does not stop.
@@ -1211,7 +1226,12 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     if (!isNight() && skyClear()) return SUN_CLEAR[band]!; // the lid is off: a real sun, for once
     return isNight() ? SUN_LOW_NIGHT[nightBand(band)]! : SUN_LOW[band]!;
   }
-  if (!highGround && /\bstars?\b/i.test(arg ?? "")) return isNight() ? (skyClear() ? STARS_CLEAR : STARS_NIGHT) : STARS_DAY;
+  if (/\bstars?\b/i.test(arg ?? "")) return isNight() ? (highGround ? STARS_HILL : skyClear() ? STARS_CLEAR : STARS_NIGHT) : STARS_DAY;
+  // WHAT IS ON THE GROUND IS NOT THE SKY (rome, 2026-11-05: look clouds in the wood
+  // answered with beechnuts). The scree, the mast, the crabs, the eels, the wrack,
+  // the ice and the fen answer `look weather` only; the sky and the clouds go on
+  // to what is actually overhead.
+  const groundAsk = /^(the )?weather$/i.test((arg ?? "").trim());
   // The mountain's two weather arcs, then its presence.
   if (z.world!.rooms.get(roomId)?.region === "mountain") {
     switch (phaseOf(z, "clouddown")) {
@@ -1220,7 +1240,7 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
       case "aftermath": return "The cloud lifts back up the hill, and the mountain comes back room by room.";
       default: break;
     }
-    switch (phaseOf(z, "scree")) {
+    if (groundAsk) switch (phaseOf(z, "scree")) {
       case "telegraph": return "Loose stone runs somewhere up the slope, and takes a while to stop.";
       case "active": return "The scree is coming down — fans of it, gullies of it — and the whole hill is on the move.";
       case "aftermath": return "The slope has settled, and fresh fans of stone lie where the old ground was.";
@@ -1245,7 +1265,7 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   }
   // The wood's mast year and the crossing's two gifts.
   if (z.world!.rooms.get(roomId)?.region === "wood") {
-    switch (phaseOf(z, "mast")) {
+    if (groundAsk) switch (phaseOf(z, "mast")) {
       case "telegraph": return "A pattering starts high in the wood, like small rain that never reaches the ground — the mast is coming in.";
       case "active": return "The wood's floor is full — beechnuts everywhere, and everything that eats them knows.";
       case "aftermath": return "The mast is picked over now — the floor goes back to being the floor.";
@@ -1253,15 +1273,15 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     }
   }
   const crabs = crabsOn(z, roomId);
-  if (crabs !== "idle") return CRAB_LINES[crabs];
-  if (z.world!.rooms.get(roomId)?.region === "crossing" && eelRunOn(z, roomId)) {
+  if (groundAsk && crabs !== "idle") return CRAB_LINES[crabs];
+  if (groundAsk && z.world!.rooms.get(roomId)?.region === "crossing" && eelRunOn(z, roomId)) {
     return eelRunFlooding(z, roomId)
       ? "The water is full of eels — silver, moving, all of them going the same way — and the flood is under them and pushing. This is the hour of it."
       : "The water is full of eels — silver, moving, all of them going the same way. The channels are alive with them.";
   }
-  if (wrackIn(z, roomId)) return "The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
-  if (frozen(z, roomId)) return pick(ICE_LINES).trimStart();
-  if (fenUp(z, roomId)) return FEN_UP_LINE.trimStart();
+  if (groundAsk && wrackIn(z, roomId)) return "The wrack is fresh on the strand — wind and water have brought it in, and the crabs are feeding on it.";
+  if (groundAsk && frozen(z, roomId)) return pick(ICE_LINES).trimStart();
+  if (groundAsk && fenUp(z, roomId)) return FEN_UP_LINE.trimStart();
   const nearRain = rainNearby(z, roomId);
   if (nearRain) return `Low grey cloud stands over ${groundName(nearRain)}, and the rain is coming down under it. Here the sky is only grey, and holding.`;
   switch (wxPhase(z, "rain", roomId)) {
@@ -1284,9 +1304,9 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     case "aftermath": return "The worst of the cold is lifting, and the sky no longer looks like it is waiting to bite.";
   }
   switch (wxPhase(z, "wind", roomId)) {
-    case "telegraph": return "The wind is getting up, and the grey lid is beginning to move — it is not as still as it pretends.";
+    case "telegraph": return "The wind is getting up, and the clouds are beginning to hurry across the sky.";
     case "active": return "The wind is up and it never lets off. The sky streams with it, grey and hurrying, and nothing you carry is quiet.";
-    case "aftermath": return "The wind drops, and the sky settles back into its usual grey stillness.";
+    case "aftermath": return "The wind drops, and the clouds go back to drifting slowly over.";
   }
   if (LIGHTS_ROOMS.has(roomId)) {
     switch (phaseOf(z, "lights")) {
@@ -1304,10 +1324,19 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   // moon. Last, so no arc ever loses its line to it — a wanderer asking after
   // the sky in the rain gets the rain, which is the sky's most urgent news. On
   // a quiet night the news is the month, and that is worth having.
-  if (isNight()) return MOON_SKY[isFullMoon() ? 0 : moonPhase()] ?? MOON_SKY[6];
-  // THE CLEAR DAY says so, rather than falling through to the lid the region's
-  // own line describes: the picture has no cloud in it today, so neither do the words.
+  // ...with the night's own sky in front of it (rome, 2026-11-05), so the words
+  // describe the clouds and the stars the picture is showing.
+  // A COVERED SPELL is the after-rain sky in the picture, and says so here: no
+  // sun, no moon, no stars (zone-util skyCovered), at whatever hour it is.
+  if (skyCovered() && /^(the )?(sky|cloud|clouds|weather|lid|overcast)?$/i.test((arg ?? "").trim()))
+    return SKY_COVERED[isNight() ? 3 : isDawn() ? 0 : isDusk() ? 2 : 1]!;
+  if (isNight()) return `${SKY_NIGHT} ${MOON_SKY[isFullMoon() ? 0 : moonPhase()] ?? MOON_SKY[6]}`;
+  // THE CLEAR DAY says so: the picture has no cloud in it today, so neither do the words.
   if (skyClear()) return SKY_CLEAR;
+  // AND ANY OTHER HOUR SAYS WHICH HOUR IT IS (rome, 2026-11-05: at dusk this fell
+  // through to a line about an ordinary grey day while the picture burned orange).
+  // An open sky only - a sky asked by name (sun, moon, stars) was answered above.
+  if (/^(the )?(sky|cloud|clouds|weather|lid|overcast)?$/i.test((arg ?? "").trim())) return SKY_HOURS[skyBand()]!;
   return null;
 }
 

@@ -1257,22 +1257,12 @@ export const PAGE = `<!doctype html>
     30%  { filter: brightness(1.25) saturate(.75) contrast(1.03); }
   }
   body.bolt[data-view="image"] #scene, body.bolt[data-view="image"] #sky, body.bolt[data-view="image"] #mobs { animation: var(--bolt-name, bolt-flash-2) var(--bolt-dur, .8s) ease-out; }
-  /* UNREACHABLE AS OF 2026-09-09 and kept on purpose: the blood moon is in
-     NO_GROUND_TINT now, so nothing ever sets t-blood on the scene. Left standing
-     because this is the rule you would switch back on, and a deleted one is a
-     rule nobody knows was ever considered. */
-  body[data-view="image"] #scene.t-blood::after {
-    background: #d67c6c;
-    mix-blend-mode: multiply;
-    /* NOTE, if this is ever made reachable again: it REPLACES the edge feather
-       the base rule sets, because mask-image does not compose across rules. A
-       revived blood tint would want both - the scene's own image to keep red
-       off the sky, and the horizontal fade to keep the plate's edge soft. */
-    -webkit-mask-image: var(--sceneimg); mask-image: var(--sceneimg);
-    -webkit-mask-size: cover; mask-size: cover;
-    -webkit-mask-position: center 55%; mask-position: center 55%;
-    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  }
+  /* THE BLOOD MOON GRADES THE PLATE THE WAY THE RAIN AFTER DARK DOES (rome,
+     2026-11-05): a filter on the night plate, under the light layers, so the
+     gate lanterns keep flickering (FX_UNDER_TINT) and stay the torch plate's
+     own, and a carried torch is the torch plate's light laid over the red
+     ground through its light map, as at dawn. */
+  body[data-view="image"] #scene.t-blood { filter: sepia(.8) hue-rotate(-32deg) saturate(2.2) brightness(.9) contrast(1.05); }
   body[data-view="image"] #bar,
   body[data-view="image"] #chips,
   body[data-view="image"] #inputline { position: relative; z-index: 1; }
@@ -4679,7 +4669,10 @@ var FAR = {
   // ...and a great thing's death is not a man's cry: low, huge, and long.
   fallcry: function (t, o) { VOX.voc(t, { f: [[0, 150], [0.6, 210], [2.2, 95]], d: 2.4, r: [14, 0.35], fm: [[450, 4], [800, 5]], n: 0.35, g: 1.5, a: 0.25 }, o); },
   howl: function (t, o) { VOICES.wolf(t, 0, o); VOICES.wolf(t + 1.3, 0, o); },
-  watch: function (t, o) { VOX.voc(t, { f: [[0, 185], [1.0, 178]], d: 1.1, fm: [[700, 4], [1200, 5]], n: 0.2, g: 1.2, a: 0.1 }, o);
+  // THE BUGLE (rome, 2026-11-05: this is the bugle). Reveille and taps off the
+  // keep (events.tickBugle). It was called "watch" and rode the last watchman's
+  // call of the hour, so it played at nightfall under a line about a voice.
+  bugle: function (t, o) { VOX.voc(t, { f: [[0, 185], [1.0, 178]], d: 1.1, fm: [[700, 4], [1200, 5]], n: 0.2, g: 1.2, a: 0.1 }, o);
     VOX.voc(t + 1.3, { f: [[0, 200], [0.8, 165]], d: 0.9, fm: [[650, 4], [1100, 5]], n: 0.2, g: 1.1, a: 0.1 }, o); },
   grind: function (t, o) { VOX.voc(t, { f: [[0, 42], [2.0, 38]], d: 2.0, r: [9, 0.9], fm: [[300, 3], [700, 4]], n: 0.7, g: 1.6, a: 0.2 }, o); VOX.blip(t + 1.9, 60, 30, 0.6, 0.8, o); },
   thud: function (t, o) { VOX.blip(t, 60, 30, 0.7, 1.0, o); SND._burst(t, { freq: 200, dur: 0.8, gain: 0.5 * SCAPE_VOL, atk: 0.02, out: o }); },
@@ -11808,7 +11801,7 @@ var TORCH_HOURS = { night: 1, moon: 1, blood: 1, eclipse: 1, dusk: 1, dawn: 1, "
 // doing the work — same argument that moved dusk and dawn.
 // The wet low hours and the wet night stand on the night plate, which is the
 // right ground for them as it is; the grey is all in the sky.
-var NO_GROUND_TINT = { dusk: 1, blood: 1, "wet-night": 1, "wet-dusk": 1 };
+var NO_GROUND_TINT = { dusk: 1, "wet-night": 1, "wet-dusk": 1 };
 // MORE THAN ONE SKY FOR AN HOUR. An hour listed here owns a POOL, and which one
 // is up is decided by the world-day count the server sends — so the sky changes
 // from one day to the next and never from one room to the next. A sky picked per
@@ -13738,6 +13731,12 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       dawnTorch = stem; dawnTorchSrc = scene; lit = false;
       scene = "/room-bg/" + stem + "-day.webp";
     }
+    // ...AND THE BLOOD MOON THE SAME WAY: the red night ground, the torch plate's
+    // own light laid on it through the light map.
+    if (lit && hour === "blood" && pbase === "night" && !shut && typeof fogMasks !== "undefined" && fogMasks && fogMasks[stem + "-snowlight"]) {
+      dawnTorch = stem; dawnTorchSrc = scene; lit = false;
+      scene = "/room-bg/" + stem + "-night.webp";
+    }
     tint = (lit || shut || NO_GROUND_TINT[hour] || pbase === hour) ? "" : hour;
     // A ROOF IS OVER THEM TOO — AND SO IS A HILL. SHELTERED names the rooms with
     // a slot in them; it does not name the ones with no opening at all, because
@@ -13807,6 +13806,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       dawnTorch = "gate-" + gate; dawnTorchSrc = scene; lit = false;
       scene = "/room-bg/gate-" + gate + "-day.webp";
     }
+    if (lit && hour === "blood" && base === "night" && typeof fogMasks !== "undefined" && fogMasks && fogMasks["gate-" + gate + "-snowlight"]) { // the blood moon with a torch, as above
+      dawnTorch = "gate-" + gate; dawnTorchSrc = scene; lit = false;
+      scene = "/room-bg/gate-" + gate + "-night.webp";
+    }
     line = MOB_LINE["gate-" + gate] || MOB_LINE_GATE;
     // A TORCH PLATE TAKES NO HOUR CORRECTION, EVER. The correction exists to
     // relight a ground that was shot under the wrong sky — and a torch plate's
@@ -13867,6 +13870,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       if (lit && tbase === "day") { // dawn with a torch, as above
         dawnTorch = terr; dawnTorchSrc = scene; lit = false;
         scene = "/room-bg/" + terr + "-day" + floodSuffix(terr, "day") + ".webp";
+      }
+      if (lit && hour === "blood" && tbase === "night" && !indoors && typeof fogMasks !== "undefined" && fogMasks && fogMasks[terr + "-snowlight"]) { // the blood moon with a torch, as above
+        dawnTorch = terr; dawnTorchSrc = scene; lit = false;
+        scene = "/room-bg/" + terr + "-night" + floodSuffix(terr, "night") + ".webp";
       }
       line = MOB_LINE[terr] || MOB_LINE_DEFAULT;
       tint = (lit || NO_GROUND_TINT[hour] || tbase === hour) ? "" : hour;
@@ -14167,7 +14174,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
 // the night and dawn fog). Rain and fog by day grade the day plate greyer, and
 // snow's plate is painted for snow, lanterns and all; the night, dawn and dusk
 // grades on it only darken it.
-var FX_UNDER_TINT = { moon: 1, eclipse: 1, dawn: 1, "wet-dawn": 1, "after-rain": 1, rain: 1, "rain-dark": 1, "rain-dawn": 1, "rain-dusk": 1, fog: 1, "snow-night": 1, "snow-dawn": 1, "snow-dusk": 1 };
+var FX_UNDER_TINT = { moon: 1, eclipse: 1, blood: 1, dawn: 1, "wet-dawn": 1, "after-rain": 1, rain: 1, "rain-dark": 1, "rain-dawn": 1, "rain-dusk": 1, fog: 1, "snow-night": 1, "snow-dawn": 1, "snow-dusk": 1 };
 var fxCanvas = document.getElementById("scene-fx");
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");

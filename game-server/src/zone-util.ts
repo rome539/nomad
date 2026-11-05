@@ -175,6 +175,14 @@ export function skyDayHash(d: number): number {
 export function skyClear(now = Date.now()): boolean {
   return skyDayHash(worldDay(now)) % SKY_CLEAR_EVERY === 0;
 }
+// IS THE CLOUD COVERING THE SKY RIGHT NOW (rome, 2026-11-05: some days and nights
+// are cloudy, no sun, no moon, no stars, and the picture has to show it). The
+// lid's shut spells, less the full moon, which lights the ground and so shows
+// through (events.skyVeil). The picture draws these as the after-rain sky and
+// `look sky` says so, off this one rule.
+export function skyCovered(now = Date.now()): boolean {
+  return !lidOpen(now) && !(isNight(now) && isFullMoon(now));
+}
 // The raw window, before the streak ceiling. A cheap avalanche so consecutive
 // windows do not run in a visible pattern — the sky must not be a stripe you can
 // read off the hour.

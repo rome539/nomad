@@ -3702,7 +3702,7 @@ export const ECLIPSE_AFTER_MS = 10 * 60_000;     // the light returns
 export const BLOOD_MOON_EVERY = 5;
 export const MURMUR_BLOOD_ODDS = 0.06;          // the dead's night: the murmur, twelve times as often
 export const ECLIPSE_TELL_LINES = [
-  "The light thins. Not cloud — the grey lid itself is going darker, the way a lamp goes when something stands between it and the flame.",
+  "The light thins. Not cloud — the sky itself is going darker, the way a lamp goes when something stands between it and the flame.",
   "The day dims, slowly, and everything outside goes the colour of an old bruise. Nothing in the sky has changed, and that is what is wrong.",
 ];
 // THE WORDS SAY WHAT THE PICTURE SHOWS (rome, 2026-11-04): totality draws the
@@ -3714,7 +3714,7 @@ export const ECLIPSE_TOTAL_LINES = [
   "The day has gone out. The sky is night-blue at noon, pricked with stars, and where the sun was there is a black disc with its light burning round the rim. It is not night — night is honest about what it is. This is the light being taken away.",
 ];
 export const ECLIPSE_AFTER_LINES = [
-  "The light comes back slowly, the way a lamp comes back when whatever stood before it moves on, and the country returns to its usual grey.",
+  "The light comes back slowly, the way a lamp comes back when whatever stood before it moves on, and the country comes back to its usual light.",
   "The day returns by degrees, and the birds start up again as if they had never stopped — which they had, and they know it.",
 ];
 export const ECLIPSE_MOUNTAIN_LINES = [
@@ -3722,9 +3722,18 @@ export const ECLIPSE_MOUNTAIN_LINES = [
   "The shadow is not the drake's shadow. It is the sun's own — a black circle closing over the light, and the whole hill holding its breath under it.",
 ];
 export const ECLIPSE_SUN_LINES = [
-  "The sun has gone black. A dark disc sits square over it, and all that is left of it is a ring of light burning round the edge. You are looking straight at the one thing the lid never let you see.",
+  "The sun has gone black. A dark disc sits square over it, and all that is left of it is a ring of light burning round the edge. You are looking straight at the one thing nobody ever gets to look at.",
   "The sun is a black disc with a ring of fire round it, hanging in a sky gone dark enough for stars. The day has been cancelled, and nobody consulted you.",
 ];
+// ...AND EACH LOOK UP GETS ITS OWN ANSWER (rome, 2026-11-05: every word gave
+// the same eclipse line). In totality the picture is the night's sky at noon:
+// stars out, the black disc with its ring, the clouds dark.
+export const ECLIPSE_STARS = "Stars, in the middle of the day. The sun has gone out and they have come through it, pale and few, as if it were night.";
+export const ECLIPSE_MOON = "The moon is the black disc sitting over the sun, with the sun's light burning round its rim.";
+export const ECLIPSE_CLOUDS = "The clouds hang dark across a sky gone night-blue at noon, and the ring of light round the black sun shows faintly through the thin places in them.";
+// The mountain's stars, said in the sky's own answer now as well as on a close
+// look, so the hill at night is not handed the low country's sky.
+export const STARS_HILL = "Stars, and a great many more of them than the low country ever gets. Up here the cloud is under you as often as it is over you, and on the nights it is under you the whole sky is out.";
 export const ECLIPSE_AMBIENT = [
   "Somewhere a bird settles in the wrong hour, and goes quiet.",
   "The dark at noon has a different smell to it — colder, and patient.",
@@ -3734,6 +3743,11 @@ export const BLOOD_MOON_LINES = [
   "The moon is up, and it is the colour of old blood, and the grounds are lit in it — the only light this country gets, and it is not a light anything should walk by.",
   "The moon has risen red, and the dark has not come, and the ground lies out under a light the colour of a wound. The dead are awake in it. The living should not be.",
 ];
+// ...and the rest of the red night's sky, as the picture draws it: the red moon,
+// the clouds lit red from beneath it, a few faint red stars (rome, 2026-11-05).
+export const BLOOD_MOON_SKY = "Night, and the sky has gone red. A red moon hangs in it, and the clouds drifting under it are lit from beneath the colour of old blood, and the ground lies out under the same light.";
+export const BLOOD_MOON_CLOUDS = "The clouds go over slow and low, and the red moon lights every one of them from underneath, the colour of old blood.";
+export const BLOOD_MOON_STARS = "A few stars, faint and tinged red. The moon has drowned the rest of them in its light.";
 export const BLOOD_MOON_AMBIENT = [
   "In the red light, every shadow lies the wrong way.",
   "The moon hangs there like a wound that will not close, and the night waits under it.",
@@ -3900,7 +3914,7 @@ export const RIDDLES: { q: string; a: string[] }[] = [
   { q: "The mountain keeps me after the cold has gone. What am I?", a: ["snow"] },
   { q: "I rise red once in thirteen moons. What am I?", a: ["moon", "blood moon", "the moon"] },
   { q: "I fall and I am not rain, and the wood's floor fills with me. What am I?", a: ["mast", "beechmast", "beech mast"] },
-  { q: "I am above the whole world and I have never broken. What am I?", a: ["lid", "the lid"] },
+  { q: "I am above the whole world and I have never broken. What am I?", a: ["lid", "the lid", "sky", "the sky"] },
 ];
 export const RIDDLE_ASK = "The black door speaks, from somewhere in the iron: \"{q}\" (answer it with 'say')";
 export const RIDDLE_OPEN_LINE = "The door is still a moment. \"So you have walked the world,\" it says, \"and the world has kept you.\" The iron grinds open.";
@@ -8788,17 +8802,39 @@ export const MOON_DAY = "You look for the moon and get the day instead. Whatever
 // out, and that is the same information arriving secondhand. Which is the whole
 // texture of this country — you get the hour, you just do not get to see it.
 export const SUN_LOW = [
-  "The lid is coming up out of the dark — grey rather than black now, evenly, with no edge anywhere in it to say where. The day is starting, in the only way it ever does here.",
-  "The grey overhead is filling out and still climbing. There is a good stretch of the light left.",
-  "The lid is as bright as it gets, which is not very. This is the top of the day, and you would not know it to look at it if you had not been here a while.",
-  "The grey is going out of the lid — not from any one side, just leaving, the way colour leaves cloth. Whatever you meant to do in the light, do it now.",
-  "The last of the grey is going. Another few minutes of this and it is night, and there was never a sunset to watch it happen.",
+  "The sun is not up yet, or not where you can see it. Low along the edge of the sky there is a band of gold, and the undersides of the clouds have caught it and gone gold and pink, with the blue still dark above them.",
+  "The sun is up somewhere behind the clouds, and the sky round them has gone a clear, deep blue. There is a good stretch of the light left.",
+  "The sun is high and hidden in the cloud, but the light is everywhere: a blue sky with white cloud drifting slowly across it. This is the top of the day.",
+  "The sun is on its way down behind the clouds. The sky overhead is still blue, but the light has started to slant, and the shadows are getting long.",
+  "The sun is going down out of sight, and it has set the low sky burning orange. The clouds are lit from underneath, dark on top, and the blue above them is going to night.",
 ];
 export const SUN_LOW_NIGHT = [
-  "The sun is down, if it was ever up — it went behind the lid without once showing itself, and the grey went out of the cloud rather than off any horizon.",
-  "Down, and a long way down. Nothing is thinning anywhere and nothing is going to for a while yet.",
-  "The black overhead has gone the colour of wet slate. It is not light, and it is on its way to being.",
+  "The sun is down. The last of the colour has gone out of the low sky, and the clouds have gone from orange to grey to dark.",
+  "Down, and a long way down. The sky is dark blue to black, the clouds only darker shapes against it, and nothing is going to change that for a while yet.",
+  "The black overhead has gone the colour of wet slate along the bottom edge. It is not light yet, but it is getting there.",
 ];
+// WHAT THE SKY LOOKS LIKE, hour by hour (rome, 2026-11-05: `look sky` at dusk
+// said it was an ordinary grey day while the picture burned orange). These are
+// the page's own skies in words, one per band of the day (skyBand) and one for
+// the night (the moon's line follows it): the day is blue with white cloud
+// drifting across it and no sun to be seen, dawn and dusk light the clouds from
+// underneath, and the night is dark blue with stars between the clouds.
+export const SKY_HOURS = [
+  "Dawn. The sky is a deep blue going pale toward the bottom, where a band of gold lies along the edge of the world, and every cloud has caught it underneath, gold and pink against the blue.",
+  "Morning. A blue sky with white clouds drifting slowly across it, all one way, and now and then a bird crossing.",
+  "The middle of the day. A wide blue sky with white clouds drifting across it, piled up and slow, and the sun lost somewhere behind them.",
+  "Afternoon. The sky is still blue and the white clouds are still drifting across it, but the light has started to slant.",
+  "Dusk. The low sky is burning orange and gold along the edge of the world, the clouds lit from underneath and dark on top, and above them the blue is going to night.",
+];
+// ...AND THE COVERED SPELLS (zone-util skyCovered), drawn as the after-rain sky:
+// dawn, day, dusk, night.
+export const SKY_COVERED = [
+  "Dawn, under heavy grey cloud. The light comes up grey through it, with no gold in it and no sun.",
+  "Heavy grey cloud over the whole of the sky, low and dark-bellied, with only a little pale light showing through the gaps. No sun anywhere in it.",
+  "Dusk, under heavy grey cloud. The light goes from grey to dark behind it, and there is no sunset to be seen.",
+  "Night, and heavy cloud has the whole of the sky. Not one star shows through it, and no moon.",
+];
+export const SKY_NIGHT = "Night. The sky is dark blue going to black, full of stars, and grey cloud drifts slowly across them, covering some and letting others out.";
 // AND ON THE HILL IT IS A REAL SUN, which is the mountain's whole conceit and
 // the thing its own line already said better than anything else in the file:
 // "the sun is real on this hill in a way it is not in the country below." That
@@ -8828,8 +8864,8 @@ export const MOON_ARC = [
   " It has come over and started down.",
   " It is low in the west, and going.",
 ];
-export const STARS_NIGHT = "Stars, in the gaps — not many and not often, and the lid closes over them again while you are still looking. On the nights it opens properly there are more of them than anyone down here has any use for.";
-export const STARS_DAY = "Nothing to see. Whatever is up there is on the far side of the day and the lid both.";
+export const STARS_NIGHT = "Stars, scattered across the dark between the clouds. The clouds drift over them and let them out again while you watch, and there are more of them than anyone down here has any use for.";
+export const STARS_DAY = "Nothing to see. It is broad day, and whatever is up there is on the far side of all that blue.";
 // AND WHAT IS BETWEEN YOU AND ALL THREE (rome, 2026-08-31, asking the right
 // question: does the weather block them?). It did not, and that was wrong.
 //
@@ -8860,13 +8896,13 @@ export const LID_MAX_SHUT = 5; // ~3h45m — a ceiling on the run, so no streak 
 // the same day count (public.ts skyCloudsTonight), so the words and
 // the sky agree: the lid is off for the whole of it, day and night.
 export const SKY_CLEAR_EVERY = 7;
-export const SKY_CLEAR = "The lid is off. The sky is clear from one edge of the world to the other — not a cloud in it anywhere, only the colour, and it looks further away than a sky has any right to.";
-export const STARS_CLEAR = "Stars, and no lid over them tonight — the whole of the sky full of them, more than anyone down here has any use for, and none of them going anywhere.";
+export const SKY_CLEAR = "The sky is clear today from one edge of the world to the other, without a single cloud in it, only the colour, and it looks further away than a sky has any right to.";
+export const STARS_CLEAR = "A clear night, without one cloud in it anywhere, and the whole sky full of stars, more than anyone down here has any use for.";
 // The low country's sun on a clear day, by the five bands of the day (SUN_LOW's).
 export const SUN_CLEAR = [
-  "The lid is off today, and the sun is coming up through the clear of it, low and red along the edge of the world. For once the day has a place it started from.",
+  "There is no cloud today, and the sun is coming up into a clear sky, low and red along the edge of the world. For once the day has a place it started from.",
   "The sun is up and climbing a clear sky, and everything on the ground has a shadow under it. They look wrong here.",
-  "The sun stands high in a sky with nothing in it. There is no lid today, and the light comes straight down and sits on you.",
+  "The sun stands high in a sky with nothing in it. There is no cloud today, and the light comes straight down and sits on you.",
   "The sun is on its way down the clear sky, and the shadows are getting long and leaning all one way.",
   "The sun is going down the edge of a clear sky, red, and you can watch it go.",
 ];
@@ -8896,7 +8932,7 @@ export const SKY_VEILED: Record<string, string> = {
   // THE CLOUD THE RAIN LEFT, and the cloud over the rain next door: grey from
   // edge to edge, the same sky the picture shows.
   grey: "Nothing of it. The cloud the rain brought is still lying over everything, low and grey from edge to edge, and nothing shows through.",
-  lid: "The lid is closed over the whole of it, the way it usually is. Somewhere behind that, something is doing what it does, and you will have to take it on trust tonight.",
+  lid: "The cloud is across the whole of it. Somewhere behind that, something is doing what it does, and you will have to take it on trust for now.",
 };
 // Predators hunt harder after dark: a straight multiplier on the two
 // wind-up odds (STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS), same shape as the
@@ -12237,7 +12273,7 @@ export const ARC_TELLINGS: Record<string, string[]> = {
   // ---- the crossing ----
   sea: [
     "\"The water has turned. Four times in a day, and it can be counted, and the men who count it walk over dry.\"",
-    "\"On a spring it comes further than you think, and takes the sill of more than one door with it. On a neap it barely bothers.\" A pause. \"The difference is the moon, whether the lid lets you see it or not.\"",
+    "\"On a spring it comes further than you think, and takes the sill of more than one door with it. On a neap it barely bothers.\" A pause. \"The difference is the moon, whether the cloud lets you see it or not.\"",
   ],
   lights: [
     "\"There are lights out on the fen tonight. Steady ones. Carried ones.\" Nothing else comes for a moment.",

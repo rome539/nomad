@@ -1109,8 +1109,9 @@ try {
     assert.match(gate, /q: HAMLET_CAPTIONS\[id\] \?\? MAP_QUARTERS\[id\],/, 'and so does the wall chart');
     assert.match(gate, /hamlet: HAMLET_ROOMS\.has\(id\) \? 1 : 0,/, 'which draws them green too');
     assert.match(pub, /if \(nr === ba\.region && !nd\.q\) \{ bareX \+= pl\.x; bareY \+= pl\.y; bare\+\+; \}/, 'a region\'s name sits over its rooms with no quarter');
+    const quarters = detail.slice(detail.indexOf('export const WOOD_QUARTERS'), detail.indexOf('const COVER_QUARTERS'));
     for (const id of ['the-salt-cross', 'the-hill-cross', 'the-hard-lane', 'the-drove-cut'])
-      assert.ok(!detail.includes(`"${id}"`), `${id} is kept out of the quarters that run the game`);
+      assert.ok(!quarters.includes(`"${id}"`), `${id} is kept out of the quarters that run the game`);
   });
   check('the two hamlets are drawn green on the map, as Assart End is (2026-11-04)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
@@ -3299,6 +3300,40 @@ try {
     assert.deepEqual(missing, [], 'each one answers a close look');
   });
 
+  check('every room of the crossing, the mountain and their hamlets answers a close look (2026-11-05)', () => {
+    const detail = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    const feats = detail.slice(detail.indexOf('export const ROOM_FEATURES'), detail.indexOf('export const SIGNPOSTS'));
+    const posts = detail.slice(detail.indexOf('export const SIGNPOSTS'), detail.indexOf('const SIGN_WORDS'));
+    const files = [1, 2, 3, 4, 5, 6].flatMap((n) => [`crossing-${n}`, `mountain-${n}`]).concat(['the-salt-hamlet', 'the-shieling-hamlet']);
+    const ids = files.flatMap((f) => readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8')
+      .split('\n').filter((l) => /^## [a-z0-9-]+ \| /.test(l) && !/\| attachment/.test(l)).map((l) => l.slice(3).split(' | ')[0]));
+    assert.equal(ids.length, 667, 'the crossing\'s and the mountain\'s rooms in their region files');
+    const missing = ids.filter((id) => !feats.includes(`  "${id}": {`) && !posts.includes(`  "${id}": {`));
+    assert.deepEqual(missing, [], 'each one answers a close look (a fingerpost room answers through its post)');
+  });
+
+  check('every room of the roads answers a close look (2026-11-05)', () => {
+    const detail = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    const feats = detail.slice(detail.indexOf('export const ROOM_FEATURES'), detail.indexOf('export const SIGNPOSTS'));
+    const posts = detail.slice(detail.indexOf('export const SIGNPOSTS'), detail.indexOf('const SIGN_WORDS'));
+    const files = ['east-road-1', 'east-road-2', 'east-road-3', 'west-road', 'west-road-2', 'west-road-3', 'the-fen-road', 'the-drove-lane', 'the-scarp-foot-track'];
+    const ids = files.flatMap((f) => readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8')
+      .split('\n').filter((l) => /^## [a-z0-9-]+ \| /.test(l) && !/\| attachment/.test(l)).map((l) => l.slice(3).split(' | ')[0]));
+    assert.equal(ids.length, 222, 'the roads\' rooms in their region files');
+    const missing = ids.filter((id) => !feats.includes(`  "${id}": {`) && !posts.includes(`  "${id}": {`));
+    assert.deepEqual(missing, [], 'each one answers a close look');
+  });
+
+  check('every fever graves sits over the same older stone, and says so on a close look (2026-11-05)', () => {
+    const rises = Object.entries(FEVER_GRAVES).flatMap(([g, f]) => f.rises ?? [g]);
+    assert.equal(rises.length, 6, 'the three village graves and the fortress\'s three');
+    for (const id of rises) {
+      const all = Object.values(ROOM_FEATURES[id] ?? {}).join(' ');
+      assert.match(all, /dressed and laid tight/, `${id}: the older stone under the graves`);
+      assert.match(all, /cold air coming up through the joints|cold comes through its joints/, `${id}: and the cold coming up through it`);
+    }
+  });
+
   check('the pack is retired from the roll, and the fever stays (2026-11-01)', () => {
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     const pool = ev.match(/const POOL: \[string, number, string\]\[\] = \[[\s\S]*?\n\];/)[0];
@@ -3836,7 +3871,9 @@ try {
     const vsrc = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.match(vsrc, /if \(events\.foggy\(z, session\.roomId\)\) return z\.send\(session, "The fog is too thick here for anyone to see it\."\);/, 'nor in the fog');
     const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
-    assert.match(gsrc, /const line = emoteLine\(session\.name, cmd\.arg, gatehouseFolk\(z\)[^\n]*\n    z\.send\(session, line, "say", \{ name: session\.name, pk: session\.pubkey \}\);\n    return gatehouseFeed\(z, line, session\.pubkey, "say"/, 'by the fire too');
+    // by the fire too, and plain there as dance is, not painted as speech (rome, 2026-11-05)
+    assert.match(gsrc, /\n    z\.send\(session, line\);\n    return gatehouseFeed\(z, line, session\.pubkey\);\n  \}/, 'by the fire too, as plain narration');
+    assert.doesNotMatch(gsrc.slice(gsrc.indexOf('if (v === "emote")'), gsrc.indexOf('if (v === "carve"')), /"say"/, 'never sent as speech');
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub.match(/var SPEECH_VERBS = [^\n]*/)[0], /emote: 1/, 'the page does not echo it twice');
     assert.match(pub, /  alias: 1, unalias: 1,\n\};/, 'alias echoes as a command by the fire');
@@ -3869,6 +3906,78 @@ try {
     const disp = zsrc.slice(zsrc.indexOf('public async dispatch('), zsrc.indexOf('\n  }\n', zsrc.indexOf('public async dispatch(')));
     const orphans = [...new Set(Object.values(VERB_ALIASES))].filter((v) => !disp.includes(`case "${v}"`));
     assert.deepEqual(orphans, [], 'every verb has a handler');
+  });
+
+  check('look sky says the hour the picture is showing, and nobody calls the sky a lid (2026-11-05)', () => {
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    // a quiet day asked about its sky gets its band; a night gets the night's sky in front of the moon
+    assert.match(ev, /return SKY_HOURS\[skyBand\(\)\]!;/, 'the day answers by its band');
+    assert.match(ev, /if \(isNight\(\)\) return `\$\{SKY_NIGHT\} /, 'the night describes its sky before the moon');
+    const hours = zd.match(/export const SKY_HOURS = \[([\s\S]*?)\n\];/)[1].split('\n').filter((l) => l.trim().startsWith('"'));
+    assert.equal(hours.length, 5, 'dawn, morning, midday, afternoon, dusk');
+    assert.match(hours[0], /^\s*"Dawn\./); assert.match(hours[0], /gold/);
+    assert.match(hours[4], /^\s*"Dusk\./); assert.match(hours[4], /orange/);
+    for (const h of hours.slice(1, 4)) { assert.match(h, /blue/, 'the day sky is blue, as painted'); assert.match(h, /white clouds/, 'with white cloud drifting over it'); }
+    // the old conceit is out of everything a player reads about the sky
+    for (const name of ['SUN_LOW', 'SUN_LOW_NIGHT', 'SKY_HOURS']) {
+      const block = zd.match(new RegExp('export const ' + name + ' = \\[([\\s\\S]*?)\\n\\];'))[1];
+      assert.doesNotMatch(block, /\blid\b/, name + ' has no lid in it');
+    }
+    for (const name of ['STARS_NIGHT', 'STARS_DAY', 'SKY_CLEAR', 'STARS_CLEAR', 'SKY_NIGHT'])
+      assert.doesNotMatch(zd.match(new RegExp('export const ' + name + ' = "[^\\n]*'))[0], /\blid\b/, name + ' has no lid in it');
+  });
+
+  check('a covered spell is the grey sky in the picture and in the words, never a starry one (2026-11-05)', () => {
+    const z = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const zu = readFileSync(new URL('../src/zone-util.ts', import.meta.url), 'utf8');
+    // one rule for both: the lid shut, less the full moon that shows through
+    assert.match(zu, /export function skyCovered\(now = Date\.now\(\)\): boolean \{\n  return !lidOpen\(now\) && !\(isNight\(now\) && isFullMoon\(now\)\);/);
+    // the picture: a covered spell is drawn as the after-rain sky at its hour
+    assert.match(z, /\|\| !!events\.rainNearby\(this, session\.roomId\) \|\| skyCovered\(\);/, 'the page is sent the grey sky');
+    // the words: look sky says the cloud has it, ahead of the stars and the moon
+    const i = ev.indexOf('if (skyCovered() &&'), j = ev.indexOf('if (isNight()) return `${SKY_NIGHT}');
+    assert.ok(i > 0 && i < j, 'the covered line answers before the starry night');
+    assert.match(ev.slice(i, j), /SKY_COVERED\[isNight\(\) \? 3 : isDawn\(\) \? 0 : isDusk\(\) \? 2 : 1\]/);
+  });
+
+  check('reveille and taps are heard as well as read, and the watchman calls the hour without the bugle (2026-11-05)', () => {
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const z = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const bugle = ev.slice(ev.indexOf('function tickBugle('), ev.indexOf('\n}\n', ev.indexOf('function tickBugle(')));
+    assert.match(bugle, /z\.roomFeed\(roomId, inKeep \? call : BUGLE_FAR, undefined, false, "evt", undefined, undefined, "bugle"\);/, 'the call carries the bugle sound');
+    const far = pub.slice(pub.indexOf('var FAR = {'), pub.indexOf('\n};', pub.indexOf('var FAR = {')));
+    assert.match(far, /\n  bugle: function \(t, o\) \{ VOX\.voc\(t, \{ f: \[\[0, 185\], \[1\.0, 178\]\]/, 'the client has the bugle, the same two notes');
+    assert.doesNotMatch(far, /\n  watch: function/, 'and no sound left under the old name');
+    assert.doesNotMatch(z, /pick\(WATCH_CALLS\), "evt", true, "/, 'the watchman calls the hour in his own voice, not the bugle');
+  });
+
+  check('on a red night each look gets its own answer: sky, clouds, stars and moon are not one line (2026-11-05)', () => {
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const i = ev.indexOf('if (isNight() && isBloodMoon()) {'), red = ev.slice(i, ev.indexOf('\n  }\n', i));
+    assert.ok(i > 0, 'the red night reads the word it was asked');
+    assert.match(red, /return BLOOD_MOON_STARS;/); assert.match(red, /return BLOOD_MOON_CLOUDS;/); assert.match(red, /return BLOOD_MOON_SKY;/);
+    assert.match(red, /if \(!\/\^sun\$\/\.test\(w\)\) return pick\(BLOOD_MOON_LINES\);/, 'the moon keeps its line, the sun its own');
+    assert.doesNotMatch(ev, /if \(isNight\(\) && isBloodMoon\(\)\) return pick\(BLOOD_MOON_LINES\);/, 'no single answer for everything');
+  });
+
+  check('every event answers each look at the sky on its own terms: the eclipse, the hill\'s stars, and nothing on the ground posing as the sky (2026-11-05)', () => {
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const look = ev.slice(ev.indexOf('export function skyLook('), ev.indexOf('// Ambience while the sky is doing something'));
+    // the eclipse: stars, moon and clouds each their own in totality
+    assert.match(look, /return ecl === "active" \? ECLIPSE_STARS : STARS_DAY;/);
+    assert.match(look, /return ecl === "active" \? ECLIPSE_MOON : MOON_DAY;/);
+    assert.match(look, /return ECLIPSE_CLOUDS;/);
+    // the mountain's stars are the mountain's
+    assert.match(look, /highGround \? STARS_HILL :/);
+    // the ground's events answer look weather, never look sky or look clouds
+    for (const g of ['switch (phaseOf(z, "scree"))', 'switch (phaseOf(z, "mast"))', 'crabs !== "idle"', 'eelRunOn(z, roomId)', 'wrackIn(z, roomId)', 'frozen(z, roomId)', 'fenUp(z, roomId)']) {
+      const at = look.indexOf(g);
+      assert.ok(at > 0, g);
+      assert.match(look.slice(Math.max(0, at - 70), at), /groundAsk/, g + ' answers only look weather');
+    }
   });
 
   check('the clear day is the same day in the words and the picture (2026-11-04)', () => {
@@ -3937,6 +4046,21 @@ try {
     // The full moon crosses the night (MOON_ARC is added after it), so the phase
     // line cannot also say where it stands.
     for (const arc of MOON_ARC) assert.ok(!/\b(high|low|holding still)\b/i.test(MOON_SKY[0]), 'full moon placed twice: ' + MOON_SKY[0] + arc);
+  });
+
+  check('the blood moon grades the plate and keeps the lanterns and the torch (2026-11-05)', () => {
+    // The red is a grade on the night plate, as the rain after dark is; the
+    // lantern flicker is the effects layer, which stops under any tint it does
+    // not list; and a torch is the torch plate's light laid over the red ground
+    // through its light map, as at dawn, so the red stays with a torch lit.
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const ngt = pub.match(/var NO_GROUND_TINT = \{([^}]*)\}/)[1];
+    assert.ok(!/blood/.test(ngt), 'the blood moon is kept off the ground');
+    assert.match(pub, /#scene\.t-blood \{ filter:[^}]*hue-rotate\(-/, 'the plate has a red grade');
+    assert.ok(!/#scene\.t-blood::after/.test(pub), 'no wash over the plate');
+    assert.match(pub.match(/var FX_UNDER_TINT = \{([^}]*)\}/)[1], /\bblood: 1/, 'the lanterns keep flickering under the red');
+    const torch = pub.match(/if \(lit && hour === "blood" && \w+ === "night"[^\n]*\n\s*dawnTorch = /g) || [];
+    assert.equal(torch.length, 3, 'a torch under the blood moon lays its light over the red ground (room, gate, terrain)');
   });
 
   console.log(`\n${passed} regression checks pass`);

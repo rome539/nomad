@@ -43,7 +43,7 @@ function skyFor(id, { night = false, raining = false, inside = false } = {}) {
       wxPhase: () => "", afterRainCleared: () => true, rainNearby: () => false,
     },
     isNight: () => night, isBloodMoon: () => false, isFullMoon: () => false,
-    eclipsePhase: () => "idle", isDusk: () => false, isDawn: () => false,
+    eclipsePhase: () => "idle", isDusk: () => false, isDawn: () => false, skyCovered: () => false,
     session: { pubkey: "k", roomId: id },
     self: {
       outOfWorld: () => inside,
@@ -53,10 +53,10 @@ function skyFor(id, { night = false, raining = false, inside = false } = {}) {
     },
   };
   const fn = new Function("seesArt", "OUTDOOR_ROOMS", "OUTDOOR_REGIONS", "ROOF_SHOWS_OUTSIDE", "events",
-    "isNight", "isBloodMoon", "isFullMoon", "eclipsePhase", "isDusk", "isDawn", "session", "self",
+    "isNight", "isBloodMoon", "isFullMoon", "eclipsePhase", "isDusk", "isDawn", "skyCovered", "session", "self",
     body.replace(/\bthis\b/g, "self").replace(/!\./g, ".")   /* the TS non-null assertion is not JS */);
   return fn(ctx.seesArt, ctx.OUTDOOR_ROOMS, ctx.OUTDOOR_REGIONS, new Set(["the-marshals-lodging"]), ctx.events, ctx.isNight,
-    ctx.isBloodMoon, ctx.isFullMoon, ctx.eclipsePhase, ctx.isDusk, ctx.isDawn, ctx.session, ctx.self);
+    ctx.isBloodMoon, ctx.isFullMoon, ctx.eclipsePhase, ctx.isDusk, ctx.isDawn, ctx.skyCovered, ctx.session, ctx.self);
 }
 
 // THE BUG, STATED AS A TEST.

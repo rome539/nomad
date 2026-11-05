@@ -64,7 +64,7 @@ export const COMMON_FEATURES: FeatureTable = {
   // The sun, moon and stars are NOT here: skyLook always has an answer for those
   // three, quiet sky or not, because they are the hour and the hour never stops.
   "sky|clouds|cloud|weather|lid|overcast":
-    "Overcast, and the same overcast it always is — a flat grey lid, unbroken from one horizon to the other, doing nothing today that it does not do every day.",
+    "A wide sky with cloud drifting slowly across it, all one way, the same as it always is out here.",
   // THE SUN, THE MOON AND THE STARS ARE NOT ANSWERED HERE ANY MORE (rome,
   // 2026-08-31). This line predates the world having astronomy, and by the time
   // it was read at the Crossing House every clause of it was false: the moon
@@ -220,11 +220,11 @@ export const REGION_FEATURES: Record<string, FeatureTable> = {
     "shadow":
       "The shadow is not yours and it is not any bird's. It crosses the slope ahead of you and there is nothing overhead to have cast it. It does not fall on you. It is not for you.",
     "stars|star":
-      "Stars, and a great many more of them than the low country ever gets — up here the lid is under you as often as it is over you, and on the nights it is under you the whole sky is out.",
+      "Stars, and a great many more of them than the low country ever gets — up here the cloud is under you as often as it is over you, and on the nights it is under you the whole sky is out.",
     "sun":
       "The sun is real on this hill in a way it is not in the country below. It cuts the mountain in two: one side it lies on all day and one side it never does, and every living thing on this hill that can choose has chosen the side it keeps.",
     "sky|cloud|clouds":
-      "The sky up here is not the flat lid the low country keeps — it moves and it breaks, and the cloud line climbs and falls across the slope as the day goes. Where you stand decides whether the sun is on you or the cloud is, and you are nearer the sky than any ground below ever gets.",
+      "The sky up here is not the low country's sky — it moves and it breaks, and the cloud line climbs and falls across the slope as the day goes. Where you stand decides whether the sun is on you or the cloud is, and you are nearer the sky than any ground below ever gets.",
     "water|burn|beck|stream":
       "The water on this hill never stands and never warms — peat-brown where it has come through the ground, clear over the gravel, and cold enough to ache your hands within a count of ten. It is always going somewhere lower, and you hear it before you see it. Nothing up here has ever been still, and the water least of all.",
     "summit|height|ridge|top|peak|slope":
@@ -617,6 +617,12 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   "the-fever-graves": {
     "graves|grave|pit|mounds|burials":
       "In rows, but set close and shallow, each mound barely a body's length from the next: graves dug as fast as they were needed. The chapel's own ground is a hundred paces away and has room. These people were not carried that far.",
+    // THE GRAVES ARE OLDER THAN THE VILLAGE (rome, 2026-11-05): the fever's
+    // dead went back into ground that was already a burial ground, and under
+    // it is the older thing the fever comes up out of. The same stone is under
+    // every one of the four fever graves, and the room text is unchanged.
+    "ground|earth|soil|bones|layers|under":
+      "Where the rushes have pulled a mound open, the earth under the shallow grave is not clean. Older bones lie beneath it, packed in another way, with no rows at all, and older again under those. Under the deepest of them the soil stops, a spade's depth down, on flat stone, dressed and laid tight, older than anything else here, with cold air coming up through the joints.",
   },
   "the-shallow-well": {
     "well|slab|stone|water|cover":
@@ -986,10 +992,18 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   "ossuary": {
     "bones|bone|skulls|skull|courses|walls":
       "Each course is one kind of bone laid to a line, and every skull is turned to face the room. It was done slowly, by people who had the time, long before the bad years. The top course is not finished. Nobody has added to it since.",
+    "floor|bottom|bottom course|stone|under":
+      "The bottom course is not the garrison's. The bones in it are smaller and darker and laid in no order at all, the careful courses simply built on top of them. Where a flag has lifted, the floor beneath is older stone again, dressed and laid tight, with cold air coming up through the joints.",
+  },
+  "the-plague-trench": {
+    "trench|ridge|stakes|stake|earth|ground|bones":
+      "Where the ridge has been dug into, the trench shows its layers: the hurried dead on top, limed and tangled, and under them, on the same line, older bones laid in a trench just like it, and older again. Somebody dug here because somebody always had. Under the deepest of them the soil stops, a spade's depth down, on flat stone, dressed and laid tight, older than anything else here, with cold air coming up through the joints.",
   },
   "catacomb": {
     "niches|niche|shrouds|dead|burials":
       "The niches near the steps are full, and the ones further in are empty and swept, waiting. They were cut ahead for a garrison's dead, generation by generation, and the generations stopped coming before the niches ran out.",
+    "wall|walls|back|stone|draft|draught":
+      "At the back of the deepest niches the garrison's cutting breaks through into older work: shallow niches of another shape, packed with bones of another people, and behind those a face of flat stone, dressed and laid tight, older than the Door. The cold comes through its joints as much as down the steps.",
   },
   "kennels": {
     "chains|chain|collars|collar|bowls|bone":
@@ -2877,6 +2891,3347 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   "the-standing-oaks": {
     "oaks|ring|ground|ceiling|crowns|floor":
       "The floor inside the ring is swept by nothing you can see, and in the middle of it the earth is a slightly different colour, in a square, as if something stood on that spot for a very long time. The oaks were planted round the square. Whatever was in it, it is the oldest thing in the wood, and it is not here.",
+  },
+  // ======================= THE CROSSING, the rest (2026-11-05) ==========
+  "the-shore-descent": {
+    "track|zigzags|moor|bench|water":
+      "Each turn of the zigzag is built up on the outside with a few laid stones, so a cart could swing round without going off the edge. Most of the stones are still there. On the long legs between, the ruts have cut down into the peat and filled with brown water.",
+  },
+  "the-boat-noust": {
+    "noust|hollow|stone|bank|boat":
+      "The stone lining is set on edge and tight, and two timber chocks still lie in the bottom where the keel sat. The chocks are worn into a shallow V. Along the top of the hollow there are rusted iron pins every few feet, for the ropes that held a winter's covering down.",
+  },
+  "the-strand-head": {
+    "strand|shingle|stones|peat|tideline|bank|weed":
+      "The peat ends in a raw cut edge a hand high, sliced off clean by the water at the top of some tide. Pieces of it lie out on the shingle in black slabs, drying and cracking. The stones nearest the tideline are wet and dark and the ones above it are pale and dry.",
+  },
+  "the-wrack-line": {
+    "wrack|weed|shoe|bone|stave|float|line":
+      "The shoe is a man's, sole only, the stitching rotted and the leather gone hard as wood. The float is glass in a net of tarred string, the glass green and sea-frosted. Everywhere along the line the weed has been turned with a stick and left turned, the wet side up.",
+  },
+  "the-shore-road": {
+    "road|surface|shingle|tide-mark":
+      "Under the grit the road is set with long kerbstones on its seaward edge, and those have been reset in places, straight again, by somebody with a bar. The road has drains under it every so often, a slab over a slot, so the water off the moor goes under it and not across.",
+  },
+  "the-net-poles": {
+    "poles|stakes|net|shallows|engine":
+      "Each stake is notched on the landward side, a hand from the top, where the net's head-rope was lashed. The shreds on the nearest three are tarred twine, the knots still tight. The stakes are worn thinnest at the waterline, eaten in by the tide in a ring.",
+  },
+  "the-shellfish-scars": {
+    "rock|cuts|pits|limpets|crab|weed|scars":
+      "The cuts are square-bottomed, with wedge-slots still showing along their edges where blocks were split off and lifted out. They took the stone at low water, between tides. In the pits the limpets have settled in rows along the wedge-slots, where the edge gives them a grip.",
+  },
+  "the-sunken-hurdles": {
+    "hurdles|fence|panels|mud|island":
+      "The panels are woven from the same silvered willow as the eyot's fence, and they stand dead in line with it. Their stakes go down into the mud further than you can push a stick. The fence was built on dry ground and the water came up round it afterwards.",
+  },
+  "the-chapel-channel": {
+    "channel|water|reed|eyots":
+      "The reed on both banks is cut back in one place on each side, opposite each other, a gap the width of a boat. Somebody used to cross here by water. The cuts are old and the reed has nearly closed them, and the gap is only plain from out on the channel.",
+  },
+  "the-landing-stage": {
+    "jetty|stage|ring|step|stone|channel":
+      "The ring is worn through to half its thickness on its lower side. The step has a groove in its edge where boat after boat was pulled against it. The jetty's stones are laid with their long sides to the current, the way a builder does who has seen what water does to stone set the other way.",
+  },
+  "the-gravel-flats": {
+    "gravel|flats|banks|channels|water|ford":
+      "Every bank has a steep face on the downstream side and a long gentle back on the up, the way gravel is pushed and dropped. The stones on top are dry and grey; a hand's depth down they are wet and brown. Nothing grows on the banks. They do not stay long enough.",
+  },
+  "the-ford-road": {
+    "road|surface|grass|verges":
+      "Under the grass down the middle the road is metalled with the same round shingle as the shore, rammed in hard. The verges have been cut back once, a long time ago, and the cut stems of the old gorse are grey stubs among the new.",
+  },
+  "the-quay-stub": {
+    "quay|ring|bolt|rope|courses|stone":
+      "The ring bolt is leaded deep into the end stone and does not shift when you pull. The rope on it is new and tied with a knot that does not slip. The fallen courses lie down there in the order they fell, the top one furthest out.",
+  },
+  "the-toll-post": {
+    "post|table|charges|columns|figures":
+      "The four headings are still legible because they were cut deeper than the figures; the figures were cut shallow to be changed. You can see where they were changed: two of the column spaces are a little lower than the stone around them, dressed back and recut.",
+  },
+  "the-bridge-approach": {
+    "embankment|bridge|piers|arch|arches|road":
+      "The embankment is faced with dressed stone on its downstream side and plain rubble on the up, as if the money ran out halfway round. The roadway along its top is worn in the middle by feet and not at the edges. Nobody brought a cart up here in a long while.",
+  },
+  "the-eyot-track": {
+    "path|track|brushwood|stone|plank|stones":
+      "You can read the repairs like handwriting: here a tidy bundle of brushwood pegged down, there one big flat stone dropped in and left, there a plank wedged on two stones by somebody in a hurry. The oldest work is the best and the lowest, half under the mud.",
+  },
+  "the-reed-gate": {
+    "reeds|reed|brushwood|path":
+      "The reeds lean in over the path from both sides and meet at the top, and on the inside of the arch their stems are snapped at shoulder height, all at the same height. Somebody kept this way open by walking it, often. The brushwood underfoot has been relaid over older brushwood.",
+  },
+  "the-first-eyot": {
+    "eyot|island|willows|fire-ring|ring|fire":
+      "Round the fire-ring the ground is littered with what people put down and did not pick up: a broken pipe stem, a bent nail, fish bones, a knot of cord. Cut into the trunk of the biggest willow, at the height of a sitting man's eyes, are initials, dozens, over and across each other.",
+  },
+  "the-brushwood-causey": {
+    "causey|willow|bundles|stakes|mud|path":
+      "Push a hand down through the mud and the bundles are there, tied round with withy, laid crosswise and pinned through with stakes. The stakes along the edges are notched at the top, a notch for every few yards, so a man could count his way across in a fog.",
+  },
+  "the-hurdle-eyot": {
+    "hurdles|fence|eyot|island":
+      "The fence has been mended recently and well: new withies woven through the old in places, and three panels near the gap replaced outright. Inside it the grass is long and unbitten. Whatever the fence is meant to keep in, it is not keeping anything in now.",
+  },
+  "the-mud-causey": {
+    "causey|mud|stakes":
+      "Under the mud, the causey is still there: feel with a foot and there is a firm edge, and beyond it nothing. The stakes that stop at the near end are snapped, not pulled, broken off at mud height. The mud has a smell to it when it is pressed, old and rotten.",
+  },
+  "the-chapel-eyot": {
+    "chapel|altar|slab|bench|walls|stone":
+      "The altar slab is cut with five small crosses, one at each corner and one in the middle, and the middle one is worn almost away by hands. The bench round the walls is dished in hollows. The door faces west, back the way people came, and the altar faces the mountain.",
+  },
+  "the-long-causey": {
+    "causey|kerbs|stone|gaps|drainage":
+      "Each kerb has a mason's mark on its inner face, a little arrow and a stroke, the same mark the whole way along. The drainage gaps are bridged with a single long slab apiece. Nothing about it has settled. It is as level now as the day it was laid.",
+  },
+  "the-causey-end": {
+    "kerb|stone|end|mud|reed|causey":
+      "The last kerb has the same mason's arrow on it as every other, and beside it, laid out on the mud and half sunk, two more kerbs waiting to be set. Their marks are cut. Their beds were never dug. The reed has grown up between them.",
+  },
+  "the-reed-maze": {
+    "reed|reeds|path|fork|forks":
+      "At each fork a few reeds have been knotted together at the top, by hand, and the knots have dried and gone brown. Some forks have a knot on one side and some on both. The cutting paths and the way through are knotted the same, which is no help at all.",
+  },
+  "the-ford-head": {
+    "withies|withy|gravel|shingle|ford|water":
+      "The withies are willow rods with a twist of bark left on at the top so they show up against the water. The ones nearest the shore are fresh, still green inside if you break one. Further out they get older and greyer, and the line of them bends.",
+  },
+  "the-near-arch": {
+    "arch|piers|pier|span|edge|bridge":
+      "Each voussoir in the arch is cut with a number on its hidden face, and where the arch is broken you can see the numbers, the last whole stone a seventeen. The break is clean. The mortar in the joints is still hard enough to turn a knife.",
+  },
+  "the-ferry-steps": {
+    "steps|ring|rope|iron":
+      "The steps go down below the water, and you can see three more of them under it, furred green. The iron ring at the top is worn bright on the side the rope runs over. The rope itself is tarred and wet, and on the bank side it is wrapped with old sacking where it lies against the stone.",
+  },
+  "the-salt-pool": {
+    "pool|water|floor|wall":
+      "The water is so still that a dropped grain of sand rings out across it and the rings take a long time to reach the far wall. Along its edge a crust of salt has grown on the rock in a white line, then another line a little lower, then another, each a different tide's stopping place.",
+  },
+  "the-causeway-head": {
+    "post|scale|lines|weed|road|causeway|stone":
+      "The cut lines on the post are numbered at the side, small, and the numbers are recut over older numbers in the same places. The weed on each line has dried in a different shade, from green near the bottom to black at the top, where the water has not reached in a long while.",
+  },
+  "the-otter-run": {
+    "slide|run|mud|scales|eyot":
+      "The slide is smooth as a soaped board and a hand wide, with claw-marks at the top where it starts and none on the way down. The fish scales at the top are fresh and silver. Off to one side the reed is flattened in a small round bed with droppings full of bones.",
+  },
+  "the-hurdle-store": {
+    "hurdles|lean-to|willow|stack":
+      "The stack is laid in courses, each hurdle crossed over the one below so air gets through. The lean-to over it is roofed with reed. The bottom hurdles have rotted where they touch the ground, but the rest are sound, and the top ones still have green bark.",
+  },
+  "the-quaking-turf": {
+    "turf|ground|root|mat|water":
+      "Kneel and press and the water comes up round your hand through the grass, brown and cold. The mat is all roots, packed and woven, with no soil in it at all. In one place a stick has been pushed right through and left standing, and it goes down further than your arm.",
+  },
+  "the-graves": {
+    "graves|humps|stones|stone|turf|rows":
+      "The stones at the heads are shore pebbles, round, and every one has a cross scratched on it with another stone. The humps are short and the rows crooked, each dug where the ground would take a spade. Some of the humps are very small.",
+  },
+  "the-plank-run": {
+    "planks|plank|trestles|trestle":
+      "The planks are all different, salvage from boats and doors and carts, one with a hinge-strap still nailed on. The trestles are lashed with rope, wire and in one place a belt. The last trestle has nail holes in its top where its plank was, and the plank is gone, not rotted.",
+  },
+  "the-reed-fork": {
+    "reed|path|fork|stand":
+      "Both paths are worn to the same width and depth, which is the trouble. On the stand of reed between them somebody once cut a blaze, a square of stems sliced off level, and the reed has grown back through it so it is only a slightly different green.",
+  },
+  "the-cutters-eyot": {
+    "stacks|reed|hut|whetstone|post|hooks|reed-hooks":
+      "The whetstone on the post is worn into a deep saddle, and there is a little pile of grey grit at the foot of the post from all the grinding. The reed-hooks in the row are not all old. Two of them are sharp, freshly, and the wooden handles are dark with the oil of a hand.",
+  },
+  "the-first-shoal": {
+    "shoal|gravel|bank|withies|current":
+      "The withies across the shoal are planted in pairs, one either side of a line, and the line bends where the deep water bends. On the shoal's crest a flat stone has been set into the gravel, the only stone here somebody put down on purpose. It has a notch cut in it, pointing on.",
+  },
+  "the-net-stakes": {
+    "stakes|pound|funnel|lines|engine|weed":
+      "The stakes are driven at a lean, all pointing into the tide, so the push of the water drove them in tighter. The pound at the point is a ring of stakes closer set than the rest, and in its middle the gravel is scoured into a hollow where the trapped fish thrashed.",
+  },
+  "the-first-pier": {
+    "pier|plinth|arch|plank|stubs|stone":
+      "The plinth's top is grooved with chisel lines all running the same way, the dressing nobody ever covered with a road. The plank is wedged into the stub of the next arch's springing with three iron spikes. Two of the spikes are newer than the plank.",
+  },
+  "the-scaffold-stub": {
+    "putlog|holes|timber|scaffold|pier":
+      "The timber in the hole is oak, squared with an adze, and the adze marks are still crisp. The holes go into the pier a full arm's length. At the bottom of one of them there is a pair of old iron dogs, the clamps that held a scaffold together, dropped and never fetched.",
+  },
+  "the-blowhole": {
+    "shaft|hole|blowhole|roof|daylight|spray":
+      "The rock around the bottom of the shaft is wet and green with weed that should not grow this far from the sea, fed by the spray. The shaft's sides are smooth and scalloped, worn round by air and water going up and down it. It breathes on its own; you can feel the draught on your face.",
+  },
+  "the-fallen-roof": {
+    "slab|roof|ceiling|sand|cave":
+      "Look up and the scar is there in the roof, the exact shape of the slab, paler than the rock round it. The slab landed flat and broke in two along a line. The sand on the windward side of it is rippled and the sand in its lee is smooth, and something has lain in the smooth sand.",
+  },
+  "the-first-crossing-stone": {
+    "causeway|road|stone|surface|weed":
+      "The stones of the road are pinned to each other with iron cramps, leaded in, and you can see the grey lead where the weed has torn off. The weed points east. Every tide that went over this went over it the same way, and combed it.",
+  },
+  "the-dead-end": {
+    "stake|rag|path|water":
+      "The rag is a strip torn off a shirt, tied in a hard knot that somebody pulled tight with their teeth; you can see the tooth marks in the cloth. It has been retied once, a second knot over the first. The stake it is tied to has been pushed in by hand, not driven.",
+  },
+  "the-stake-line": {
+    "stakes|stake|line|reed":
+      "Every tenth stake is taller and has a notch cut in it. Count the notches and you know how far you have come. Some of the short ones in between have been replaced with fresher wood, and whoever replaced them kept the count.",
+  },
+  "the-first-channel": {
+    "channel|water|gravel|shoals":
+      "The water runs clear over gravel that is rolling as you look at it, small stones tumbling downstream along the bottom in a steady dribble. On the far side the withies stand a little upstream of where you would aim, because the current carries everybody down.",
+  },
+  "the-plank-span": {
+    "planks|plank|pier|lashing|span":
+      "The lashings at each end are tarred rope, wound on and wound on, and the tar has run and set in drips down the pier's face. The two planks are not the same length; the shorter one rests on a wedge. In the middle of each plank the wood is worn pale by feet.",
+  },
+  "the-channel-brink": {
+    "stage|timber|rope|channel|water":
+      "The end timber of the stage is scored deep across its top where the ferry's rope ran over it, a groove you could lay your arm in. The bolts holding the end beam are newer than the beam. The water at the foot of the posts moves without making a sound.",
+  },
+  "the-shingle-bank": {
+    "shingle|stones|bank|wall|sand":
+      "The stones are sorted top to bottom: fist-sized at the crest, pebbles at the foot, sand at the very bottom. Dig a little at the foot and you find things in the sand: a cork, a twist of rope, a buckle green with salt. The bank keeps what it is given and rolls it under.",
+  },
+  "the-drowned-chamber": {
+    "sand|floor|band|salt|walls|roof":
+      "The white band is a crust you can scrape off with a fingernail, and under it the stone is dark and soft as cheese. The sand is raked into long shallow curves that follow the walls round, the way water swirls when it fills a room from one side. Nothing is buried in it more than a finger deep.",
+  },
+  "the-weeded-milestone": {
+    "milestone|stone|number|socket|weed":
+      "The number is cut in the same square letters as the east road's stones, and the direction is an arrow with a split tail. Below the weed line the letters are furred over and soft at the edges; above it they are as sharp as the day they were cut. The water has been eating it from the bottom up.",
+  },
+  "the-black-eyot": {
+    "eyot|peat|alder|alders|ground|island":
+      "The alders fell eastward, both times, and sent up new trunks from the fallen ones, so the stand is a tangle of old trunks lying down and young ones standing on them. Under them the peat has been cut, a long time ago, in neat square steps. Somebody dug fuel here.",
+  },
+  "the-second-shoal": {
+    "shoal|spine|stone|print|boot|tracks":
+      "The boot print is a heavy one, nailed, the nail heads in a ring round the heel. The water in it is clear and has not yet silted. Nearby the bird tracks cross over it and none of them cross under, which puts it after the last of the night and before the birds came down.",
+  },
+  "the-second-pier": {
+    "pier|plinth|arch|fire-scar|bones|stone":
+      "The fire-scar has been used over and over, the stone under it cracked and flaking from heat, and the fish bones round it are of all ages, from grey and crumbling to white and greasy. The fires were always laid on the same spot, the one place the wind does not reach.",
+  },
+  "the-drowned-mooring": {
+    "posts|mooring|channel|stage":
+      "Each post is worn into a waist where ropes were taken round it, and the waists are at different heights going out, each a little lower than the last. The mooring was used as the water rose, post by post, until it was only the first three.",
+  },
+  "the-rope-run": {
+    "rope|stage|water":
+      "Close to, the rope is spliced in three places, and the splices are done well, the strands tucked and whipped. It is not one rope but four, of different ages, joined. Near the stage it is worn flat on top where hands have slid along it.",
+  },
+  "the-weed-gallery": {
+    "weed|roof|gallery":
+      "Lift the weed and the roof under it is rock, and the rock is pocked all over with small holes where shellfish bored into it when it lay in the open sea. The weed's holdfasts grip the holes like hands. The water dripping off the blades is salt and ice-cold.",
+  },
+  "the-sand-crawl": {
+    "sand|ripples|bars|roof|rock|weed":
+      "The bars of sand all lean the same way, their steep faces toward the back of the cave: the water comes in faster than it goes out. On the wet rock at shoulder height there is a smear of something greasy, rubbed along the stone by things that have come through here on their sides.",
+  },
+  "the-causeway-bend": {
+    "bend|causeway|road|ridge|shingle|weed":
+      "On the outside of the bend the kerbstones are bigger and set deeper, and every one of them has an iron cramp to the next. The builders knew the water would push here hardest. Two of the cramps have been replaced, and the new lead is a brighter grey.",
+  },
+  "the-tern-causey": {
+    "causey|brushwood|terns|bundles|nests":
+      "The nests are not nests, only hollows in the brushwood with a few shell fragments in them and two speckled eggs. The bundles round them are white with droppings. Some of the bundles are fresher than the rest, laid on top of the old ones by somebody who did not want the causey lost under the birds.",
+  },
+  "the-white-dunes": {
+    "dunes|sand|crests":
+      "The sand is so fine it squeaks underfoot. Here and there the wind has uncovered something on a dune's flank and will cover it again tomorrow: a fence post, the line of an old wall, a scatter of shells too far from the water to have walked here.",
+  },
+  "the-grey-marsh": {
+    "marsh|creeks|creek":
+      "Every creek has the same steep mud sides and the same glint of water at the bottom. On one bank a short stick is pushed into the mud with a twist of grass tied round it, somebody's mark for something. There is no second stick to say what.",
+  },
+  "the-second-channel": {
+    "channel|water|gravel":
+      "The gravel on the bottom is bigger here, stones the size of an egg, and they shift underfoot less than the small. The current has scooped a trough along the middle deeper than the rest. On the far side the withies are planted thick, one every stride, for the people who come out of this cold.",
+  },
+  "the-gap": {
+    "gap|beam|pier|girder|iron":
+      "The beam is a single length of iron, riveted, the rivets rusted into lumps. At this end it is bedded into a slot cut in the pier's stone and wedged with iron wedges. The stone round the slot is stained orange down its whole face, from the rust running off it every rain.",
+  },
+  "the-starling": {
+    "starling|apron|stone|point|pier":
+      "The apron's stones are cramped together with iron and the iron has bled orange down every joint. In the angle at the point there is a jam of driftwood, rope, a cart wheel, and bones, packed so tight the water goes through it without moving any of it.",
+  },
+  "the-cold-spring": {
+    "spring|water|weed|boil|shimmer":
+      "The weed over the spring is bright green and fine as hair, not the black flat weed of the rest of the channel. Put a hand in the boil and it is colder than the water round it, and it pushes. The mud on the bank above is printed with every kind of foot.",
+  },
+  "the-green-water": {
+    "water|green|line|shallows|bottom|edge":
+      "On the shallow side of the line the gravel is grey and ordinary. On the deep side it drops away in a steep slope of clean stones, and the slope is too steep for anything to settle on it. A few stones roll down it as you watch, and you do not see where they stop.",
+  },
+  "the-sea-cave": {
+    "cave|stone|walls|sand|floor":
+      "The walls are hollowed in scoops the size of a bucket, each scoop smooth inside, cut by stones the sea swirled round in it. Some of the scoops still have their stone in the bottom, round as an egg. The sand at the mouth is printed by the last tide in a long curve.",
+  },
+  "the-shell-scar": {
+    "scar|mound|shell|layers|ash|bone|flints|earth":
+      "The flints in the dark earth at the bottom are worked, struck flakes with sharp edges. The burnt bone in the ash band is small, bird and fish. Pull a shell from any layer and it is the same shellfish all the way up: these people ate one thing, here, for a very long time.",
+  },
+  "the-shell-eyot": {
+    "eyot|island|shell|mound":
+      "Every shell on the mound is broken open at the same place, a little chip off the hinge where a knife went in. Lower down, where the mound is cut, the shells are packed with grey ash. People sat here and opened shellfish, and opened shellfish, until they had made an island.",
+  },
+  "the-cord-grass": {
+    "grass|cord|bank|creek|mud":
+      "Part the grass and the mud under it is laced through with roots, white and tough as cord, which is where the name came from. The top of the bank is worn into a narrow path. On the side of the bank, where people did not walk the top, there are holes, deep ones, with nothing at the bottom.",
+  },
+  "the-sea-purslane": {
+    "purslane|bushes|creek|mud|banks":
+      "The leaves are thick and grey and salt to the taste. Under the bushes the mud is soft and there are deep slots in it where something put a foot through and pulled it out. The creek below has a dropped stake standing upright in the middle of it, sunk to its top.",
+  },
+  "the-quicksand-flat": {
+    "sand|flat|withies|rope|water":
+      "The rope is knotted to the three withies with a knot that takes a thought to tie, and tied tight. Out on the flat, ten yards from the rope, a single stick is standing upright in the sand with its top gone dark. It was pushed in by somebody, from the edge, as far as they could reach. It is a long reach.",
+  },
+  "the-long-bank": {
+    "bank|gravel|weed|tideline|crust":
+      "The crust of dried weed along both sides is laced with feathers and tiny bones, the line of everything that floated. The gravel along the crest is trodden into a path by more feet than birds have. In two places along it somebody built a little cairn of stones, knee-high, to see the way by in a fog.",
+  },
+  "the-second-crossing-stone": {
+    "milestone|stone|barnacle|barnacles|weed|number":
+      "The barnacles are thick on the north face, crusted over each other in layers, and the ones at the top are dead and white. On the south face there is not a single one. The number cut into it has been filled with something dark and hard, pitch, so it would read wet.",
+  },
+  "the-heron-tree": {
+    "tree|alder|herons|heron":
+      "The alder is dead and grey and every branch the herons stand on is white with their droppings. At its foot, in the water, the mud is littered with fish heads and frog bones. The herons have been standing here, these herons or their fathers, for as long as the tree has been dead.",
+  },
+  "the-salt-causey": {
+    "causey|stone|stones|samphire|gaps":
+      "The stones are laid without kerbs and without a bed, just set down on the salt mud in a line. Some have sunk. Some have been lifted and set back. One has a chisel line cut along it where somebody started to dress it and gave up after a hand's length.",
+  },
+  "the-marram-sea": {
+    "marram|grass|dunes|dune":
+      "Down at the roots the marram grows out of sand that is always moving, and the roots climb up through it as it piles, so every clump stands on a little column of old roots. A path through it has been flattened by something low and heavy, not by feet.",
+  },
+  "the-saltmarsh-pools": {
+    "pools|pool|turf|ground|water":
+      "The pools are almost perfectly round and all much the same size. Their bottoms are bare grey mud. The firm ground between them is cropped short and trodden with a narrow path that goes round each pool on its landward side, never its seaward.",
+  },
+  "the-crooked-creek": {
+    "creek|banks|bank|mud|loops":
+      "On every bend the outside bank is undercut and the inside is a little beach of soft mud printed thick with birds' feet. At the tightest loop a plank has been laid across the creek and left. It is grey and split and the mud has nearly taken it.",
+  },
+  "the-third-channel": {
+    "rope|posts|channel|water":
+      "The posts are driven deep and stayed with smaller posts behind them, leaning in, so the rope cannot pull them over. The rope is worn shiny along its whole length. Where it is tied off at the near post it is knotted round on itself four times, more than it needs.",
+  },
+  "the-drowned-withies": {
+    "withies|withy|current|water":
+      "Each withy has a twist of bark left at the top, the marker's trick, and the twists stream out flat on the current. They are planted in a line, and the line points to a crossing that is no longer there. The new line of withies runs off at an angle away from them.",
+  },
+  "the-third-pier": {
+    "pier|tower|plinth|pins|windlass|drum|stone":
+      "The iron pins are set in a row across the roadway, for a bar or a chain that was swung across it. The windlass drum lying on its side still has a few turns of chain on it, rusted solid. The tower stump is only shoulder high, and its door faced the road.",
+  },
+  "the-tollhouse-shell": {
+    "tollhouse|room|window|door|slot|brackets":
+      "The slot in the floor looks straight down at the water. It is the width of a hand and worn smooth along both edges. The window faces the road, not the water, and on its sill there are rows of small marks scratched with a point, counting.",
+  },
+  "the-slack": {
+    "slack|water|spur|rock":
+      "Turning in the slow circle are a hat, a cask stave, a dead gull and a lot of froth. Along the foot of the spur a tidemark of rubbish has dried onto the rock. Somebody has set a hooked pole against the spur, the right length for reaching out and drawing things in.",
+  },
+  "the-mid-channel": {
+    "channel|rope|water":
+      "The rope sags under the water here, and the bit of it you can see before it goes down is green-furred and slick. Looking down along it the green gets darker and then the rope is only a pale line going away under you, and then not even that.",
+  },
+  "the-weed-raft": {
+    "raft|weed|driftwood|mat":
+      "Where the mat is thickest it is driftwood laced through with weed, and you can see daylight between the logs. Where it is thinnest it is only weed, and it looks the same. Pushed against its edge there is a drowned sheep, and the weed has started to grow over it.",
+  },
+  "the-crab-pools": {
+    "pools|pool|weed|ledges|crabs":
+      "Under the ledges the crabs back into their holes and wait, their claws held up in front. The pools are lined with pink crust and the crust is grazed in long clean tracks by limpets. Somebody has rolled a flat stone across the deepest pool's mouth, half closing it.",
+  },
+  "the-sunken-stretch": {
+    "causeway|road|stretch|water":
+      "Under the standing water the road is still the road, stone and cramps, and a green slime on it that makes the wade slow. At both ends of the dip there is a short post with a cut on it at knee height. Water above the cut, and the dip is past wading.",
+  },
+  "the-samphire-flat": {
+    "samphire|mud|flat":
+      "The samphire has been cut, here and there, in neat patches, the stems sliced through above the mud by a knife, and the cut stems are already putting out new green. The cutters stepped carefully: there are footprints only along the edges of the patches.",
+  },
+  "the-salt-marsh": {
+    "marsh|creeks|creek|banks|mud":
+      "The creek banks are straight-sided and glossy and the bottoms are deeper than the banks are wide. At the edge of the nearest one there is a sliding scar in the mud, long, ending in the water, where something went over and did not climb back out at this place.",
+  },
+  "the-blowout": {
+    "blowout|bowl|sand|roots|marram|rim":
+      "The roots hanging round the rim are white and dry and longer than a man is tall, which is how deep the dune had grown before the wind opened it. On the bowl's floor lie a few dark stones and the bones of a sheep, uncovered and drying, and soon to be covered again.",
+  },
+  "the-redshank-ground": {
+    "marsh|birds|bird|redshank|ground":
+      "The ground is cropped short and printed everywhere with small three-toed feet. In a tussock there is a hollow lined with grass, with eggs in it the colour of the mud. The birds that rose went up from just here, and are still going round over it, shouting.",
+  },
+  "the-sea-lavender": {
+    "lavender|marsh|runnels|ground":
+      "The runnels under the lavender are a finger wide and shallow and full of salt water that has nowhere to go. They are crusted white at their edges. Something has been nipping the lavender's flowers off along a line that runs straight across the patch.",
+  },
+  "the-high-water-mark": {
+    "wrack|line|weed|cork|feathers|oar|mark":
+      "The broken oar has a name burnt into its loom, too worn to read except the first letter. The cork is a net float, a ring of it, with a hole for the line. The wrack line is two lines, one fresh and one old and grey a stride higher, the biggest tide anybody here has seen lately.",
+  },
+  "the-gull-stand": {
+    "gulls|shoal|stand":
+      "The shoal under the gulls is white with them and littered with broken shells, cracked open by being dropped from a height. The gulls all face the wind so it does not get under their feathers. Among them the shells of every crab and mussel the crossing makes are piled.",
+  },
+  "the-mid-ford": {
+    "post|crosspiece|shoal|rest":
+      "The crosspiece is at chest height and worn smooth along its whole length by hands gripping it, and the post's upstream face is scoured pale by the water. Cut into the crosspiece, small, are initials, and here and there a date with the year worn off.",
+  },
+  "the-broken-arch": {
+    "arch|stones|course|rope bridge|bridge|end":
+      "Along the top of the arch the stones are cut with a mason's number, counting up toward the break, and the last numbered stone is the one you stand on at the end. The rope bridge's near end is made fast round that stone in a figure of eight, over and over.",
+  },
+  "the-pier-foot": {
+    "steps|ledge|ring|rope|pier":
+      "The ring is new iron, leaded into an old hole that once held a bigger ring. The rope is good rope, tarred, and it runs down at an angle into the channel and does not move in the current, which means something heavy is on the end of it. The steps have been chipped back where they were broken.",
+  },
+  "the-far-rope-stage": {
+    "stage|bollard|block|post|ring|rope|rock":
+      "The ring is leaded into a hole drilled straight into the bank's bedrock, and the lead has been topped up, a newer pour over an older one. The block still turns when you push it. Its sheave is greased black and the grease is not old.",
+  },
+  "the-sluice-stone": {
+    "slab|stone|grooves|groove|arch|gate|sluice":
+      "The grooves are worn smoother at the bottom than the top, where the gate sat most of the time. Beside the slab there is a socket cut in the causeway for a post with a pulley, and a rope groove worn across the slab's top edge. Somebody hauled the gate up and down here, a lot.",
+  },
+  "the-bothy-of-the-crossing": {
+    "bothy|lintel|hearth|bed-shelf|shelf|door|roof|slate":
+      "The rule on the lintel is cut deep, and under it, smaller, other hands have added their initials, a column of them, people who did as it said. There is dry wood stacked by the hearth and the bed-shelf has a heap of bracken on it that is not this year's. The slates have been patched with a flat stone in one place.",
+  },
+  "the-creek-crossing": {
+    "plank|creek|banks|mud|water":
+      "The plank is an old ship's timber, adzed flat on top and still showing a row of treenail holes. Both its ends sit in grooves worn into the mud banks, which have been dug out and squared to hold it. It has been moved up and down the bank more than once as the creek widened.",
+  },
+  "the-dune-ridge": {
+    "ridge|dune|dunes|marram|sand|crest":
+      "The marram along the crest leans all one way and has been combed through by the wind so long that the sand round each clump is scooped into a little hollow on the same side. In the hollows below, the sand is damp and holds a print; on the crest it pours back into any print you make.",
+  },
+  "the-drained-creek": {
+    "creek|bed|mud|banks|prints|trickle":
+      "The prints in the mud are a heron's three long toes, a gull's webbed feet, and a line of small paired marks with a tail-drag between them. Some go up the creek and some come back down. The banks are cracked into great slabs that are slowly sliding into the bed.",
+  },
+  "the-samphire-flats": {
+    "samphire|mud|creeks|stems":
+      "Each stem stands on its own, a hand apart from the next, as though it had been set out in rows. The mud between them is shining and bare. A few stems have been snipped off clean at the bottom, and the cut ends are still wet and green.",
+  },
+  "the-tide-race": {
+    "race|waves|water|line":
+      "The standing waves hold their places exactly, the same humps of water over the same stones below, while the water pours through them. Along the edge of the race the gravel has been piled into a ridge by the fight between the two waters. Foam is caught in it, yellowed.",
+  },
+  "the-fourth-channel": {
+    "channel|water|gravel":
+      "The gravel here is coarse and bedded, stones jammed against each other by the water, and they do not roll. The withies on this side are planted leaning the other way, into a current that comes from the east. Somebody who knew this water set them that way on purpose.",
+  },
+  "the-far-ferry-steps": {
+    "steps|bench|lantern|treads":
+      "The scoops in the treads are deepest at the bottom step, where everybody stepped off the boat, and shallowest at the top. The bench is one slab on two stones, and the lantern place behind it is a niche cut in the bank with the soot of a lot of nights on its roof.",
+  },
+  "the-half-drowned-cart": {
+    "cart|wheel|ironwork|bed|wood":
+      "The cart's tailboard is down and its chain hangs loose. The wheel that is left turns on a greased axle. There are scrape marks on the causeway's edge above it, fresh pale scores in the stone, where it went over sideways with its load still on.",
+  },
+  "the-mid-causeway": {
+    "road|causeway|water|post|shores":
+      "The road here is worn exactly as hard as at the ends; people did not hurry over the middle, or if they did their feet did not show it. A single kerbstone on the south side has been knocked out of line and leans into the water, and the gap where it stood is full of weed.",
+  },
+  "the-strand-track": {
+    "track|shingle|shore|marsh":
+      "The shingle on the track is pressed flat and the stones are polished on top, the way stones get only under thousands of feet. On the landward side of it, every so often, a path goes off into the marsh, narrower, each to some piece of ground somebody worked.",
+  },
+  "the-cockle-strand": {
+    "shells|shell|cockle|track|water":
+      "The cockle shells on the track are crushed to a grey grit, and the grit is deepest down the middle where the feet went. At the tideline the whole shells start, white, open, a few still paired. The water coming back has a long low line of foam in front of it.",
+  },
+  "the-mud-shore": {
+    "mud|shingle|track|samphire|birds|prints":
+      "The mud below the track has a boot in it, sunk to the ankle and left, the leather gone grey and stiff. The bird prints run over and round it. Along the top of the samphire the track is trodden into a narrow hard line no wider than one foot in front of the other.",
+  },
+  "the-gutway": {
+    "slab|bridge|gut|creek|water":
+      "The slab is a single stone, long and thin, and the hollow worn in its middle holds a puddle of salt water after every tide. Its ends are bedded on stones set into the mud, and those have been reset, recently, by somebody who packed fresh clay round them.",
+  },
+  "the-salting-edge": {
+    "turf|bank|salting|creeks|track":
+      "The turf is grazed short and studded with small droppings, sheep's or something like them. The bank's face is cut by the tide into a little cliff of mud and roots, and you can see in it the layers of every flood that put silt down on the turf and built it up.",
+  },
+  "the-creek-mouth": {
+    "creek|mouth|posts|staithe|mud|stream":
+      "The staithe posts are thick black oak with iron rings, and the rings are worn on the downstream side. The mud between the posts is pocked with the round holes left by the bottoms of boats settling at low water, over and over, in the same places.",
+  },
+  "the-marsh-strand": {
+    "track|reed|marsh|water":
+      "There is nothing here, and the track knows it: it runs straight, with no turnings and no repairs, because there is nowhere to turn to. At its edge a single upturned crab shell, bleached white, lies where a bird left it.",
+  },
+  "the-hard-approach": {
+    "track|creek|reed":
+      "The track is built up a foot here with turf and stones on its creek side, because the creek kept eating it. The building is in three different kinds of work, one on top of another, as each lot of repairs was undermined and repaired again.",
+  },
+  "the-marsh-hard": {
+    "hard|stone|bollard|ruts|cart-ruts":
+      "The ruts are worn through the laid stone into the clay underneath, and the stones along them are rounded off at the edges. The bollard is a stump of old ship's mast with an iron band round its top. A rope has worn a ring into it just below the band.",
+  },
+  "the-sea-buckthorn": {
+    "buckthorn|thorns|thicket|berries|branches":
+      "The way through is a low tunnel at knee height, the thorns on its roof bent back and polished by something going through it, often. Orange berries lie squashed along its floor. Caught on the thorns at the mouth are tufts of grey fur.",
+  },
+  "the-samphire-island": {
+    "island|ground|grass|creeks":
+      "The grass on top is grazed, and in the middle there is a ring of stones set flat in the turf, the size of a hut, with a gap for a door on the landward side. Somebody once lived out here where they could see anything coming. The hearth stone in the middle is cracked by fire.",
+  },
+  "the-storm-ridge": {
+    "ridge|shingle|crest":
+      "The stones on the seaward face are all big, flung up and left. The landward side slopes down in finer gravel. Along the crest the stones are flattened and darkened in a narrow line, a path, because it is the one place on this whole shore with a view in every direction.",
+  },
+  "the-cockle-beds": {
+    "cockles|beds|sand|holes":
+      "The paired holes are breathing as you watch, tiny spurts of water from some of them when your foot comes down nearby. The sand has been raked in long parallel lines, and the rake was a wide one, with a lot of teeth. The lines are softening already.",
+  },
+  "the-shell-bank": {
+    "shell|shells|bank|cockle|mussel|razor":
+      "The razor shells are the only ones whole; the cockle and mussel are broken open the same way, a knife's chip at the hinge. Push a hand into the bank and the shell goes down and down, dry and white, with grey ash in it lower down.",
+  },
+  "the-fourth-pier": {
+    "pier|plinth|arch":
+      "The far arch's stones are cut with the same mason's numbers as the near arch's, counting down this time from the far bank. The plinth's top is worn by feet in a path from where the rope bridge lands to where the arch begins.",
+  },
+  "the-far-hard": {
+    "hard|ramp|stone|keels|grooves":
+      "The keel grooves on this ramp line up with the ones on the western hard, same spacing, same depth. The green below the line is a fur of weed you could part with a finger; the white above is stone worn by boats' bottoms and people's boots until it is almost polished.",
+  },
+  "the-causeway-cross": {
+    "cross|stump|arms|verge":
+      "The stump has offerings round its foot, small things from a long way back: a ring of green copper, a few flat stones set on each other, a button. Each one was put down by somebody who got this far and wanted to say so. The stump is worn smooth on its landward side by hands.",
+  },
+  "the-grey-dunes": {
+    "dunes|lichen|moss|heath|sand|crust":
+      "Step off the path and the crust of lichen breaks and the sand underneath is bone dry and pale. The old footprints in the crust stay for years: you can see a line of them going off into the dunes, filled with moss, from somebody who walked here long ago.",
+  },
+  "the-old-sea-bank": {
+    "bank|earth|sea bank|marsh":
+      "The bank has a ditch along its landward side that it was dug out of. At each end where it stops, the sea has bitten the end off in a ragged cut. Halfway along there is a sluice through it, a box of timbers gone black, its flap rotted off.",
+  },
+  "the-wide-creek": {
+    "creek|water|mud":
+      "Along the creek's bank a line of stakes stands in the mud, short and grey, where somebody once tried to put a footbridge across and never finished. The creek has moved since and the stakes are now half in the water. The banks are printed with a hundred bird feet.",
+  },
+  "the-fifth-channel": {
+    "channel|weed|water|current":
+      "The weed is long green ribbons, all lying downstream, all rooted in the gravel. It parts round your legs and closes behind you. Under it, the gravel is stuck with small white shells that crunch when you step.",
+  },
+  "the-eel-grass": {
+    "eel grass|grass|meadow|shallows|soil":
+      "The eel grass is rooted in dark mud that smells of eggs when you stir it. Little fish dart off from your feet in clouds. Between the blades there are snail shells, thousands, and the blades themselves are spotted with the eggs of something laid in long jelly strings.",
+  },
+  "the-far-arch": {
+    "arch|parapet|bench|recess|roadway":
+      "The bench is worn into two hollows side by side, and the parapet's top is worn smooth in two places in front of them where elbows rested. Cut into the parapet's inside face are lines of initials, the oldest so shallow now they are only felt, not seen.",
+  },
+  "the-far-noust": {
+    "noust|boat|hollow|stone":
+      "The boat is clinker-built, its planks overlapping, every rivet clenched over a little square of iron inside. The tar is old but has been renewed on the keel. Under the upturned hull, in the dry, a set of oars lies on the stone, and they are not rotten.",
+  },
+  "the-far-milestone": {
+    "milestone|stone|face|number":
+      "The cut face reads clean because the stone is high enough the weed never got to it. The number is filled with old pitch to stand out wet. On its back somebody has scratched a long line of strokes in fives, counting crossings, perhaps, or tides, or days.",
+  },
+  "the-wildfowler": {
+    "hut|stand|rest|gun|driftwood|turf|wood":
+      "The rest is a forked post with a groove worn round in its crotch, polished, where the barrel swung. The arc worn into the wood beneath is a hand's width deep at the middle and shallow at the ends; the gun was aimed at the same patch of water nearly every time.",
+  },
+  "the-withy-bank": {
+    "withies|withy|rows":
+      "The new withies are cut willow still green inside, pushed in by hand and the earth pressed round them with a heel; the heel marks are still in the gravel. The old ones beside them have split at the top and the twists of bark on them are long gone.",
+  },
+  "the-bridge-strand": {
+    "bridge|arch|piers|stonework|underside":
+      "The underside of the arch is whiskered with little white stalactites where water has seeped through the mortar and left lime. In the joints between the stones there are swallows' nests, mud cups, rows of them. The piers' feet are wrapped in weed to the high-water line.",
+  },
+  "the-mussel-bank": {
+    "mussels|mussel|shell|causeway|road|stone":
+      "The mussels are bearded to the stone with brown threads, and you can see the stone under them only where somebody has cut a path through, scraping them off with a blade. The scraped path is already being taken back, with tiny new mussels the size of a fingernail.",
+  },
+  "the-fowlers-track": {
+    "track|faggots|causeway|mud|salting":
+      "The faggots are bundles of brushwood laid lengthways, and where they have rotted they have been replaced with bundles laid across. Every few yards a stake keeps them from drifting. The whole track creaks and sighs underfoot, and a heron gets up from a long way off.",
+  },
+  "the-decoy-wood": {
+    "willows|willow|decoy|pipes|hoops|trees|rise":
+      "The hoops are hazel, bent into arches and pegged at each end, and the rotted net still clings to a few of them. The pipes narrow as they go, each curving off the same way, so the ducks could not see the end until they were in it. The willows were planted in a ring.",
+  },
+  "the-last-shoal": {
+    "shoal|gravel|bank":
+      "The withies on the last shoal stand in a straight line pointing at the landing, the only straight line in the whole ford. The gravel here is trodden flat in a path between them, and on either side of the path it lies loose and untouched.",
+  },
+  "the-shingle-spit": {
+    "spit|shingle|stakes|fence":
+      "The stakes are fence posts, squared and mortised for rails, and two still have a rail in them. They were set on dry land in a line toward the bridge. The shingle has built up round them to half their height.",
+  },
+  "the-oyster-scars": {
+    "ledge|scars|shells|marks|tongs|rakes":
+      "The tong marks are paired scratches in the rock, two by two, and they are all over it like writing. The oyster shells underfoot are big and grey and layered, and the deeper you dig the bigger they get. Nothing on the ledge now is as big as the old shells at the bottom.",
+  },
+  "the-cutting-water": {
+    "channel|slabs|slab|bridge|bank":
+      "The two slabs still in place are cramped to each other with an iron bar leaded into both. The third slab lies in the channel where it fell, end up, with the water piling against it. The causeway's stone on both sides of the cut is broken off rough, not cut: the water did it.",
+  },
+  "the-cockle-scars": {
+    "heaps|shell|mud|beds|scars|ground":
+      "The shell heaps are layered in bands, white and grey, and in the grey bands there is charcoal from the fires the cockles were boiled on. In one heap's flank somebody has cut a step, and then another, up to the top where they could look out over the beds.",
+  },
+  "the-ford-landing": {
+    "landing|hard|shingle|ruts|cart-ruts|stone":
+      "The ruts are worn deep in the laid stone and run straight inland, the same width apart as the bridge's ruts and the causeway's. It is the same carts. At the top of the hard there is a single flat stone off to the side, worn smooth on top, where people sat to wring out their clothes.",
+  },
+  "the-wrack-bank": {
+    "wrack|weed|bank|flies":
+      "Push a hand into the bank and it is hot inside, wet and rotting and alive with little hopping things. The weed is layered, each storm's on top of the last, the bottom ones black and soft. A path has been trodden straight through, and it is the only firm part of it.",
+  },
+  "the-passengers-rest": {
+    "shelter|bench|window|slot|hollows|roof":
+      "The four hollows in the bench are worn to slightly different depths; the one nearest the window is the deepest, because everybody wanted that one. The slot window's sill is rubbed smooth by elbows. Scratched into the back wall at a sitting man's height are tallies, and a drawing of a boat.",
+  },
+  "the-weed-flat": {
+    "bladderwrack|wrack|weed|bladders|road|causeway":
+      "Lift a handful of the wrack and the road is there under it, cramped stone, slick and green. The bladders pop with a little spit of salt water. The weed is rooted to the causeway's own stones, holdfast to holdfast, as if the road were a reef.",
+  },
+  "the-perch": {
+    "beacon|tripod|legs|cage|fire|nest|perch":
+      "The legs are oak, tarred black, the tar thick and cracked like old paint, and bolted at the top to an iron ring. The cage is full of sticks and gull feathers, a nest built in the fire-basket, and under the nest there is still a cake of black ash from the last fire that was lit.",
+  },
+  "the-gull-flats": {
+    "mud|gulls|flats":
+      "The mud is printed so thick with gulls' feet that it is more print than mud. Broken crab and mussel shells are scattered everywhere, dropped from a height to crack. In the middle of the flats there is one bigger print, a single boot, sunk deep, and no second one after it.",
+  },
+  "the-cart-ruts": {
+    "ruts|troughs|track|grass|crown|water":
+      "The ruts are worn down to bare rock in the bottom, and the rock is scored along its length by iron tyres. The water standing in them is clear and full of tadpoles. On the crown the grass is long and seeding, untouched by any foot.",
+  },
+  "the-hard-standing": {
+    "standing|chalk|kerbs|ruts|wheel-ruts":
+      "The chalk is rammed so hard it rings when a heel comes down on it, and white powder comes up off it in a dry wind. The ruts cross each other in a fan where carts were turned. At one edge a heap of broken chalk lumps, unused, has gone green with moss.",
+  },
+  "the-ferry-lane": {
+    "lane|banks|ground|field":
+      "The banks of the lane are stepped where the old surfaces were, each a little lower than the last: you can see the lane sinking through the ground in layers. Roots of hedging hang out of the banks overhead. Down at the bottom the stones are worn smooth and slightly dished.",
+  },
+  "the-causeway-rise": {
+    "road|bank|verge|camber|causeway":
+      "Where the road comes up out of the weed, the last weed-mark on the kerbstones is a dark line, and above it the stone is lichened grey like any ordinary road. The verges are cut back square. The camber has drain slots through the kerb every few yards on both sides.",
+  },
+  "the-saltings-gate": {
+    "gate|rail|hinge|posts":
+      "The top rail is worn smooth in a long pale stretch at the latch end, the shape of forearms. The one hinge left is iron, and the gate hangs from it a little crooked, its far end resting on a stone somebody put there to hold it up. The posts on either side are sound.",
+  },
+  "the-ford-corner": {
+    "corner|heap|road-stone|stone|turn|road":
+      "The heap of road-stone is broken shingle, raked into a mound and left for mending the road, and grassed over before the mending came. Somebody stuck a stick in the top of it. The turn is worn wide on the outside, where carts swung round.",
+  },
+  "the-drove-road": {
+    "verge|verges|grass|road":
+      "The verges are greener and coarser than the moor beyond them, the grass fed by a great deal of muck over a great many nights. Along the inside of each verge there is a line of old stakes, for hurdles, every one rotted to a stub. The road between them is worn in the middle and the edges both.",
+  },
+  "the-shepherds-stone": {
+    "stone|boulder|hollow|seat|initials":
+      "The hollow in the top of the boulder is smooth and holds rainwater; somebody drank from it, or set a pot in it. The seat stone is worn into a curve. The oldest initials on it are cut in a square hand and have moss in them. The two newer sets are in a rounder hand, perhaps the same family.",
+  },
+  "the-far-tide-mark": {
+    "post|scale|lines|bracket|lantern|candle|frame":
+      "The candle stub has run over the lantern's floor and set there in a pale tongue, and the wick is a black curl. The scale's lines on this post are cut a little differently from the western post's, the numbers smaller. The bracket has been mended with a strip of iron and two rivets.",
+  },
+  "the-bridge-landing": {
+    "bollard|parapet|kerbs|road|landing":
+      "The bollard's top is worn into a shallow dish, polished like a door handle, and the stone around the dish is a little darker from the grease of hands. The kerbs at the landing are scored by cart wheels that swung too close coming off the bridge.",
+  },
+  "the-toll-cottage": {
+    "cottage|hatch|bench|chimney|house|room":
+      "The hatch has a ledge in front of it worn smooth in a long line, where coins were slid across. The bench outside is pitted all along the front edge with knife nicks, where people waiting whittled at it. The chimney's top is stuffed with a nest.",
+  },
+  "the-cart-shed": {
+    "shed|bays|bay|cart|ruts|wreck":
+      "The wrecked cart is missing one wheel and its shafts, and what is left of it is propped level on stones somebody set under the axle. In the empty bays the ruts go in shallow and come out deep: carts went in empty and came out loaded, every one, and the last two never came back.",
+  },
+  "the-ferry-strand": {
+    "strand|shore|road|water":
+      "The shingle where the two roads meet is trodden into a flat platform, and among the stones there are a great many old buttons, buckles and nails, lost from people waiting here. The water is narrow and quick and the far bank is clear enough to see a figure on it.",
+  },
+  "the-boat-graves": {
+    "boats|boat|ribs|hull|planks|graves|tideline":
+      "Each boat lies with its bow toward the sea. The newest still has her name cut into her stern board, too worn to read. The ribs of the next are tied to stakes driven into the shingle, as if somebody wanted her to stay where she was put.",
+  },
+  "the-landing-arch": {
+    "arch|keystone|face|causeway|road":
+      "The face on the keystone has two eyes and a mouth and the faint line of a beard, and the eyes are cut deeper than the rest so they still hold a shadow. The arch's stones are all dressed and fitted with no mortar at all. Its inner faces are cut with initials up to the height of a man's reach.",
+  },
+  "the-far-strand": {
+    "strand|shingle|weed|road":
+      "The weed on this side is higher up the shingle than on the western shore; the water comes up further here. Above it the stones are dry and the shore road begins in a clean edge of laid kerb, as if somebody drew a line where the sea was allowed to stop.",
+  },
+  "the-marsh-road": {
+    "road|salting|way":
+      "No kerbs and no metalling, but the way is still clear because the grass on it is shorter and finer than the grass beside it. Here and there a stone has been dropped into a soft place and trodden in. Somebody walked this often enough to fix it with whatever was to hand.",
+  },
+  "the-samphire-turn": {
+    "samphire|ruts|wheel-ruts|track|salting|turn":
+      "The samphire in the ruts grows in two neat green lines, one in each, and it stands upright and unbroken. Where the track turns onto the salting the ruts swing wide, cut by wheels long ago, and now the only thing using the curve is water.",
+  },
+  "the-crossing-house": {
+    "house|lamp|hatch|yard|well|stabling|stalls|stone":
+      "The stabling runs along one side, eight stalls, each with an iron ring in the wall worn on its inside curve and a manger of hollowed stone. The mangers have dry grass in them, bedded down, not fodder. The stone of the house is the same as the causeway's, cut by the same hands.",
+  },
+  "the-well-yard": {
+    "well|well-head|windlass|chain|bucket|yard|cobbles|water":
+      "The windlass drum is worn bright where the chain runs and the chain links are worn thin on their inner sides. The cobbles round the well-head are dished in a ring where people stood to draw. The bucket is oak, hooped with iron, and somebody has replaced one of its staves.",
+  },
+  "the-keepers-garden": {
+    "garden|beds|bean-frame|frame|beans|tree|wall":
+      "The beds are edged with boards and the soil in them is black and fine, much better than any soil out here: carried in, or made. The fruit tree is pruned. Along the bean rows the pods have been torn off and dropped half-eaten, and in the soft soil there are small hand-like prints.",
+  },
+  "the-sea-dyke": {
+    "dyke|bank|turf|ramp|breaches|breach":
+      "The breaches have bitten into the dyke in clean V-shapes, and the turf on their faces is torn and hanging, not slumped. The ramp is worn bare to the clay underneath by feet. Along the top the turf is cut with the square holes of old stakes, a fence that once ran along the crest.",
+  },
+  "the-boat-noust-east": {
+    "noust|boat|hull|stones|bilge|hollow":
+      "The stones on the boat's bilge are round shore stones, each about the size of a loaf, set evenly along her so she would not lift in a gale. Under her the noust's floor is swept. Her oars are inside her, lashed under the thwarts.",
+  },
+  "the-strand-road": {
+    "road|kerbs|surface|shore":
+      "The kerbstones on this road carry the same mason's arrow as the long causey and the bridge arches. One stone, a little way along, has been reset upside down, so its arrow points into the ground: somebody fixing the road after the people who built it were gone.",
+  },
+  "the-flashes": {
+    "flashes|water|salting|dips":
+      "The water in the flashes is warm on the top and cold underneath, and the bottom is soft grey mud that clouds up round your boot. The edges are crusted white. Small birds pick along them and run ahead of you, and stop, and pick, and run again.",
+  },
+  "the-limpet-rocks": {
+    "rocks|reef|limpets|shells|shell-scatter":
+      "Each limpet sits in a scar it has ground into the rock for itself, exactly its shape, and goes home to it after every tide. The empty scars are pale rings where the limpets were prised off. Among the broken shells above the tideline some have been smashed with a stone and some bitten.",
+  },
+  "the-shingle-rise": {
+    "notch|shingle|beach|road|bank":
+      "The sides of the notch are held up with timber shuttering, planks spiked into posts, and the shingle has pushed through the gaps in long grey tongues. The road through the notch has been dug out more than once; the spoil heaps lie grassed over on either side.",
+  },
+  "the-anchor-stone": {
+    "stone|block|granite|hole|rope":
+      "The hole is bored true, round and smooth, and on its inside the wear is all on one side, a long groove where the rope pulled seaward. The granite has small black and white grains and does not match a single other stone on this shore. It has sunk into the shingle a hand's depth.",
+  },
+  "the-drain-cut": {
+    "cut|drain|channel|reeds|water":
+      "The channel's sides were cut with a spade and the spade-marks are still in the clay above the waterline, every stroke the same width. The spoil was thrown up on the north side only, and is a long grassy ridge now. The water in the bottom moves slowly east.",
+  },
+  "the-fisher-huts": {
+    "huts|hut|hulls|boats|door|stone|footings|transoms":
+      "The hulls are clinker boats turned over, the gaps between the planks stuffed with moss and tar. The stone against the fourth door is a big flat one, set on edge, the kind you need both hands for. Through a crack in the door there is a shape inside that is a net, hung up and folded.",
+  },
+  "the-thrift-bank": {
+    "thrift|sea-pink|cushions|beach|bank|stone":
+      "Each cushion of sea-pink is rooted in a crack between the stones, the root going down long and tough into the dark where the rain sits. The flowers face the sun. Under the cushions the shingle is damp, and the stones are a darker grey there than anywhere else.",
+  },
+  "the-storm-line": {
+    "tree|weed|timber|ridge|crest|line":
+      "The tree is an oak, roots and all, stripped of its bark and bleached the grey-white of old bone. Its roots still hold stones in their grip from wherever it grew. The timber beside it is a ship's frame, with the bolt holes still in it, and a nail rusted solid.",
+  },
+  "the-wet-carr": {
+    "carr|willow|sallow|stems|roots|water|leaves":
+      "The stems are coated in grey lichen on the side away from the wind. The water between them is black and smells of rot when you stir it. Here and there a stem has been cut through with a blade, a long time ago, and the stump has sent up a dozen new shoots.",
+  },
+  "the-shingle-stair": {
+    "stair|steps|seat|stone|track":
+      "The seat is a slab on two uprights, set so that whoever sits on it faces the mountain square. Its top is worn smooth and dished. The stair's treads are worn in the middle, and the top step is worn most of all, where everybody stopped to look up before going on.",
+  },
+  "the-burn-flats": {
+    "gravel|stones|flats|silt":
+      "The stones are sorted by size in long low ridges, the biggest at the east end of each and the smallest at the west. Turn one over and its underside is clean, not green: these have all moved recently, in some flood that came down off the hill.",
+  },
+  "the-outfall": {
+    "outfall|chute|water|gravel|alders|burn":
+      "Where the chute hits the gravel it has dug a pool, clear and cold, with the stones at the bottom of it washed clean and rounded. The alders on either side have roots bared and white where the floods have stripped them. A branch is jammed in the chute's lip, pointing back uphill.",
+  },
+  // The Salt Hamlet (migs 370-373, 2026-11-04).
+  "the-burnt-cot": {
+    "walls|cot|black|fire|thorn|hearth":
+      "The black is on the inside face only, and highest over the doorway, where a fire inside a house always climbs out. The outside of the walls is clean. The thorn has rooted in the hearth's ash and grown fat on it, and it is the biggest thorn on the hard.",
+  },
+  "the-wind-orchard": {
+    "orchard|trees|tree|bark|windfalls|grass":
+      "The dead half and the living half were planted on the same day, in the same rows, at the same spacing. The living trees have been pruned, years ago, by somebody who knew how; the dead ones were left alone. Under the living half the windfalls are bitten, not pecked, and the bites are small and many.",
+  },
+  "the-sea-furrows": {
+    "furrows|ground|waves|crests|hollows|land":
+      "Each furrow curves at the end in a long shallow hook, where the plough team was turned round on the headland a few hundred years running. The hook is the same in every one. A few stones lie along the crests where they were thrown out of the soil and never carried off.",
+  },
+  "the-marsh-field": {
+    "field|meadow|strips|geese|grass":
+      "Kneel and the old strips are there in the turf, each a slightly different height from the next, a ribbon of nettle along some of the edges where a boundary bank stood. The geese have cropped the whole of it short, and their droppings lie thick on the side out of the wind.",
+  },
+  "the-yard-backs": {
+    "gardens|walls|wall|gaps|elder|kale|nettle":
+      "The gaps in the back walls are worn smooth on top and down both sides, the stones polished by hands as well as feet. Each gap lines up with a gap in the next wall, and the next, so that one path ran the whole length of the backs and every household used it.",
+  },
+  "the-chapel-hard": {
+    "hard|stone|stones|yews|yew":
+      "The worn middle of the hard is a rough oval, not a path: people stood here, in a crowd, often, and shuffled. Under the nearer yew the stones are rubbed in two places close together where something heavy and narrow-footed was set down again and again. A bier, or a table.",
+  },
+  "the-salt-chapel": {
+    "chapel|font|bench|door|roof|block":
+      "The font is cut from a single block and still holds a hand's depth of rainwater, though the roof does not leak. The bench along the wall is worn into hollows where people sat, and the hollows are closest together by the door. The door has a bar, and the bar is on the inside.",
+  },
+  "the-turf-hut": {
+    "hut|turf|walls|roof|driftwood|bracken|bedding":
+      "The driftwood rafters are bent and silvered and every one is a different length; somebody walked the strand for them. The bracken bedding is crushed flat in one long shape along the wall and newer bracken has been pushed in at its edges, so somebody still sleeps here, or something.",
+  },
+  "the-hard-lane": {
+    "lane|track|banks|bank|salt|walls":
+      "The cut is deepest where the lane leaves the marsh, and the bank there has two old ruts worn into its side, high up, from a time before the lane had sunk to where it is now. The salt along the foot of the banks is crusted on the seaward side only.",
+  },
+  "the-row-foot": {
+    "scorch|gable|fire|walls|ruts|shell|grit":
+      "The scorch climbs the gable in a narrow tongue, and at its foot the stones are cracked across where somebody threw water on them while they were hot. Whoever lit it wanted the wall's shelter more than the wall. The ruts here run in from the furrows and stop short of the houses.",
+  },
+  "the-salters-row": {
+    "doors|door|cots|street|walls|shell":
+      "Every door is shut the same way, latched from outside and the latch tied round with a twist of cord, all the cords long rotted to stubs. Somebody went down the row closing up. The laid shell runs in front of the better cots only, a strip each, bought and laid one family at a time.",
+  },
+  "the-salt-cross": {
+    "cross|steps|step|tally|stump|head":
+      "The broken head lies face down in the grass beside the steps, too heavy to have been carried far, and nobody ever set it back. The tally on the bottom step is strokes in fives, cut neatly at first and then quickly and then hardly at all, the last few only scratched.",
+  },
+  "the-row-head": {
+    "gate|wall|roofs|roof":
+      "The gate is set to swing outward, toward the far waste, and the post on the hamlet side is worn by a hand at latch height. Count the roofs and they come out the same from here as from the marsh end, which is more than most villages can say.",
+  },
+  "the-net-green": {
+    "posts|lines|green|grass|nets|hides":
+      "The posts have notches cut in their tops at different heights, for the different nets, and the notches are worn smooth by rope. Under the hide-pegging lines there is a row of small square holes in the turf, every one the width of a peg, too many to count.",
+  },
+  "the-dipping-well": {
+    "well|barrel|staves|water|mud|prints":
+      "The barrel has had its bottom knocked out on purpose so the water rises up into it from below. The staves are hooped with withy, not iron, and the withy has been renewed at least once. The hoof-prints round it are deer and sheep and something heavier, and all of them come and go.",
+  },
+  "the-old-hearths": {
+    "hearths|stones|ring|shelters|marks":
+      "The flat stones are worn on top and cracked through from the heat, two of them split and set back together. The marks of the shelters lie in a ring round the fire, every one with its doorway toward it. Whoever came here came every year and pitched in the same places.",
+  },
+  "the-pump-green": {
+    "well|ring|slab|rope|windlass|bucket|water":
+      "The slab was dragged across the top and the drag marks are still in the turf on one side, two long scars. The windlass handle is worn bright where hands turned it. The rope's rotted end still hangs from the axle, and it is a good thick rope, better than the well needed.",
+  },
+  "the-salt-pound": {
+    "pound|pen|gate|stones|courses|wall":
+      "The gate hangs on iron pins leaded into the stone, which is why it still swings. The top course on the seaward side is knocked loose in one place, two stones down inside the pen, where something went over it from inside. There are tufts of coarse hair caught in the stones beside the gap.",
+  },
+  "the-smiths-yard": {
+    "yard|scale|trough|ground|salt":
+      "Scuff the black and it is all hammer-scale, flakes of iron knocked off hot metal, trodden in until the yard is more iron than earth. The trough was cracked by frost and mended with a lead strap, and then cracked again beside the strap, and that time nobody mended it.",
+  },
+  "the-saltmasters-yard": {
+    "yard|cobbles|boiling-house|house|roof":
+      "The cobbles are laid in a fan from the boiling-house door, set by somebody who knew how, and a cart's wheels have worn two shallow grooves straight across them to the gate. The half-roofed boiling-house still has its flue. The house across the yard has a step scrubbed white.",
+  },
+  "the-far-cot": {
+    "cot|byre|roof|channel|partition|muck":
+      "The muck channel is cut stone, not a ditch, and it has a slope to it a mason would be proud of. The byre end of the roof is lower than the house end, so the beast lived under less roof and the family under more. Inside the byre door a ring is still leaded into the wall.",
+  },
+  "the-bare-toft": {
+    "toft|bank|doorstep|step|ground":
+      "The doorstep is the only stone the robbers left, because it was set too deep to lever out. It is worn hollow in the middle and worn again to one side, where a bad leg or a good habit always stepped. The bank round the toft is low and even, and nothing has been dug in it.",
+  },
+  "the-strand-graves": {
+    "graves|grave|mounds|rows|sea-pinks|pinks":
+      "In rows, and close: each mound barely a body's length from the next, dug as fast as they were needed. The chapel's own ground is behind its wall with room in it. These people were not carried that far. The sea-pinks grow thickest at the heads of the mounds.",
+    "ground|earth|soil|bones|layers|under":
+      "The salt has eaten one mound's side open, and the grave in it is shallow and new against what is under it: older bones, lying every way, with shells and sea-pinks' roots among them, and older again below. Under the deepest of them the soil stops, a spade's depth down, on flat stone, dressed and laid tight, older than anything else here, with cold air coming up through the joints.",
+  },
+  "the-gorse-corner": {
+    "gorse|path|tunnel|bushes|common":
+      "The path goes in at the height of a sheep's back and the gorse over it is clipped short and even, not by any blade: browsed. Tufts of wool hang on the spines at the entrance, and further in, coarser hair, darker, caught at the height of your knee.",
+  },
+  "the-sea-smithy": {
+    "smithy|hearth|hood|anvil|block|hooks|window":
+      "The anvil block is a single elm stump with four iron bolts through it and a square of clean wood on top where the anvil sat. Round that square the wood is pocked all over with small burns. The hooks on the wall are spaced for tools of every size, and each one is empty.",
+  },
+  "the-saltmasters-house": {
+    "house|hearth|lintel|hook|bench|bedstead|window|shutter|floor":
+      "The floor is swept, and the sweepings were taken out, not pushed into a corner. The hook in the lintel is worn thin on its underside by a pot's handle. The shutter has a bar on the inside and the bar is in its brackets: somebody shut it, and then left by the door.",
+  },
+  "the-far-house": {
+    "house|thatch|hearth|hearth-stone|byre|floor|smoke":
+      "The underside of the thatch is a black crust, hard and glossy, shining where the smoke went up through it. The hearth-stone is cracked in a star from the middle out. The beaten floor is lower round the hearth than at the walls, worn down by a lifetime of feet going round the fire.",
+  },
+  "the-sallow-rows": {
+    "sallow|willow|stools|stool|rows|rods|trunks":
+      "Every stool has the old cut showing at the bottom, a ring of grey stumps where the rods were taken off level, year after year, with a hook. Above that the forty trunks have gone their own ways. Two of the stools have rods still bundled and tied at the foot, cut and never collected.",
+  },
+  "the-marsh-end": {
+    "marsh|creek|sedge|water":
+      "The last firm ground ends in a little bank of trodden turf where people stood and looked out, and there are flat stones set into the edge of it to stand on. Beyond that the sedge closes up and the water lies in it in sheets, and no path goes on.",
+  },
+  // ======================= THE MOUNTAIN, the rest (2026-11-05) ==========
+  "the-boulder-beach": {
+    "boulders|stones|shingle|tideline":
+      "The boulders below the tideline are bald and smooth; above it they wear lichen in grey rings, and the line between the two is sharp. None of them has moved in a very long time. In the gaps between them the shingle is fine and wet, and full of bleached crab legs.",
+  },
+  "the-track-head": {
+    "stone|track|road|turf|step":
+      "The last laid stone is the same as every other, dressed, set on its edge. The next one is not there, and there is no hole where it should be. The worn place in the turf beyond starts at exactly the road's width and stays it, because everybody who walked off the road kept walking as wide as the road had been.",
+  },
+  "the-burn-mouth": {
+    "burn|water|gravel|braids":
+      "Each braid has its own little bank of gravel, and the banks are freshly cut, the stones on their faces still wet underneath. The water is brown from the hill and turns grey where it meets the sea. Lying in the gravel there are twigs and heather stems, carried down from a long way up.",
+  },
+  "the-cobble-bank": {
+    "cobbles|cobble|bank|stone":
+      "The cobbles are so alike that a handful of them could be a set. Each one is worn on all sides by all the others. Down between them, a forearm deep, the stones are smaller and wet, and the whole bank breathes out a smell of weed when it shifts.",
+  },
+  "the-wind-flat": {
+    "grass|shelf|flat":
+      "Kneel and the grass is a tight mat of tiny leaves, many kinds, all kept an inch high, and among them flowers no bigger than a fingernail. The roots go deep and the soil they hold is thin and black. The only thing on the shelf that stands higher than the grass is the droppings of sheep or deer.",
+  },
+  "the-first-rise": {
+    "slope|ground|rise":
+      "The turf on the rise is pocked with little level steps across the slope, one above another, each a hoof wide: the trods of animals going along the hill rather than up it. They run all the way up out of sight. The mountain starts here, and that is how the animals first say so.",
+  },
+  "the-thorn-scrub": {
+    "blackthorn|thorn|scrub|tunnels|spines":
+      "The tunnels are floored with trodden earth and littered with droppings, and the thorns round the mouths are hung with tufts of wool and coarse hair. Every bush is clipped flat on its top by the wind and leans landward, so the whole scrub looks combed.",
+  },
+  "the-lower-beck": {
+    "beck|burn|banks|turf|water|gravel":
+      "Where the banks have dropped into the burn, whole slabs of turf lie in the water with the grass still on them, combed flat by the current. The gravel in the bottom is speckled with tiny fish that dart off upstream. The side of the beck is trodden along the edge where everything walks it.",
+  },
+  "the-alder-thicket": {
+    "alders|alder|roots|thicket":
+      "The knuckled roots are polished on top where they are used as steps. Between them the black water has a skin of floating leaves. On the alder trunks at shoulder height the bark is rubbed off in patches, smooth and pale, where something big has scratched itself.",
+  },
+  "the-nettle-ground": {
+    "nettles|nettle|ground|stand":
+      "Push into the nettles and the ground under them is not hillside but a low bank of earth with stones in it, in the outline of a building with a door on the downhill side. The soil is black and soft and full of old bone and charcoal. The people went; their middens stayed fertile.",
+  },
+  "the-turf-wall": {
+    "wall|turf|sods":
+      "The sods were cut square with a spade and laid grass side down, each course set back a little from the one below. Where the wall has slumped you can see the grass growing on it from both faces now. In the lowest courses the cut edges of the sods are still sharp.",
+  },
+  "the-rush-hollow": {
+    "rushes|rush|hollow|oval|stems|water":
+      "The pressed oval is wider at one end than the other, and at the wide end there are hairs caught on the rush stems, long and coarse and grey-brown. The black ground at its edge holds a print, split, with two dew-claws behind: a big beast, and it lay here a long time.",
+  },
+  "the-beck-narrows": {
+    "slot|walls|rock|boulders|burn|narrows":
+      "The rock of the walls is polished smooth to the height of the highest flood and rough above it. The jammed boulders overhead have wedged themselves so tight that ferns grow out of the cracks between them. A stick lies jammed across the slot at head height, carried up there by water.",
+  },
+  "the-goat-track": {
+    "path|track":
+      "The path is worn down to the bare soil in a strip a hand wide and is dotted with small round droppings. At the uphill edge the turf is rubbed bald on rocks at knee height, where something leaned its weight as it walked. Long pale hairs are caught on the heather beside it.",
+  },
+  "the-last-pasture": {
+    "grass|pasture|field|wall":
+      "Under the grass the field has the faint lines of old work, a ridge here and a hollow there where it was once cleared of stones. The cleared stones are heaped along the foot of the wall below. At the top edge the grass simply thins, one blade at a time, until there is more rock showing than green.",
+  },
+  "the-water-slide": {
+    "rock|slide|tongue|water|sheet":
+      "The rock is smooth as a stair rail and covered with a thin skin of green slime you can scrape off with a fingernail. Down its edges, where the water does not run, there are boot scrapes, long ones, ending abruptly. The bottom of the slide drops into a churned pool.",
+  },
+  "the-plunge-pool": {
+    "pool|fall|moss|spray":
+      "The moss in the spray ring is so thick and bright that it looks lit from inside, and a finger pushed into it comes out dripping. In the pool, at the edge of the deep, there is a stick standing upright in the water, stuck by one end in something you cannot see.",
+  },
+  "the-sphagnum-flat": {
+    "moss|sphagnum|carpet|flat":
+      "Lift a handful and it is mostly water, cold, and the moss underneath is pale and dead and goes down further than your arm. Every step leaves a dent full of water that fills from below. The red moss grows in humps and the green in hollows, every hump and hollow its own colour.",
+  },
+  "the-hanging-turf": {
+    "turf|edge|roots|mat|slope":
+      "The roots in the undercut are a solid mat of heather and grass, woven, holding the whole skin together. Under it the soil has washed out in a black hollow. Lumps of turf that have already come away lie down the slope below, still green on top, upside down or right way up.",
+  },
+  "the-peat-hags": {
+    "hags|peat|channels|heather|wood|trunks":
+      "The black trunks in the cut faces are pine, mostly, with the bark still on, and sound enough to take a knife. Some are charred on one side. The peat has buried a forest to its top, and the trunks all lie the same way, felled by the same wind.",
+  },
+  "the-cotton-grass": {
+    "cotton|grass|bog cotton|stalks":
+      "Each white tuft is a seed head, soft and loose, that comes away at a touch. The leaves at the bottom are thin and red at the tips. Between the stalks the ground is not ground, but a skin of moss over water, and your boot goes through it to the ankle at once.",
+  },
+  "the-bracken-slope": {
+    "bracken|slope|ground":
+      "Under the fronds, last year's bracken lies in a brown mat, dry and crackling, and the ground under that is bare. There are tunnels through the base of the stand at the height of a dog. The bracken has climbed over an old wall and buried it, and you trip on it before you see it.",
+  },
+  "the-boulder-field": {
+    "boulders|boulder|rock|gaps":
+      "The top faces of the boulders are rough and lichened and the gaps between them go down into black. The boulders that sound hollow when you step on them have water running underneath; you can hear it, a long way down, under the whole field.",
+  },
+  "the-gravel-race": {
+    "gravel|bed|burn|stones":
+      "Hold a hand flat on the gravel under the water and you feel it moving, a slow crawl of grit against your palm. The stones are smaller downstream and bigger up. At the edges the race has thrown up little ridges of gravel and left them, and they will be gone at the next spate.",
+  },
+  "the-fallen-birch": {
+    "birch|trunk|tree|raft":
+      "The birch's bark is still white in strips and the wood under it is soft and spongy. The raft on its upstream side is twigs, heather, a dead lamb, a broken basket and a lot of froth. The trunk's top is worn bare of moss along a line, where feet have used it.",
+  },
+  "the-quaking-moss": {
+    "moss|surface|water":
+      "The swell goes out from your feet in a slow wave and comes back as a slower one. Here and there the moss has split and the water shows in a crack, dark and clear and still, and very deep. A stick lies flat on the surface, as if somebody put it down to spread their weight and went no further.",
+  },
+  "the-pass-head": {
+    "shoulder|skyline|rise|ground":
+      "The ground on the shoulder is short grass and grit, and there is not a single stone on it bigger than a fist, as if somebody had cleared it. The wind has done that. Along the skyline the grass is darker in a faint line that is a path, worn by animals walking the edge.",
+  },
+  "the-slant": {
+    "ramp|slant|turf|rock|crag":
+      "The ramp is printed all the way up with the cloven feet of sheep and deer, and here and there a heavier print. At the narrowest point the rock above has a long smooth patch at shoulder height, rubbed glossy by flanks pressing past against the wall.",
+  },
+  "the-high-fold": {
+    "wall|fold|stone|pen|corrie":
+      "The wall is built with a gap at its middle, and on either side of the gap there is a stone set upright for a gatepost, with a groove worn in each. Where the beasts now walk over the wall, the top stones are knocked off in a line and scattered down the inside.",
+  },
+  "the-wether-ledge": {
+    "ledge|grass":
+      "The grass is cropped so short the soil shows through in places, and it is dotted with droppings of three or four different kinds. At the back of the ledge, under the rock, there is a long dry hollow where things lie up out of the north, and it is full of shed hair.",
+  },
+  "the-peat-pool": {
+    "pool|water|peat":
+      "Hold a hand under the surface and it vanishes at the wrist into brown. The edge of the pool is a sheer wall of peat, and in the wall, a hand under the water, the end of something pale is showing. It is a bone, and it is not rotted, and it has been there a long time.",
+  },
+  "the-beck-fork": {
+    "waters|water|fork|channel|junction":
+      "The line between the two waters is sharp enough to put a finger on, brown one side, clear the other, and the clear side is a little colder. The gravel under the clear water is grey; under the brown it is stained the colour of tea. Below the mixing it is all one shade.",
+  },
+  "the-dry-course": {
+    "bed|course|rock|banks|gravel":
+      "The scoured rock has pot-holes in it, round and smooth, each with a stone still sitting in the bottom that the water once whirled round. Tufts of grass and heather are caught in the bushes on the banks, at head height. That is how high the water comes.",
+  },
+  "the-sunk-boulders": {
+    "boulders|crowns|moss|bog":
+      "Push a stick down beside the nearest boulder and it goes down a long way before it touches stone, then follows the curve of the boulder further down. The moss on the crowns has a little ring of bare rock at the top, where birds stand.",
+  },
+  "the-shoulder-walk": {
+    "shoulder|ground|line":
+      "The ground on the walk is trodden firm and grey, a wide band of it, by everything that ever went along the shoulder. There is no shelter anywhere along it, and on the downwind side the grass is littered with things the wind has dropped: feathers, tufts of wool, a scrap of cloth.",
+  },
+  "the-shoulder-drop": {
+    "edge|lochan|corrie|ramp|grass|scree":
+      "Right at the edge the grass is worn bare in a short patch, the size of a seat, where people have sat to look down. The ramp comes up under the lip at a slant, so narrow that its top is only a ledge, and from above you would look straight past it.",
+  },
+  "the-north-scree": {
+    "scree|stones|crust":
+      "The black crust on the stones smears like soot and smells of nothing at all. The stones under it are cold to the touch on the hottest day. Ice lingers in the gaps between them in the mornings, long after the rest of the hill has thawed.",
+  },
+  "the-scree-toe": {
+    "scree|stones|pieces|turf|toe":
+      "The big stones at the toe are grown over with lichen and moss, settled for good. A few paces up, the stones are bare and newer. Between the two there is a line where the moss stops, and above that line everything is still sliding.",
+  },
+  "the-moraine-bank": {
+    "moraine|bank|ridge|rubble":
+      "The rubble in the bank is every kind of stone mixed together, round and sharp, big and small, none of it sorted. Some of the stones have long parallel scratches on them, all one way. The ridge is grown over with grass on its downhill side and bare on the uphill.",
+  },
+  "the-stone-river": {
+    "stones|rock|river|turf|edges":
+      "At the edges of the stone river the turf is rucked up like a rug pushed against a wall, and torn, with the roots hanging out over the stones. Lichen grows on the stones in the middle, but only on their upper faces, and on some of them the lichen is upside down.",
+  },
+  "the-flood-gravel": {
+    "gravel|apron|turf|boulders":
+      "The torn turf lies upside down at the edges of the apron in rolled flaps, like blankets thrown off a bed. Grass has started to grow through the gravel in thin green threads. One boulder in the middle sits on top of a crushed rowan sapling, which is still alive.",
+  },
+  "the-mire-foot": {
+    "mire|prints|hoofprints|heather|water":
+      "The prints are layered so thick that each new one cuts across three older ones. Deer, sheep, a dog or something like one, and the big cloven print of something heavy. The heather stems at the mire's edge are snapped short and the snapped ends are pale and fresh.",
+  },
+  "the-cairn-line": {
+    "cairns|cairn|heaps|stones|courses":
+      "Each cairn is built of flat stones laid carefully, the biggest at the bottom, and topped with a single upright stone pointing toward the next. Where a cairn has fallen, its stones have been put back by a different hand, less carefully. The line runs dead straight between them.",
+  },
+  "the-shattered-rib": {
+    "rib|slabs|gaps|rock":
+      "Inside the gaps the rock faces match each other exactly, bump for hollow, so you can see where each slab was joined to the next. The frost is still working: on the floor of each gap there are new flakes, sharp-edged, that fell this winter. There are droppings in the deepest gap.",
+  },
+  "the-fan": {
+    "fan|stone|cone|gully":
+      "The fan's middle is a rough trough of big stones, the path the biggest falls took. The edges are pebbles and grit. Looking up the gully that feeds it, you can see the stones waiting at the top, piled on a ledge, and a few of them are freshly white where they broke.",
+  },
+  "the-loose-slope": {
+    "scree|slope|rock":
+      "The scree is clean sharp-edged rock, no lichen on any of it, all moving too often for anything to grow. Each step pushes a little wave of it downhill with a dry clatter. The tracks you made coming up are already smoothed over below you.",
+  },
+  "the-sorted-ground": {
+    "rings|stripes|stones|gravel|ground":
+      "The rings are as near round as a cart wheel and the coarse stones in their rims stand on their edges, pushed up out of the fine. Cross the rings and step on a stripe and your boot sinks into soft gravel. The ground is still at it: one of the rings has a stone half-lifted on its edge.",
+  },
+  "the-lichen-boulders": {
+    "lichen|boulders|rings|stones|plates":
+      "The biggest ring has a dead grey centre and a living yellow-green edge, and inside it are smaller rings, younger, growing over the old. On the rock where a ring has been scraped off, the stone is a brighter grey, the colour it was when it fell.",
+  },
+  "the-lower-force": {
+    "fall|force|lip|pool|rock":
+      "The lip of the fall is worn into a notch the shape of the water, smooth and dark. Beside it the rock has a line of handholds that are worn too, polished pale by hands, and in one of them there is a rusty iron spike somebody drove in long ago.",
+  },
+  "the-force-pool": {
+    "pool|basin|rock|walls":
+      "The things circling in the pool are sticks, a lump of froth, a drowned bird, and one wooden bowl turning on its side. The wet walls are green and black, and at the waterline they are worn into a smooth ledge where the circling has rubbed them.",
+  },
+  "the-black-runnel": {
+    "runnel|channel|water|peat|bog":
+      "The sides of the runnel are cut as sheer as if by a spade, black and fibrous, with roots hanging out. Somebody has laid two long poles across it at one place, side by side, and pushed their ends into the peat. One pole is rotten through.",
+  },
+  "the-wind-lane": {
+    "trough|lane|grit|air":
+      "The grit streaming along the trough has polished the stones in its floor, and they shine where they face the wind. Along both edges of the trough the grass leans away from it. At its downwind end the grit has piled into a long low drift.",
+  },
+  "the-wind-scour": {
+    "scour|turf|gravel|roots|edge":
+      "At the torn edge the turf curls back on itself like a page, roots hanging in the air, and every gust lifts it a little more. Out in the bare gravel there are still a few roots standing up like little wires, their soil blown out from round them.",
+  },
+  "the-north-corrie": {
+    "corrie|bowl|floor|stone":
+      "The wet stone on the floor is dark green with moss that never dries, and the shadow under the back wall has a crust of old snow even in the warm months. There is no sign anything stays here. The tracks cross the corrie from side to side and do not stop.",
+  },
+  "the-brink": {
+    "ledge|brink|crag|holds":
+      "The holds up to the ledge are worn, but not by much, a little smoother than the rock round them. On the ledge itself the grit has never been trodden into a path. There are no droppings, no tracks, no feathers. Nothing lives on it and nothing passes it.",
+  },
+  "the-bealach": {
+    "pass|bealach|saddle|ground|stone|cairns":
+      "The ground at the saddle is beaten bare in a band twice as wide as a road, the stones in it polished by hooves and paws and feet, every kind. Here and there in the band, a stone has been knocked out of the ground and lies loose, kicked a stride along by the last thing to come through.",
+  },
+  "the-wind-notch": {
+    "notch|gap|grass":
+      "The grass in the notch is combed so flat its blades lie overlapping like shingles on a roof, every one pointing out of the gap. The rock on either side is scoured smooth on its windward face and rough on its lee. Anything dropped here goes through the gap and away.",
+  },
+  "the-rock-glacier": {
+    "rock glacier|glacier|rubble|ridges|tongue":
+      "The ridges across the rubble are evenly spaced and curve downhill at the middle, like the folds of cloth. Between the stones, a forearm down, there is ice, grey and dirty, and cold comes up off it in a breath you can feel on your face.",
+  },
+  "the-shifting-ground": {
+    "blocks|block|slab|ground":
+      "The slabs that tilt are worn bright along the edges they rock on, and the smaller stones they rest on are crushed to powder at the points of contact. The ones that do not tilt have lichen on them. The ones that do have none.",
+  },
+  "the-cold-hollow": {
+    "hollow|basin|snow|rubble":
+      "The old snow is grey with grit and hard as packed salt, and there are layers in its edge, each a winter, each a slightly different shade. Lying in its surface, half-melted in, there are a few dead insects and a feather. The rubble round it is wet with meltwater.",
+  },
+  "the-glacier-mouth": {
+    "hole|mouth|arch|burn|rock":
+      "The roof of the arch is ice, not rock, ribbed and dripping, and grey with grit frozen into it in layers. The burn comes out from under it milky with ground stone. On the gravel at the mouth there is a scatter of small stones polished smooth on one side by the ice dragging over them.",
+  },
+  "the-wedge": {
+    "block|fissure|crack|walls|wall":
+      "Both walls are polished in a band at shoulder height, and the band is greasy to the touch and holds coarse grey hairs in the rough places at its edges. The block itself is scraped along its underside where heads and backs have pushed under it. The crack beyond smells of animal.",
+  },
+  "the-wet-slabs": {
+    "slabs|rock|algae|film|water":
+      "The black algae is a skin you can peel up with a fingernail, and the rock under it is pale grey and rough, the grip you would want if it were not covered. Long smear-marks run down the slabs where feet have gone out from under somebody.",
+  },
+  "the-blown-ground": {
+    "gravel|ground|ripples":
+      "The ripples are spaced a hand apart, their crests lined with the biggest grit and their troughs with the smallest that stayed. Every stone has a little tail of sand in its lee, all pointing the same way. A feather lies pinned against one of them, quivering.",
+  },
+  "the-stone-stripes": {
+    "stripes|lines|stone|gravel|slope":
+      "The stones in the stripes stand on their edges, long faces downhill, pushed up out of the fine stuff and left. The gravel between is soft and finger-marked with frost. Each stripe goes down the slope straighter than any wall anybody built.",
+  },
+  "the-snow-gully": {
+    "gully|snow|groove|tongue":
+      "The grooves cut by meltwater are clean and blue-walled, and at the top of the tongue there are old cut steps, softened by melt but still there, a line of them going up. At the bottom of the snow, where it runs out onto rock, the stones are scored by things that came down fast.",
+  },
+  "the-corrie-rim": {
+    "rim|edge|turf|stone|drops":
+      "The two strides of level ground are worn into a path along the crest, bare and grey. On the corrie side the turf ends in a lip that has broken away in places, showing the black of the bowl below. The stones along the rim are rubbed smooth by wind-blown grit.",
+  },
+  "the-corrie-lip": {
+    "lip|rim|line|bowl|shoulder":
+      "The turf at the lip is cut through by a dozen trods coming up from the shoulder and going over into the bowl, each a hoof wide. Where they cross the lip they have worn it down into notches. The wind has piled grit against the down-slope side of every tussock.",
+  },
+  "the-gully-head": {
+    "bowl|lochan|walls|floor|notch":
+      "From the notch's mouth you can see the bowl's walls are scraped smooth in long grooves, all running down toward the lochan. The floor is boulders and moss. The black water in the middle lies dead flat even when the wind is moving on the rim.",
+  },
+  "the-first-crag": {
+    "crag|wall|rock":
+      "The rock is wet and black and seamed with white quartz in crooked lines. At its foot the turf stops dead in a hard edge, and between the turf and the rock there is a gap a hand wide where the water running down the face disappears into the ground.",
+  },
+  "the-boulder-choke": {
+    "choke|blocks|boulders|gully|gaps":
+      "The way through at the back is worn: the moss is scraped off the blocks along it in a tunnel, and the grit under it is printed with knees and paws. One of the wedged blocks has a long fresh crack across it, white inside, that was not there long ago.",
+  },
+  "the-crag-shadow": {
+    "shadow|flakes|blocks|ground|wall|crag":
+      "The flakes lie with their sharp edges up and nothing has rounded them. Among them, half buried, are a sheep's skull, a long leg bone, and a piece of rusted iron that was once a tool. They all came down the face, or with something that did.",
+  },
+  "the-gully-foot": {
+    "gully|heap|grit|splinters":
+      "The heap is fresh on top, pale grey stone with no lichen on it, and older underneath. Among the splinters there is a rib bone, snapped in two, with the break still sharp. Whatever brings things down the gully brings them down hard.",
+  },
+  "the-cleft": {
+    "cleft|fissure|track|grit|lip":
+      "The scored track at the lip is a groove in the grit, and it has small stones pushed along the front of it and smeared dark stains in its middle. Caught on the rock at the mouth there are tufts of wool and a scrap of hide with the hair on it.",
+  },
+  "the-south-shoulder": {
+    "shoulder|heather|rock|flank":
+      "The heather here is short and springy and flowering purple in its season, and the ground under it is dry enough to sit on. The rock showing through it is warm in the hand. Every stone on the slope has a lizard's worth of shade on its north side.",
+  },
+  "the-sun-shoulder": {
+    "rock|ground|shoulder":
+      "The rock is a reddish stone that holds the heat like a hearth, and it is spotted with orange lichen. The ground is threaded with paths, many and fresh, of animals coming round the corner into the sun. The heather is browsed down along every one of them.",
+  },
+  "the-bare-plateau": {
+    "pavement|stone|gravel|plants|cushions|plateau":
+      "Each cushion is tight as a fist and covered in tiny flowers the size of a pinhead. The stone pavement under the gravel is cracked into blocks with deep slots between them, and in the slots, out of the wind, there are ferns no bigger than a thumb.",
+  },
+  "the-frost-shatter": {
+    "rock|plates|fragments|rubble":
+      "Lift a plate and the one under it is its other half, with a matching break, still sharp. The pieces have moved apart by a finger's width at most. Under the top layer the rock is damp, and in the cracks there is a rime of ice even in the afternoon.",
+  },
+  "the-cold-face": {
+    "face|rock|film|ice|ledges|lichen":
+      "The fringes of ice along the ledges hang in long thin teeth, and the drips falling off them have built small cones of ice on the ledge below. The rusty lichen comes off on your hand as an orange powder. Nothing living leaves a mark on this face.",
+  },
+  "the-black-scree": {
+    "scree|sheet|pieces":
+      "The pieces are all much the same size, a thumb's length, flat and sharp and as black as charcoal. They ring like broken pottery when they slide. The sheet runs so evenly from top to bottom that there is not a single larger stone anywhere on it.",
+  },
+  "the-corrie-mouth": {
+    "lip|bowl|grass|edge|floor|water":
+      "The grass runs to the lip in a thick mat and hangs over it in a fringe, roots and all, like the eave of a roof. Below the fringe the rock goes straight down. Looking out over the floor you can see the lochan, and around its edge, a ring of paler stones where the water stood higher once.",
+  },
+  "the-corrie-floor": {
+    "floor|blocks|moss|corrie":
+      "The moss between the blocks is deep and soft and unmarked, every hollow filled, as though nothing ever walked through here. The blocks are huge and their faces are scraped with long lines, all running toward the lochan. It is quiet enough to hear the water drip off the walls.",
+  },
+  "the-notch": {
+    "notch|slot|tracks|grit|crag":
+      "The tracks in the grit are deer, sheep, and something with broad pads and claws that show. They go through and come back through, layered over each other in the narrowest part where nothing can step aside. The rock on both walls is rubbed smooth at hip height.",
+  },
+  "the-heather-shelf": {
+    "heather|terrace|shelf":
+      "The heather's stems are thick as a wrist at the base and twisted, old enough to have fallen over and grown up again. In among it there are beds, round flattened places, the heather pressed down and the soil under it bare and dry. One of them is still warm.",
+  },
+  "the-flat-top": {
+    "ground|plain|stone|top":
+      "The stones on the flat top are all frost-split and lie flat, but here and there one stands on its edge, set up by a hand. They are a long way apart. From one you can just see the next, and nothing else that anybody ever touched.",
+  },
+  "the-plateau-edge": {
+    "rim|edge|ground|plateau":
+      "At the rim the stones are loose and lie tipped toward the drop, as if they were leaning over to look. The turf behind them has a crack in it running parallel to the edge, a hand wide and deep, where the whole lip is getting ready to go.",
+  },
+  "the-drift-edge": {
+    "snow|drift|wall|overhang|gap|ground":
+      "The undercut is blue inside and dripping, and the drift above it is hollow, a shell of old snow over air. The bare strip at its foot is sorted gravel and dead grass, flattened, yellow, and only now starting to green up again where the snow let go.",
+  },
+  "the-lochan-shore": {
+    "shore|grit|tracks|water|wall":
+      "The pad prints follow the deer prints exactly, stepping inside them, and where the deer prints break into a run the pad prints lengthen too. At the water's edge both stop, and in the grit there is a smear and a few long hairs.",
+  },
+  "the-deer-lawn-high": {
+    "grass|lawn|heather|grazing":
+      "The grass is bitten so short and so often that it has grown into a dense turf like a bowling green. It is spotted with droppings, all of them deer, in clusters. At the lawn's edge the heather is browsed back in a sharp line, as far as a neck can reach without stepping into it.",
+  },
+  "the-dry-corrie": {
+    "corrie|bowl|grass|gravel|floor":
+      "The flattened places in the grass are shaped like bodies, and there are several of them in a loose group under the warmest wall. The gravel around them is dotted with droppings and shed hair. Nothing moves the dry grass in here but whatever lies in it.",
+  },
+  "the-hidden-burn": {
+    "burn|water|heather|stream|hollow":
+      "Part the heather where the sound is loudest and there is a slot in the peat under it, the water running dark and fast at the bottom of it. The heather's roots bridge it. Somebody has pushed a stick down into the slot at one place to mark it, and the stick is green with moss.",
+  },
+  "the-old-snow": {
+    "snow|ice|grit|insects":
+      "The grey top skin is grit and flies and the dust of a whole summer, melted into a crust. Scrape it back and the snow underneath is white and very hard. A little way in, through the side of the drift, a darker shape shows faintly, about the size of a fox.",
+  },
+  "the-water-lip": {
+    "lip|notch|water|rock":
+      "The water slides over the notch so smooth and flat that it looks like glass laid on the rock. The notch's edges are polished and rounded. Down on the rock below, where it lands out of sight, there is a fine mist rising, and moss as bright as paint.",
+  },
+  "the-wallow": {
+    "wallow|mud|heather|hollow":
+      "The mud is printed with hooves going in and coming out, and the hair in it is red-brown and long. The heather stems round the edge are plastered with mud to the height of a deer's back and still wet. The smell is musk and rot together.",
+  },
+  "the-warm-slabs": {
+    "slabs|rock|sheets":
+      "The rock is warm to the touch long after the sun has gone off it and gives off a faint smell of dust. Along the cracks between the sheets there are shed skins, thin and papery, caught on the rough edges where something slid out of them.",
+  },
+  "the-cut": {
+    "cut|slot|burn|rock|wool|lip|shape":
+      "The wool on the lip is wet and dirty, caught on a sharp edge where something scrabbled. Down in the slot the dark shape is a sheep, wedged on its side above the water, and the water has been washing round it long enough to clean the fleece white on its lower side.",
+  },
+  "the-old-drift": {
+    "drift|hollow|crest|snow":
+      "The scoured hollow in front of the drift is bare to the rock, swept clean by the wind turning back on itself off the snow's face. The drift's edges are hard and sharp as a cut cake, and they are in exactly the same place as the old lichen-line on the rocks beside it says they always are.",
+  },
+  "the-cold-shadow": {
+    "shadow|rubble|moss|ground":
+      "The black moss is crisp with frost in the creases even now. The rubble under it is wet and very cold, and the cold comes up through your boots. Nothing grows here but the moss, and the moss grows so slowly that a footprint pressed into it last year is still there.",
+  },
+  "the-melt-runnel": {
+    "runnel|channel|snow|water":
+      "The runnel's walls are smooth as glass, carved by the water, and grey with grit frozen in thin lines. At first light the bottom is dry ice, crusted, and you can see where the water will run again by the trail of grit along it.",
+  },
+  "the-upper-drift": {
+    "drift|ice|grit|stones|cups|tongue":
+      "Each stone sits in its own cup of melt because the dark stone takes the sun and the snow does not. Lift one and the cup is full of clear water. Among the stones there is a bird's wing, frozen in, the feathers still perfect.",
+  },
+  "the-hanging-step": {
+    "shelf|step|wall|face|drop":
+      "The shelf's floor is gritty and dry and its outer edge is crumbling, loose bits ready to go at a touch. At the narrowest point the rock above has a crack at chest height that every hand has used, and the crack is worn smooth inside.",
+  },
+  "the-lower-band": {
+    "band|shelf|ledge|ledges|overhang|wall|rock":
+      "The overhang keeps the shelf dry, and the dust under it is soft as flour and printed with small feet. At the shelf's far end the ledge narrows and stops, and on the rock above the stop there are scratches, many, where something tried to go on.",
+  },
+  "the-kept-room": {
+    "room|walls|floor|corners|rock|box|dust":
+      "The tool marks on the walls run in neat parallel lines, every stroke the same length and the same angle, worked by somebody patient. The dust on the box lies in an even grey coat with nothing written in it. The floor in front of the box is swept, and the swept part is only as wide as a person standing.",
+  },
+  "the-thin-turf": {
+    "turf|grass|sheets|rock|soil":
+      "Lift a lifted edge and the soil underneath is a thin black crumb with the roots running sideways through it, looking for somewhere to go down and not finding it. The rock is pale where the turf has only just come off it and grey where it came off long ago.",
+  },
+  "the-basking-stone": {
+    "stone|boulder|top":
+      "The shine on the top of the boulder is grease, worked into the stone, darker in the middle. Long coarse hairs are caught in the rough edges round it. On the ground to the south, where something steps up onto it, the turf is worn bare in a single patch.",
+  },
+  "the-pothole": {
+    "pothole|shaft|hole|stone|cut|burn":
+      "The rim of the pothole is rounded and polished, and the shaft's walls inside are ribbed with spiral grooves going down. Water goes into it without a sound. A smaller pothole beside it, dry, still has its grinding stone sitting in the bottom, smooth as an egg.",
+  },
+  "the-snow-edge": {
+    "snow|edge|lip|curl|drift|blocks":
+      "The curl of the lip is hollow underneath and you can see light through its thinnest part. The fallen blocks below are rounded at the edges and gritty, settling slowly into the ground. One has a hare's track going straight across its top.",
+  },
+  "the-moat": {
+    "moat|gap|trench|snow|rock":
+      "Lean over the trench and the cold comes up in a breath, and you can hear water a long way down. The snow wall is layered, a winter to each band. The fallen stuff bridging it is soft at the edges, and there are tracks going round the trench, not over it.",
+  },
+  "the-snow-bed": {
+    "snow|field|hollow|bed":
+      "Round the edge of the snow bed there is a ring of bare black ground where nothing grows because the snow sits on it too long, and outside that ring a second ring of moss, and then grass. The rings mark where the snow used to reach. The outer one is a long way out.",
+  },
+  "the-chimney-foot": {
+    "chimney|cleft|wall|ledge|trickle":
+      "The trickle down the back of the cleft has built a little curtain of green slime and a puddle at the foot. On the rock at the entrance, chest high, there is a smooth patch, the size of a palm, darker than the rest: where everybody puts a hand to start.",
+  },
+  "the-ledge-walk": {
+    "ledge|hold|rib|rock":
+      "The hold at chest height is a natural flake, and it has been used so long it is polished and glossy and has a slight groove along the top where fingers curl. The ledge at the rib is worn down a fraction in the middle. People went round here facing the rock.",
+  },
+  "the-terrace": {
+    "terrace|ledge|grass|wall|corner":
+      "The grass is cropped very short and dotted with droppings. At the corner where the terrace stops, the ground is trampled into a bare patch, and the rock round the corner shows scratch marks at the level of a beast's shoulder, where something went to look and came back.",
+  },
+  "the-hot-ledge": {
+    "ledge|dust|scree":
+      "The dust on the ledge is so fine it holds the print of every hoof that passed, and it is printed solid. Here and there along the outer edge the dust has slid off in a little fan down the face, where a foot went too close. The rock above is warm and dry and smells of goat.",
+  },
+  "the-gravel-shelf": {
+    "shelf|terrace|gravel":
+      "The gravel is bleached almost white on top and dark underneath, which you see wherever a hoof turned a stone over. The tracks across the shelf go straight and fast, the prints spaced wide, every animal crossing it at a run.",
+  },
+  "the-broken-ground-high": {
+    "blocks|hollows|cliffs|ground":
+      "Every hollow has its own floor of grass and its own droppings, and in two of them there are beds, pressed flat and lined with shed hair. The small cliffs between have their tops worn by things stepping up. The best hollows are the ones you cannot see into until you are in them.",
+  },
+  "the-crown-step": {
+    "step|plates|spur|crown":
+      "The plates of the step are loose and rock underfoot with a hollow clack. Once you are up, the spur's bare top is gritty and windswept and you can see along it the whole way to where it bends. Not a single thing has dropped anything on it.",
+  },
+  "the-shattered-crown": {
+    "crown|crest|plates|rock|comb|gaps":
+      "The plates lean apart at the top and touch at the bottom, so the gaps are wedges of sky. Down at their feet the frost-broken pieces lie in heaps, sharp and new. A few of the plates have a crust of rime on their north faces that the sun never touches.",
+  },
+  "the-grey-ice": {
+    "ice|lens|grit|layers|lines":
+      "Count the dark lines and you lose count past forty. Bubbles are trapped in the ice between them, round and silver, some as big as a fingertip. Here and there in a dark line there is a small black speck, a fly or a seed, held where it landed.",
+  },
+  "the-firn": {
+    "firn|snow|ice|crack":
+      "The firn is made of grains like coarse salt, frozen together, and when you scrape it they come away and roll. The crack is blue at the top and darker blue further in, and the blue goes on down past the point where the light lets you see.",
+  },
+  "the-chimney": {
+    "chimney|cleft|walls|holds":
+      "The two polished holds are small flakes in the wet rock, and one has a thin groove worn in it by boots as well as hands. Higher up, the back wall has a smear of old blood, long dried to brown, at the height of a knee: somebody barked a shin here and went on anyway.",
+  },
+  "the-second-band": {
+    "shelf|band|wall|droppings":
+      "The droppings run along the back in a line and pile up in three places, at the three widest spots, where something stops every time. The undercut above them is blackened with grease at the height of a lying beast's back. The dust in the dry hollows takes a clear print of a cloven foot.",
+  },
+  "the-broken-terrace": {
+    "terrace|shelf|islands|gaps|rock|turf|rubble":
+      "The edges of the grass islands are torn, roots hanging, and each gap between them is scraped pale where hooves skid across. Far below, the fan of turf and rubble has grass growing back through it, so it came down a few years ago, not this one.",
+  },
+  "the-sun-traverse": {
+    "ledge|rock|stone|traverse":
+      "The rock above is polished in a long low smear at shoulder height, the line of everything that pressed against it going along. Below the ledge's lip the face is clean and pale. In two places there are dark old stains on the ledge, and scattered tufts of hair.",
+  },
+  "the-hot-scree": {
+    "scree|ground|shimmer":
+      "The stones are pale and dry and too hot to hold in the afternoon. Among them, lying perfectly still, there are lizards the exact grey of the scree, and they go only when your shadow touches them. Under the top layer the stones are cool and damp.",
+  },
+  "the-sun-gully": {
+    "gully|gravel|rock|walls":
+      "The gravel on the floor is printed with tracks that go up and down the gully, and all of them are blurred, made in the soft evening and baked hard by the next noon. The walls give off heat like an oven door. In one corner there is a scatter of small bones and fur.",
+  },
+  "the-dry-gorge": {
+    "gorge|walls|potholes|floor|wrack|crevices":
+      "The flood-wrack jammed in the crevices is heather, sticks, bleached bone and a whole small tree, roots and all, wedged sideways high above your head. The potholes in the floor are dry and each has its grinding stones lying in the bottom. The walls are polished to the height of the wrack.",
+  },
+  "the-north-rib": {
+    "rib|spur|edges":
+      "The rock along the rib's crest is worn into a faint path by animals, not deep, and littered with droppings at the points where they stopped to look over. The edges on both sides are crumbling. A few loose blocks lean outward at the lip, waiting.",
+  },
+  "the-cold-ramp": {
+    "ramp|snow|rib":
+      "Old steps are kicked up the snow, softened, refrozen, and kicked again, a line of them going up. They are not boots. They are hooves, sharp ones, pressed in a neat zigzag where the animals kicked their own steps up the ramp.",
+  },
+  "the-late-field": {
+    "snow|field|sheet|lace|stone|edges":
+      "The lace of snow at the edge is so thin you can see the black stone through it. Meltwater drips off the undercut in a steady rhythm. On the snow's surface there are small tracks in a line, a bird's, that start in the middle of the field and go nowhere.",
+  },
+  "the-airy-step": {
+    "ledge|step|holds|wall":
+      "The holds are good and worn, polished by hands, and the ledge is littered with what the ravens drop: a snail shell, a sheep's tooth, a broken egg. The rock under the raven ledge above is splashed white. One stone on the step is cracked across where something heavy landed on it.",
+  },
+  "the-third-band": {
+    "shelf|band|grass|crags":
+      "The grass on the highest shelf is fine and cushioned, half moss, and grazed in small neat bites. The shelf's outer edge is fringed with grass hanging over the drop. The summit crags above are a different rock, darker, and their scree lies along the back of the shelf in a fresh thin line.",
+  },
+  "the-slab-nose": {
+    "prow|nose|slab|rock|gap":
+      "The prow's clean rock is scored across its lower face with long parallel scratches, where hooves have scraped as animals made the step. The gap round the front is only a stride. The rock on the far side of it is worn smooth where everything lands in the same place.",
+  },
+  "the-dry-ledge": {
+    "ledge|grit|droppings":
+      "The small droppings are the round pellets of goats or sheep. The large ones are long, twisted, and full of hair and bone splinters. They lie on the same yard of ledge, the old under the new, and the ledge is printed with both feet.",
+  },
+  "the-upper-force": {
+    "force|fall|lip|bowl|spray|gorge":
+      "The bowl is green-walled with moss that never dries, and in its spray the rock is slick as soap. The lip of the fall is notched and rounded. There is a stick wedged high in a crack beside the fall, carried up by some flood bigger than anything that comes down now.",
+  },
+  "the-wind-scoop": {
+    "hollow|scoop|gravel|sign":
+      "The gravel in the middle of the hollow is churned and pressed with the marks of things lying down, turning round, getting up. There is fresh dung and old dung and a bed of shed winter hair in one corner. The rim is clean; nothing stays on the rim.",
+  },
+  "the-spur-walk": {
+    "plates|spur|walk":
+      "Every plate rocks on a smaller stone underneath, and the edges are chipped white where they knock together. The plates nearest the middle of the spur are rocked so often they have worn little cups in the stones they sit on. The noise carries further than the eye.",
+  },
+  "the-rib-foot": {
+    "rib|corner|grit|blocks|buttress":
+      "The trickle of grit comes down the back of the corner in a thin line and has built a small cone at its foot, perfectly shaped. Lying in the cone, half buried, there is a long bone, white and dry. The big blocks above it are cracked and stained where water runs.",
+  },
+  "the-rake-top": {
+    "shelf|buttress|ramp|cloud":
+      "The shelf is grit and broken rock, and it is trodden; the rake brings everything up here, and the prints go out across the shelf and stop at the foot of the buttress. The buttress rock is cold to the touch and wet even when the shelf is dry.",
+  },
+  "the-under-rib": {
+    "overhang|cave|dust|roof|rock":
+      "The dust is soft and dry and printed in a dozen places with the shape of things lying down. Along the back wall, where the overhang is lowest, the rock is rubbed glossy in a long band at the height of a lying back, and the dust under it is full of shed hair.",
+  },
+  "the-rake": {
+    "rake|ramp|ground":
+      "The rake's grassy patches are cropped and its loose patches are scraped through by hooves to the rock underneath, in long skids. The best line up it is a narrow trod, worn bare, that weaves between the loose and the grass, exactly where you would have chosen.",
+  },
+  "the-band-end": {
+    "bands|shelves|buttress":
+      "Where each shelf ends against the buttress there is a bare trampled patch, all the same size, where things turn round. On the buttress's face above the lowest shelf there is a line of scratches going up, and a little way above them a ledge with droppings on it.",
+  },
+  "the-heather-step": {
+    "heather|step|paths":
+      "The paths through the heather are beaten bare, three of them, and where they part there is a patch of trampled ground with a great deal of dung on it. The heather's woody stems are snapped and pale along the paths' edges. Hair is caught on them, two or three colours.",
+  },
+  "the-shelf-head": {
+    "shelves|terraces|grass":
+      "The grass is thin and every blade bitten off at the same height. The first terrace's edge is worn into a step by things climbing up from the north side. On the warm rock above it, a raven has left a pile of small cracked bones.",
+  },
+  "the-water-notch": {
+    "notch|slot|rock|burn":
+      "The polished band at chest height is a thin dark line of high water, smooth as glass. Below it the rock is scoured white and pocked. Jammed in the notch at the top of the polished band there is a small branch with grass tangled in it, left by the last high water.",
+  },
+  "the-lee-drift": {
+    "drift|snow|scallops|line|tongue":
+      "The wet grey line at the drift's foot is trodden to slush by hooves and paws, all crowding to the one place the water is. The scallops in the snow face downwind, every one curved the same way. A trickle runs from the foot of it and sinks into the gravel within a stride.",
+  },
+  "the-spur-head": {
+    "spur|head|ground|tarn|plateau":
+      "The ground at the head is a scatter of boulders, the first real cover since the spur began, and behind several of them the gravel is pressed into hollows. One hollow has a ring of feathers round it. Whatever lay there was watching the spur.",
+  },
+  "the-rib-gap": {
+    "gap|blocks|boulder|ribs":
+      "The light is green because the walls are furred with moss that grows only in the shade. The floor blocks are worn smooth along a single line, and the line is printed with hooves. The boulder jammed overhead has grass growing on top of it.",
+  },
+  "the-first-buttress": {
+    "buttress|rib|rock|wall":
+      "At its foot the rock is clean and grey and goes up in vertical seams, with tufts of grass on the seams at long intervals. A fan of fallen flakes lies under it. The face is marked with white streaks where birds roost, very high.",
+  },
+  "the-hanging-scree": {
+    "scree|shelf|drop":
+      "The stones on the hanging scree are small and loose and lie at an angle so steep that a dropped pebble sets a dozen sliding. At the bottom edge they go over in little spurts. There are no tracks across it; everything that crossed went round.",
+  },
+  "the-upper-heather": {
+    "heather|mat|rock":
+      "The heather is pressed so flat it grows sideways across the rock and its stems are as thick as a finger and hard as wire. In the dips it is a little taller. Its tiny flowers come late up here, and some of the mat is still flowering when the snow comes.",
+  },
+  "the-long-shelf": {
+    "shelf|terrace|turf|wall":
+      "The turf is grazed to a carpet and trodden into a path along its middle, and the path is printed with several kinds of feet going both ways. Under the wall, in the dust, something has made a wallow. At the shelf's far end the path narrows and the turf grows ragged.",
+  },
+  "the-mid-shelf": {
+    "shelf|crags|snowfields|gorge":
+      "The shelf is grassy and dotted with old dung, and in its middle there is a ring of stones the size of a cart-wheel, set flat, the stones sunk into the turf. Something was made here once and burned: there is charcoal in the soil inside the ring, a hand down.",
+  },
+  "the-tarn-edge": {
+    "tarn|gravel|wall|slabs|crescent":
+      "The slabs of the wall lean against each other in a row, each frost-heaved up and tipped over onto the next. Behind them the gravel is dry and trodden into beds. The water's edge is printed with drinking places, the gravel scuffed down to the waterline.",
+  },
+  "the-cold-plateau": {
+    "plateau|stone|ice|lichen|moss":
+      "Lift a stone and its underside is crusted white with frost and the ice in the joint below it is clear and hard. The cushion moss is so tight you cannot push a finger into it. The lichens grow in rings on the stones, and the rings are very small.",
+  },
+  "the-second-rib": {
+    "rib|buttress|ledges":
+      "The ledges up the flank are evenly spaced and every one is splashed white with droppings, the highest ones whitest. Nothing on the lowest ledge has been disturbed in years. The rock between them is clean, unmarked, without a single scratch.",
+  },
+  "the-scoop": {
+    "scoop|hollow|grit|marks":
+      "The grit is churned in a ring where things have circled before lying down, and pressed into hollows the size of a curled dog and the size of a curled bear. There is dung in it of four kinds. In the back of the scoop a wing feather lies on the grit, long, black, and fresh.",
+  },
+  "the-fall-line": {
+    "trough|line|debris|face":
+      "The polished trough is scored with long fresh scrapes, white on the grey, where things came down in it. The debris at the bottom is new rock, sharp, and among it there is a broken horn. Everything that falls on this face comes to this exact line.",
+  },
+  "the-last-green": {
+    "grass|green|hollow|water":
+      "The grass is bitten down tight and the seep in the middle is trodden into a black mud ring. Round the green's edge, among the rocks, there are droppings that are not grazers', and a lot of them. The rock on the upslope side has a long smooth hollow at its foot, a place to lie and watch.",
+  },
+  "the-shelf-break": {
+    "gully|gravel|heap|terrace":
+      "The heap at the gully's foot is gravel, stones, a mat of heather and a sheep's spine with the ribs still on it. The gully's sides are packed gravel, cut sheer by the last flood, and pebbles drop out of them now and then and roll down.",
+  },
+  "the-frost-pavement": {
+    "pavement|slabs|cracks|gravel":
+      "The slabs are smooth on top and their edges are rounded, and the gravel in the cracks between them is graded, finest at the top and coarsest down in the slot. Here and there a slab has been lifted on its edge by the frost and dropped back crooked.",
+  },
+  "the-first-tower": {
+    "tower|pinnacle|ledge|ice|rock":
+      "The ice on the ledge is a thin clear skin over the rock, so clear the rock seems bare. On the tower's north face it hangs in sheets, and at the foot of the face there is a fan of broken ice, fresh, the pieces still sharp.",
+  },
+  "the-arete-foot": {
+    "ribs|wall|ridge|arete":
+      "Where the ribs join, the rock is worn into a single path, and the path is grey grit and worn stones. At the very foot of it there is a hollow in the shelter of a block, and in the hollow there is a heap of feathers and small bones, the leavings of a bird that eats here.",
+  },
+  "the-valley-mouth": {
+    "valley|glen|stream|drop|spray":
+      "At the valley's lower end the stream runs out over a lip worn into a U, and the lip's edges are polished smooth. The grass runs right to the edge and stops. The rocks along the lip are coated in wet moss from the spray that blows back up off the drop.",
+  },
+  "the-outwash": {
+    "outwash|sand|gravel|prints|plain":
+      "The big prints are pad and claw, the claws long and the pad as broad as a spread hand, and they cross the plain in a straight line without stopping. Other prints come and go round them, deer mostly, all of them turned away from the line.",
+  },
+  "the-stone-run": {
+    "blocks|run|gaps":
+      "The blocks knock together under your feet with a deep hollow sound. Down in the gaps there is a scurry and a squeak. On the tops of the blocks there are small dark droppings in rows, and the remains of seed heads, nibbled and dropped.",
+  },
+  "the-sun-buttress": {
+    "buttress|rib|ledges|droppings":
+      "The droppings on the ledges are white and chalky and layered thick, with pellets of fur and bone among them, coughed up. The ledges face due south. From them you can see every inch of the slope below, and the rock under them is splashed white for a long way down.",
+  },
+  "the-stripe-field": {
+    "stripes|boulders|lines|slope":
+      "The boulders in the stripes stand on their edges, pushed up by frost and leaning, and the lines between them are fine gravel trodden into paths. The paths go down the slope, along the grain. Nothing walks across them.",
+  },
+  "the-arete-walk": {
+    "ridge|arete|rock":
+      "The rock along the ridge's top is grey and gritty and worn smooth in a strip down the middle, a path made by every kind of foot. Lichen grows thick on both edges where nothing steps. In cloud the rock sweats and every crystal in it glints.",
+  },
+  "the-notch-of-air": {
+    "notch|gap|saddle|ridge":
+      "The saddle's rock is polished in a single stride's width, and on both sides of it the edges are crumbled to grit. The wind coming up through the notch carries small things up with it, and there are bits of grass and feathers lodged in the cracks on the upwind side.",
+  },
+  "the-drop-either-side": {
+    "ridge|stretch":
+      "The rock on this stretch is unmarked, sound and level and grey, and there is not a single loose stone on it: the wind clears it. On both edges the lichen grows in rings, untouched. The only sign of passing is a faint polish down the middle.",
+  },
+  "the-valley-shoulder": {
+    "rim|valley|shoulder|arete":
+      "The rim has a seat of flat rock where the ground rises toward the arete, worn smooth on top by something lying on it. From here you can see the whole valley floor, and the rock round the seat is scattered with droppings and bones. Whatever lies here watches the valley.",
+  },
+  "the-hanging-floor": {
+    "floor|gravel|grass|water|braids":
+      "The gravel between the braids of water is printed in long lines of prints, crossing and recrossing, and in the soft places they are deep. The grass is short and dotted with deer droppings. One long line of large prints runs the whole length of the floor and does not turn.",
+  },
+  "the-moraine-loop": {
+    "moraine|bank|rubble|crescent":
+      "The rubble in the loop is every kind of rock, round and broken, and some of the round ones are scratched with long straight lines. The inside of the crescent has a flat floor of fine silt where water stood once. The bank is grassed on its outer face and bare on its inner.",
+  },
+  "the-shelf-end": {
+    "shelf|terrace|buttress|point":
+      "Where the terrace points against the buttress the ground is trampled bare and the rock is rubbed at shoulder height. Twenty feet up, the next shelf has a fringe of grass hanging over its edge and droppings visible on it. No marks go up between.",
+  },
+  "the-warm-gully": {
+    "gully|rock":
+      "The rock is warm enough to make the air above it wobble, and dry, and there is not a fly in the gully at noon. In the shade of a boulder at its head there is a bed, pressed into the gravel, with shed hair round its edge. It is cooler in the bed than anywhere else in the gully.",
+  },
+  "the-moss-flush": {
+    "moss|flush|rock|melt|sheet|prints|snow":
+      "The moss is cropped so close it looks like green felt, and pressed into the snow round it is a ring of small cloven prints, hundreds, all facing in. The water running through the moss is ice-cold and clear, and tiny black flies hatch off it in clouds.",
+  },
+  "the-spur-end": {
+    "spur|blocks|slope|ridge|arete":
+      "The jammed blocks on the slope are loose at the top and settled at the bottom, and the settled ones are lichened. A narrow trod picks its way up between them, polished, and at its top there is a block with a rubbed patch on its edge where everything steps up.",
+  },
+  "the-bad-step": {
+    "step|rib|ridge|holds":
+      "The holds on either side of the bad step are good flakes, polished, and the rib between them is worn in the middle into a faint dip. On the rock below the step, out of reach, there is a long smear of old blood, darkened and weathered, going down.",
+  },
+  "the-second-tower": {
+    "tower|pinnacle|crack":
+      "The crack splitting the tower is a hand wide at the bottom and wider at the top, and the wind whistles in it. At its foot lie blocks that fell out of it, sharp-edged, unweathered. On the exposed side the ledge is worn and narrow, and the rock above it is polished by shoulders.",
+  },
+  "the-blade": {
+    "blade|ridge|holds|rock|sheet":
+      "The knife-edge along the top is weathered to a crumbling crest, and pieces of it lie on the holds below, fresh and sharp. The holds themselves are good, and the lowest one has a long scratch across it, white, where a hoof slipped and caught.",
+  },
+  "the-north-bank": {
+    "bank|ground|snow|patches":
+      "The snow patches are grey with grit and pocked with old prints, all of them stretched long, the strides of things running. Between the patches the ground is stones and black lichen. There is no droppings here at all; nothing stops long enough.",
+  },
+  "the-braided-flats": {
+    "flats|channels|gravel|stream":
+      "The gravel between the channels is pale and clean and every stone of it is the same few colours, washed down from the headwall. The channels move as you watch, one silting up and another cutting through. Prints cross the bars and vanish into the water.",
+  },
+  "the-scoop-of-grass": {
+    "grass|bowl|scoop|spring|rock":
+      "The grass is cropped to the roots and the spring's runnel is trodden into a muddy groove by drinking. Round the rim, on the rocks where you could lie and see the whole bowl, there are smooth patches worn bald, and droppings that are not a grazer's.",
+  },
+  "the-high-spring": {
+    "spring|water|rock|gravel":
+      "The water comes out of a crack in the rock no wider than a finger, and the crack's lip is furred with a pale green weed found nowhere else this high. Where it sinks into the gravel the stones are stained orange. The ground round it is printed with every kind of hoof and pad.",
+  },
+  "the-upper-brim": {
+    "brim|edge|snow|lip|snowfield":
+      "The lip at the brim is carved by the wind into a smooth overhanging curl, and on its top the snow is rippled in fine ridges like sand. There are no tracks on the brim. Things that cross the snowfield cross well below it, where they cannot be seen against the sky.",
+  },
+  "the-snow-brim": {
+    "snow|crust|brim":
+      "The holes where the fifth step broke through are knee deep, and the snow at the bottom of them is soft and grainy, loose as sugar. The crust over it is a finger thick. Somebody's holes and some animal's holes cross here, and you can tell them apart by their spacing.",
+  },
+  "the-high-neve": {
+    "neve|snow|light|ground":
+      "The snow at your feet is fine and dry, and under the top layer it is packed into grains the size of salt. There is no shadow to judge anything by. A dropped glove would look a mile off and a mile-off rock would look like a dropped glove.",
+  },
+  "the-bergschrund": {
+    "bergschrund|gap|trench|ice|rock|headwall":
+      "The ice side of the trench is blue and smooth and the rock side is wet black stone. Things are lying on the snow bridges below, a long way down: a dark lump that might be a stone, a pale one that might be bone. The sound of water comes up from below them.",
+  },
+  "the-horns": {
+    "horns|blades|rock|stone|ridge":
+      "Close to, the two horns are rough and crystalline, the stone glittering with flecks that catch the light. The softer rock round their feet has crumbled into a ring of grit. On the eastern horn, high up, a pale streak shows where a slab peeled off not long ago.",
+  },
+  "the-arete-end": {
+    "arete|ridge|blocks|ice":
+      "The broken blocks are tumbled and loose and grey, and the ice beyond them begins in a dirty white edge with stones frozen into it. The arete behind you is visible for a few hundred feet and then gone into cloud, and the rock where it meets the mass is polished by the wind.",
+  },
+  "the-south-bank": {
+    "bank|grass|flowers|hollows":
+      "The flowers are tiny, flat cushions with flowers no bigger than a pinhead, white and pink and yellow, in the shelter of every stone. The grass in the hollows is cropped. The ground is printed with deer and hare, and the prints all go to the sheltered spots and back.",
+  },
+  "the-far-shore-high": {
+    "fan|gravel|channels|shore|stream|water":
+      "The fan is printed in the soft places with crossings, and every one goes straight, fast, prints spaced long. Nothing stood still on this gravel. At its upstream edge, where the channels come in, there is a dead hind lying half in the water, and it has been eaten.",
+  },
+  "the-till": {
+    "till|face|clay|sand|gravel|boulders|bone":
+      "The bones sticking out of the cut face are big, long bones and part of a skull with the base of a horn, the bone stained brown by the clay. They are not from anything that lives on this mountain now. The stream has washed a few loose and they lie in the gravel below.",
+  },
+  "the-fan-head": {
+    "fan|stone|corner":
+      "At the head of the fan the stones are biggest and sit locked together, and down the fan they get smaller as far as you can see. On the biggest stones near your feet there are scrape marks, fresh, as if something heavy came down the fan and stopped here.",
+  },
+  "the-south-rib": {
+    "rib|path|crest|gravel":
+      "The path along the crest is a hand wide and beaten down into the gravel a finger deep. It does not wander. At each place where the rib narrows, the path is worn into the rock itself, and the stone there is polished smooth.",
+  },
+  "the-dry-shelf": {
+    "shelf|terrace|gravel":
+      "The gravel is hot and loose and every stone on it is bleached pale on top. There are no prints; nothing lies here and nothing grazes here. Where the shelf meets the slope above it, a single dead heather root sticks out of the gravel, white as bone.",
+  },
+  "the-frost-face": {
+    "face|snow|frost|feathers":
+      "The frost feathers are built of tiny plates of ice, layered like the vanes of a real feather. Where one has broken off, the snow under it is hard and blue. The broken pieces lie in a trail down the slope below, glittering.",
+  },
+  "the-white-slope": {
+    "slope|tracks|snow":
+      "The tracks are standing up in little pillars of hard snow where the loose snow round them has blown away. Each print is wider than a spread hand and has the marks of claws at its front. The stride is long and even, and nowhere along the line does it stop or turn.",
+  },
+  "the-wind-slab": {
+    "slab|snow|crust":
+      "The slab is a finger or two thick, hard as board, and where it has broken at the edge you can see the soft grainy snow underneath, a layer of air and loose crystals. A crack runs across the slab ahead of you, a thin dark line from one side to the other.",
+  },
+  "the-ice-shelf": {
+    "shelf|ice|stones|bowls|bench|headwall":
+      "Each stone has sunk into its own bowl of meltwater and the meltwater has frozen again around it in a clear ring. The ice of the shelf is polished glassy by the wind and full of white bubbles. Nothing has walked on it; there are no marks of any kind.",
+  },
+  "the-blue-wall": {
+    "wall|ice|crack|face":
+      "The blue is deepest where the crack is narrowest, almost black at the back of it. The face is fluted with grooves where meltwater runs. Frozen into the ice a little way in, you can make out stones, a band of grit, and a long dark streak that could be anything.",
+  },
+  "the-neve": {
+    "neve|snow|field|ice":
+      "In the morning the surface is hard and squeaks. By the afternoon it is soft and wet and your boot goes in to the ankle. The prints from the morning are still there in the afternoon, softened and spread, and the ones from the afternoon are frozen hard by the next day.",
+  },
+  "the-cloud-base": {
+    "cloud|line|air":
+      "At the line itself the air is wet and cold and you can see your breath go into the grey. The rocks below the line are dry and those above it are beaded with water. A little way into the cloud there is a cairn of three stones, and you only see it when you are next to it.",
+  },
+  "the-valley-head": {
+    "headwall|wall|stream|thread|valley|ice":
+      "The foot of the headwall is wet and green with moss fed by the blown spray, and the moss grows in a fan on the downwind side. The stream that lands is only a trickle across a bed of round stones. Above, the ice on the headwall's lip is blue at its broken edge.",
+  },
+  "the-step-in-the-floor": {
+    "step|floor|groove|stream|valley":
+      "The rock of the step is smooth and rounded and covered with long straight scratches all pointing down the valley, the marks of stones dragged across it by the ice that made it. The groove the stream runs in is cut into the scratches, much later.",
+  },
+  "the-shelf-tail": {
+    "tail|stone|shelves|soil|moss":
+      "The last grass grows in a thin line along the shelf's back wall where a little damp comes down, and after it the stones are bare and grey and loose. Droppings stop where the grass stops. Beyond, there is not even lichen on most of the stones.",
+  },
+  "the-sun-notch": {
+    "notch|cleft|rib|path":
+      "The walls of the notch are rubbed glossy at shoulder height by things pushing through. On a ledge above the path, out of sight of anyone coming, the rock is worn into a smooth hollow, and under it there are bones, old and new.",
+  },
+  "the-terrace-end": {
+    "terrace|shelves|ledges":
+      "Where the terrace narrows to ledges the turf is trampled into a bare patch and the droppings are thick. Something comes to this end and stops. On the narrow ledges beyond, the dust is unprinted.",
+  },
+  "the-snow-dome": {
+    "dome|snow|snowfield|rise":
+      "The snow on the dome's top is wind-packed and hard, rippled, and every ripple casts a tiny shadow. There are tracks up one side of it and down the other, a single line, something that went over the top to look and then went on.",
+  },
+  "the-first-notch": {
+    "notch|gap|crest|ridge|face":
+      "The wind through the notch has polished both its walls and piled grit and ice against the lee side. Looking down the north face, there is nothing to rest the eye on: no ledge, no snow, no bird, just wet black rock going down into the grey.",
+  },
+  "the-crest-step": {
+    "step|rock|crest|ridge|ice":
+      "The rock of the step is sound and grey and gritty, and the ice ends against it in a thin dirty edge. On top, the crest runs off narrow and level. On the step itself the rock has a polished patch where everything puts a foot to go up.",
+  },
+  "the-rime": {
+    "rime|ice|feathers|rocks":
+      "Snap a feather of rime and it is made of tiny overlapping scales, each one a frozen droplet. On the windward side of a rock the rime is a hand thick. On a dead bird lying in the rocks it has grown so thick that the bird is a shape of ice.",
+  },
+  "the-crevasse-field": {
+    "crevasses|cracks|ice|snow":
+      "The open cracks are blue at their walls and black at the bottom, and from one of them comes a faint drip of water. The roofed ones show only as a slight sag in the snow, a line a shade greyer than the rest. A hare's tracks run across the field, and at one sag they stop.",
+  },
+  "the-ice-fall": {
+    "ice fall|blocks|towers|ice":
+      "The blocks are white on top and blue in their broken faces, and some lean against each other in arches. At their feet lie fallen pieces, fresh ones, sharp and clear. As you watch, one of the towers groans, a deep sound like a door, and does not move.",
+  },
+  "the-white-out": {
+    "snow|cloud|slope|ground":
+      "Hold a hand out and you can see it, and the snow at your feet, and nothing beyond that. Toss a stone and it lands with a soft sound and you lose sight of it before it lands. The prints you made coming here are behind you and they are the only thing that is not white.",
+  },
+  "the-grey-nothing": {
+    "cloud|rock|grey":
+      "The rock at your feet is wet and beaded with droplets, and the lichen on it is a pale green that is the only colour there is. Turn round and the rock behind is the same as the rock in front. Your own footprints do not show on it.",
+  },
+  "the-rising-ground": {
+    "rock|ground|cloud":
+      "The rock steepens in steps, and each step looks like the last, and on each one there is a little ledge of grit with a print or two in it, all going up. Nothing comes down. Water runs down every crack and the cracks hum faintly.",
+  },
+  "the-cloud-foot": {
+    "cloud|plants|line|ground|shelves":
+      "The last plants are tiny cushions, pressed into cracks, and they stop at the line as if cut. Above it the rock is clean and wet. The cushions on the very edge are beaded with water from the cloud, and the ones further down are dry.",
+  },
+  "the-last-shelf": {
+    "shelf|ledge|cloud|line":
+      "The ledge's grit is dry on its outer edge and damp where the cloud touches the back. There are prints along it, going both ways, and droppings in the dry part. The rock above, where the cloud sits, is dark and dripping.",
+  },
+  "the-shelf-drop": {
+    "drop|lip|shelves|tier":
+      "The lip is rounded and polished, a smooth curve over which water pours in wet weather. At its edge there is a small fan of stones that were set rolling and caught. Looking straight down, the ground below has a scatter of the same stones in it, and bones.",
+  },
+  "the-hard-pack": {
+    "snow|pack|cornice|edge":
+      "The snow is so hard a heel only scratches it. Its surface is carved by the wind into long ridges with sharp edges, all running the same way. At the east edge the cornice curls out over nothing, and its overhang is thin enough to see light through.",
+  },
+  "the-north-drop": {
+    "ledge|rock|pellets|bones|birds":
+      "The pellets are grey and furred, and when one breaks open there are skulls in it no bigger than a fingernail, and tiny leg bones, and fur. The rock is whitened in long streaks down the face below. The ledge's edge is worn smooth by claws.",
+  },
+  "the-knife": {
+    "ridge|knife|stone|plank":
+      "The top of the knife is a crest of rough rock with a faint polish down its middle where feet have gone. Its sides are clean and smooth and run down out of sight on both hands. A single loose stone sits on the edge, and the wind moves it a little with each gust.",
+  },
+  "the-cold-crest": {
+    "crest|rime|rock|ice|cloud":
+      "The rime on the crest is a hand thick and grows in feathers pointing west. Under it the rock is black and dry. Somewhere above, in the cloud, there is a sound now and then of something falling, far off, and then nothing.",
+  },
+  "the-drift-foot": {
+    "drift|snow|lee":
+      "The snow at the drift's foot is soft and deep, and in one place it has slumped a little, a long shallow dip in the surface the shape of something lying under it. Nothing has dug at it. The prints that come to the edge of the drift turn and go round.",
+  },
+  "the-clear-window": {
+    "hollow|rock|air|walls":
+      "The hollow's floor is dry grit, and it is printed all over: things come here to see. On the rocks round the edge the grey cloud presses against the clear air like a wall of wet wool, and drips form on the rock at the line between them.",
+  },
+  "the-cloud-shelf": {
+    "shelf|terrace|cloud|sun|end":
+      "At the sunny end the rock is dry and warm and pressed into beds, three or four, with hair in them. At the wet end the rock is slick, and there are prints coming out of the cloud onto the shelf and going toward the beds, and then the prints scuffed.",
+  },
+  "the-catch-slope": {
+    "slope|scree|skull|hind|cloud":
+      "The hind's skull is bleached white on top and green-black with moss underneath where it lies against the scree. Its teeth are worn flat. Around it on the slope there are other bones, smaller, held in the scree like things caught in a net.",
+  },
+  "the-fall-fan": {
+    "fan|grit|chips|bones":
+      "Pick up a handful of the grit and among the chips there are tiny bones: a bird's leg, a vertebra, the jaw of a vole. The grit is soft and sorted fine and takes a print, and the prints across it are small ones, hopping.",
+  },
+  "the-gendarme": {
+    "gendarme|tower|rock|line|path":
+      "The worn line round the base on the south side is a polished groove in the rock, and above it, at shoulder height, the tower is rubbed smooth and dark. On the north side the rock is lichened and clean. Nothing has touched it.",
+  },
+  "the-second-notch": {
+    "notch|snow|prints|crest|ridge":
+      "The prints in the snow are big and round with claws at the front, and they go straight over the crest and down the north side where the face is nearly sheer. At the lip the snow is torn where claws dug in. Below, the prints go on down, and on.",
+  },
+  "the-broken-crust": {
+    "crust|snow|plates|holes":
+      "The holes are each the length of a forearm and wider than a spread hand, and at the bottom of each one the snow is packed hard by the weight that went through. The plates round the holes are tipped up on edge. The line goes straight, uphill.",
+  },
+  "the-sun-cup": {
+    "cups|bowls|snow|ice|ridges|honeycomb":
+      "Each bowl is a foot across and lined with dirty grit that collected in its bottom. The ridges between are sharp ice, and they break with a crack under a boot. In the bottom of one bowl a beetle lies dead, frozen in.",
+  },
+  "the-boulder-nose": {
+    "nose|rock|scree|fan":
+      "The nose is solid rock, rooted in the mountain, and its upslope face is battered and chipped white by everything that came down against it. The scree on either side of it parts in two clean streams. Behind it, out of the fall, there is a little sheltered hollow with droppings in it.",
+  },
+  "the-splinter-field": {
+    "splinters|blades|rock|field":
+      "The splinters are sharp enough to cut a hand, and lie edge-up in every direction. At the crossing place the splinters have been trodden flat and snapped short into a rough path, and the path is stained dark in places where feet bled.",
+  },
+  "the-lower-fan": {
+    "fan|chips|splinters|antler|jaw|stones|water":
+      "The antler is a stag's, shed, gnawed at its tines. The half jaw has its teeth, worn flat, a grazer's. Put an ear to the stones and the water under them is loud, running fast somewhere just below your feet.",
+  },
+  "the-ridge-walk": {
+    "ridge|plates|rock":
+      "The plates are loose and grey and every one clinks against the next. Here and there one is set on edge in the middle of the walk, propped up, standing upright, and it does not look like the frost did it. Further along there is another.",
+  },
+  "the-blue-shadow": {
+    "shadow|cornice|snow|blue":
+      "In the blue the snow is hard and old and rings underfoot. At the line where blue becomes white, there is a row of hollows in the snow, a body's length apart, where things have lain just inside the shade, looking out.",
+  },
+  "the-runnel": {
+    "runnel|channel|snow|water":
+      "The walls of the runnel are glassy and the floor is a thin sheet of ice over grit. Prints go down the bottom of it, softened and refrozen, and in one place the wall is clawed where something climbed out.",
+  },
+  "the-glacier-bend": {
+    "ice|cracks|buttress|glacier|flank":
+      "The cracks are a hand wide and as deep as the light goes, and they fan out from the buttress like the spokes of a wheel. The ice between them is grey with grit. On the buttress's face, at the height the ice once reached, there is a line of scratches.",
+  },
+  "the-melt-run": {
+    "channel|run|silt|prints|stone|ice":
+      "The three sets are a fox's narrow line, a hare's paired bounds, and a third set, pads with claws, bigger than either, that steps over the fox's prints. All three go down. The silt holds them so cleanly you can see the hairs between the toes.",
+  },
+  "the-grey-run": {
+    "chute|run|stone":
+      "The chute's middle is polished like a step in a church, and its edges are scattered with chips knocked off things on the way down. At the bottom, where it opens onto the fan, a few of the chips are fresh and white. One of them is bone.",
+  },
+  "the-scoured-flat": {
+    "flat|grit|vertebra|bone|bones":
+      "The vertebra is grey and porous and heavier than it looks, its wings broken off, the hole for the spine wide enough to put your fist through. It belongs to nothing that lives on this mountain. The grit has been swept into a little drift against its windward side.",
+  },
+  "the-last-tooth": {
+    "tooth|pinnacle|top":
+      "The top of the pinnacle is a flat place no bigger than a table, scattered with droppings and feathers. The rock is worn smooth on its western edge, where something sits to look out. From here the swept ground above is a pale band with not a single dark speck on it.",
+  },
+  "the-lean": {
+    "slab|lean|gap|droppings":
+      "The droppings in the back are dry and crumble to dust and are full of fine hair. The underside of the slab is scratched in long lines at the height of a sitting back. The smell is old, nearly gone, and still enough to make the hair on your arms stand up.",
+  },
+  "the-third-notch": {
+    "notch|snow|ridge|gap":
+      "The snow filling the notch is level on top and hard, and along its edges, where it meets the rock, there is a dark gap a finger wide, going down. Drop a stone into the gap and it rattles for a long time. On the snow itself there are no prints at all.",
+  },
+  "the-serac-field": {
+    "seracs|towers|blocks|ice|lanes":
+      "In the lanes the snow is littered with chips of ice, some fresh and clear, some old and white, all fallen off the towers. One lane is half blocked by a tower that came down across it, lying on its side, and the snow under it is pressed flat.",
+  },
+  "the-ice-blocks": {
+    "blocks|towers|ice|gap":
+      "In the clearest block there is a stone floating a foot in, and a line of bubbles above it where it sank as the ice formed. The gap between the two blocks is polished on both sides at hip height. The air in it smells of nothing at all.",
+  },
+  "the-crevasse-lip": {
+    "crevasse|crack|lip|walls|ice":
+      "The lip is rounded and sagging, and a line of small cracks runs along it a stride back from the edge. Lean over and the walls are layered in bands, white and blue and grey, each a year. On a ledge a little way down there is a glove, frozen stiff.",
+  },
+  "the-snow-hollow": {
+    "hollow|scoop|drift|snow":
+      "The walls of the hollow are scraped in long grooves by claws, layered over older grooves that have softened. The floor is packed hard and has a dip in it the shape of a curled body. A few long hairs are frozen into the floor.",
+  },
+  "the-melt-lip": {
+    "lip|ice|cave|wall":
+      "The drips fall from the lip in a line and have drilled a row of small holes in the gravel below. Inside the cave the ice roof is ribbed and glassy and you can see the light through it. Stones are frozen into the roof, some of them hanging half out.",
+  },
+  "the-snow-tongue": {
+    "tongue|snow|edges|rocks":
+      "The snow of the tongue is trodden into a narrow groove down its middle, packed hard and icy, by things that go up and down it. Along its edges there are scrape marks and a few long sliding grooves where something went down on its side.",
+  },
+  "the-tongue-foot": {
+    "lip|snow|rock|stones|tongue":
+      "Under the lip, half in the meltwater, there is a dark heap with hair on it. It has been there through at least one thaw. The stones around it are stained and there are small prints all round it, coming and going, of things that have been feeding on it.",
+  },
+  "the-under-step": {
+    "rock|line|tier":
+      "Put your hand flat on the rock and it is cool, but not cold, and the cold you expected is not there. The grit underfoot is dry. Along the line, the rock overhead has a faint film of dust on it, and the dust is dry too.",
+  },
+  "the-last-fan": {
+    "fan|stone|ground|red|grey":
+      "Kneel at the line and the grey stones and the red ones lie side by side, a grey and a red touching, with no mixing. The red ones are coated with a fine rust that comes off on your fingers. Nothing grows on either side.",
+  },
+  "the-ridge-end": {
+    "ridge|crest|shoulder|rock":
+      "The broken rock of the shoulder is scattered with droppings, and some of them are a raven's, full of grit. The crest behind is scoured clean. Here at its end the first loose stones are lying about again, as if the wind had given up sweeping.",
+  },
+  "the-ridge-drop": {
+    "gap|bridge|snow bridge|ice|rock|shoulder":
+      "The snow bridge is a narrow arch, sagging in the middle and pocked with prints going over. The gap under it is dark blue and goes down out of sight. On the rock side, scratched into the edge where things jump off, there are claw marks.",
+  },
+  "the-white-tower": {
+    "tower|serac|ice|bridge":
+      "The tower's chalk-white face is cracked with a long dark seam near its base, running up and across. At its foot there are fallen pieces, white and rounded. The snow bridge comes in right below it, and every print on the bridge goes past it quickly.",
+  },
+  "the-slot": {
+    "slot|crevasse|bridge|snow":
+      "Where the slot is open you can see the snow bridge from the side, a crust a foot thick with nothing under it at all. Further along a hole has broken through the bridge, round, and around its edge the snow is clawed.",
+  },
+  "the-glacier-toe": {
+    "toe|ice|stones|gravel|bone":
+      "The bones lying at the ice's foot are big, and old, stained brown, and one is part of a skull with a horn core the width of your arm. The ice above them is dirty and dripping and still holding more, black shapes deep in the grey.",
+  },
+  "the-red-tail": {
+    "tail|grit|rock|ground":
+      "The grit thins out over a hundred paces like dust blown off a shelf, and the prints on it are all going up. Every one is clear: pads, claws, hooves. Nothing that came this way came back by it.",
+  },
+  "the-red-edge": {
+    "edge|band|rock|red|grey":
+      "Run a finger along the line and the red side is rough and stains your skin and the grey side is clean. The line is perfectly straight and runs for a long way in both directions. Frost has split the red rock along it into plates.",
+  },
+  "the-shelf-walk": {
+    "walk|overhang|grit|bones|wall":
+      "The bones along the back wall are cracked lengthwise for the marrow, every one, and the cracks show teeth. The grit in front of them is pressed flat in a long shape. The overhang above is blackened with grease at the height of a lying beast's shoulder.",
+  },
+  "the-red-scree": {
+    "scree|stone|red":
+      "The red stones are flat and light and slide over each other with a sound like broken crockery. Every step leaves a little scar of darker red where the top layer slid off. The tracks across the scree are only scars, already blurring, and none of them is a clean print.",
+  },
+  "the-rust-slope": {
+    "slope|stones|red":
+      "Every stone is coated in the same fine rust, and lying among them, now and then, there is a stone of a different colour, grey, carried up here somehow. The slope has no prints on it. Your own prints fill in behind you as the little red stones slide back.",
+  },
+  "the-red-moss": {
+    "moss|crust|lichen|hollow|stones":
+      "The nibbled patches are bare stone with a ring of torn moss round them, and in the torn edges you can see the moss is green underneath the red. There are small hoof-prints in the damp at the hollow's bottom, and droppings like dark beads.",
+  },
+  "the-north-step": {
+    "step|shoulder|rock|ridge":
+      "The rock of the step is ordinary grey, frost-split, cold to the hand, and coated on its north side with rime. The wind has swept every loose stone off the shoulder above. A single raven feather is caught in a crack, quivering.",
+  },
+  "the-ice-plain": {
+    "ice|plain|snow|surface|roof":
+      "Under the inch of dry snow the ice is glassy and dark, with white bubbles in it. Here and there the dark goes darker, a long line under the surface: a crack, roofed. Brush the snow away and the roof is a thin skin of ice over black.",
+  },
+  "the-drift-hollow": {
+    "hollow|chamber|snow|doorway|rock":
+      "The floor of the chamber is dry snow, fine as flour, and there is not a mark in it. The walls are smooth and slightly glazed where some warmth once melted them and they froze again. The doorway's edges are sharp and unworn.",
+  },
+  "the-glacier-head": {
+    "ice|ridge|line|rock|join":
+      "Along the join the ice is thrown up in broken slabs and the rock above is scarred and polished. Strewn along the line are things that fell from above: stones, grit, a long bone, a raven's skull, a tangle of dry heather from somewhere far below.",
+  },
+  "the-cold-terrace": {
+    "terrace|wall|strip|stone":
+      "The loose stuff along the back wall is grit, splinters, and a few bones, and in two places it is scraped into hollows with shed hair in them. The wall above them is smudged dark at the height of a curled back. Nothing else on this tier has been slept in.",
+  },
+  "the-low-traverse": {
+    "shelf|traverse":
+      "The shelf is trodden flat into a path, and the path has the prints of many things going east and a few coming west. On the rock above, at intervals, there are scratch marks, high up, where something reached up to look over the edge.",
+  },
+  "the-oxide-flat": {
+    "flat|pavement|rust|water|hollows|rock":
+      "The rust comes off on your hands as an orange powder that dries to a stain. The water in the hollows has a skin on it that breaks into plates, like the skin on cooled milk. No prints go to the hollows. The prints that cross the flat go round them.",
+  },
+  "the-iron-band": {
+    "band|seam|chips|iron|rock":
+      "The chips are black and heavy, and their broken faces are bright and grey like new metal. A lump of it pulls at a needle held near. The seam rings when struck, and the ringing carries a long way and comes back off the rock above.",
+  },
+  "the-stained-run": {
+    "run|stripe|rock|stain":
+      "The stain is darker red and smooth, the rock polished by water running over it. At its foot there is a fan of stones carried down in the last flood, sorted, the big ones at the top. Bones are mixed in with them, washed down from above.",
+  },
+  "the-cold-shoulder": {
+    "shoulder|rock|rime":
+      "The rime on the north sides of the rocks is a hand thick and as white as salt. Break it and the rock under it is black and bone dry. On the south sides of the same rocks, there is no rime at all, only the grey stone.",
+  },
+  "the-stone-desert": {
+    "rock|plates|desert|skyline":
+      "The plates are swept so clean there is not a grain of grit on them, and their surfaces are polished in one direction. Lying flat in a crack between two plates there is a single feather, black and long, held there against the wind.",
+  },
+  "the-swept-ground": {
+    "pavement|stone|ground":
+      "The fist-sized stone sitting alone on the pavement has a little tail of grit in its lee, the only grit for a long way. Pick it up and there is a pale ring under it where it has sat. The pavement is polished in long streaks, all pointing the same way, toward the top.",
+  },
+  "the-pavement": {
+    "pavement|slabs|cracks|rock":
+      "Kneel at a crack and there is ice in the bottom of it, clear and hard, even at noon. Some of the slabs are lifted at one edge by the ice, a finger's width. In the deepest crack there is a wing, small, a bird's, dry as paper.",
+  },
+  "the-shelf-under": {
+    "shelf|nests|sticks|ledge|wall":
+      "The nests are huge, each as wide as a cart wheel, built of sticks thick as an arm that grew far below. In the middle of each nest there is a cup of fur and feathers, flattened and dry. The rock below the shelf is whitened with old droppings, and nothing is fresh.",
+  },
+  "the-warm-under": {
+    "hollows|grit|rock|ground":
+      "The hollows are large, the size of a curled bear and bigger, and the grit in them is pressed hard and warm. Shed hair lies in the bottom of each, thick and coarse. The rock overhead is warm enough to keep a hand on for only a little while.",
+  },
+  "the-burnt-ground": {
+    "ground|patches|rock|red|glacier|toe|ice":
+      "Strike a black patch with a stone and it rings high and clear; strike the red beside it and it thuds. The black patches have clean edges as if traced round something. Where the ice comes down onto them, the ice is melted back in a hollow and the ground under it steams faintly.",
+  },
+  "the-ochre-shelf": {
+    "shelf|stone|powder|prints":
+      "The prints are two kinds: one is a big cat's, round and heavy, the other is longer and narrower with the claws set further forward. Neither steps on the other. The yellow powder clings to your boots and comes off in little puffs with each step.",
+  },
+  "the-red-gully": {
+    "gully|walls|stone|grit|wall":
+      "The shape in the grit against the west wall is long, longer than you are, and the grit is pressed so hard it has a sheen. The wall above is rubbed smooth. A heap of bones lies a little way down the gully, and they have been cracked open.",
+  },
+  "the-north-crest": {
+    "crest|face|ridge|cloud":
+      "The rock along the crest is scoured clean and lichened on its south edge only. Small stones are wedged in the cracks, held there by the wind. Looking down the north face, there is cloud a long way down, and in it, now and then, a dark shape of rock showing through.",
+  },
+  "the-shoulder-end": {
+    "shoulder|crest|ridge|towers":
+      "The shoulder's end is a jumble of loose blocks with a faint path between them, and the path splits here: one branch up onto the crest, one down into the lee. The down branch is trodden harder. Most things that come here choose the lee.",
+  },
+  "the-lee-side": {
+    "hollow|grit|walls":
+      "The grit on the floor is dry and soft and pressed flat in a few places where things have lain. There is a little heap of droppings in one corner and a few tufts of hair caught on the walls. It is a cold hollow, and it smells only of stone and cold.",
+  },
+  "the-cold-plain": {
+    "plain|rock|sky":
+      "The rock is split into plates and the plates are covered in a thin dry dust that does not hold a print. Breathe out and your breath is gone before you see it. Your lips crack. A fallen raven lies dried out on the rock, light as a leaf.",
+  },
+  "the-wind-cut": {
+    "cut|trench|rock|stone":
+      "The polished stone in the trench's floor shines like water, and the trench's walls are scalloped by the grit into little cups, all facing upwind. A handful of grit lies drifted in each cup. The trench runs dead straight because the wind does.",
+  },
+  "the-approach": {
+    "ground|rise|approach":
+      "The rise is smooth and the rock under it is glazed in places, dark and shining. There is not a bone, a feather, a dropping, or a print anywhere on it. The last print you see is behind you, at the foot of the rise, and it stops there.",
+  },
+  "the-under-shelf": {
+    "shelf|chips|bone|ground":
+      "Pick up a handful of the bone chips and every one is the same size, a thumbnail, and every one is cracked across. Some are blackened at the edges. Nothing larger lies anywhere on the shelf, and nothing smaller.",
+  },
+  "the-south-shelf": {
+    "shelf|plants|strip|rock":
+      "The dwarf plants are willow, a hand high, their branches lying flat along the rock and their leaves no bigger than a fingernail. The water seeps from a crack behind them and wets a strip of rock the width of a table. Every leaf has been nibbled.",
+  },
+  "the-high-red": {
+    "bowl|red|ground|corner":
+      "From the corner you can see the whole bowl drains to its middle, and the middle is a hollow of dark red stones with a crust of white salt on them where water has stood and dried. Prints lead down into the hollow from every side.",
+  },
+  "the-scree-head": {
+    "scree|head|gully|channel|stone":
+      "The stones at the head are tight-packed and every one is pushing on the one below it. A few are cracked through from the pressure. At the very lip of the channel the stones are on the move, a slow trickle of grit always running between them.",
+  },
+  "the-gully-top": {
+    "slot|gully|gap":
+      "Both sides of the slot are polished at shoulder height, smooth and dark with grease. The floor of the gap is worn to bare rock. A heap of loose hair lies in the lee of one wall, as though shed in passing over and over.",
+  },
+  "the-crest-walk": {
+    "crest|rock":
+      "The rock of the crest is scoured clean and its surface is pitted with tiny holes, all made by grit. The wind is steady from the west and it hums in the holes. Here and there a raven's feather lies wedged and quivering.",
+  },
+  "the-cushion-ledge": {
+    "ledge|cushions|plants|rock|cracks":
+      "The cushions are tight as moss, green on top, and on their outsides they are nibbled to the rock in a ring, like a fringe cut evenly round. The rock between them is warm to the touch. Small droppings lie scattered in the cracks between the cushions.",
+  },
+  "the-first-step": {
+    "step|ridge|rock":
+      "The rock of the first step is cold and frost-split and lichened, ordinary. Put a hand on it and then back on the ground behind you and the difference is plain. The lichen grows right up to a line between the two and stops.",
+  },
+  "the-ramp-head": {
+    "ramp|ground|rock":
+      "The rock at the ramp's head is dark and dry and warm as a hearthstone an hour after the fire. The snow at its edges melts back in a clean line, a finger's width away from the warm rock. There is no smoke and no smell, only the warmth.",
+  },
+  "the-warm-flags": {
+    "flags|rock|paving":
+      "The flags are smooth and warm, and the grit that covers everything else has been swept off them in long curving lines, as if by something dragged across them. The lines all run toward the summit. Not one print is on the flags.",
+  },
+  "the-last-ground": {
+    "ground|rock|stone|band|flat":
+      "The band of pushed stone round the edges is heaped highest at the four corners, where whatever pushed it turned. In the bare middle the rock has a shine on it, smooth, as if something heavy had been dragged across it over and over. There is no grit in the middle at all.",
+  },
+  "the-warm-gutter": {
+    "gutter|rock|grit|prints":
+      "The grit in the gutter is warm to the touch and soft as flour, and the prints in it are many: hoof, pad, claw, the dragging line of a tail. Hold a hand over the gutter and the air coming along it is warm and dry and smells faintly of struck flint.",
+  },
+  "the-crest-gap": {
+    "gap|saddle|snow|crest":
+      "The old snow in the bottom is grey and hard and pitted, a crust of dirt and grit on it. Its east edge is melted back in a hollow, the snow there rotten and slumped. Things come down into the saddle to lick at it; the near edge is grooved by tongues.",
+  },
+  "the-north-lip": {
+    "lip|edge|ice|cracks|crest|rock":
+      "The ice in the cracks is old, grey and full of grit, and on the south side of each crack it has melted back a finger's width. Put one hand in the crack and one on the rock beside it and one is cold enough to ache and the other is warm as a cheek.",
+  },
+  "the-shoulder-stone": {
+    "stone|hump|hollow|water|dust":
+      "The hollow is worn smooth inside and the water in it is clear, with a little grit at the bottom. The rock round its rim is polished by muzzles. The dust round the hump is printed so thick that nothing can be read in it but the sheer number.",
+  },
+  "the-run-stone": {
+    "stone|rock|lobes|edges":
+      "Run a hand over the lobes and they are smooth and ropy, and the ropes all run downhill. Where a curled edge has cracked, the inside is full of small holes like bread, every hole empty. The frost has not broken it; there is not a single flake of it lying loose.",
+  },
+  "the-black-glass": {
+    "glass|chips|glaze|edge":
+      "The chips are black and shine like a wet eye, and their broken faces are curved in ripples. The edges are fine enough to shave the hair off the back of a hand. Held up to the light, the thinnest of them glows a deep brown, like strong tea.",
+  },
+  "the-heat-shimmer": {
+    "air|shimmer|ground|terraces":
+      "Kneel and the shimmer is coming up off the ground itself, out of the rock, not off the sun. The rock under your palm is hot. A stone dropped onto it skitters, and a little puff of dust goes up and hangs in the moving air.",
+  },
+  "the-heat-under": {
+    "overhang|heat|warmth":
+      "The rock of the overhang is too hot to keep a hand on. In the grit under it there are shed skins, and old feathers, and a sweet heavy smell like a closed room. Something rustles at the back, under the lowest part, and stops when you stop.",
+  },
+  "the-lower-warm": {
+    "edge|line|ground|warm":
+      "Right at the line the rock under your feet is warm and the grit a step down is frosted white. There is a crack along the line, a thin one, and from it a thread of steam goes up in the cold air below and vanishes.",
+  },
+  "the-lower-flags": {
+    "flags|paving|overhang|hollows|hair|print|grit":
+      "The whole print is the shape of a body lying on its side, as long as two men, with a dry pale patch in the grit the shape of a flank. Where its head lay there is a scorch on the rock, a smudge of black. The hair in the hollows nearby is coarse and dark.",
+  },
+  "the-crown-edge": {
+    "edge|brow|ridge|cloud":
+      "The rock at the brow is scoured and the lichen on it is a pale grey crust, very old, cracked into a pattern like dried mud. A few raven pellets lie along the edge. Below, the cloud floor is white and level and holes in it show the dark ground far beneath.",
+  },
+  "the-cold-side": {
+    "rime|stone|stones|ground|strip":
+      "The rime stands out from the north faces in feathers a hand long, and the ground under it is frozen so hard a boot leaves no mark. There are no prints on the strip at all. The nearest prints run along its south edge, forty feet away, in a beaten line.",
+  },
+  "the-tower-foot": {
+    "tower|ledge|droppings":
+      "The droppings on the ledge are a big cat's, full of hair and bone, and some are fresh enough to smell. The rock above the ledge is rubbed glossy at shoulder height round the whole curve. In one hollow the dust is pressed flat and still warm.",
+  },
+  "the-scald": {
+    "scald|rock|flakes|edge|ground":
+      "The flakes lift off the rock like the skin off a burnt loaf, pale and brittle, and under them the rock is darker. The edge of the scald is a smooth curve and you can follow it with your eyes the whole way round. On the far side of it the lichen is untouched.",
+  },
+  "the-sun-trap": {
+    "bowl|rock|air|smell":
+      "The smell comes from a cleft at the back of the bowl, where a carcass is wedged, dried out by the heat to leather and hair. It has not rotted; it has baked. The rock round the cleft is splashed white by birds that tried and gave up.",
+  },
+  "the-vent": {
+    "vent|hole|sand|mouth|rock":
+      "The sand round the mouth is clean and fine and not a single print is in it. Hold a hand over the hole and the air coming up is warm and dry and smells very faintly of struck matches. The rock round the rim is glazed dark, as if fired.",
+  },
+  "the-step-up": {
+    "ledge|chimney|terraces|step":
+      "The ledge at the chimney's top is worn smooth in one place where hands come over the edge. From it the warm side of the tier opens out, and the ground nearest you is printed thick and recent. The noise comes from everywhere at once.",
+  },
+  "the-south-step": {
+    "step|rock|chimney":
+      "The chimney's walls are polished in two bands, one for the back and one for the boots, and the bands are smooth and pale. At the foot of the step the ground is trampled bare by animals that came here, stopped, turned round, and went back.",
+  },
+  "the-last-crest": {
+    "crest|blocks|block|halves|drop":
+      "The two halves of the split block have faces as smooth as cut stone, and they match. The ground between them is clean, scraped, without a single loose stone. Frost does not throw stones eighteen feet. The edges of the split are faintly glazed.",
+  },
+  "the-shadow-step": {
+    "shade|step|cover":
+      "In the shade the rock is cold and the grit is pressed into hollows where things stand. The hollows face east, toward the notch. On the wall beside them the rock is rubbed dark at the height of a standing beast's shoulder.",
+  },
+  "the-crack-line": {
+    "crack|grass|lip|rock|air":
+      "The grass along the lip is short and fine, cropped by something, and its roots go down into the crack where the warm air is. The rock either side is dry and dusted with a pale yellow crust. The air from the crack smells of struck matches.",
+  },
+  "the-warm-scree": {
+    "scree|stone|stones|hollows":
+      "The hollows are long and curved, like a body lying coiled, and each is lined with a thin crust of shed skin flakes, big ones, the size of a fingernail. The stones at the bottom of each hollow are polished smooth. They are warm through.",
+  },
+  "the-under-warmth": {
+    "ground|cracks|steam|threads":
+      "The steam comes out of the cracks in threads and each crack has a crust round its lip, yellow and white, crumbling. Put a hand over one and it is wet and warm. The ground between is bare and dry and nothing grows on it.",
+  },
+  "the-terrace-foot": {
+    "wall|terrace|bones|ground|shade|road":
+      "The bones along the foot are of every age and every size, and some are crushed where they landed. The strip of clear ground is beaten into a path a stride wide, printed with pads and hooves and dragging lines. The shade is cold against the warm rock.",
+  },
+  "the-south-gully": {
+    "gully|stone|bones":
+      "The gully is jammed with bones and hide and hair washed down from the terraces in the rains, all of it packed in among the stones. The smell is strong. In the dry places small things have made runs through it, and there are tiny prints in the dust between.",
+  },
+  "the-high-notch": {
+    "notch|gap|ridge|rock|threshold":
+      "The rock in the notch is scoured clean and pale. Looking east the threshold ground is grey and swept and has no mark on it anywhere. The notch's floor is worn smooth in a path that comes from the west and stops dead at its eastern lip.",
+  },
+  "the-tower-gap": {
+    "gap|towers|rubble":
+      "The rubble in the gap is loose and every stone has been turned by the wind, grey side up. The walls of the towers on either side are polished in long streaks by the wind and the grit it carries. A feather pinned against the rubble shivers and does not blow away.",
+  },
+  "the-adder-shelf": {
+    "shelf|holes|rock|adders|snakes":
+      "The holes are smooth-lipped and polished, and in their mouths there are shed skins, whole ones, inside out. The rock is warm everywhere, and in the sun the adders lie in loose heaps, their patterns breaking up against the broken stone so that the heaps are hard to see.",
+  },
+  "the-dry-heat": {
+    "bones|heat|dust":
+      "The cracked bones are white and as light as paper, and their insides are clean and dry. The dust is fine and pale and warm, and it lifts in a little cloud at every step and settles slowly. Nothing here smells of anything.",
+  },
+  "the-under-terrace": {
+    "pile|diggings|lip|terraces":
+      "The diggings go down into the pile in deep holes, and the sides of them show what the pile is made of: bones and hide and hair, layered like the bands in a cut bank. The freshest digging has claw-marks down its walls, and a long bone pulled out and left beside it.",
+  },
+  "the-quiet-ground": {
+    "rock|ground":
+      "The rock is bare and grey and clean of everything, even lichen. Drop a pebble and it clicks and that is the only sound. On the rock, here and there, there are patches of a darker grey, smooth, in rounded shapes, as if something heavy had lain on each one.",
+  },
+  "the-scorched-step": {
+    "ground|rock|notch|step":
+      "The pale rock is cracked in a fine net of shallow lines, the way clay cracks in a hot sun. Kneel and the cracks are full of a fine white ash that blows away when you breathe. At the line where the scorch begins, the last print going east stops.",
+  },
+  "the-guano-face": {
+    "wall|face|runnels|guano":
+      "The white is crusted thick and layered, old grey under fresh white, and the runnels in it are stained green and brown where rain carries the newest down. A ledge partway up holds a dead chick, fallen out of a nest and dried, the size of a goose.",
+  },
+  "the-eyrie-foot": {
+    "ledges|bones|face|base":
+      "The bones at the base are of everything: sheep, deer, goat, and long heavy ones that do not fit any of them. They lie in a drift along the foot, crushed where they hit, and the drift is deep enough to wade. A shed feather among them is longer than your arm.",
+  },
+  "the-bare-place": {
+    "stone|place|ground":
+      "The stone is smooth and warm and clean, and in its middle there is a faint scorch, a dark ring the size of a cart wheel, glazed at its edge. Nothing lies on it. The cover behind you is the last place with any prints.",
+  },
+  "the-swept-terrace": {
+    "terrace|rock|ring|stone":
+      "The ring of heaped stone is highest on the east side, where whatever lay here pushed hardest turning round. The rock in the middle is polished and faintly warm. At one edge of the ring there is a dark scorch on the rock, a smudge, as from a breath.",
+  },
+  "the-high-perch": {
+    "perch|knuckle|rock|base":
+      "The knuckle's top is polished to a shine by claws and its edges are scored with deep grooves where talons gripped. The white round the base is thick and fresh. Caught in the grooves there are feathers, long dark ones, and a tuft of down.",
+  },
+  "the-white-wall": {
+    "wall|holds|white":
+      "The holds are crusted with white and slick under it, and each one has been scraped clean by hands at its edge, the only clean rock on the face. The smell is strong enough to taste. At the top of the line the white is worn through to the grey in a single patch.",
+  },
+  "the-second-terrace": {
+    "terrace|rock|stains|shelf":
+      "The black stains are layered so thick they have built up a crust on the rock, and the crust has rings in it like a cut tree. Lying on top there are the remains of the last thing brought here: a hind's leg, the hoof still on, picked clean.",
+  },
+  "the-scatter": {
+    "scatter|hide|hair|hooves|ground":
+      "The ground is deep in the leavings of the terrace above, all of it trampled. There are prints of four or five kinds in among it, all pointed in toward the middle, and paths worn into the drifts from every side. Flies rise off it in a cloud as you come in.",
+  },
+  "the-grease-flat": {
+    "flat|rock|floor|grease":
+      "Rub a finger on the rock and it comes away with a smear of old fat, rendered out of years of carcasses and soaked into the stone. The floor slopes to the drop, and along the lip there are claw-scrapes where things went over and tried to stop.",
+  },
+  "the-threshold": {
+    "threshold|walls|ash|approach|ground|rock":
+      "The ash on the floor is fine and grey and untrodden. The walls on either side are glazed black in long runs from the height of a tall man upward, and the glaze has dripped and set. The smell is strongest at the far end, where the walls close in.",
+  },
+  "the-ash-ground": {
+    "ash|grit|ground|rock":
+      "Pinch a little of the ash and it is soft and greasy and smells of burnt stone. Your prints in it are crisp, every crease of your boot sole. Behind you they are the only marks in the room. Ahead of you the ash is level and unmarked to the far wall.",
+  },
+  "the-wind-post": {
+    "pillar|post|top":
+      "The pillar's top is scoured smooth and grey and not a single dropping is on it, though the rock below its foot is white with them. Its east face is glazed dark, the only face that is. Birds that come near it turn away a few wingbeats short.",
+  },
+  "the-updraught": {
+    "air|face|updraught|ledges":
+      "The air comes up the face so hard that grit from below is carried past your face and up, and small feathers come drifting up from somewhere and go on over your head. The rock here is clean, scoured by everything the updraught brings past.",
+  },
+  "the-nest-shelf": {
+    "nests|nest|shelf|ledge|young":
+      "The nests are built of whole branches, bark still on, carried up from the wood far below, and lined with wool and fur. In each one there are bones heaped at the edge, picked clean. The young in them are already bigger than an eagle and are watching you.",
+  },
+  "the-third-terrace": {
+    "bones|terrace|long bones":
+      "The long bones are as thick as your thigh and cracked open lengthwise, the marrow long gone. Lay one beside you and it reaches past your shoulder. They are older than the rest, brown and heavy, and the bones heaped over them are white and new.",
+  },
+  "the-gorge-ground": {
+    "birds|ground":
+      "The ground under the birds is a crust of droppings, feathers and scraps, and every bird stands on a little cleared patch of its own. They watch you with one eye, then the other. Under their feet there are bones cracked small, and they are all the same few shapes.",
+  },
+  "the-crack-heap": {
+    "heap|bones|rock":
+      "Every bone is split the same way, along its length, and every split has a chip at one end where it struck the rock. The rock itself is pitted and dented under the heap, beaten hollow by years of things dropped on it from high above.",
+  },
+  "the-last-shelter": {
+    "hole|block|grit|floor|slot":
+      "The grit on the floor is clean and smoothed, and there are no prints in it but your own. The fallen block over the hole is cracked across, and the crack is old. Through the slot the pale ground to the east is bright and empty and nothing moves on it.",
+  },
+  "the-hot-flags": {
+    "flags|rock|floor|terrace":
+      "The flags are hot enough that a drop of water on them hisses and is gone. The joints between them are filled with a crust of pale yellow, crumbling. No bones lie here and no prints cross it, and the edge where the hot flags begin is a straight line.",
+  },
+  "the-lookout": {
+    "corner|face|bird|lookout":
+      "The rock at the corner is scored by talons in long grooves and white round its base. There is always a bird here, and the bird is always facing east. Looking where it looks, the ground is pale and empty, and the bird does not look away.",
+  },
+  "the-last-terrace": {
+    "terrace|floor|bones|bank":
+      "The bones in the bank are pushed into a long curve along the edges, and the middle is swept rock, faintly warm. Across the swept floor there is one mark: a long shallow groove, smooth, as wide as a cart, curving from one side to the other.",
+  },
+  "the-picked-ground": {
+    "skeletons|bones|ground":
+      "The skeletons lie in their proper order, ribs arched, legs folded under, as the animals fell. They are so clean they shine. Not a single bone has been carried off, and not a single small mark of teeth is on any of them; only beaks have been here.",
+  },
+  "the-white-heap": {
+    "heap|bank|leavings|wall":
+      "Push a hand into the bank and it gives like snow and is dry, and it is all bone, so old it has gone to chalk. It crumbles at a touch. At the bottom, against the wall, the oldest layer has hardened into something like stone, and there are shapes in it.",
+  },
+  // The Shieling Hamlet (migs 370-373, 2026-11-04).
+  "the-drove-cut": {
+    "cut|banks|bank|roots|stones|walls":
+      "The banks are polished at the height of a sheep's flank, a smooth greasy band all the way up both sides where ten thousand fleeces rubbed past. Above the band the roots stick out raw. Below it the floor of the cut is bare rock, and the rock is pocked with small hoof-dents.",
+  },
+  "the-spring-green": {
+    "spring|ring|slab|windlass|rope|bucket|water":
+      "The slab was levered on with a bar, and the bar's bite is still in its edge, three notches where it slipped. The windlass handle is worn bright on the grip. Lean close to the gap and the cold comes up out of it like breath, and you can hear the water moving underneath.",
+  },
+  "the-terrace-strips": {
+    "terraces|strips|walls|wall|steps|stubble|ridges":
+      "Every wall leans very slightly into the hill, the way a good waller sets one so the slope holds it up. The stones were picked off the strips themselves; the soil on the steps has none bigger than a fist. Somebody carried the soil here too, some of it, in baskets, and the strips are deepest at the inside edge.",
+  },
+  "the-shiel-foot": {
+    "scorch|gable|fire|walls|ruts|stone":
+      "The scorch is a narrow black tongue up the gable, and at its foot the turf is still lifted in a square where somebody cut it to smother the fire. They smothered it, and the square was never put back. The ruts in the trodden stone are sledge runners, not wheels, two straight grooves.",
+  },
+  "the-fold-pound": {
+    "pound|pen|gate|stones|courses|wall":
+      "The gate is hurdle, woven hazel on a frame, and it has been rewoven at least twice; the new withies are paler than the old. On the downhill side the top course is knocked off in one place and two stones lie inside the pen, where whatever was shut in here went over from inside.",
+  },
+  "the-in-field": {
+    "field|in-field|meadow|deer|grass":
+      "The ground is darker and softer here than anywhere else on the slope, years of muck carried out from the byres and forked in. The ridges of the last ploughing still show across it in the late light. Deer have bedded in the long grass at the top in three or four round flattened places.",
+  },
+  "the-shiel-street": {
+    "doors|door|shiels|street|walls|stone|rock":
+      "Every door is shut the same way, the latch tied round with a twist of cord, every cord rotted to a stub. Somebody went down the street closing up. Where the hill's bare rock comes through the street, steps have been cut into it, shallow, for a sledge's runners to bump down.",
+  },
+  "the-forge-yard": {
+    "yard|scale|trough|clinker|heap|ground":
+      "Kick the clinker heap and it breaks open glassy and green-black inside, the slag of a hot fire run a long time. Every lump in it is the same size, raked out and dumped in the same place. The frost crack runs right down the trough and somebody drove a wedge into it to see how far.",
+  },
+  "the-hill-smithy": {
+    "smithy|hearth|hood|anvil|block|hooks|wind-eye|window":
+      "The anvil block is a stump of birch, which is no good for it, because birch was what grew within reach. It is split twice and bound round with iron to hold it. The hooks on the wall are close together and small: hoof-nails, shears, the light work a hill smith did, and nothing heavy.",
+  },
+  "the-shiel-backs": {
+    "plots|walls|wall|gaps|rowans|nettle|bilberry":
+      "The gaps in the back walls line up, one behind the next, so a single short path ran the length of the backs. Their top stones are worn smooth by hands. In each plot the nettles grow thickest in one corner, the same corner, where each household threw its slops.",
+  },
+  "the-hill-cross": {
+    "cross|steps|step|tally|stump|head":
+      "The head of the cross is nowhere here; it went downhill, and the hill keeps what goes downhill. The tally on the bottom step is strokes in fives, neat at first, then fast, then hardly cut at all, the last few no more than scratched with something blunt.",
+  },
+  "the-herds-yard": {
+    "yard|cobbles|byre|house|roof":
+      "The cobbles are worn into a hollow by the byre door, where every beast in the place came through it once a year to be counted. Somebody scored a line beside the door at shoulder height and cut a tally of nicks along it. The house across the yard has its threshold scrubbed pale.",
+  },
+  "the-herds-house": {
+    "house|hearth|lintel|hook|bench|bedstead|window|shutter|floor":
+      "The floor is swept and the sweepings carried out. The hook in the lintel is worn thin on its underside by a pot's handle. The bench in the wall has a hollow at one end only, by the hearth, where one person sat every evening for a long time.",
+  },
+  "the-burnt-shiel": {
+    "shiel|walls|black|fire|rowan|hearth":
+      "The black is on the inside face of the walls, highest over the door, the way a fire inside a house climbs out. The outside is clean. The rowan has rooted in the hearth's ash, and it is the only tree inside a wall anywhere in the place.",
+  },
+  "the-chapel-shelf": {
+    "shelf|yews|yew|wall|stone":
+      "The shelf was cut level by hand and the spoil was thrown over the edge; it lies in a fan of grassed-over rubble below the wall. The worn middle is an oval, a crowd's shuffle, not a path. The yews' roots have shoved the wall outward in two places and nobody straightened it.",
+  },
+  "the-shiel-head": {
+    "gate|wall|roofs|roof":
+      "The gate opens downhill, and its post on the inside is worn by a hand at latch height. The wall it hangs in is the best-built wall in the place, chest high and capped, because this is the side the weather comes from and the side the country is.",
+  },
+  "the-high-croft": {
+    "croft|house|byre|roof|channel|partition|muck":
+      "The muck channel is cut into the bedrock where the house stands on it and lined with slabs where it does not. The byre end of the roof is lower than the house end. Inside the byre door an iron ring is leaded into the wall, worn bright on the inside of its curve by a tether.",
+  },
+  "the-high-house": {
+    "house|thatch|hearth|hearth-stone|byre|floor|smoke":
+      "The underside of the thatch is a black crust hard enough to ring when you rap it. The hearth-stone is cracked across, and the crack has been packed with clay. The beaten floor is worn lowest in a ring round the fire, a lifetime of feet going round it.",
+  },
+  "the-thorn-garth": {
+    "garth|garden|wall|trunks|trees|bark|windfalls|grass":
+      "The dead trees and the living ones stand in the same rows, planted the same day. The living ones were pruned once by somebody who knew how; the dead were left alone. Under the living half the windfalls are bitten, not pecked, and the wall has a gap at the bottom where something comes through.",
+  },
+  "the-hill-chapel": {
+    "chapel|font|bench|door|roof|block":
+      "The font is cut from a single block of the hill's own grey stone and still holds a hand's depth of water, though the roof does not leak. The bench is worn into hollows, closest together nearest the door. The door has a bar, and the bar is on the inside.",
+  },
+  "the-fleece-green": {
+    "posts|lines|green|grass|fleeces|hides":
+      "The posts are notched at the top for ropes, and the notches are worn smooth and greasy-dark, greasy enough to stain a finger even now: wool fat, years of it. Under the lines the grass is brighter than the rest, and there is a row of small square peg-holes along each.",
+  },
+  "the-lost-toft": {
+    "toft|bank|doorstep|step|ground":
+      "The doorstep was set too deep to lever out, which is why it is the only stone left. It is worn hollow in the middle and worn again on one side, where somebody always stepped. The bank round the toft is low and even, and the turf inside it is finer than the turf outside.",
+  },
+  "the-rowan-rows": {
+    "rowans|rowan|row|trees|trunks":
+      "Each crooked tree grew up out of an old cut stump, and under the moss there are knife-marks on several of the stumps, a cross cut into the bark at the foot. The spacing is exact, a stride and a half apart, and the row runs along the very edge of the common and not one tree past it.",
+  },
+  "the-peat-hut": {
+    "hut|turf|walls|roof|birch|peat|bracken|bedding":
+      "The birch rafters are bent and bark-on and every one is tied, not pegged, with twisted heather rope. The bracken bedding is crushed flat in a long shape along the wall, and fresh bracken has been pushed in at the edges. Somebody still sleeps here, or something.",
+  },
+  "the-hill-spring": {
+    "spring|barrel|staves|water|mud|prints":
+      "The barrel's bottom was knocked out so the water rises into it from the hill. The staves are hooped with twisted birch, renewed at least once. The prints in the mud are sheep and deer and something heavier, and all of them come and go.",
+  },
+  "the-hill-graves": {
+    "graves|grave|mounds|rows":
+      "In rows, and close: each mound barely a body's length from the next, dug as fast as they were needed, and shallow, because the rock is a foot under the turf here. The chapel's shelf is in sight and has room. These people were not carried that far.",
+    "ground|earth|soil|bones|layers|under|rock":
+      "The rock a foot under the turf is not the hill's. Where frost has heaved a mound, the shallow grave lies over older bones, crushed flat and packed close, and under them the rock is flat stone, dressed and laid tight, older than anything on the hill, with cold air coming up through the joints.",
+  },
+  "the-scree-end": {
+    "scree|juniper|slope|stone|common":
+      "The last of the common ends at a line of big stones set along the top of the scree, a stride apart, the only fence the slope would take. Below them the juniper grows flat to the stones, pressed down by snow, and nothing goes across but small loose trickles of grit.",
+  },
+  "the-cold-hearths": {
+    "hearths|stones|ring|shelters|marks":
+      "The flat stones are cracked through with heat, and one is split and set back together. The marks of the old shelters lie round the fire with every doorway facing it. The herders who came up here pitched in the same places every summer, before there was a single stone house.",
+  },
+  "the-thorn-nook": {
+    "thorn|path|tunnel|bushes|common":
+      "The path goes in at the height of a sheep's back and the thorn over it is browsed short and even. Tufts of wool hang on the spikes at the mouth of it, and further in, coarser, darker hair, caught at the height of your knee.",
+  },
+  // ======================= THE ROADS, the rest (2026-11-05) =============
+  "the-willow-landing": {
+    "ring|mooring|stone|willows|willow|causeway":
+      "The ring turns because its socket is worn round, a groove cut into the stone by years of the ring swinging. The willows on the bank were cut back hard once and have grown out again from the stumps in bunches. The last stone of the causeway is worn lower on its landward edge, where feet stepped off.",
+  },
+  "the-green-lane": {
+    "hedges|hedge|lane|tunnel|track":
+      "The hedges were laid once: you can see the old stems bent over and pinned at the bottom, grown on into thick crooked trunks. Nobody has laid them since. The ruts under the leaf litter are still there, two shallow troughs narrower than the lane is now.",
+  },
+  "the-tussock-ford": {
+    "tussocks|tussock|sedge|peat|crossing":
+      "Each tussock is worn bald on top where feet land, a bare patch in the middle of the sedge. Between two of them somebody has pushed a pole down into the peat and left it, and the pole goes down further than its own length and does not touch anything.",
+  },
+  "the-wood-gate": {
+    "gate|posts|stumps|iron|hinges":
+      "The iron in the oak stumps is a pair of hinge pins on one side and a hasp on the other, rusted solid. The gate itself is not anywhere nearby. The posts are worn on the inside faces at hip height where the gate swung against them for years.",
+  },
+  "the-faggot-stack": {
+    "ricks|faggots|bundles|wood|bindings|stack":
+      "The bindings on the two good ricks are twisted withy, and the knots are all tied the same way, by the same pair of hands. The rotted ricks have gone to long soft ridges full of beetles. The stacking ground is levelled, and the lane's edge beside it is worn by barrows.",
+  },
+  "the-fuel-road": {
+    "lane|banks|roots|hedge|road":
+      "The hedge roots hanging out of the banks are thick as an arm and bare, and the banks are scarred along their whole length at one height, where barrow hubs scraped. The lane's floor is bare rock and stone, worn smooth.",
+  },
+  "the-bank-and-ditch": {
+    "bank|ditch|gap|lane":
+      "The gap was cut square and its sides were faced with stone so they would not slump, and the facing is still there under the moss. The bank either side is higher than your head. On the common side of the gap a post-hole is cut in the stone, for something that could close it.",
+  },
+  "the-gorse-break": {
+    "gorse|lane|ruts|passage":
+      "Under the gorse the ruts are still clear and dry, two parallel troughs, and the gorse has rooted along the crown between them. The flowers smell of nothing much up close. The passage through is worn bare by things going through low.",
+  },
+  "the-gorse-tunnel": {
+    "gorse|tunnel|drove|needles|pipe":
+      "The dead needles on the floor are a hand deep and dry, and they hold the print of every foot that passes, which is a great many. The gorse overhead has been browsed from below in places. There is wool caught in it, and it is not new.",
+  },
+  "the-rutted-track": {
+    "ruts|spine|track|grass|water":
+      "The water in the ruts has a skin of pale mud on the bottom, undisturbed, and frogspawn in one of them. The spine between them is worn to bare earth along a line exactly one foot wide. The ruts were made by narrow iron tyres a long time ago.",
+  },
+  "the-drowned-hurdles": {
+    "hurdles|hurdle|weave|hazel|layers":
+      "The layers below are all hazel, but woven differently: the deepest is tight and careful, the next looser, the top one quick and wide-meshed. Each was laid by somebody in less of a hurry to do it well. The pegs holding the top one are new wood.",
+  },
+  "the-rush-shore": {
+    "boards|trestles|rush":
+      "The boards are nailed with square nails, and many of the nails have been pulled and the boards relaid with pegs. The trestles stand in the water on stone pads. In the mud beside the boards there are slots and prints going along at knee height, in a line.",
+  },
+  "the-eel-traps": {
+    "traps|trap|stakes|wicker":
+      "The wicker traps are funnel-mouthed, each with a narrower funnel inside it, so what goes in cannot find the way out. The two shut ones are tied with a cord that is newer than the traps. Whoever tied them is not the person who made them.",
+  },
+  "the-sheep-fold": {
+    "fold|wall|doorway|stone":
+      "The floor inside is swept, the dirt pushed out through the doorway into a little heap that has not yet been rained flat. The wall is drystone and every course leans a little inward. The doorway's stones are rubbed smooth where fleeces brushed past.",
+  },
+  "the-high-verge": {
+    "verge|drove|ridge|grass|road":
+      "The grass along the verge is cropped and the drove is wide enough for a flock, its edges marked by a line of old stones set every few strides. From here the paved road is pale and plain through the trees. A sitting-stone on the verge has been sat on enough to be smooth.",
+  },
+  "the-track": {
+    "track|roadbed|stone|earth":
+      "Kick at the track's edge and you find a kerbstone, buried, and then another. The roadbed is still down there under a hand of earth. Where the earth has washed off it the stones are dressed and set, and they are the same as the east road's.",
+  },
+  "the-sinking-path": {
+    "path|stone|brushwood|way":
+      "Where the path stands proud the stone on top is fresh, dumped from somewhere else, and where it sinks the stone is old and green. Somebody keeps adding to it. In the wet stretches you can feel the brushwood underfoot, and it is soft.",
+  },
+  "the-dead-alders": {
+    "alders|alder|trees|wood":
+      "The dead alders are hung with grey beards of lichen, and the bark has fallen off most of them in sheets that float at their feet. A line of high water stains every trunk at the same height. Woodpecker holes run up the nearest one in a neat column.",
+  },
+  "the-lych-way": {
+    "path|way|lych":
+      "The path is worn deep in the middle and the edges are untrodden, which is how it is when people walk it two by two. Every so often there is a wider place where the path swells to twice its width and then narrows again. Bearers changed shoulders there.",
+  },
+  "the-wet-furlong": {
+    "stones|water|rushes|path|furlong":
+      "The stones laid end to end are long and flat and every one has a hollow worn in its middle. The tipped ones have been set back more than once; you can see the scars on them where a bar levered them up. The water between them is clear and cold.",
+  },
+  "the-coffin-stone": {
+    "slab|stone|uprights|top":
+      "The top of the slab is worn smooth in two long hollows, one at each end, where the weight rested. There are scratches along one side, short and deep, made by something with corners being set down and lifted. Small stones lie on top, set there one at a time.",
+  },
+  "the-rush-ground": {
+    "rushes|rush|ground|path":
+      "Kneel in the path and you can see the old cutting: some clumps have stems that were sliced off level, long ago, and have grown up again from the cut. The path through is trodden flat and dark. Nothing has cut a single rush here in a great many seasons.",
+  },
+  "the-cross-field": {
+    "field|ridges|furrows|path":
+      "The ridges run the long way down the field and each one is curved slightly at its end, the shape of a plough team being turned. The path crosses them all. Along its edge there is a strip of different grass, finer, where people walked it for generations.",
+  },
+  "the-broken-cross": {
+    "cross|base|steps|head|shaft|marks":
+      "The marks on the base are crosses and initials and short lines, cut by knives and nails, layered over each other until the stone is more scratch than surface. The head lying in the grass has a face on it, worn to almost nothing. The break in the shaft is old and weathered.",
+  },
+  "the-last-paving": {
+    "paving|stones|courses|road":
+      "The last whole course is laid true and bedded. The two after it are laid on sand only, quickly. The scatter beyond that is stones dumped from a cart and never set. The work did not stop all at once; it ran out over a few days.",
+  },
+  "the-fen-edge": {
+    "fen|reed|water|cuttings|ground":
+      "Right at the edge there is a line of stakes driven into the ground, close together, with brushwood woven between them: somebody holding the firm ground's edge against the fen. The fen is winning. Half the stakes are leaning outward into the water.",
+  },
+  "the-open-water": {
+    "water|lake|reed|way":
+      "Under the water the way is a line of flat stones, pale against the dark mud, and you can see them if the light is right. Some have been moved. At the far side a pole stands up out of the water with a rag on it, to aim for.",
+  },
+  "the-seep-edge": {
+    "seep|slope|floor|trees":
+      "The floor at the slope's foot is moss over wet black soil, and it holds every print: deer, fox, and the trodden line of the path. The seep ahead makes a sound like slow breathing. The trees here have ferns growing in their forks.",
+  },
+  "the-thorn-lane": {
+    "blackthorn|thorn|thorns|lane|tunnel|wool":
+      "The wool on the thorns is in clumps, and all of it is at the height of a sheep's back, grey and felted and very old. Higher up, at a man's shoulder, the thorns are broken off short along the whole lane, where people pushed through and snapped them.",
+  },
+  "the-sunken-drove": {
+    "drove|channel|banks|bank":
+      "The banks are polished smooth at the height of a beast's flank and the polish is greasy with old wool fat. Your hands come away smelling of sheep. At the bottom the stones are worn into a single narrow trough down the middle.",
+  },
+  "the-tinkers-camp": {
+    "rings|fires|ground|scraps|metal|awl|tang|verge":
+      "The scraps trodden into the turf are bright where your boot scuffs them: copper clippings, the end of a broken rivet, a solder drip. The fire rings are each built of the same kind of stone, carried here. Somebody came back to the same spot every year and pitched in the same places.",
+  },
+  "the-heron-stand": {
+    "spit|gravel|herons|bones|lime":
+      "The bones on the spit are fish and frog and the tiny skulls of water voles, crusted white with lime. The herons stand on one leg on the cleanest stones. Between the stones there are pellets, grey and full of bones, coughed up and left.",
+  },
+  "the-quaking-flat": {
+    "flat|raft|moss|root|ground|water":
+      "Kneel and press and the water comes up through the moss round your hand, cold and brown. There is a hole in the raft a few strides off, round, where something went through and the moss has not yet closed. The water in it is black.",
+  },
+  "the-ditch-end": {
+    "ditch|revetting|plank|walk|boards":
+      "The revetting where it gives up is a row of rotten stakes with brushwood woven between, sagging outward. The plank walk's boards are pegged to cross-pieces, and the pegs are replaced with new wood in several places. Under the green slime the boards are sound.",
+  },
+  "the-peat-road": {
+    "road|ruts|brushwood|spoil|peat":
+      "The road's surface is crumbled peat, black and springy, and the ruts in it are wide-set for a big-wheeled cart. Along the edges there are broken peats, dropped off the loads and never picked up, gone hard and grey.",
+  },
+  "the-peat-cuts": {
+    "cuts|pits|turf-banks|banks|peat|oak|bog oak":
+      "The walls of the cuts are marked with the long strokes of a peat spade, every stroke the same width. On the drying banks a few peats are still stacked in little pyramids, gone grey and hard as wood. A length of black bog oak lies beside the nearest pit, dragged out and left.",
+  },
+  "the-west-brow": {
+    "brow|tops|wood|crowns|track":
+      "At the brow the track is worn into a deep notch where everything goes over the edge. The rock at its lip is scored with long marks, from sledges or carts let down here with a brake. Below, the crowns of the wood are a single green roof.",
+  },
+  "the-brow-path": {
+    "track|path|turns|slope":
+      "Each turn of the path is worn wide on the outside where feet and hooves swung round. Between the turns, there are shortcuts straight down the slope, worn by animals and by people in a hurry, and the shortcuts are eroding into gullies.",
+  },
+  "the-scree-turn": {
+    "scree|stone|path|slope":
+      "The path across the scree is a line of flatter stones, chosen and kicked into place by many feet, and a few have been set on purpose and wedged. Above the path the scree is pale and new. Below it, the stones are lichened, and old.",
+  },
+  "the-bracken-hillside": {
+    "bracken|hill|path|trough":
+      "The trough through the bracken is floored with last year's fronds, flattened and brown. At intervals there are side-paths, low, going off into the bracken at knee height. The fronds round their mouths are broken and bent the same way.",
+  },
+  "the-first-oaks": {
+    "oaks|trees|roots|litter|slope":
+      "The oaks lean away from the hill, their crowns combed back by the wind, and their roots grip the slope in great knuckles over the stones. Under them the leaf litter is deep and dry. A hollow under the biggest root is lined with leaves and fur.",
+  },
+  "the-wood-bank": {
+    "bank|ditch|wood|place":
+      "The bank was faced with stones on the hill side, and some of the facing is still there, mossed and leaning. The low place where it fell is worn to bare earth by the path and by everything else, and the ditch below it has been trodden into a slope.",
+  },
+  "the-hanger": {
+    "trees|roots|slope|steps|wood|path":
+      "The root steps are worn bare and polished where feet have used them, and the soil between them has washed away to stones. The trees lean outward over the drop at the same angle, all of them, and their trunks have curved back up toward the light.",
+  },
+  "the-holly-scarp": {
+    "holly|scarp|rock|step|cut|leaves":
+      "The cut through the holly is clean-sided, the stems sliced off with a blade at the edges. It has been kept. Some of the cut ends are old and grey, some fresh and still pale. The rock step underneath is worn into two footholds.",
+  },
+  "the-spring-line-oaks": {
+    "oaks|seeps|water|floor|trees":
+      "Each seep comes out from under a root or a stone, clear, and runs off in a little channel lined with bright green moss. The oaks here are tall and straight and smooth. At one seep somebody has set a flat stone across the channel to stand on while drinking.",
+  },
+  "the-wet-margin": {
+    "margin|mud|moss|water|alders|willow|path":
+      "The firm line through the margin is marked by stones pushed into the mud, some flat and some not, and by branches laid across the worst places. The branches are of different ages. One fresh one has bark still on it.",
+  },
+  "the-plank-bridge": {
+    "planks|bridge|beck|footings|pins":
+      "The pins through the planks are iron, rusted, and two have been replaced with wooden pegs. The stone footings are good work, better than the planks, cut and bedded. Downstream you can see where the proud bridge stood: two abutments and nothing between.",
+  },
+  "the-drovers-stance": {
+    "stance|turf|wall|trough|rings|fires":
+      "The trough is cut from a single stone and the spring runs into it through a groove in its lip, worn smooth. The fire rings are at the far end, downwind of the beasts, every one built in the lee of the wall. The turf where the beasts stood is darker and thicker.",
+  },
+  "the-beggars-hollow": {
+    "hollow|scoop|face|fires|ground":
+      "The back of the hollow is black with soot laid on in layers, and at the height of a sitting man's head the soot is rubbed off in a smooth patch. There are scratched marks on the rock beside it, strokes and a few letters. The ground is littered with small bones and charcoal.",
+  },
+  "the-boundary-dyke": {
+    "dyke|bank|ditch":
+      "The bank is grassed over and rounded with age, and here and there along it a stone has been set upright on top, every few hundred paces, one after the other. On the downhill side the ditch has filled to a shallow green line you can still follow by eye.",
+  },
+  "the-spoil-banks": {
+    "banks|spoil|waste|thorn|rabbits|track":
+      "The rabbit holes in the banks spill fresh pale grit, quarry waste, sharp chips of stone that never saw a chisel. Near one hole there is a scatter of fur and a bloodied scrape where something dug in after them.",
+  },
+  "the-drowned-milestone": {
+    "milestone|stone|names|water":
+      "The names above the waterline are scratched shallow, and some are scratched over older names. At the waterline the stone has gone soft and a fingernail sinks into it. Below, under the water, the face is smooth and blank, the letters all gone back to stone.",
+  },
+  "the-rain-shadow": {
+    "sand|road|gorse|grass|ridge":
+      "The sand on the road is fine and pale and rippled by wind. Under it, if you brush it away, the road's stones are there, still laid. The gorse here is low and bent, and its roots have gone down between the road's stones to find water.",
+  },
+  "the-shepherds-ruin": {
+    "hut|walls|fireplace|doorway|stones":
+      "The fireplace's back is a single slab, cracked across by heat and blackened, and in front of it the floor is worn into a hollow by a lifetime of a stool's legs. In a crack in the wall at shoulder height there is a hook of bent iron, for a lamp or a coat.",
+  },
+  "the-haul-road": {
+    "road|ruts|grit|track":
+      "The ruts are worn by sledge runners, not wheels: two smooth flat grooves, wider than a wheel's. The pale grit in them is quarry dust washed down from above. Your print in it is the only one, sharp-edged, among the prints of birds.",
+  },
+  "the-mustering-yard": {
+    "yard|apron|hardstanding|walls|gateposts|ruts":
+      "The hardstanding is laid in rows, and along the back wall the stones are worn into a long shallow trough where men stood in a line, a great many times. Iron rings are leaded into the wall at the height of a horse's head, every few strides. The gateposts are scored where wheels clipped them.",
+  },
+  "the-sheepwalk": {
+    "grass|moss|folds|ring-marks|track|brow":
+      "The ring-marks are the footings of folds, circles of stones sunk into the turf with greener grass inside. The grass is cropped short, and the droppings on it are fresh. The track along the brow is worn by feet, and by narrow hooves going the other way.",
+  },
+  "the-roadwarden-post": {
+    "house|post|hatch|yard|door|bars":
+      "The bars on the hatch are worn bright where hands have reached through them. Cut into the door's stone frame there is a row of short marks, many, some old and filled with lichen and some clean. The yard behind is swept, and the wall round it has been mended with newer stone.",
+  },
+  "the-tops": {
+    "tops|grass|hill|track":
+      "The grass is short and thick and full of tiny flowers, and the wind combs it flat in long waves you can watch going over. The track across it is a faint line worn by feet. Here and there a lark goes up from right under your boot.",
+  },
+  "the-sheep-scrape": {
+    "scrape|hollow|bank|cave|hair":
+      "The hair in the scrape is coarse and brown and much longer than wool. The bank's back is rubbed smooth and greasy at the height of a big shoulder. The old sheep-smell is still in the dust underneath, but the new smell over it is sharper.",
+  },
+  "the-bent-thorn": {
+    "thorn|hawthorn|trunk|crown":
+      "The polished patch on the trunk is at the height of a cow's flank, and the bark there is gone and the wood under it is smooth and dark. Tufts of hair and wool hang in the lower branches. In the lee of the trunk the grass is trodden to a bare patch.",
+  },
+  "the-stony-rise": {
+    "stones|track|walls|turf|tracks":
+      "The stones breaking through the turf are pale, frost-split and lichened, and the track picks its way between them where the ground is softest. A fallen wall's stones lie in a long line in the grass. The sheep tracks thread off between the stones and fade.",
+  },
+  "the-cattle-stance": {
+    "stance|enclosure|wall|gateway|grass":
+      "Along the inside of the wall on its windward side, the ground is hollowed in a row of shallow scoops where men lay against it, and there are the black marks of small fires. The grass inside is dark and coarse. The gateway's posts are polished by flanks.",
+  },
+  "the-high-lane": {
+    "lane|walls|road|tops":
+      "The walls here were built by the same hands as the lower ones, the same lean, the same capstones, but the capstones are more often fallen. Some of the stones in them are worked: a carved block, a piece of a doorframe, carried up from below and built in.",
+  },
+  "the-wall-end": {
+    "wall|walls|stones|hill":
+      "The tumble is a wall's whole end fallen outward in one piece, the stones lying in the order they stood. The walls behind are lichened in grey and orange rings. One stone at the end has a hole worn through it, where a gate's hinge pin turned.",
+  },
+  "the-blackthorn-lane": {
+    "blackthorn|sloes|thorns|lane":
+      "The sloes are dusty blue and bitter, and most of them below shoulder height have been picked or eaten. The thorns at sleeve height are hung with threads of cloth, many colours, from everybody who came through.",
+  },
+  "the-steep-pitch": {
+    "lane|stone|steps|banks|hedges":
+      "The steps in the bare stone are worn into hollows, each one the size of a hoof, and the hollows hold water. Down one side a groove is worn where wheels or sledges came down braked. The hedge banks are lower here and stony.",
+  },
+  "the-drovers-spring": {
+    "spring|trough|lip|stone|cress|water":
+      "The lip is a single stone cut into a spout, and the spout is worn smooth by water and by muzzles. The trough is old, its corners rounded off. Cut into its rim, small and neat, there are initials and a mark like a pair of horns.",
+  },
+  "the-holly-bank": {
+    "holly|bank|wool|leaves|lane":
+      "The holly's lowest leaves are browsed off in a level line, the height of a deer's reach. The wool caught in them is grey and felted. The lane's floor on the far side is worn down into a groove, where everything leaned away from the holly.",
+  },
+  "the-hedge-gap": {
+    "gap|posts|gate|hedge|field|thorn|thistle":
+      "The posts are oak and their hinge holes are empty and rusted round. The gap is trodden into a bare path through the thorn and thistle, and the thorn's branches at the sides are broken back at the height of a beast's shoulder.",
+  },
+  "the-hollow-lane": {
+    "lane|banks|hedges|trench|roots|mud|prints":
+      "The mud in the bottom has prints of every age in it, the oldest only dents, the newest crisp. Badger and deer and boot. The roots in the walls are polished where hands have grabbed them going up the slippery part.",
+  },
+  "the-drove-mouth": {
+    "lane|drove|stone|corner|banks":
+      "The stone at the corner is polished smooth and greasy on its lane side, a long shine at the height of a cow's flank. The lane's floor is worn below the fields in a single deep curve. Cut into the corner stone, near the top, is a mark like a pair of horns.",
+  },
+  "the-weed-paving": {
+    "paving|stones|road|courses|weed|dock|nettle":
+      "The holes where stones were lifted are clean-edged, and some still have the bedding sand at the bottom, untouched. The lifting was careful: whoever took them knew how the road was laid. The creeping weed has pushed one course up by a finger.",
+  },
+  "the-third-milestone": {
+    "milestone|stone|face|verge":
+      "Lean round to read it and the face is cut with the same square letters as the others, but the verge has grown up over the number. The back of the stone, the side that faces the road now, has been scratched with names and marks by people who could not see the front.",
+  },
+  "the-hollow-elm": {
+    "elm|tree|ash|hollow":
+      "The ash in the bottom is grey and fine and layered, many small fires. The inside walls are blackened to above head height and the wood there is charred in shallow scales. Somebody cut a shelf into the inside of the trunk, and a stub of candle is stuck to it.",
+  },
+  "the-crooked-mile": {
+    "paving|kink|bends|road":
+      "In the crook of the second bend there is a ring of stones in the verge, sunk and overgrown, the footing of something round. A tree, or a well, or a cross. It is gone, and the road still goes round the place where it stood.",
+  },
+  "the-culvert": {
+    "culvert|arch|brick|drain|parapet|water|bank":
+      "The bricks of the arch are narrow and hard and laid in neat rings, and the underside is whiskered with little white drips of lime. A path is worn down the bank to the water's edge. Under the arch, out of the rain, the ground is dry and trodden.",
+  },
+  "the-fen-gut": {
+    "gut|water|peat|bank|fen":
+      "The water is warm to the hand and leaves a faint oily shine on the skin. The peat bank alongside is trodden into a path and printed with feet going both ways. Where the gut bends, a crust of white scum has dried along its edge.",
+  },
+  "the-smithy-ruin": {
+    "smithy|forge|walls|floor|scale|cinders":
+      "The forge's mouth still has its iron bars, warped and rusted through. The floor is a hard black crust and among the scale there are nails, a horseshoe, half a hinge, all dropped and trodden in. A ring is leaded into the wall outside, worn bright by halters.",
+  },
+  "the-wind-row": {
+    "thorns|hedge|row|wind":
+      "The thorns were planted in two staggered lines, so the gaps in one are covered by the other. Their trunks lean south together at the same angle. Under them, on the road, the stones are dry when the rest of the road is wet.",
+  },
+  "the-burnt-farmstead": {
+    "farmstead|holding|gable|gables|hearth|doorstep|wall":
+      "The fire took the roof first: the charred ends of the rafters are still caught in the gable sockets. The burn marks are heaviest on the outside of the walls, low down, where it was set. The doorstep is worn hollow and has a crack across it from the heat.",
+  },
+  "the-pinfold": {
+    "pinfold|pound|gate|walls|wall|nettles":
+      "The iron gate hangs from its one pin by a hinge worn to a thin ring. Its bars are bent outward in the middle, pushed from inside. The nettles inside are thick and dark, growing on old dung. The wall's top course has a line of stones set on edge, to stop things jumping it.",
+  },
+  "the-open-heath": {
+    "heath|ling|sand|water|hollows|road":
+      "The ling is short and wiry and grows in clumps with bare sand between, and the sand is printed with small birds' feet and the long thin line of something that slithers. The road's stones run straight across the heath, half drowned in the hollows.",
+  },
+  "the-second-milestone": {
+    "milestone|face|distance|stone|grass":
+      "The scratches over the number are crossings-out and corrections: somebody scratched a different number beside it, somebody else crossed theirs out. The stone's top is worn smooth where people sat. The grass around it has never been cut.",
+  },
+  "the-long-straight": {
+    "road|straight":
+      "The kerbs along the straight are set exactly, the line of them true for as far as you can see, and the road's crown is still there, a gentle hump. Every few hundred strides there is a stone in the verge with a notch cut in it, for the instrument that laid it out.",
+  },
+  "the-ash-verge": {
+    "ash|trees|verge|shadows":
+      "The ashes were planted the same distance apart to within a hand. The dieback has left their crowns grey and bare. At the foot of every third tree there is a small stone set in the ground, flush, with a number cut in it.",
+  },
+  "the-elder-hedge": {
+    "hedge|elder|blackthorn|boundary":
+      "Inside the hedge you can still see the old laid stems, bent over and pinned, grown on into crooked trunks a hand thick. The elder has come up through them and over them. The elder's berries are stripped from the road side and left on the far side.",
+  },
+  "the-sunken-lane": {
+    "lane|banks|roots|road":
+      "The roots hanging out of the banks are polished where shoulders have rubbed against them. In one bank somebody cut a little niche, a hand deep, and set a flat stone in it for a shelf. There is nothing on the shelf.",
+  },
+  "the-drovers-turn": {
+    "turn|bend|mud|hooves|road|ground":
+      "The hard grey mud is pocked with hoof-prints set in it like stone, and the prints are all cloven and all old, a whole herd's passing preserved. The bend is so wide that its inner edge is a separate verge of grass, and on it there are the black rings of old fires.",
+  },
+  "the-broken-paving": {
+    "paving|stones|roadbed|courses|grass|seams":
+      "Each stone tilts a little differently, lifted by ice in its bed and set down again crooked. The grass in the seams is short and tough. Stamp on one stone and the one beside it rocks.",
+  },
+  "the-cart-road": {
+    "road|stone|herringbone|groove":
+      "The herringbone is laid so that each stone locks the next, and none of them has moved. The groove down the middle is polished smooth by iron tyres and holds a thin line of water. On the verge there is a stone post with a ring for tying a horse.",
+  },
+  "the-postern-ditch": {
+    "ditch|revetting|wall|leaf-rot":
+      "Where the revetting stops, its last plank is still pegged in place and the next plank lies in the ditch beside it, never set. Under the leaf-rot the ditch's floor is laid stone, slick and green. Along the wall's foot the mortar is stained dark to the height of the water.",
+  },
+  "the-drain-mouth": {
+    "arch|drain|mouth|ditch|water|stream":
+      "The arch's stones are slimed green on the inside and dry and grey outside, and the line between is sharp. At the foot of the arch there is a heap of silt and broken pottery and bones, carried out over years and dropped where the water slowed.",
+  },
+  "the-grave-drain": {
+    "drain|channel|stone|pit":
+      "The channel's sides are lined with flat stones set on edge and capped with slabs, and the slabs are blackened underneath. The floor is a smooth trough of silt. At the top end, where it leaves the pit, there is a grating of iron bars, rusted, one of them missing.",
+  },
+  "the-postern-carr": {
+    "alder|alders|carr|stems|mud|boots|ground":
+      "The boot prints in the mud are a man's, nailed, and they go one way only, out. They are old, softened at the edges, but the mud remembers them as it said. Between the stems, at shin height, there is a thread of cloth caught on a snapped twig.",
+  },
+  "the-grave-verge": {
+    "line|grass|track|verge|pits":
+      "On the fortress side of the line the grass is dark and coarse and grows over long low humps. On the far side it is thin and grey and lies flat. The hoof-cut track along the edge is worn down into a groove, and the ruts in it are cut by cloven feet and iron wheels.",
+  },
+  "the-thorn-gap": {
+    "gap|thorn|paving|scar-wood|ends":
+      "The healed cut ends are thick knobs of grey scar-wood, all at the same height and angle, cut with downward strokes by somebody coming from the east. Between the thorns the paving is clean and dressed, and on its stones there is not a single footprint, only leaf-litter.",
+  },
+  "the-stepping-stones": {
+    "stones|slabs|beck|water":
+      "Each slab is worn into a shallow dish on top where feet have landed. The two that shifted have been set back on their beds by somebody, crooked but firm. On the upstream face of each stone the weed streams out long and green.",
+  },
+  "the-sheep-creep": {
+    "creep|gap|banks|bedrock|stone":
+      "The bedrock in the creep is polished into a single smooth trough, and the banks on either side are worn into a slick greasy band at the height of a fleece. On the top of one bank a flat stone is set where a man sat to count, worn into a hollow.",
+  },
+  "the-east-paving": {
+    "paving|stones|road|channel|verge|flint":
+      "Lift the corner of a loose sod at the verge and the drain channel is lined with cut stone and still clear. The paving stones each carry a small mason's mark on their edge, the same mark. At the very end of the good stretch one stone is set but not grouted, and the grout bucket's ring is still printed in the verge.",
+  },
+  "the-withy-beds": {
+    "withy|willow|stools|stool|rods|beds|thicket":
+      "Each stool has a ring of old cut stumps at its base, and the stumps are all cut at the same height with one clean slant. One stool has a bundle of rods tied with withy still leaning against it, cut and never carried off, gone grey.",
+  },
+  "the-first-fold": {
+    "fold|walls|wall|gap|wool|joints":
+      "The gap in the fold has two upright stones for posts, grooved down their inside faces for a hurdle that slid in. The wool in the joints is grey and felted. Inside, along the foot of the windward wall, the ground is worn into a long hollow where the flock packed in.",
+  },
+  "the-toll-stone": {
+    "stone|slot|schedule|charges|block|rates":
+      "The slot is worn smooth at its lip from coins dropped in. The schedule's letters are cut deep and painted once, and a little red still hangs on in the bottoms of the letters. Somebody has scratched a line through the last rate and nothing beside it.",
+  },
+  "the-trap-line": {
+    "traps|trap|weir|stakes|withies|frames":
+      "The two spoiled traps are torn open from outside, the withies pulled apart and bitten through. Fish scales lie on the bank beside them. The weir's stakes are driven in a curve that guides the water into the traps' mouths, and the curve is still true.",
+  },
+  "the-drove-green": {
+    "lane|grass|hedge-banks|banks|hedges":
+      "The hedge-banks are faced with stone on the lane side and earth on the field side, so a beast could not climb them out of the lane. The grass in the lane is shorter in a wide strip down the middle, where the herds walked. Old fire rings sit in the lee of the banks every so often.",
+  },
+  "the-road-kiln": {
+    "kiln|mouth|throat|charge|bank":
+      "The plug of burnt lime in the kiln's belly has cracked across its top, and the cracks are white and powdery. The draw-hole at the bottom is still bricked up. On the bank above, at the loading mouth, a heap of unburnt limestone lies where it was tipped, waiting.",
+  },
+  "the-hollow-way": {
+    "banks|revetting|stone|stonework|ivy|joints|road":
+      "The revetting stones carry a mason's mark on their faces, small, and it is a mark you have seen on the fortress's own walls. The ivy's roots have got into the joints and pushed some stones out a finger's width. The courses behind the ivy are still true.",
+  },
+  "the-mill-loft": {
+    "loft|floor|beam|hoist|slot|sacking|ladder":
+      "The sacking in the corner is folded into a bed and the dust round it is swept back. The hoist beam has a groove worn round it where the rope ran. Through the slot in the floor the water below shows dark, and the sound of it comes up through the boards.",
+  },
+  "the-mill-leat": {
+    "leat|channel|beck|stone":
+      "The leat's stone sides are fitted without a gap and its floor slopes so gently you cannot see it slope, only that the water moves. At the head there is a sluice slot cut in the stone for a board that is long gone. The natural stream below it is louder and rougher.",
+  },
+  "the-oak-hollow": {
+    "oak|kindling|wood|split|curve":
+      "The kindling is stacked in a neat pile, small sticks on top and bigger below, the way a person stacks it who intends to come back. The inside of the oak is charred at the bottom from fires laid before. The split's edges are worn smooth by people squeezing in.",
+  },
+  "the-hollow-oak": {
+    "oak|opening|rim|marks|leaves|floor|tree":
+      "The marks on the rim are cut deep and overgrown with bark, so they stand out as raised scars: initials, horns, a little cross. Some are cut inside older marks. The floor inside is flat and dry and swept clean of the leaves that drift in.",
+  },
+  "the-fifth-milestone": {
+    "milestone|pillar|face|stone":
+      "The FIVE is cut deep and sharp because the stone here is harder than the stone of the western ones. Below the distance there is a small mark, a mason's, that is also on the hollow way's revetting. Nobody has scratched a name on this one, which is the only one of them unmarked.",
+  },
+  "the-drowned-mill": {
+    "mill|wheel|axle|millstones|stones|pool|water|race":
+      "The dressing on the flat millstone is a pattern of straight grooves, cut sharp, and the stone has barely been worn. It was dressed fresh not long before the mill stopped. The wheel's buckets are full of silt and growing weed.",
+  },
+  "the-drovers-cairn": {
+    "cairn|stones|heap":
+      "The stones on the cairn are of every kind, some from far away, pale and dark, round from rivers and sharp from the hill. Some have marks scratched on them. The newest ones on top are clean. The bottom ones have sunk and the grass has come up round them.",
+  },
+  "the-carters-rest": {
+    "shelter|hearth|ash|walls|roof|slabs":
+      "The layered ash in the hearth has bands of different colours, different fires, different woods. The roof slabs are blackened above it. On the back wall there is a row of iron hooks, rusted, for harness, and a cart's spoke is propped in the corner.",
+  },
+  "the-millpond": {
+    "pond|millpond|water|dam|bank":
+      "Along the bank the reeds are cut back in one place to a flat stone set at the water's edge, worn smooth by somebody kneeling on it. The water is clear for a stride out and then goes green-black. A line of old stakes stands in the shallows where a fence once kept stock off the dam.",
+  },
+  "the-wether-slope": {
+    "lynchets|terraces|pasture|gorse|hillside|slope":
+      "Each lynchet's front is a little bank of earth with stones in it, the stones the plough turned up and somebody threw to the edge. The steps are even, every one about the same width. Gorse has taken the steepest fronts. Sheep tracks run along the flats.",
+  },
+  "the-broken-culvert": {
+    "culvert|arch|stone|paving|subsidence|hole|road":
+      "Kneel at the edge of the hole and you can see into the arch, and the dropped stone lies in the water at the bottom, with brick round the gap it left. The paving round the hole has cracked in rings. The water lying on the low side has a skin of dust on it.",
+  },
+  "the-dam-walk": {
+    "dam|path|sluice|rack|pinion|turf":
+      "The rack and pinion are iron, and the pinion's teeth are rusted to the rack in a single block. The handle that turned it is still on, and it has a smooth patch on its grip. The wheel-marks on the dam are old and mossed, two thin grooves in the turf.",
+  },
+  "the-broken-fold": {
+    "fold|wall|walls|stones|gap|grass":
+      "The fallen stones lie in a fan pointing away from the fold, every one pushed outward, and some are cracked across. On the inside face of the wall's broken ends there are long scrapes, pale, at a height above a man's shoulder. The grass in the gap is trodden into a path.",
+  },
+  "the-elm-avenue": {
+    "elms|elm|avenue|verges|tunnel":
+      "The standing elms are evenly spaced and the fallen ones lie at the same intervals, so you can count the avenue by its gaps. Their trunks are scarred at axle height on the road side, where carts brushed past. The light comes through the canopy in shifting coins on the paving.",
+  },
+  "the-fallen-avenue": {
+    "elms|trunks|pool|avenue|drainage":
+      "The three trunks lie parallel, all pointing the same way, felled by the same wind. Under the pool's water you can see the drain they blocked: a stone channel along the verge, still clean where the water runs. The trunks are soft and full of holes, and things live in them.",
+  },
+  "the-tail-race": {
+    "race|channel|footbridge|planks|plank|water|beck":
+      "The new plank is still pale and its bolts are bright. The old plank beside it is grey and soft and holds you anyway. The channel's walls are polished to a gloss by the water, and at the bottom, where it opens into the beck, it has dug a deep pool.",
+  },
+  "the-shepherds-bothy": {
+    "bothy|hut|bed|hearth|shelf|roof|turf":
+      "The plank bed is worn smooth along one edge where a man sat on it every night to pull his boots off. The shelf holds a cracked bowl. On the hearth-slab the soot has a cleaner patch in the shape of a pot's base, and a dog's bed of old sacking lies in the corner.",
+  },
+  "the-relay-house": {
+    "house|hatch|lamp|stable|stalls|yard|stalls":
+      "The stalls each have a ring in the wall, worn bright, and a name painted on a board above, too faded to read but for a letter or two. The stable floor is swept and the straw is fresh. The lamp over the hatch has a clean glass.",
+  },
+  "the-osier-island": {
+    "island|gravel|willow|ring|ash|fire":
+      "The fire ring's stones are stacked neatly in a little dry heap, the way somebody packs up a fire they mean to use again. The willows round it have been cut for kindling, and the cuts are healed over. The gravel is printed with heron feet and nothing else.",
+  },
+  "the-bothy-spring": {
+    "spring|basin|gravel|water|thread":
+      "The gravel in the basin moves where the water comes up through it, little grains rising and settling. Somebody laid a ring of stones round the basin's edge to keep the mud out, and set a flat one on the downhill side to kneel on.",
+  },
+  "the-weighbridge": {
+    "plate|iron|weighbridge|slot|beam|pit|mechanism":
+      "The plate is cast with a pattern of raised squares for grip, worn flat in two broad stripes where wheels crossed. Peer down the slot and the beam is there under the water, its brass fittings green. Cut into the plate's edge are a number and a mark.",
+  },
+  "the-flood-mead": {
+    "meadow|channels|scars|grass|water":
+      "The flood channels have little stone sluices at their heads, the boards long gone, the grooves still clean. The grass is tall and full of meadow flowers and seed heads, and paths run through it at knee height where deer have pushed through.",
+  },
+  "the-high-gorse": {
+    "gorse|brake|lane|corridor|needles|stems":
+      "The black stems underneath are as thick as a wrist and twisted, very old. The corridor through is cut, not worn: the stems at its edges were lopped with a blade, long ago, and the gorse has not yet closed it. The flowers are humming with bees.",
+  },
+  "the-thorn-drop": {
+    "thorn|stone|path|switchbacks|track|hillside":
+      "Each switchback has a stone wedged at the outside of the turn, put there by somebody to stop feet sliding off. The thorn on the drop side is broken back at hand height, where people grabbed it. The loose stone below the path is fresh and pale.",
+  },
+  "the-cut-bank": {
+    "cut|chalk|faces|flint|rooks|ledges|spoil-heap|heap":
+      "The chalk faces are marked with long pick-strokes, every stroke slanting the same way, the men all right-handed. The flints in the courses stand out like knuckles where the chalk has weathered back. The rooks' ledges are whitened and the ground beneath is littered with twigs.",
+  },
+  "the-cattle-drink": {
+    "bank|mud|prints|hoof|water":
+      "The prints that are not hoof are pads, broad, with the claws showing, and they come down to the water and go back up in the same line, without stopping to drink. The hoof-prints round them are scattered, as if the herd broke and ran.",
+  },
+  "the-burnt-brake": {
+    "brake|gorse|stems|ground|shoots|burn|edge":
+      "The black stems snap like charcoal and smear your hands. The green shoots are coming up from the old roots in tufts. At the burn's ragged edge the gorse is scorched yellow on one side only, and there is a heap of cut branches that was meant to stop the fire and did not.",
+  },
+  "the-sixth-milestone": {
+    "milestone|tally|scratches|pillar":
+      "The tally is cut with the same narrow point all the way round, and the strokes are even, every fifth one across the four. Where the tally starts again on its second circuit, the strokes are shallower and a little shakier. It stops in the middle of a group of five.",
+  },
+  "the-marl-hole": {
+    "hole|pit|clay|marl|water|sides":
+      "The clay sides are grooved with the strokes of the spades that dug it, gone soft and smoothed by rain. At the bottom of the near side there are long slide-marks going into the water, and claw-marks going up the clay that do not reach the top.",
+  },
+  "the-marker-stone": {
+    "stone|marker|cross|base":
+      "The cross at the base is cut neatly and fresh, the stone pale in the grooves. Higher up, the old stone has other marks under the lichen, worn very faint: cup-shaped hollows, a ring round one of them. The drove's path bends round the stone in a deep groove.",
+  },
+  "the-beck-mouth": {
+    "beck|gulley|ford|paving":
+      "The gulley's stones are wet and moss-green and the beck comes down them in a hundred little falls. Where it reaches the valley floor it has spread a fan of grey gravel. Up the gulley a little way a stick is jammed between two rocks, left by a flood.",
+  },
+  "the-hatchpool": {
+    "pool|hatch|stonework|water|bank":
+      "The hatch's stone frame has two grooves for the board, and the board is gone. The dressed stones carry the same small mason's mark as the road's kerbs. On a flat stone at the pool's edge there are fish bones and scales, and a heron's grey feather.",
+  },
+  "the-high-common": {
+    "common|grazing|wind":
+      "The turf is short and full of tiny thyme, and the smell comes up when you step on it. There is no wall and no tree, but there are old fire-rings here and there, low and black in the grass, where people stopped to cook in the open. Every one is on the lee side of a stone.",
+  },
+  "the-fallen-elm": {
+    "elm|slice|halves|heartwood|rings|trunk":
+      "The cut faces are sawn, flat, two men on a long saw, and the saw-marks are still there under the grey. Count the rings and the tree was young when the road was new. The beetle galleries run through the heartwood in branching tunnels like writing.",
+  },
+  "the-plank-crossing": {
+    "planks|abutments|beck|bolts":
+      "The abutments are cut stone with old bolt-holes in them at four different heights, one set for each bridge that was here before. The planks are elm, bolted with iron, and they bow a finger's depth in the middle when you stand on them. The beck below is fast and clear.",
+  },
+  "the-lapwing-flat": {
+    "flat|saucer|rushes|water|birds|ground":
+      "The open ground has scrapes in it, shallow hollows with a few dry grass stems in them and eggs the colour of the mud. The birds that went up are circling low and calling. In the soft ground round the water there is a line of fox prints that goes straight through the nesting ground.",
+  },
+  "the-verge-shrine": {
+    "shrine|niche|shelf|button|tooth|coin|wall":
+      "The dip in the shelf is worn smooth by hands setting things down and taking them up. The coin is worn so smooth you can see the light through its edge. Behind the scatter, at the back of the niche, the stone is blackened by a small flame, a candle or a lamp, burned there a great many times.",
+  },
+  "the-hanging-wood": {
+    "wood|ash|yew|beck|cleft":
+      "The yews' roots grip the rock in red snakes, their bark peeling in thin strips. The beck below is loud and white. On the steepest parts the trees lean out over the water, and one has fallen and lies across the cleft, mossed over, high above the stream.",
+  },
+  "the-common-boundary": {
+    "boundary|bank|ditch|gap|drove":
+      "The bank is low and wide, grassed and softened by age, and it runs straight to the horizon both ways. The gap where the drove goes through is worn bare and down into a groove. Every few hundred strides a boundary stone stands in the bank, leaning, its face gone soft with lichen.",
+  },
+  "the-long-rise": {
+    "road|rise|tilt":
+      "The road's camber is still good here and the drains along it still carry water. Every so often there is a flat stone set into the verge, a mounting stone, where riders who had walked their horse up the rise got back on. The stones are worn in the middle.",
+  },
+  "the-force": {
+    "force|fall|pool|rock|moss|spray":
+      "The pool at the foot is black and round and turning, and its edges are polished smooth. The moss in the spray is so thick and bright it looks lit from inside. On a ledge at the fall's side, out of the spray, there is a scatter of fish bones and a grey feather.",
+  },
+  "the-wind-scoured-ridge": {
+    "ridge|lane|turf|stone|spine":
+      "The exposed stone is polished on its east faces and rough on its west, every rock along the ridge the same. The turf is cropped so tight and wind-pressed that it feels like felt. Where the lane crosses a bare stone, the stone is worn into a shallow dish by feet.",
+  },
+  "the-chalk-cut": {
+    "cut|chalk|walls|road":
+      "The chalk walls are scored with pick marks and with the names of people scratched into the soft white, hundreds, some old and blurred by rain and some sharp. Rooks have nested in the ledges. The road at the bottom is dusted white.",
+  },
+  "the-scree-run": {
+    "scree|stone|fan|beck|paving|scarp":
+      "The stones of the fan are sharp and pale near the top and darker and settled at the bottom, where the beck has cut a clean channel through them. The edge you climb up is trodden into a faint path, the stones kicked flat.",
+  },
+  "the-fall-shelter": {
+    "shelf|rock|wall|tallies|fall":
+      "The tallies on the back wall are strokes in fives, in columns, and the columns are in different hands, some neat and some rough. A few have names beside them. The shelf's floor is dry and worn smooth where people sat with their backs to the wall.",
+  },
+  "the-hanging-fold": {
+    "fold|wall|shelf|drop":
+      "The wall along the drop is capped with long flat stones set on edge, every one leaning the same way, and its face is fitted so tight a knife will not go between the stones. The other walls are rougher. The ground inside is greener than the shelf around it.",
+  },
+  "the-seventh-milestone": {
+    "milestone|pillar|road|ground":
+      "The ground round the pillar's foot is cracked in rings, and on its uphill side the turf is torn and bunched against it. The number SEVEN is still crisp. The road it points at is now three strides away, and between them the turf has slid, carrying the old verge with it.",
+  },
+  "the-otter-holt": {
+    "holt|bank|alder|roots|slide|mud|heads":
+      "The fish heads lie in a little heap on a flat stone by the slide, each one bitten off behind the gills. The slide is glossy mud, polished. Under the alder roots the hole is dark and smells of fish and musk, and a spraint on the stone is full of tiny bones.",
+  },
+  "the-hare-ground": {
+    "forms|hollows|grass|stones|ground":
+      "The forms are pressed into the grass in the shape of a crouch, a hollow for the body and two dents for the forepaws. Some are warm. The stones are all about the size of an egg and lie close together, sorted by frost.",
+  },
+  "the-tollkeepers-ruin": {
+    "ruin|toll-house|wall|hearth|gate-post|post|iron":
+      "The iron in the gate-post is a heavy hinge pin and a hasp with a lock-staple, and the staple has been sawn through. The hearth is full of nettles and under them the hearthstone is cracked from the heat. A wall course has a row of square holes for the shelving inside.",
+  },
+  "the-gill-foot": {
+    "gill|cleft|stream|stones|water|walls":
+      "The stones in the stream are round and slick with brown weed, and they knock together underfoot. The walls of the gill rise straight up, mossed and dripping, and above you the sky is a narrow strip. A rotted plank is wedged across the stream at one point, high up.",
+  },
+  "the-fallen-dyke": {
+    "wall|stones|drove|dyke":
+      "The fallen stones lie in two lines either side of where the wall stood, the line of its base still showing as a strip of bare ground. The ends of the standing wall are ragged. Sheep have been through the gap so long that it is trodden into a path.",
+  },
+  "the-hawthorn-narrows": {
+    "hawthorn|thorn|tunnel|paving":
+      "The hawthorn's old trunks are black and deeply cracked, and they lean over the road from both sides and lock together overhead. The paving underneath is dry and clean. The thorns at head height are broken off short along the whole tunnel.",
+  },
+  "the-gill-pot": {
+    "pot|pool|ledge|rock|wall":
+      "The ledge on the north wall is polished smooth by feet and slightly dished in the middle, and above it, at hand height, the wall is worn into a single dark smear where everyone steadies themselves. The pot's water turns slowly. Its edges are undercut.",
+  },
+  "the-drove-head": {
+    "funnel|hurdles|mounting block|block|slot|bank|gate":
+      "The hurdle lines in the turf are rows of small square holes, still sharp. The mounting block is three steps of stone, the top one worn hollow. The slot where the gate hung has a hinge-pin rusted into its upright, and the gate is gone.",
+  },
+  "the-drove-pound": {
+    "pound|trough|pipe|wall|walls|gate":
+      "The lead pipe comes out of the bank through a stone collar and the water runs from it in a steady thread into the trough. The trough's rim is worn smooth on one side by muzzles. The gate lies in the nettles against the wall, its hinges torn.",
+  },
+  "the-rowan-gill": {
+    "rowans|rowan|gill|berries|walls|roots":
+      "The rowans' roots go down into the cracks and have split the rock, and some of the splits are wide enough to put a hand in. The berries hang in heavy bunches and are dropping into the water. Birds have been feeding: stripped stalks litter the ledges.",
+  },
+  "the-grid-lane": {
+    "lane|banks|bank|way":
+      "The banks at the bottom are higher than your head and polished at the height of a beast's flank. The floor is wet stone worn into a stair by hooves. At the top of the bank there are the stumps of a hedge that was laid once, very thick.",
+  },
+  "the-grid-drop": {
+    "drop|banks|ground|way|stair":
+      "The churned stair is worn into the clay in hoof-shaped steps, deep, each one filled with a little water. The banks are scored by flanks and by the sides of carts let down braked. The sound of the road comes up the drop before anything else does.",
+  },
+  "the-sunken-alders": {
+    "alders|stumps|water|peat|flat":
+      "The flat-cut stumps are cut with an axe, and their tops are worn smooth where feet land. The water round them is black. The dead alders are grey and hung with lichen, and woodpeckers have riddled them with holes.",
+  },
+  "the-open-stretch": {
+    "road|embankment|stretch":
+      "The embankment's sides are faced with turf on the outside and stone underneath, and the stone shows where the turf has slipped. The road on top runs dead level. Every few hundred strides a drain goes under it, a little stone mouth on either side.",
+  },
+  "the-gill-narrows": {
+    "walls|gap|beck|jam|wood|narrows":
+      "The walls in the narrows are polished smooth at shoulder height by packs and bodies squeezing through. The jam of wood above you is whole branches and part of a gate, locked solid. The water through the gap is white and loud.",
+  },
+  "the-saddle-gap": {
+    "saddle|gap|grass|wind|road":
+      "The grass lies flat and long, all pointing east. Stones on the road's verge have small drifts of grit piled on their west sides. A tattered strip of cloth is caught on a thorn at the saddle's lip, flapping east.",
+  },
+  "the-shepherds-ford": {
+    "ford|gravel|flags|stone|water":
+      "The flags in the bed are big and flat and set tight, and the water goes over them a hand deep. A few have been knocked askew and reset. On the gravel bank above the ford the ground is trodden hard by hooves, and there is wool in the thorn beside it.",
+  },
+  "the-eighth-milestone": {
+    "milestone|face|legend|letters|stone":
+      "The new legend is cut with a narrower chisel than the old, and quickly; some strokes overshoot their letters. The old face was taken back by a hand's depth to make room for it, and the dressing marks of that are rough. Its letters are the road's letters. Its words are not.",
+  },
+  "the-spring-line": {
+    "spring|springs|threads|water|moss|slope|rock":
+      "Every thread comes out of the slope at the same height, along a band of darker rock, and each has its own little fan of bright moss below it. The beck begins as all of them together. The ground is soft with water everywhere you step.",
+  },
+  "the-turf-road": {
+    "causeway|road|brushwood|sleepers|cuts|water":
+      "The sleepers are old timbers, some of them squared and tarred, some cut from ship's timber with the bolt-holes still in them. The brushwood under them is black and soft. Every few strides one sleeper has been replaced with a fresher one.",
+  },
+  "the-turf-stacks": {
+    "stacks|peat|turf|cuttings|terraces":
+      "The standing stacks are built in a herringbone, each peat leaning on the next so the wind can get through. They are dry and light and ring when knocked. Lying beside the last stack is a peat spade, its blade rusted, its handle grey and split.",
+  },
+  "the-peat-house": {
+    "shed|house|boards|fuel|peat|stone":
+      "The peats stacked inside are dry and light and a thumbnail pressed into one leaves a mark. The gaps between the boards are even, a finger wide, measured. On a nail by the door hangs a tally stick, notched along one edge, and the last notch is only half cut.",
+  },
+  "the-herds-hut": {
+    "hut|room|bed|shelf|hearth|smoke-hole|door|turf":
+      "The stone bed shelf is worn into a hollow the length of a man. Above the hearth the smoke-hole's edges are black and glossy. In the wall by the bed there is a small square niche, and in it a flat stone with lines scratched on it, a count of days.",
+  },
+  "the-wether-fold": {
+    "fold|wall|gap|stone|ground":
+      "Every stone in the wall was picked for its face and set with the face out, and the throughstones that tie both sides together stick out a little at regular heights. The gap's edges are worn smooth by fleeces. Inside, the grass is thick and dark and full of nettles at the edges.",
+  },
+  "the-sheep-trod": {
+    "path|trod|track|turf":
+      "The trod is worn down to bare soil a hand wide and a finger deep, and it is dotted all the way with small round droppings. Where it crosses a stone the stone has a polished groove. It does not deviate for anything smaller than a boulder.",
+  },
+  "the-scarp-spring": {
+    "spring|trough|gravel|water|scarp":
+      "The trough is a single block hollowed out, older than the road, its rim worn down in two places where water spills over. The gravel under the spring is clean and moves gently. Carved into the trough's end there is a ring with a dot in it, very worn.",
+  },
+  "the-beck-stair": {
+    "steps|stair|treads|bank|tread":
+      "Each tread has a mattock bite still visible at its back edge. The fourth from the top has a green skin of slime and a deep scrape mark across it where somebody's boot went. A rope's worth of wear runs down the bank beside the steps, where people held on to a line that is gone.",
+  },
+  "the-beck-head": {
+    "spring|trough|gravel|hollow|scarp|water":
+      "The trough is cut from a block of the scarp's grey stone and is half full of clear water, with a few leaves on the bottom. Its lip is worn on the downhill side. Above it, a little way up the scarp, there is a cross cut in the rock face.",
+  },
+  "the-deep-lane": {
+    "lane|hedges|banks|roots|thorn":
+      "The banks are layered like a cut cake, the old road surfaces showing one above another in thin hard bands as the lane sank through them. The thorn roots are polished at shoulder height. The floor is bare stone, worn into a shallow trough.",
+  },
+  "the-well-house": {
+    "well|hood|vault|floor|channel|keystone|cross|tally|springhead":
+      "The cross in the keystone is cut neatly and deep. The tally beside it is scratched with a nail, quick and shallow, and goes on into a second row. The channel in the floor is lined with stone so smooth the water runs over it without a ripple.",
+  },
+  "the-moss-path": {
+    "stones|path|moss":
+      "Under the moss each stone has a hollow worn in its middle by feet. The tipped ones lean the same way, toward the softest ground. One stone near the middle has been replaced: it is a different stone, darker, with no moss on it yet.",
+  },
+  "the-hut-yard": {
+    "yard|wall|ground|path|peats|butt":
+      "In the corner of the yard there is a ring in the ground where the water butt stood, the turf inside the ring yellow. A peat or two lies against the wall, dried hard. The path going east is worn as deep as the path in.",
+  },
+  "the-top-wall": {
+    "wall|ridge|stone|stones":
+      "The wall is built with the biggest stones at the bottom and every course a little narrower than the last, so it tapers. On its top every few strides there is a stone set upright, a cope. Some of the cope stones have marks scratched in them, initials, very old.",
+  },
+  "the-hill-gate": {
+    "gate|gap|gateposts|posts|wall":
+      "The gateposts have holes cut through them for a bar, and the holes are worn smooth inside. The gap's floor is worn down into a hollow and full of hoof-prints. On one post, at a man's eye height, a mark has been cut: three short lines, crossed.",
+  },
+  "the-spring-bank": {
+    "bank|turf|water|terraces|slope":
+      "The little terraces across the slope are a hoof wide and very even, and they cross the wet line in one place where the water runs over a flat stone. The turf above the seep is short and dry and the turf below is lush and full of rushes.",
+  },
+  "the-quarry-turn": {
+    "quarry|blocks|skids|chippings|stone|road":
+      "The blocks on the skids each have a mason's mark on their face, a small one, and a number in red paint, faded to rust. The skids are timber, rotted at their ends. The quarry's back wall has a block half cut free, the wedge holes drilled, and no wedges in them.",
+  },
+  "the-beck-lane": {
+    "lane|track|hedge|passing places|bank|water":
+      "The passing places are cut into the hedge in neat bays and each one is worn into a hollow by wheels backing in. Along the hedge side the hub height is scraped into the thorn. On the water side the bank has been faced with stone where carts went too close.",
+  },
+  "the-peat-track": {
+    "track|ruts|grass|carts":
+      "The ruts are deep and narrow, cut by a cart with tall thin wheels, and in the bottom of each the peat dust is still black. The strip of grass in the middle is long. Every so often there is a dropped peat in a rut, gone hard and grey.",
+  },
+  "the-paving-end": {
+    "paving|stone|edge|course|road|track":
+      "The last course is laid true and pointed, and its outer face is dressed smooth, finished, as if it were meant to be an end. In the track beyond, the pick marks are rough and the stone is undressed. The line between them is as straight as a ruler.",
+  },
+  "the-sledge-track": {
+    "track|sledge|sleeper|beds|flush|stone":
+      "The sleeper beds are shallow slots in the stone, evenly spaced, and the flush down the middle of each is polished like glass. At the top, a ring is leaded into the rock for the rope, worn thin. At the bottom the flush is scarred by something that came down fast.",
+  },
+  "the-winding-house": {
+    "drum|house|shed|brake|lever|rope":
+      "The drum's surface is grooved in a spiral where the rope wound on, the grooves worn smooth. The brake lever is iron, its handle polished bright. The floor by the lever is worn into a hollow where one man stood for a long time, and there is a stool's mark beside it.",
+  },
+  "the-under-scarp": {
+    "scarp|track|stones|heather|rock|birch":
+      "The recent stones lie on top of the heather with their undersides pale and the heather under them crushed and still green. Older stones are sunk into the heather and lichened. On the track itself there is a fresh dent where one landed and bounced.",
+  },
+  "the-first-hairpin": {
+    "hairpin|track|revetting|rock|paving":
+      "The revetting on the outside of the bend is dry stone, each stone tilted slightly into the hill so it carries the weight inward. The rock on the inside is pick-marked, every mark fresh-looking still. On the bend itself the rock floor is grooved by cart wheels turning.",
+  },
+  "the-fallen-crag": {
+    "crag|rock|bed|grass":
+      "The bed against the rock is a long oval of crushed grass, and the rock above it is rubbed smooth at the height of a lying back. Long dark hairs are caught in the rock's rough edge. The fallen crag's broken face is pale and has not yet grown lichen.",
+  },
+  "the-second-hairpin": {
+    "hairpin|track|elbow|road":
+      "At the elbow there is a flat stone at the edge, worn smooth on top, where people sat to look back. The track's floor here is grooved by wheels and by sledges let down on a rope, and the groove of the rope is worn into the rock at the inside of the turn.",
+  },
+  "the-heather-bench": {
+    "heather|bench|shelf|track":
+      "The heather is old and woody, burned in strips at some time, the strips now grown back at different heights. The track through it is pale and stony. In the heather beside it a grouse has scraped a dust bath, and there are feathers in it.",
+  },
+  "the-cutting-ledge": {
+    "ledge|shelf|rock|drill marks|marks|face":
+      "The drill marks are half-round grooves in the rock, a finger wide, each one where a hole was bored for a charge. Above the ledge the rock is cracked from the blasting. An iron ring is set in the rock at intervals along the inside, for the men's ropes.",
+  },
+  "the-turf-stack-ruin": {
+    "mound|stack|peats|holes|heather":
+      "The holes at the bottom are rabbit burrows, and fresh black peat spills out of them. Pull at the heather on top and the peats underneath are still squared, still stacked in their rows, gone soft and dark. A rusted spade-blade sticks out of one end.",
+  },
+  "the-third-hairpin": {
+    "hairpin|revetting|track|bend":
+      "Where the revetting went, the track's edge is a raw slope of earth and broken stone, and the stones of the revetting lie down the hillside in a long fan. On the inside of the bend, wheel grooves come round and then stop short of the broken edge.",
+  },
+  "the-raven-rock": {
+    "rock|buttress|ravens|ledge|face":
+      "The ledge where the ravens nest is a dark mass of sticks, and the rock under it is streaked white. At the foot of the buttress there are bones dropped from above, small ones, and a raven feather. The rock face drips steadily into a pool at its foot.",
+  },
+  "the-rope-post": {
+    "post|ring|iron|rope|rock":
+      "The ring in the post is worn thin as a wire on its inner edge, by a rope that ran through it for years. The post is leaded into a hole drilled in the rock. Far along the traverse you can see the next post standing alone with nothing between them.",
+  },
+  "the-moor-gate": {
+    "posts|gate|hinge|iron|wall|track":
+      "The hinge iron is a heavy pin rusted into the stone with a lump of lead. The other post has a hole for the latch. A line of stones in the heather either side shows where the wall ran, sunk and mossed, and the heather is a little greener along it.",
+  },
+  "the-shelter-stone": {
+    "slab|stone|bracken|space|shelter":
+      "The bracken on the floor is in layers, old brown at the bottom and less old on top, carried up by many people. The underside of the slab is blackened by small fires, and there are names scratched into the smoke, finger-drawn and knife-cut.",
+  },
+  "the-crag-foot": {
+    "crag|rock|groove|overhang|stone|water":
+      "The groove the water has cut in the stone at the bottom is a hand deep and smooth as a gutter. The overhang above is dry and the ground under it is trodden and scattered with droppings. The path along the crag's foot is worn into the stone.",
+  },
+  "the-beck-gully": {
+    "gully|beck|rock|scarp|sides":
+      "The gully's sides are scored by the beck in long smooth flutes, and moss grows thick in the shade. The path down into it is worn into steps in the rock. At the gully's head the beck comes out from under a big flat stone.",
+  },
+  "the-gully-steps": {
+    "steps|stair|rock|roots|ferns|beck|pool|pools":
+      "The roots used as steps are polished bare and slick. Each pool the beck drops into is round and clear, with a stone turning slowly at its bottom. Ferns hang over the stair so thickly that you push them aside, and they are wet.",
+  },
+  "the-alder-gill": {
+    "alders|alder|bank|stones|beck|trunks":
+      "The bank of stones under the alders is a path built up by hand, the stones set flat and close. The alders' roots run out into the water in red tangles. On the moss of one trunk there are claw-marks, fresh, going up.",
+  },
+  "the-gully-mouth": {
+    "gully|beck|fan|stones|rushes|levels":
+      "The fan of stones spreads out wide and pale and the beck threads through it in many small streams. Out on the levels the rushes start in a hard line. The air smells of salt, and there are gull feathers on the stones.",
+  },
+  "the-scarp-top": {
+    "lip|scarp|track|moor|shelf":
+      "At the lip the track's floor is worn into a hollow where everyone stops. There is a cairn of stones beside it, man-high, built by people setting one stone each. Far behind and below, the grey mark of the fortress is the only straight-edged thing in sight.",
+  },
+  "the-rush-levels": {
+    "rush|levels|drains|grazing|ground":
+      "The drains are cut straight and their sides were faced with turf once, now slumped. The rushes grow thickest along their edges. The firm line through is marked by a few stones set upright in the ground, a stride apart, half-sunk.",
+  },
+  "the-high-shelf": {
+    "peat|cotton-grass|stones|track|shelf|water":
+      "Lift the edge of one of the laid stones and its underside is dry and the peat it sits on is packed hard. The stones are long and flat and set end to end, and every one has sunk on its downhill edge. Cotton-grass nods between them.",
+  },
+  "the-old-drain": {
+    "drain|plank|bridge|weed|reed|water|bank":
+      "The plank bridge's planks are pegged to two cross-beams, and the pegs have rotted out so the planks lie loose. Kneel and the drain's sides are cut straight and faced with stakes. The water in it is brown and barely moving.",
+  },
+  "the-peat-cuttings": {
+    "cuttings|trenches|peat|turfs|stacks|stack|moor":
+      "The trench walls are marked with the long strokes of a peat spade, and every stroke is the same width. The stacks are built in herringbone and capped with a turf to keep the rain off. A peat spade lies at the end of the last trench, its blade rusted to lace.",
+  },
+  "the-lapwing-ground": {
+    "grass|ground|plovers|lapwings|reed":
+      "The open grass has shallow scrapes in it, lined with a few dry stems, and in some there are eggs the colour of the ground. The birds dive close enough that you hear their wings. At the reed's edge the ground is soft and full of prints.",
+  },
+  "the-boundary-cairn": {
+    "cairn|stone|hollow|flat stone":
+      "The hollow in the flat stone on top holds rainwater, and in it there are a few small coins, green and worn, and a ring. The cairn's stones are laid in courses, carefully. On its far side the stones have a mark scratched into them, a line with a cross through it.",
+  },
+  "the-cattle-causey": {
+    "causeway|causey|stone|turf|water":
+      "The causey's turf is trodden hard and bare down its middle, and its edges are faced with stones that have slipped outward. On the stones there are scratch marks from hooves. In the water on both sides there are sunk stones that fell off it.",
+  },
+  "the-watershed": {
+    "runnels|ground|water|watershed":
+      "The runnels on both sides start within a stride of each other, two thin threads in the turf going away in different directions. On the highest point, somebody set a stone upright, small, with a line cut across its top from one side to the other.",
+  },
+  "the-willow-holt-edge": {
+    "willows|willow|gap|causey|reed":
+      "The willows are cut back in the gap, and the cut stumps are healed over into grey knobs. Their leaves are crusted white with salt on their seaward side. The causey through the gap is worn into a shallow hollow by feet.",
+  },
+  "the-first-sight": {
+    "water|valley|track|hill":
+      "At the edge where the moor drops away, the turf is worn bare in a short strip, where everybody stops at once. Small stones have been set in a line along the lip, one on another in little stacks. There are many of them.",
+  },
+  "the-reed-edge": {
+    "reed|causey|wall":
+      "The causey going into the reed is built of brushwood and stone, and where it enters the reed the reed on either side has been cut back and kept, the stumps sharp underfoot. The cut is old. The reed is closing it slowly from both sides.",
+  },
+  "the-far-shore-stone": {
+    "pillar|stone|bench|face":
+      "The pillar's face is clean, the lichen scraped off it with a blade, and the scrape marks are fresh. The bench is a single slab on two stones, worn smooth and slightly hollow. Cut into the pillar's back, out of sight from the bench, there is a mason's mark you have seen on the road's kerbs.",
+  },
+  "the-reed-path": {
+    "path|reed|ground":
+      "The cut stumps along the path's edges are old and the new reed is growing up between them. The path underfoot is soft and wet and trodden into a narrow line. In the reed beside it, at knee height, there is a tunnel going alongside.",
+  },
+  "the-bittern-pool": {
+    "pool|water|weed|reed":
+      "The floating weed is broken in a line across the pool where something passed. At the reed's edge there is a flattened platform of reed stems, and on it a few long brown feathers, striped like the reeds. The water smells of mud.",
+  },
+  "the-marsh-sill": {
+    "sill|ground|marsh|reed|water":
+      "The sill's ground is firm sand and shell, and it is printed with gull feet and the boots of somebody who came this way not long ago. At its seaward end there is a heap of shells, opened, and a few burnt sticks.",
+  },
+  "the-causey-foot": {
+    "causeys|causey|sill|path|ways":
+      "Where the path meets the causey the old wood is worn into a step, and the step is polished by feet. The causey's timbers are black and hard as stone. Along their edges, every few strides, a short stake stands with a notch in its top.",
   },
 };
 

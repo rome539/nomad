@@ -279,6 +279,33 @@ clarity in the interface, scope in a small number of deep systems.**
 
 Directions rome likes and wants held. Design only; no code until he says go.
 
+- **THE WORLD'S STORY — what emptied the country** *(rome, 2026-11-05)*. Every
+  region shows the same thing: a settled country stopped mid-week and left in
+  a hurry, the names later taken off. Rome's lean for the cause, for now, is
+  **a plague** (the fever graves in every village, everyone going at once, the
+  fever coming back each year as its echo) **together with something from
+  below or above** (the iron doors that are never rusted, the warm summit,
+  the older country under the ground). Two other causes are held for later
+  story, not dropped:
+  - **The country ordered empty.** Whoever held the writ called everyone in or
+    away, the roads stopped where the order reached, and the keepers still
+    keep "the arrangement" because nobody told them to stop.
+  - **The siege went on.** Whoever undermined the Door went on through the
+    rest of the country; the spoiling and the names taken off are the
+    winners' work, or the hiders'.
+  **Decided 2026-11-05: the sickness came up from below**, and the graves are
+  older than the towns. The plague dead were buried fast in the one ground
+  nobody wanted, an older burial ground, and a close look at every fever
+  graves (the three villages and the fortress's ossuary, catacomb and plague
+  trench) finds older bones under them and, under those, the same flat
+  dressed stone laid tight with cold air coming up through its joints. Room
+  texts unchanged.
+  **Decided 2026-11-05: they went to different lands**, out of the country
+  in different directions, not all one way (the roads can carry it).
+  Still open: who took the names off, whether the keepers are one order, what the
+  iron doors are, one fixed "how long ago" (room texts disagree: two hundred
+  years, generations, a very long time), and who the player is.
+
 - **THE WIDE LAND — the world's next shape** *(researched 2026-11-03; rome
   likes it, research only, nothing authorised)*. The world today is one thin
   strip: 165 squares west to east and about 34 north to south, every region a
