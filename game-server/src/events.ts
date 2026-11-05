@@ -85,6 +85,8 @@ import {
   PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
   FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_GRAVES, FEVER_RISES, FEVER_EVERY_MIN_MS, FEVER_EVERY_MAX_MS, FEVER_FIRST_MIN_MS, FEVER_FIRST_MAX_MS, FEVER_RAIN_SOON_MIN_MS, FEVER_RAIN_SOON_MAX_MS, FEVER_RAT_HOLD_MS, FEVER_RAT_HOME, FEVER_COUGH_RISE_MS, FEVER_COUGH_FADE_MS, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
   DAY_CYCLE_MS, BUGLE_EVERY_DAYS, BUGLE_SALUTERS, BUGLE_REVEILLE, BUGLE_TAPS, BUGLE_FAR, BUGLE_SALUTE_ONE, BUGLE_SALUTE_MANY,
+  WARM_ROOMS,
+  PALE_DRAKE, PALE_SNOW_HOLD_MS,
 } from "./zone-data";
 
 // An idle arc waits here until the roll (or the bell's hours) wakes it.
@@ -200,6 +202,7 @@ export function wxGround(z: ZoneDO, roomId: string): string {
   return band === "gate" ? "out" : band;
 }
 export function wxCovers(z: ZoneDO, id: string, roomId: string): boolean {
+  if (id === "cold" && WARM_ROOMS.has(roomId)) return false; // the cold never reaches a warm room (the summit)
   const st = z.events.get(id);
   if (!st || st.phase === "idle") return false;
   return !st.bands || st.bands.includes(wxGround(z, roomId)); // no list: begun before weather had a place
@@ -538,6 +541,7 @@ export function fogTell(z: ZoneDO, roomId: string): string | null {
 // the open ground and the deep. (The keep's halls and the warrens' earth
 // stay livable — cover is the answer, and the map already says where.)
 export function coldBites(z: ZoneDO, roomId: string): boolean {
+  if (WARM_ROOMS.has(roomId)) return false; // the summit and the litter chamber: warm whatever the hill is doing
   // The deep is cold whenever the cold is on anywhere: it is under all of it.
   return (phaseOf(z, "cold") === "active" && ((OUTDOOR_ROOMS.has(roomId) && wxCovers(z, "cold", roomId)) || deepRoom(z, roomId)))
     // THE SNOW KEEPS THE COLD (5d): the season outlasts the weather that made
@@ -3878,12 +3882,19 @@ function coldSnows(z: ZoneDO, st: EventState): void {
   if (st.bands && !st.bands.includes("mountain")) return;
   if (z.snowUntil < st.until + SNOW_PERSIST_MS) z.snowUntil = st.until + SNOW_PERSIST_MS;
 }
+// THE PALE DRAKE'S SNOW (PALE_SNOW_HOLD_MS): while it lives, the mountain stays
+// under snow; when it dies the hold runs out and the melt comes as usual.
+export function paleDrakeSnows(z: ZoneDO, now: number): void {
+  if (z.snowUntil >= now + PALE_SNOW_HOLD_MS) return;
+  if ([...z.creatures.values()].some((c) => c.templateId === PALE_DRAKE && c.hp > 0)) z.snowUntil = now + PALE_SNOW_HOLD_MS;
+}
 async function tickCold(z: ZoneDO, now: number): Promise<void> {
   let st = z.events.get("cold");
   if (!st) {
     st = { phase: "idle", until: NEVER };
     z.events.set("cold", st);
   }
+  paleDrakeSnows(z, now);
   // THE MELT (8f), checked every beat, not just on the arc's clock: when the
   // mountain's snow runs out, the burns rise — and the next road roll draws
   // the spate (bias, never trigger). The season ends loudly.

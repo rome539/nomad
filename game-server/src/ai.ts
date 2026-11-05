@@ -41,7 +41,7 @@ import {
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS, HUNTS_NOT_CARRION,
-  SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
+  SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_ROUSED_MS, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
@@ -2933,7 +2933,14 @@ export function naps(z: ZoneDO, creature: Creature, now: number): void {
     fallAsleep(z, creature, now);
   }
 
+// Still hurt, or struck within DRAKE_ROUSED_MS: a drake in that state stays up.
+export function drakeRoused(z: ZoneDO, creature: Creature, now: number): boolean {
+    const max = z.world!.mobTemplates.get(creature.templateId)?.max_hp ?? 0;
+    return creature.hp < max || creature.grudges.some((g) => now - g.at < DRAKE_ROUSED_MS);
+  }
+
 export function fallAsleep(z: ZoneDO, creature: Creature, now: number, gorged = false): void {
+    if (SUMMIT_BOSSES.has(creature.templateId) && drakeRoused(z, creature, now)) return; // the fight is not over (DRAKE_ROUSED_MS)
     creature.asleep = true;
     // Default false, so every route that is NOT the gorge clears a stale flag
     // on its way in — the bones line can never outlive the meal.

@@ -40,7 +40,7 @@ try {
         "export {cmdCook, moveLoad} from './verbs';",
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
-        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine} from './ai';",
+        "export {reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep} from './ai';",
         "export {ratHoards, godMet, godRemembers} from './ai';",
         "export * as chronicle from './chronicle';",
         "export * as aliases from './aliases';",
@@ -67,7 +67,7 @@ try {
         "export {sendCtx} from './chips';",
         "export * as carving from './carving';",
         "export * as feverrat from './feverrat';",
-        "export {tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient} from './events';",
+        "export {tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, coldBites, snowed, paleDrakeSnows} from './events';",
         "export {FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT} from './zone-data';",
         "export * as pvp from './pvp';",
         "export {PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, GATEHOUSE_NOARG, MOUTHS, WITNESSED_LINES} from './zone-data';",
@@ -89,7 +89,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1990,6 +1990,17 @@ try {
     assert.deepEqual(z.traces.get('r').map((t) => t.id), ['nomad'], 'the wolf body is gone; a nomad is never a study');
     await cmdStudy(z, me, 'dead wolf');
     assert.match(said.at(-1), /Nothing by that name/);
+  });
+  await checkAsync('a dead body names everything it gives, the cuts included (2026-11-05)', async () => {
+    // The page named only the trophy and keys, so a kind whose kill cuts leather,
+    // fat or bone read "gives nothing worth carrying" (the sloth) or left them out.
+    const { z, me, said } = studyWorld();
+    z.world.itemTemplates = new Map([['leather-offcuts', { id: 'leather-offcuts', name: 'a handful of leather offcuts' }],
+      ['fat', { id: 'fat', name: 'a lump of fat' }], ['bone-offcuts', { id: 'bone-offcuts', name: 'a handful of bone and horn' }]]);
+    z.traces.set('r', [{ kind: 'blood', at: Date.now(), label: 'a hill wolf', id: 'hill-wolf' }]);
+    await cmdStudy(z, me, 'dead wolf');
+    assert.match(said.at(-1), /Its body gives [^.]*a handful of leather offcuts/, 'the leather a hill wolf is cut for');
+    assert.doesNotMatch(said.at(-1), /nothing worth carrying/);
   });
   await checkAsync('a full account wants every behaviour and the kills (2026-10-24)', async () => {
     const { z, me, wolf, said, db } = studyWorld();
@@ -4145,6 +4156,59 @@ try {
     assert.match(pub, /var skyParts = skyLay \? \[skyLay\.far\]\.concat\(skyLay\.disc \? \[skyLay\.disc\] : \[\], \(skyLay\.clouds \|\| \[\]\)\.map\(/, 'the far sky, the disc and every cloud strip are the sky');
     assert.match(pub, /var waiting = 7 \+ Math\.max\(1, skyParts\.length\)/, 'the room counts each of them');
     assert.match(pub, /for \(var sp = 0; sp < skyParts\.length; sp\+\+\) readySceneImage\("\/sky\/" \+ skyParts\[sp\] \+ "\.webp\?v=" \+ SKY_V, loaded\);/, 'and waits for each before it paints');
+  });
+
+  check('a drake that was fought does not fall asleep while the fighter is off mending (2026-11-05)', () => {
+    // A wanderer fought the drake, stepped back to heal, and came back to find it
+    // asleep: it napped as soon as nobody was standing over it.
+    const now = Date.now(), H = 60_000;
+    const z = { world: { mobTemplates: new Map([['the-drake', { id: 'the-drake', max_hp: 150 }], ['the-pale-drake', { id: 'the-pale-drake', max_hp: 160 }]]) } };
+    const drake = (o) => ({ id: 'd', templateId: 'the-drake', roomId: 'the-summit', hp: 150, grudges: [], nextWanderAt: 0, ...o });
+    let d = drake({ hp: 90 }); fallAsleep(z, d, now);
+    assert.ok(!d.asleep, 'still hurt: it stays up');
+    d = drake({ grudges: [{ pk: 'luna', at: now - 10 * H }] }); fallAsleep(z, d, now);
+    assert.ok(!d.asleep, 'whole again, but struck ten minutes ago: it stays up');
+    d = drake({ templateId: 'the-pale-drake', hp: 160, grudges: [{ pk: 'luna', at: now - 5 * H }] }); fallAsleep(z, d, now);
+    assert.ok(!d.asleep, 'the pale drake the same');
+    d = drake({ grudges: [{ pk: 'luna', at: now - 31 * H }] }); fallAsleep(z, d, now);
+    assert.ok(d.asleep, 'whole and left alone long enough, it can sleep again');
+    const wolf = { id: 'w', templateId: 'hill-wolf', roomId: 'r', hp: 5, grudges: [{ pk: 'luna', at: now }], nextWanderAt: 0 };
+    fallAsleep(z, wolf, now);
+    assert.ok(wolf.asleep, 'nothing else changes');
+  });
+
+  check('the summit is warm while the rooms around it keep the cold (2026-11-05)', () => {
+    // Its room says warm air; the game let the cold bite there like the rest of
+    // the mountain. Warm, not snowless: the snow still lies on it.
+    const now = Date.now(), H = 3_600_000;
+    const z = { snowUntil: now + H, events: new Map([['cold', { phase: 'active', until: now + H }]]),
+      world: { rooms: new Map([['the-summit', { region: 'mountain' }], ['the-summit-gate', { region: 'mountain' }]]) },
+      regionOf: (r) => z.world.rooms.get(r)?.region ?? '' };
+    assert.ok(snowed(z, 'the-summit'), 'the snow still lies on the summit when it lies on the mountain');
+    assert.ok(!coldBites(z, 'the-summit'), 'the cold does not bite there');
+    assert.ok(!wxCovers(z, 'cold', 'the-summit'), 'a cold snap does not reach it');
+    assert.ok(snowed(z, 'the-summit-gate'), 'the gate below still lies under the snow');
+    assert.ok(coldBites(z, 'the-summit-gate'), 'and is still cold');
+  });
+
+  check('the mountain snows while the pale drake lives, and not after (2026-11-05)', () => {
+    const now = Date.now(), M = 60_000;
+    const pale = { id: 'p', templateId: 'the-pale-drake', roomId: 'the-summit', hp: 160 };
+    const z = { snowUntil: 0, creatures: new Map([['p', pale]]) };
+    paleDrakeSnows(z, now);
+    assert.ok(z.snowUntil > now, 'it brings the snow');
+    paleDrakeSnows(z, now + 10 * M);
+    assert.ok(z.snowUntil > now + 10 * M, 'and keeps it while it lives');
+    z.creatures.delete('p');
+    const last = z.snowUntil;
+    paleDrakeSnows(z, now + 11 * M);
+    assert.equal(z.snowUntil, last, 'dead, it holds the snow no longer');
+    assert.ok(last < now + 13 * M, 'which runs out within minutes, and the melt follows');
+    const plain = { snowUntil: 0, creatures: new Map([['d', { id: 'd', templateId: 'the-drake', hp: 150 }]]) };
+    paleDrakeSnows(plain, now);
+    assert.equal(plain.snowUntil, 0, 'the ordinary drake brings none');
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    assert.match(ev.slice(ev.indexOf('async function tickCold'), ev.indexOf('// THE MELT (8f)')), /paleDrakeSnows\(z, now\);/, 'the beat that keeps the snow asks after the pale drake');
   });
 
   console.log(`\n${passed} regression checks pass`);

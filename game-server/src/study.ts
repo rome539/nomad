@@ -29,6 +29,7 @@ import {
   MOVE_SOUNDS, STILL_SOUNDS, TRACK_PRINTS,
   NAPPERS, NOCTURNAL, SENTINELS, SCAVENGERS, VERMIN, GRAZERS, PREYS_ON, PACK_PREY, STARVE_HUNTERS,
   THIEVES, LURKERS, HOLLOW, GRAVE_FLESH, BIG_VITALS, OUTDOOR_ROOMS, HUNGRY_AT, CORPSE_TRACES,
+  FAT_DROPS, LEATHER_DROPS, BONE_DROPS, FAT_ITEM, LEATHER_ID, BONE_BITS_ID,
 } from "./zone-data";
 
 export type Behaviour = "about" | "asleep" | "feeding" | "hungry" | "dead";
@@ -183,7 +184,13 @@ function hungerLine(id: string): string {
 
 function deadLine(z: ZoneDO, tmpl: MobTemplate): string {
   const world = z.world!;
-  const gives = [tmpl.loot_item, ...world.mobKeys.filter((k) => k.templateId === tmpl.id).map((k) => k.keyItem)]
+  // ...AND WHAT CAN BE CUT FROM IT (rome, 2026-11-05: the sloth's page said its
+  // body gave nothing worth carrying, and a kill cuts leather from it). The
+  // same three tables the kill cuts from (zone.ts), fat for the lantern and the
+  // den's leather and bone, so the page cannot leave out what the body gives.
+  const cuts = ([[FAT_ITEM, FAT_DROPS], [LEATHER_ID, LEATHER_DROPS], [BONE_BITS_ID, BONE_DROPS]] as const)
+    .filter(([, odds]) => odds[tmpl.id]).map(([id]) => id);
+  const gives = [tmpl.loot_item, ...world.mobKeys.filter((k) => k.templateId === tmpl.id).map((k) => k.keyItem), ...cuts]
     .map((i) => (i ? world.itemTemplates.get(i)?.name : undefined)).filter(Boolean) as string[];
   const hide = HOLLOW.has(tmpl.id) && !GRAVE_FLESH.has(tmpl.id)
     ? ["Nothing in it but dry bone.", "Bone, and a little hard gristle.", "Bone, thick and close-knit.", "Bone like old iron."][Math.min(3, tmpl.armor)]

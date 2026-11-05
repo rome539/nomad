@@ -3859,6 +3859,11 @@ export const WRACK_FORAGE_MULT = 1.5;
 // cold tax, travel is quieter, and fresh snow covers the record (traces fade
 // twice as fast).
 export const SNOW_PERSIST_MS = 40 * 60_000;  // the season outlasts the weather
+// THE PALE DRAKE BRINGS THE SNOW (rome, 2026-11-05): while it is alive the
+// mountain lies under snow, renewed every beat this far ahead, and when it dies
+// the snow runs out with it and the melt follows as it always does.
+export const PALE_DRAKE = "the-pale-drake";
+export const PALE_SNOW_HOLD_MS = 2 * 60_000;
 export const SNOW_TRACE_LIFE_MULT = 0.5;     // fresh snow covers the record
 export const SNOW_NOISE_MULT = 0.5;          // and wraps every sound
 // ...and DEEP SNOW HOLDS YOUR FEET (rome, 2026-10-29): while it lies, every
@@ -6633,6 +6638,11 @@ export const SENTINELS = new Set(["three-hound", "two-hound"]);
 // holds his turret: it is his.
 // The summit's animal, named here because three sets below reference it.
 export const SUMMIT_BOSS = "the-drake";
+// A FIGHT ON THE SUMMIT IS NOT OVER BECAUSE SOMEBODY STEPPED BACK (rome,
+// 2026-11-05: a wanderer fought the drake, went off to mend, and came back to
+// find it asleep). Neither drake lies down while it is still hurt, nor until
+// this long after the last blow anyone landed on it.
+export const DRAKE_ROUSED_MS = 30 * 60_000;
 // THE PALE DRAKE (mig 247) rolls off the summit the way the drowned god and the
 // marrow king roll off the forgotten king's throne — a DIFFERENT individual in
 // the same room, not a bigger copy. Which means every gate that reads
@@ -7314,7 +7324,11 @@ export const HOARD_HOLE = "the-hoard-hole";
 export const HOARD_HOLE_CAP = 8;
 // THE LITTER CHAMBER is "warmer than earth has any business being": standing in
 // it is standing by a fire. It stops the chill and it dries you (cough.ts).
-export const WARM_ROOMS = new Set(["the-litter-chamber"]);
+// ...AND THE SUMMIT (rome, 2026-11-05): the top of the mountain is warm, as its
+// room says, while every room around it keeps the mountain's cold. The cold
+// never bites in a warm room (events.coldBites, events.wxCovers); the snow
+// still lies on the summit when it lies on the mountain.
+export const WARM_ROOMS = new Set(["the-litter-chamber", "the-summit"]);
 // THE BLACK SUMP soaks only whoever goes into it: the bank is dry, and dive is
 // how you go in (verbs.cmdDive).
 export const WARREN_SUMP = "the-warren-sump";
