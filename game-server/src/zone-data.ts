@@ -11881,6 +11881,17 @@ export const REGION_LABELS: Record<string, string> = {
   crossing: "The Crossing",
 };
 
+// THE HAMLETS ARE GREEN ON THE MAP (rome, 2026-11-04), as Assart End is: the
+// two copies of the old village belong to the Crossing and the mountain, so the
+// fever, the ground and the region caption stay theirs, but on the paper they
+// are drawn as what they are, a village, in the village's green.
+export const HAMLET_ROOMS = new Set<string>([
+  // the Salt Hamlet (the Crossing)
+  "the-hard-lane", "the-pump-green", "the-sea-furrows", "the-row-foot", "the-salt-pound", "the-marsh-field", "the-salters-row", "the-smiths-yard", "the-sea-smithy", "the-yard-backs", "the-salt-cross", "the-saltmasters-yard", "the-saltmasters-house", "the-burnt-cot", "the-chapel-hard", "the-row-head", "the-far-cot", "the-far-house", "the-salt-chapel", "the-wind-orchard", "the-net-green", "the-bare-toft", "the-sallow-rows", "the-turf-hut", "the-dipping-well", "the-strand-graves", "the-marsh-end", "the-old-hearths", "the-gorse-corner",
+  // the Shieling Hamlet (the mountain)
+  "the-drove-cut", "the-spring-green", "the-terrace-strips", "the-shiel-foot", "the-fold-pound", "the-in-field", "the-shiel-street", "the-forge-yard", "the-hill-smithy", "the-shiel-backs", "the-hill-cross", "the-herds-yard", "the-herds-house", "the-burnt-shiel", "the-chapel-shelf", "the-shiel-head", "the-high-croft", "the-high-house", "the-hill-chapel", "the-thorn-garth", "the-fleece-green", "the-lost-toft", "the-rowan-rows", "the-peat-hut", "the-hill-spring", "the-hill-graves", "the-scree-end", "the-cold-hearths", "the-thorn-nook",
+]);
+
 export const MAP_BAND_OF: Record<string, number> = {
   sky: 0, out: 1, gate: 1, road: 1, wood: 1, mountain: 1, den: 1, crossing: 1, upper: 2, warrens: 3, deep: 4,
 };

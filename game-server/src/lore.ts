@@ -23,7 +23,7 @@ import {
   GROUNDS_ROOMS, OVERWORKS_ROOMS, WARRENS_ROOMS, JOURNAL_ITEM, MOB_TRAIT_DOES, MOB_TRAITS, MOB_FAMILY_NAME,
   THIEVES, RUNNERS, BROODERS, SENTINELS, DROWNERS, LURKERS, ROOTED, FIREKEEPERS, CORRODERS,
   REVENANTS, AGGRO_SCAVENGERS, SCAVENGERS, PATROLS, LISTENERS, HOLLOW,
-  MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF,
+  MILESTONES, MILESTONE_CAP, MILESTONE_SHOW, MAP_BAND_OF, HAMLET_ROOMS,
   GATE_TELLINGS, DOOR_TELLINGS, DOOR_TELLING_ODDS, ARC_TELLINGS, ARC_TELLING_ODDS, ARC_BAND,
 } from "./zone-data";
 
@@ -526,6 +526,8 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
       // the ground that would take one, never where one stands: a room with a
       // stranger's den in it is marked exactly like the empty ground beside it.
       hold: den.canBuildHere(z, id) ? 1 : 0,
+      // a hamlet is drawn in the village's green, whatever region it is in
+      hamlet: HAMLET_ROOMS.has(id) ? 1 : 0,
       band: MAP_BAND_OF[mapRegionOf(z, id)] ?? 1,
       // Which quarter of the wood this square belongs to, so the client can hold
       // a quarter's caption back until you have walked some of it — same law the

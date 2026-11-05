@@ -8304,12 +8304,15 @@ function mapCssVar(name) {
   var v = getComputedStyle(document.documentElement).getPropertyValue(name);
   return (v && v.trim()) || "#8a8a8a";
 }
-function mapRegionColor(region, isGate) {
+function mapRegionColor(region, isGate, isHamlet) {
   // A GATE IS A GATE WHEREVER IT STANDS. Colour used to ride the region alone,
   // which was fine while every gate was in the fortress: since the doors spread
   // onto the road and into the wood their region is road/wood, and they were
   // drawing as ordinary ground — the map hid five banks (rome, 2026-08-02).
   if (isGate) return mapCssVar("--steel");
+  // The two hamlets are copies of the old village in the Crossing and on the
+  // mountain (rome, 2026-11-04): drawn in its green, not their region's colour.
+  if (isHamlet) return mapCssVar("--heal");
   if (region === "gate") return mapCssVar("--steel");
   if (region === "deep") return mapCssVar("--blood");
   if (region === "out") return mapCssVar("--heal");   // the open ground: green and alive
@@ -8469,7 +8472,7 @@ function buildMapGraph(f) {
       // The band is the SERVER's now (zone-data.MAP_BAND_OF) — it ships on the
       // frame, so there is one copy of the strata and not two to drift apart.
       var band = (rm.band !== undefined && rm.band !== null) ? rm.band : 1;
-      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0, safe: !!rm.safe, hold: !!rm.hold,
+      nodes[rm.id] = { id: rm.id, name: rm.name || rm.id, region: key, band: band, exits: rm.exits || [], here: !!rm.here, gate: !!rm.gate, home: rm.home || 0, safe: !!rm.safe, hold: !!rm.hold, hamlet: !!rm.hamlet,
                        q: rm.q || "", gx: rm.x, gy: rm.y, fz: rm.z || 0 };
       order.push(rm.id);
     }
@@ -8746,7 +8749,7 @@ function drawMap() {
   for (var o = 0; o < g.order.length; o++) {
     var id = g.order[o], p = g.placed[id]; if (!p) continue;
     var nd = g.nodes[id]; if (nd.fz !== mapFloor) continue;
-    var cx = sx(p.x), cy = sy(p.y), col = mapRegionColor(nd.region, nd.gate);
+    var cx = sx(p.x), cy = sy(p.y), col = mapRegionColor(nd.region, nd.gate, nd.hamlet);
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s);
     // A DOOR LOOKS LIKE A DOOR (rome, 2026-08-02: "you made a gate not blue").
     // Steel at a 15% wash and a hairline stroke reads as grey — which was fine
@@ -12797,6 +12800,18 @@ var SKY_LIFE = {
     { id: "the-drake", kind: "lone", size: [0.045, 0.052], w: .1, glide: .5, slow: 1, steady: 1 },
   ],
 };
+// THE BIRDS KEEP FLYING WHILE YOU ARE UNDER A ROOF (rome, 2026-11-04), as the
+// clouds do (skyHandover). Each sky over each ground remembers what was up in it,
+// how far along, and when the next one was due; come back under it and they
+// have flown on for as long as you were gone, instead of the sky starting its
+// afternoon again. A sky not seen yet this visit starts fresh.
+var skyLifeKept = {};
+function skyLifeHandover(old, oldState, next, now) {
+  if (old) skyLifeKept[old] = { flyers: oldState.flyers, t: oldState.t, next: oldState.next, at: now };
+  var k = next ? skyLifeKept[next] : null;
+  return k ? { flyers: k.flyers, t: k.t + Math.max(0, now - k.at) / 1000, next: k.next, kept: true }
+           : { flyers: [], t: 0, next: 6 + Math.random() * 14, kept: false };
+}
 var skyLife = (function () {
   var cv = null, cx = null;
   var hour = "", band = "", ink = "", frame = null, stamp = 0, t = 0, dir = 1;
@@ -13020,9 +13035,11 @@ var skyLife = (function () {
   // a new sky or new ground is a new afternoon: clear what was flying and
       // let something be already up there about half the time
       // walking into a room under a rainbow finds it already up
-      hour = nh; band = nb; flyers = []; t = 0; next = rnd(6, 20); bowA = bow; bowX = rnd(.3, .7); bowCv = null;
+      // (unless this sky over this ground was seen already: then it carries on)
+      var kept = skyLifeHandover(hour || band ? hour + "|" + band : "", { flyers: flyers, t: t, next: next }, nh || nb ? nh + "|" + nb : "", performance.now());
+      hour = nh; band = nb; flyers = kept.flyers; t = kept.t; next = kept.next; bowA = bow; bowX = rnd(.3, .7); bowCv = null;
       ink = SKY_LIFE_HOURS[hour] || ""; dir = skyDrift.dir();
-      if (build()) { refit(); if (birds() && Math.random() < .55) spawn(true); }
+      if (build()) { refit(); if (!kept.kept && birds() && Math.random() < .55) spawn(true); }
     }
     run();
   }

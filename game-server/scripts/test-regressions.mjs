@@ -1093,6 +1093,47 @@ try {
     assert.ok(first.t >= 0 && first.t < 600, 'a sky not seen yet starts anywhere');
     assert.match(pub, /var kept = skyHandover\(name, t, dir, next, performance\.now\(\)\);\n      name = next; geo = null; t = kept\.t; dir = kept\.dir;/, 'the drift uses it');
   });
+  check('the two hamlets are drawn green on the map, as Assart End is (2026-11-04)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const data = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const lore = readFileSync(new URL('../src/lore.ts', import.meta.url), 'utf8');
+    const listed = new Set(data.match(/export const HAMLET_ROOMS = new Set<string>\(\[([\s\S]*?)\]\);/)[1].match(/"[a-z-]+"/g).map((s) => s.slice(1, -1)));
+    for (const f of ['the-salt-hamlet', 'the-shieling-hamlet']) {
+      const ids = readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8').split('\n')
+        .filter((l) => l.startsWith('## ') && !l.includes('attachment')).map((l) => l.slice(3).split(' |')[0].trim());
+      assert.equal(ids.length, 29, f);
+      for (const id of ids) assert.ok(listed.has(id), `${id} is on the map as a hamlet`);
+    }
+    assert.equal(listed.size, 58, 'and nothing else is');
+    assert.match(lore, /hamlet: HAMLET_ROOMS\.has\(id\) \? 1 : 0,/, 'the map frame says which rooms are hamlet');
+    assert.match(pub, /hamlet: !!rm\.hamlet,/, 'the page keeps it');
+    const src = pub.match(/function mapRegionColor\(region, isGate, isHamlet\) \{[\s\S]*?\n\}\n/)[0];
+    const colour = new Function('mapCssVar', src + 'return mapRegionColor;')((v) => v);
+    assert.equal(colour('crossing', false, true), '--heal', 'a Salt Hamlet room is green');
+    assert.equal(colour('mountain', false, true), '--heal', 'a Shieling room is green');
+    assert.equal(colour('den', false, false), '--heal', 'Assart End still is');
+    assert.equal(colour('mountain', false, false), '--stone', 'the rest of the mountain is not');
+    assert.equal(colour('crossing', true, true), '--steel', 'and a gate is still a gate');
+    assert.match(pub, /col = mapRegionColor\(nd\.region, nd\.gate, nd\.hamlet\);/, 'the map draws with it');
+  });
+  check('the birds fly on while you are under a roof, not from the start again (2026-11-04)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const src = pub.match(/var skyLifeKept = \{\};\nfunction skyLifeHandover[\s\S]*?\n\}\n/)[0];
+    const handover = new Function(src + 'return skyLifeHandover;')();
+    const flock = [{ t0: 280, dur: 40 }];
+    const fresh = handover('', { flyers: [], t: 0, next: 0 }, 'day|wood', 0);
+    assert.equal(fresh.kept, false, 'a sky not seen yet starts fresh');
+    assert.deepEqual(fresh.flyers, []);
+    const indoors = handover('day|wood', { flyers: flock, t: 300, next: 310 }, '', 10_000); // under a roof at t=300
+    assert.deepEqual(indoors.flyers, [], 'nothing flies under a roof');
+    const back = handover('', indoors, 'day|wood', 25_000);                                // out again 15 seconds later
+    assert.equal(back.kept, true);
+    assert.equal(back.flyers, flock, 'the same birds are still up');
+    assert.equal(back.t, 315, 'and have flown on for the time you were inside');
+    assert.equal(back.next, 310, 'and the next one is still due when it was');
+    assert.match(pub, /var kept = skyLifeHandover\(hour \|\| band \? hour \+ "\|" \+ band : "", \{ flyers: flyers, t: t, next: next \}, nh \|\| nb \? nh \+ "\|" \+ nb : "", performance\.now\(\)\);\n      hour = nh; band = nb; flyers = kept\.flyers; t = kept\.t; next = kept\.next;/, 'the birds use it');
+    assert.match(pub, /if \(!kept\.kept && birds\(\) && Math\.random\(\) < \.55\) spawn\(true\)/, 'and a sky coming back does not throw up a new bird');
+  });
   check('the fade between rooms carries the drifting sky where it is, not the still picture (2026-11-01)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const src = pub.match(/function skyCopy\(node\) \{[\s\S]*?\n\}\n/)[0];
