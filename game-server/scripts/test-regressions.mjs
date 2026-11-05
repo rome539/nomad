@@ -3324,6 +3324,18 @@ try {
     assert.deepEqual(missing, [], 'each one answers a close look');
   });
 
+  check('every room of the open ground and the pits answers a close look (2026-11-05)', () => {
+    const detail = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    const feats = detail.slice(detail.indexOf('export const ROOM_FEATURES'), detail.indexOf('export const SIGNPOSTS'));
+    const posts = detail.slice(detail.indexOf('export const SIGNPOSTS'), detail.indexOf('const SIGN_WORDS'));
+    const files = ['open-ground', 'open-ground-2', 'the-pits'];
+    const ids = files.flatMap((f) => readFileSync(new URL(`../regions/${f}.rooms`, import.meta.url), 'utf8')
+      .split('\n').filter((l) => /^## [a-z0-9-]+ \| /.test(l) && !/\| attachment/.test(l)).map((l) => l.slice(3).split(' | ')[0]));
+    assert.ok(ids.length > 68, 'the open ground\'s and the pits\' rooms in their region files');
+    const missing = ids.filter((id) => !feats.includes(`  "${id}": {`) && !posts.includes(`  "${id}": {`));
+    assert.deepEqual(missing, [], 'each one answers a close look');
+  });
+
   check('every fever graves sits over the same older stone, and says so on a close look (2026-11-05)', () => {
     const rises = Object.entries(FEVER_GRAVES).flatMap(([g, f]) => f.rises ?? [g]);
     assert.equal(rises.length, 6, 'the three village graves and the fortress\'s three');
@@ -4123,6 +4135,16 @@ try {
     written.length = 0;
     saveSim(storage, back, cache);
     assert.deepEqual(written.filter((k) => k.startsWith('b:walk')), [], 'and nothing is rewritten that did not move');
+  });
+
+  check('a room waits for every layer of its sky before it shows (2026-11-05)', () => {
+    // Stepping out of the gatehouse the first time, the room came in with a
+    // blank sky: a layered sky shows its far sky, disc and clouds, and the room
+    // waited only for the named picture, which a layered sky never shows.
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /var skyParts = skyLay \? \[skyLay\.far\]\.concat\(skyLay\.disc \? \[skyLay\.disc\] : \[\], \(skyLay\.clouds \|\| \[\]\)\.map\(/, 'the far sky, the disc and every cloud strip are the sky');
+    assert.match(pub, /var waiting = 7 \+ Math\.max\(1, skyParts\.length\)/, 'the room counts each of them');
+    assert.match(pub, /for \(var sp = 0; sp < skyParts\.length; sp\+\+\) readySceneImage\("\/sky\/" \+ skyParts\[sp\] \+ "\.webp\?v=" \+ SKY_V, loaded\);/, 'and waits for each before it paints');
   });
 
   console.log(`\n${passed} regression checks pass`);

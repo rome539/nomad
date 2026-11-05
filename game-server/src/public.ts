@@ -14128,13 +14128,22 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     if (cloudTint && !fxOn) sceneEl.className = "t-" + cloudTint;
     if (fade) fade();
   };
-  var waiting = 8, ready = true, preparedFx = null;
+  // A LAYERED SKY IS NOT THE PICTURE IT IS NAMED FOR: what shows is its far
+  // sky, its disc and its cloud strips (#sky[data-layered], skyDrift), drawn
+  // only once all of them are in. So those are what the room waits for (rome,
+  // 2026-11-05: stepping out of the gatehouse the first time, the room came in
+  // with the sky blank, and the sky arrived after it).
+  var skyLay = sky && typeof SKY_LAYERED !== "undefined" ? SKY_LAYERED[skyName(sky)] : null;
+  var skyParts = skyLay ? [skyLay.far].concat(skyLay.disc ? [skyLay.disc] : [], (skyLay.clouds || []).map(function (c) { return c[0]; })) : [];
+  // ...and not for the named picture, which a layered sky never shows.
+  var waiting = 7 + Math.max(1, skyParts.length), ready = true, preparedFx = null;
   function loaded(ok) {
     ready = ready && ok;
     if (--waiting === 0 && ready) put();
   }
   readySceneImage(scene ? scene + "?v=" + BG_V : "", loaded);
-  readySceneImage(sky ? sky + "?v=" + SKY_V : "", loaded);
+  if (!skyParts.length) readySceneImage(sky ? sky + "?v=" + SKY_V : "", loaded);
+  for (var sp = 0; sp < skyParts.length; sp++) readySceneImage("/sky/" + skyParts[sp] + ".webp?v=" + SKY_V, loaded);
   var fogImg = null;   // the decoded mask, kept to draw the fog from in put()
   readySceneImage(fogMask, function (ok) {
     var e = fogMask && readySceneImage.cache ? readySceneImage.cache.get(fogMask) : null;

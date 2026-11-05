@@ -6233,6 +6233,283 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
     "causeys|causey|sill|path|ways":
       "Where the path meets the causey the old wood is worn into a step, and the step is polished by feet. The causey's timbers are black and hard as stone. Along their edges, every few strides, a short stake stands with a notch in its top.",
   },
+  // ================= THE OPEN GROUND: THE SIEGE LINES (2026-11-05) =================
+  "the-siege-bank": {
+    "bank|earth|ditch|walk|wall":
+      "The walk behind the bank is worn into a groove, hollowed by feet going up and down it, and every few paces there is a step cut into the back of the bank to climb up and look over. The face of the bank toward the wall is pocked all along its top. Something hit it a great many times from the fortress side.",
+  },
+  "the-spoil-heap": {
+    "chalk|ridge|heap|spoil|grass":
+      "The chalk was dumped by the basketful: you can still see the heaps, each the size of a load, laid one against the next all down the line. Some of the lumps have pick marks on them. None of it was spread, because nobody here meant to stay long enough to farm it.",
+  },
+  "the-battery": {
+    "platforms|platform|chalk|track|ground|scorch":
+      "The chalk of each platform was rammed in layers, and the top layer is crushed and split at the front edge, where something heavy kicked back into it again and again. The tracks up from the rear are worn into two deep grooves the width of a wheel apart. The scorched ground runs out in a fan from each platform toward the wall.",
+  },
+  "the-shot-pile": {
+    "shot|stone|heaps|heap|piles|pile":
+      "Each ball still shows the marks of the hammer that rounded it, little flat facets all over, and a few were given up half-made, square on one side. The heaps were built tidily, the bottom course set so the rest would not roll. Nobody took a single one away.",
+  },
+  "the-forge-pit": {
+    "hearth|stone|bellows|block|hammerscale|floor|clay":
+      "The hearth stone is cracked through the middle from heat, and was used cracked. The bellows block has two holes worn oval where the nozzles sat and worked. In the scale on the floor there are a few bent nails and the end of a broken pick, left where they were dropped.",
+  },
+  "the-camp-ground": {
+    "hollows|hollow|huts|hut|streets|street|turf":
+      "Each hollow has a darker patch at one end where a fire was kept, and the turf over it is thinner. The streets between are worn lower than the hollows on either side. In one hollow, under the turf at the edge, there is a row of post stubs burned off level with the ground.",
+  },
+  "the-suttlers-row": {
+    "pottery|pot|sherds|standing|hollow":
+      "The broken pottery is mostly jugs and drinking pots, and it is all in pieces too small to have been dropped: it was thrown, or trodden. The hard standing is worn smooth in front of where a counter would have been. A few of the pieces have a mark scratched in them before they were fired, the same mark each time.",
+  },
+  "the-horse-lines": {
+    "scars|scar|strip|soil|nettles|ground|turf":
+      "The two scars are the lines of the tether ropes, worn in where they lay along the ground. Along both of them the turf is broken by hoof holes, filled and refilled until the ground sank. Under the nettles there is a horseshoe nail every step or so, bent over and thrown down.",
+  },
+  "the-marshals-lodging": {
+    "footings|hearth|floor|flags|flagstones|chimney|building":
+      "The flags are worn in one place more than anywhere else, in front of the hearth and facing the doorway toward the gate. The hearth was swept before whoever kept it left. The chimney stub is blackened inside to the top of what is left of it, and the soot is thick.",
+  },
+  "the-sap-head": {
+    "trench|sap|hurdles|hurdle|screens|wicker|earth":
+      "The zigzags are cut clean, the corners square, and the spoil from each leg is thrown toward the wall, where it would stop arrows. The rotted hurdles over the last stretch were pegged down at the edges. Under them the floor of the trench goes on and down, and the spade marks in the side are fresh-looking, the chalk still bright where it is kept out of the weather.",
+  },
+  "the-mine-mouth": {
+    "opening|timbers|timber|props|prop|chalk|mouth":
+      "The props at the mouth are squared oak, notched to take the cap pieces, and every joint is cut the same way. Somebody here knew the work. The chalk on the floor of the mouth is worn into a trough down the middle, where the spoil was dragged up and out in baskets.",
+  },
+  "the-mine-gallery": {
+    "gallery|props|prop|oak|timbers|chamber|chalk":
+      "Each prop has a number cut into it with a knife, counting up from the mouth. Near the end the cuts are hurried. In the chamber the char has eaten into the stumps of the props as far as the fire went, and the brushwood ash is still packed into the corners where the bundles were stacked.",
+    "charred|char|brushwood|ash|fire":
+      "The bundles were laid against every prop in the chamber, so they would all burn at once. A little of the brushwood that did not catch is still tied, with the same twisted withy round each bundle.",
+  },
+  "the-camouflet": {
+    "chalk|grooves|groove|walls|wall|countermine|fall|galleries":
+      "The grooves are pick marks, long ones, swung sideways because there was no room to swing them any other way. There are more of them on one side than the other. In the fall at the mouth of the countermine a pick head is wedged in the chalk, with the stub of its handle still in it.",
+  },
+  "the-village-street": {
+    "street|plots|plot|rubble|cobbles|entry|line|floors":
+      "The black line in the soil is the same depth on every plot, which means they all burned at once. The cobbles of the entry are worn hollow in the middle and polished on top. At its far end the rubble has been pulled aside to clear a way, and later than the burning.",
+  },
+  "the-pound": {
+    "walls|wall|stone|gap|gate|pound":
+      "The gap for the gate has two iron pins still leaded into the stone on one side, where the hinges were. The other side has a slot cut for a bar. Inside, the walls are rubbed smooth at the height of a cow's flank, all the way round.",
+  },
+  "the-tithe-barn": {
+    "barn|gables|gable|walls|floor|threshing|swallows":
+      "The threshing floor is made of the same hard clay all across, worn into a shallow dish between the two great doors where the flails came down. There is a mark on one of the door jambs, cut deep and squared, and a column of short notches cut under it, running down out of reach. The last few notches are cut shallower than the rest.",
+  },
+  "the-well-head": {
+    "kerb|windlass|frame|timber|well|stone":
+      "The kerb is worn into grooves along its top where ropes ran over it for a very long time. The windlass frame has a bearing at one end, polished bright on the inside, and the crank that turned in it has been taken. The drum has no rope on it, and the wood is worn smooth where the rope wound.",
+  },
+  "the-church-shell": {
+    "font|walls|tower|window|tracery|slates|grass|louvres":
+      "The font was pushed over, not fallen: its foot is still bolted down and the bowl has broken off above it. The slates on the floor lie on top of a layer of charred roof timber. Under the east window the stone where the altar stood is cut away clean.",
+  },
+  "the-churchyard": {
+    "stones|stone|yews|yew|grass|ground|wall|graves":
+      "The stones you cannot read are not worn. Their faces have been tooled flat with a chisel, down past where the letters were. The few you can still read were lying face down in the grass when it was done.",
+  },
+  "the-bell-pit": {
+    "pit|clay|channel|runner|metal|bronze":
+      "The clay lining is fired red on the inside and the outside is still raw, so it was used once, hard, and not again. In the runner channel the metal stopped short of the end, as if the pour ran out. Bits of the old bell, too thick to melt in time, lie in the bottom with the grey set round them.",
+  },
+  "the-green": {
+    "green|stone|grass|ground|seat":
+      "The dish in the top of the stone is worn smooth, and there are smaller hollows round its edge where heels rested. The grass round it is worn in a ring. Someone carved a few lines into its side, crossing each other, the kind a child cuts with a knife.",
+  },
+  "the-village-smithy": {
+    "hearth|trough|water|anvil|bed|slate|roof":
+      "The anvil bed is a block of elm with the square mark of the anvil's foot pressed deep into it, and the iron spikes that held it pulled out. The hearth still has a little clinker in the back. In the black water of the trough lies a pair of tongs, put there to cool and not taken out again.",
+  },
+  "the-fish-stew": {
+    "ponds|pond|stews|stew|sluices|sluice|kerbs|kerb|water":
+      "The sluices are oak boards in stone grooves, and they were left shut. The kerbs are cut with a step on the inside so a person could reach the water with a net. On the kerb of the clear pond the stone is wet in one place, at the edge, and the wet comes up out of the water.",
+  },
+  "the-orchard-rows": {
+    "trees|tree|rows|row|moss|mistletoe|grass":
+      "The trees were planted in straight lines and grafted: you can see the old swelling where each one was joined, low down on the trunk. A few still carry a ring of iron where a ladder was hooked. The short grass is cropped right in under the lowest branches.",
+  },
+  "the-cider-house": {
+    "trough|stone|runner|runner-stone|floor":
+      "The trough is worn in a ring around its outer edge, where the horse walked, and the floor inside the ring is not worn at all. The crack in the runner-stone has been mended once with an iron band, and broke again beside the band. The stone is stained dark all the way round.",
+  },
+  "the-culver-house": {
+    "tower|dome|nest-holes|holes|hole|nests|door|wall":
+      "In the middle of the floor stands the stump of a post with a socket in its top, where a turning ladder once went round inside the tower to reach every hole. The holes low down are rubbed smooth at the lip by hands. The ones near the top are not, and something has pulled the old nesting out of a few of them.",
+  },
+  "the-gibbet-field": {
+    "post|oak|iron|arm|hook|straps|field|circle":
+      "The iron straps are fixed with square nails driven right through the oak and clinched over. There is a ladder groove worn into one face of the post. Inside the bare circle the ground is hard and smooth, as if it was trodden flat for a long time by a crowd that stood back exactly as far as this.",
+  },
+  "the-crossroads-grave": {
+    "mound|stone|tracks|track|crossing|grave":
+      "The stone was laid flat on purpose and it is heavy, much heavier than it needs to be to mark a grave. It has iron pins leaded into the corners, going down into the mound. Nobody has ever cut a word into it.",
+  },
+  "the-charnel": {
+    "bones|stacks|stack|skulls|skull|courses|shed|door|slate":
+      "The courses were laid with the long bones ends-out, like a woodpile, and the skulls on top, facing the door. Every skull has a small number painted on it in faded red, and the numbers go up in order along each course. Toward the back, the numbers stop and the painting goes on without them.",
+  },
+  // ================= THE OPEN GROUND: THE CAMP AND THE HOLDING (2026-11-05) =================
+  "the-camp-tail": {
+    "hollows|hollow|huts|hut|turf|tussocks|bank":
+      "These hollows have no fire patch in them, and no post stubs. They were tents, not huts, put up late by people who came after the camp was laid out. One still has a ring of pegs in the turf around it, cut from green wood and never pulled.",
+  },
+  "the-picket-ground": {
+    "holes|stake|stakes|line|grass|gabions|gabion|wicker":
+      "The stake holes are set at an even pace apart, measured out by someone walking the line. The gabions were filled with chalk and flints and built up as a wind-break at the end of the ropes. The digging under one of them has pulled out the chalk and left it in a heap.",
+  },
+  "the-forage-cut": {
+    "strip|ground|turf|tussocks|chalk|grass":
+      "The edge of the cut is straight, where it was marked out with a line before the scythes went in. In the chalk between the tussocks there are a few scythe-stone chips, grey and flat, dropped where the blades were sharpened. The cut stops at the same place all along the line.",
+  },
+  "the-camp-midden": {
+    "midden|mound|bone|pot|pottery|ash|turf":
+      "The bone in the midden is mostly ox and sheep, cut with an axe at the joints, and later on it is horse, cut the same way. The ash comes in layers between the bone, one layer for each clearing of the cook-fires. Near the top the layers get thin and close together.",
+  },
+  "the-horse-pits": {
+    "pits|pit|hollows|hollow|ground|holes|hole":
+      "The edges of the pits are cut straight and deep, deeper than the camp needed for anything else. Where the holes at the ends have been dug out you can see the layer the horses went in at: whole, not butchered, put in as they fell. The holes at the ends go down past that layer.",
+  },
+  "the-camp-graves": {
+    "mounds|mound|graves|grave|rows|row|shot|stone":
+      "Each shot at a head is set the same way, pressed into the turf so it would not roll. The mounds are short because the dead were laid on their sides with their knees drawn up, to fit more into a row. The openings in the sides of them are low and round and go in under the turf.",
+  },
+  "the-deserters-ditch": {
+    "ditch|bank|stake|collar|iron|bottom":
+      "The ditch was cut from the camp side: all the spoil is thrown up on the camp's bank, not the far one. The collar is hinged, with a pin to shut it, and the pin is still through it. The stake is worn smooth at the height of a seated man's back.",
+  },
+  "the-plague-tents": {
+    "hollows|hollow|ditch|tents|tent|grass|crossing":
+      "The one crossing over the ditch is a causeway of dumped chalk, and on the far side of it the turf is burned in a square patch where a fire was kept going for a long time. The hollows are deeper because they were dug deeper, not worn deeper; the spade marks run down their sides. Nothing from the camp's midden is in here, not a bone or a sherd.",
+  },
+  "the-toft-ends": {
+    "plots|plot|footing|footings|stumps|stump|post|posts|ash|strips":
+      "Each strip has a gate gap in its footing at the lane end, and the ground just inside every gap is worn lower than the rest. The post stumps burned down from the top, not up from the ground. In one corner, under the ash, the ground is dug up in a square and filled in again.",
+  },
+  "the-back-lane": {
+    "lane|ruts|rut|footings|posts|post|gates|gate|yards":
+      "The ruts are deep and close, made by small carts, and they swing in at every yard gate. Each gate post has a hole bored in it for a bolt. The posts are burned on the yard side and not on the lane side.",
+  },
+  "the-goose-green": {
+    "green|trough|stone|timbers|timber|grass|droppings":
+      "The trough has a spout hole cut at the bottom, plugged with a wooden bung that has swollen fast. The burned timbers along the far edge are the remains of a low fence, laid in a line where it fell. Somebody's mark is cut into the end of the trough, and half of it has been chipped off.",
+  },
+  "the-stray-pound": {
+    "walls|walling|wall|gap|gate|bones|bone|corner":
+      "The walling was built without mortar, every stone fitted, and none has fallen. The gate gap has two worn slots in its sides where hurdles were slid in to shut it. The bones in the corner are of something small, and they have been cracked.",
+  },
+  "the-crofts": {
+    "beds|bed|kerbs|kerb|stone|well|sweep|arm|plots|plot":
+      "The kerbs are set in straight lines with stakes at the corners, and the stakes are still there, black and rotted to points. The well-sweep fell across the beds with its bucket chain still on the end. The chain was cut, not worn through.",
+  },
+  "the-back-pond": {
+    "pond|water|edge|stone|mud|posts|post":
+      "The stone edge has a ramp cut into it on the near side, worn down by hooves, so the beasts could walk in. On the far side there is nothing but trampled mud. One of the burned posts leaning over the water still has a rope ring round it, gone hard and black.",
+  },
+  "the-windfall-bank": {
+    "bank|earth|thorn|hedge|fruit|ground|prints":
+      "There are old wicker baskets pressed flat into the earth near the foot of the bank, rotted to the shape of their weave. The thorn along the top was planted, not grown up wild; the stumps are in a straight row. The prints at the foot go round and round the same patch.",
+  },
+  "the-field-gate": {
+    "gap|gate|hedge|thorn|track|earth":
+      "The gateposts are still there inside the thorn, two oak posts with iron hooks for the hinges. The bar that shut the gate is lying in the thorn beside them, still in one piece. The bare track runs through the middle of the gap, not where a cart would have gone.",
+  },
+  "the-dead-hedge": {
+    "hedge|thorn|boundary|bones|bone|earth":
+      "The hedge was laid in the same way all along: each stem cut most of the way through low down and bent over the next. In the bottom of it, pinned down by the thorn, are a few flints from the field, piled where someone threw them off the plough. The bones dragged in are mostly long bones.",
+  },
+  "the-waste-fields": {
+    "fields|field|furrows|furrow|ridges|ridge|grass|thorn|ploughland":
+      "The ridges are long and curve a little at each end, where the team turned. On top of the ridges, flints have been picked off and heaped, a few at a time. The thorn clumps stand where the heaps were.",
+  },
+  "the-field-bank": {
+    "bank|tree|earth|fields|thorn":
+      "The bank is made of soil scraped off the plough at the end of each furrow, built up over a very long time. The dead tree on it was split by lightning and has a ring of iron nails in it at chest height, where something was nailed up and later torn off. On the top of the bank there is a flat place worn into the earth, facing east toward the hill, where somebody stood often.",
+  },
+  "the-old-plough": {
+    "plough|share|iron|beam|furrow|earth":
+      "The share is worn bright and thin at the point, a good plough well used. The beam still has its traces fixed on, gone to leather strips, and the strips are cut through, all of them at the same place. The furrow behind it stops in the middle of the field.",
+  },
+  // ================= THE PITS (2026-11-05) =================
+  "the-dead-cart-track": {
+    "ruts|rut|track|wheels|thorn":
+      "The ruts are deeper on the way out than on the way back, two pairs side by side, one pressed hard and one light. In the bottom of the deep pair there are a few nails from a cart's tyre, sheared off and left. The track never once turns aside for anything.",
+  },
+  "the-cart-tip": {
+    "lip|edge|axle|slope|earth|bone|soil":
+      "The lip is worn into a long groove where the cart tails ran up against it before they tipped. The axle is ash wood with an iron strap round the middle, and it broke at the strap. Below the lip the slope is shaped like a tongue, the way a heap is shaped when everything on it was tipped from one place.",
+  },
+  "the-lime-pits": {
+    "pits|pit|lime|crust|edges|edge|prints":
+      "The pits are cut square with their corners true, and each has a plank ramp sunk into one side, rotted to a stain. The crust is thickest at the ramp ends, where the lime was tipped in. Every pit was filled to the same level and no further.",
+  },
+  "the-tipping-edge": {
+    "edge|slope|spill|earth|bones|bone|ground":
+      "Along the edge a row of stakes was once driven in to stop the carts going over, and the stubs are still there, leaning out. The bones coming up after rain lie in a line just below the lip. That line is where the tipping started, and everything below it came after.",
+  },
+  "the-bone-heaps": {
+    "heaps|heap|mounds|mound|bone|bones|tunnels|tunnel":
+      "The bottom of every heap is sorted, long bones lying together with their ends one way. Above a certain height the sorting stops and it is simply raked in. The rake marks are still on the earth around the foot of the heaps, long parallel scratches all pointing in.",
+  },
+  "the-sorting-ground": {
+    "ground|rows|row|bones|bone|scatter|earth":
+      "The rows were laid out with string: there are short pegs at the ends of each one, and a few still have a knot of cord round them. The skulls were put in a separate patch with a little ditch round it. The dragged scatter has gone across the ditch.",
+  },
+  "the-gnawed-ground": {
+    "ground|bone|bones|earth|tracks|track":
+      "Every bone here is split the long way, cracked by teeth strong enough to do it in one bite. Under the scatter, where the earth is scuffed through, there is older ground with the marks of a rake in it. The tracks all cross that old ground the same way, toward the den mouths.",
+  },
+  "the-second-trench": {
+    "trench|earth|heap|bones|bone|spade|ditch|thorn":
+      "The sides of the trench are cut straight down for half its length and then roughly, in a hurry, for the rest. On top of the heap the bones have a spade lying under them, its blade still clean where the earth kept the rust off. The first trench beside it was filled right to the top before this one was started.",
+  },
+  "the-burning-ground": {
+    "ground|ash|scar|earth|bone|bones":
+      "The burning was done on a raised bed of flints laid in a long rectangle, and the edges of the bed still show through the ash. The ends of bone standing up are all at one end of it. At the other end the ash has the marks of a long rake drawn through it, going out toward the drifts.",
+  },
+  "the-trench-end": {
+    "bank|spoil|thorn|hollow|fur|bone":
+      "The spoil bank is the earth from the second trench, thrown up in heaps the size of a spadeful at a time. Under the hollow the earth is packed hard and smooth by a body turning round in it. The oldest bone in the lining is grey and soft, and the newest still has meat on it.",
+  },
+  "the-ash-drifts": {
+    "drifts|drift|ash|crust|thorn|dust":
+      "Under the crust the ash is soft and grey, and further in there are small burned things that were not bone: buttons, a buckle, the iron of a belt. They were burned with whoever wore them. The drifts lie against the thorn on the side away from the wind.",
+  },
+  "the-wash-gully": {
+    "gully|layers|layer|soil|bone|bones|ash|bottom|sides":
+      "In the side of the gully the layers run level and even for a long way, one burial on top of another, each covered over with soil before the next came. Near the top there is a thick black layer of ash, and above that nothing was buried at all. The washed bones in the bottom have come out of every layer.",
+  },
+  "the-den-mouths": {
+    "holes|hole|bank|earth|spoil|bone|mouths|mouth":
+      "Each hole is dug at an angle, down and back into the bank, the way a burrow is dug and not a grave. The spoil fans are made of old burial earth with bone mixed through it. The hole mouths are polished smooth around the rim by fur.",
+  },
+  "the-wash-foot": {
+    "silt|fan|bone|bones|plates|plate|tracks|track":
+      "The silt is laid down in thin sheets, one for each time the gully ran, and in the cracks between the plates you can count them. The bones on top have been washed white and turned over and over. The tracks going down to the wet are deeper than the tracks coming back.",
+  },
+  "the-bone-fan": {
+    "fan|bone|bones|earth|spill|slope":
+      "Where the slope let go there is a scarp in the gully side, with the layers broken off clean across it. Among the bones in the fan are a few pieces of wood that were planks, and a nail still in one. Some of the dead here were put in boxes, and the boxes did not last.",
+  },
+  "the-laughing-ground": {
+    "ground|earth|meals|meal|remains|bones|bone":
+      "The ground is worn into shallow beds, each the size of a body curled up, with a lip round it. The bones of the meals lie thickest in the middle between the beds, where they were brought and fought over. A few of them are not old bones from the pits.",
+  },
+  "the-dug-earth": {
+    "earth|hollows|hollow|scrapes|scrape|bones|bone|ground":
+      "Where the scrapes go deep there are lines in the side of them: a dark line, then pale, then dark, the edges of old graves dug side by side. The claws have followed those lines. The graves here were dug shallow, and not long before whoever dug them stopped.",
+  },
+  "the-skull-mound": {
+    "mound|skulls|skull|courses|course|foot":
+      "The skulls were set facing out, every one, in rings that get smaller toward the top. The lower courses that rolled have left a gap like a missing tooth. In the gap you can see that the middle of the mound is earth, packed hard, built up first so the skulls would have something to lean on.",
+  },
+  "the-last-pit": {
+    "pit|hole|spoil|earth|thorn|bones|bone|fur|den":
+      "The spoil round the pit was thrown up to one side only, the side toward the others, as if the next carts were expected from there. The sides are cut square and clean. The spade marks go all the way to the bottom, and the bottom is level, and nothing was ever put in it by a person.",
+  },
 };
 
 // Everything below is prose keyed off the same tables and read by lookFeature.
