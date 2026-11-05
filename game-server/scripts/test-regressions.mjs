@@ -67,7 +67,7 @@ try {
         "export {sendCtx} from './chips';",
         "export * as carving from './carving';",
         "export * as feverrat from './feverrat';",
-        "export {tickFever, fevered, feverBites, feverLifts, eventAmbient} from './events';",
+        "export {tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient} from './events';",
         "export {FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT} from './zone-data';",
         "export * as pvp from './pvp';",
         "export {PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, GATEHOUSE_NOARG, MOUTHS, WITNESSED_LINES} from './zone-data';",
@@ -89,7 +89,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC } = await import(pathToFileURL(output));
+  const { VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1364,9 +1364,9 @@ try {
     ratking.crown(full.z, Date.now());
     assert.equal([...full.z.creatures.values()].filter((c) => c.templateId === 'rat').length, 1, 'never a rat over the cap');
   });
-  check('while it lives the fortress coughs, and a cough is a noise (2026-10-24)', () => {
+  check('a cough is a noise, heard next door; and the rat king no longer sets anyone coughing (2026-10-24, 2026-11-05)', () => {
     const { z } = kingWorld();
-    ratking.crown(z, Date.now() - 4 * 3_600_000); // long enough ago that the sickness is at full
+    ratking.crown(z, Date.now() - 4 * 3_600_000);
     const noise = [], heard = [], said = new Map();
     z.creatureNoise = (r) => noise.push(r);
     const voiced = [];
@@ -1376,40 +1376,16 @@ try {
     z.outOfWorld = () => false;
     z.regionOf = (r) => ({ 'the-cells': 'upper', 'the-moor': 'out', 'gate-room': 'gate' })[r];
     const inside = { pubkey: 'in', name: 'Rome', roomId: 'the-cells' };
-    const outside = { pubkey: 'out', name: 'Astra', roomId: 'the-moor' };
-    const atGate = { pubkey: 'gate', name: 'Wren', roomId: 'gate-room' };
-    z.sessions = new Map([['in', inside], ['out', outside], ['gate', atGate]]);
-    ratking.cough(z, inside);
+    z.sessions = new Map([['in', inside]]);
+    coughing.cough(z, inside, 'You cough.');
     assert.deepEqual(noise, ['the-cells'], 'a cough draws the curious like any noise');
     assert.match(heard[0], /coughing \{dir\}/, 'and the next rooms hear it');
     assert.ok(voiced.length >= 2 && voiced.every((a) => a === 'cough'), 'the cougher and the wall both carry the cough sound: ' + voiced);
     noise.length = 0; said.clear();
     for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.roll(z, Date.now()); }
-    assert.ok(noise.length > 20, 'in the fortress, about one cough in four minutes: ' + noise.length);
-    assert.ok(noise.every((r) => r === 'the-cells'), 'nobody on the moor or at the gate coughs');
-    assert.equal((said.get('out') ?? []).length, 0, 'the surface hears nothing of it');
-  });
-  check('the cough builds after the king comes and fades after he falls (2026-10-27)', () => {
-    const { z } = kingWorld();
-    const H = 3_600_000, t0 = Date.now();
-    assert.equal(ratking.sickness(z, t0), 0, 'no king, no sickness');
-    const king = ratking.crown(z, t0);
-    assert.equal(ratking.sickness(z, t0), 0, 'nothing in the air the moment he comes');
-    const mid = ratking.sickness(z, t0 + 1.5 * H);
-    assert.ok(mid > 0.3 && mid < 0.7, 'halfway up after an hour and a half: ' + mid);
-    assert.equal(ratking.sickness(z, t0 + 5 * H), 1, 'full once it has built');
-    king.hp = 0; ratking.fell(z, t0 + 5 * H);
-    const going = ratking.sickness(z, t0 + 6 * H);
-    assert.ok(going > 0.3 && going < 0.7, 'still in the air an hour after he falls: ' + going);
-    assert.equal(ratking.sickness(z, t0 + 8 * H), 0, 'and gone after that');
-    const noise = [];
-    z.creatureNoise = (r) => noise.push(r); z.roomSound = () => {}; z.send = () => {};
-    z.inGatehouse = new Set(); z.outOfWorld = () => false; z.regionOf = () => 'upper';
-    z.sessions = new Map([['in', { pubkey: 'in', name: 'Rome', roomId: 'the-cells' }]]);
-    // a new king can be crowned on any roll (about 1 in 5 over 300), and his air starts clean: take him off again
-    const fresh = () => { for (const [id, c] of z.creatures) if (c.templateId === 'rat-king' && c !== king) z.creatures.delete(id); };
-    for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.fell(z, t0 + 5 * H); ratking.roll(z, t0 + 5.2 * H); fresh(); }
-    assert.ok(noise.length > 10, 'the dead king\'s air still sets people coughing: ' + noise.length);
+    assert.equal(noise.length, 0, 'five hours in the fortress under a living king and nobody coughs');
+    assert.ok((said.get('in') ?? []).length > 5, 'but his signs still show');
+    assert.equal(typeof ratking.cough, 'undefined', 'the king has no cough of his own any more');
   });
   check('a light in the pack says how to light it and put it out, in the window and the typed list alike (2026-10-29)', () => {
     const T = { 'hooded-lantern': { id: 'hooded-lantern', name: 'a hooded lantern', rarity: 'common', slot: '' },
@@ -1534,14 +1510,6 @@ try {
     for (let i = 0; i < 300; i++) { ratking.resetForTest(z); ratking.roll(z, Date.now()); } // five hours by the fire
     assert.ok(said.length <= 1, 'once said, not again for half an hour: ' + said.length);
   });
-  check('with no king there is no cough', () => {
-    const { z } = kingWorld();
-    const noise = []; z.creatureNoise = (r) => noise.push(r); z.send = () => {};
-    z.inGatehouse = new Set(); z.outOfWorld = () => false; z.regionOf = () => 'upper';
-    z.sessions = new Map([['in', { pubkey: 'in', name: 'Rome', roomId: 'the-cells' }]]);
-    for (let i = 0; i < 300; i++) { ratking.resetForTest(z); for (const c of [...z.creatures.values()]) if (c.templateId === 'rat-king') z.creatures.delete(c.id); ratking.roll(z, Date.now()); for (const c of [...z.creatures.values()]) if (c.templateId === 'rat-king') z.creatures.delete(c.id); }
-    assert.equal(noise.length, 0);
-  });
   check('the creature hooks ask the rat king', () => {
     const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
     assert.match(ai, /if \(ratking\.spares\(z, creature, session\)\) continue;\s*const hostile = AGGRESSIVE\.has\(creature\.templateId\) \|\| bloodWake \|\| ratking\.bold\(z, creature\)(?: \|\| events\.crabMarching\(z, creature\))?(?: \|\| cave)?;/);
@@ -1558,6 +1526,7 @@ try {
     z.roomSound = () => {}; z.send = (s, t) => said.push(t);
     z.inGatehouse = new Set(); z.outOfWorld = () => false; z.wearsTrait = () => false;
     z.roomHasFirekeeper = () => false; z.dens = new Map(); z.curingCount = () => ({}); z.sendStatus = () => {};
+    z.bandOf = () => ''; // no ground of its own: no fever over it unless a check says so
     const me = { pubkey: 'me', name: 'Rome', roomId: 'r', hp: 100, resting: false };
     z.sessions = new Map([['me', me]]);
     const minutes = (n) => { for (let i = 0; i < n; i++) { coughing.resetForTest(z); coughing.tick(z, Date.now()); } };
@@ -1569,6 +1538,45 @@ try {
     minutes(30); assert.equal(noise.length, 0, 'nothing to cough about');
     coughing.swallowedWater(me);
     minutes(20); assert.ok(noise.length > 5, 'coughing after the dunk: ' + noise.length);
+  });
+  check('the fever sets you coughing on its own ground, not under the grave-cloth or behind a gatehouse door (2026-11-05)', () => {
+    const { z, me, noise, said, minutes } = coughWorld();
+    coughing.weather.coldBites = () => false; coughing.weather.raining = () => false; coughing.weather.inWater = () => false;
+    z.bandOf = (r) => (r === 'r' ? 'crossing' : 'wood');
+    z.events = new Map([['fever-strand', { phase: 'idle', until: Date.now() + 3_600_000 }]]);
+    minutes(60); assert.equal(noise.length, 0, 'no fever, no cough');
+    z.events.get('fever-strand').phase = 'active';
+    minutes(120); assert.ok(noise.length > 15 && noise.length < 50, 'about one cough in four minutes while the Crossing has its fever: ' + noise.length);
+    assert.ok(said.some((t) => /graves|chest|hacking/.test(t)), 'in the fever\'s own words');
+    noise.length = 0; me.roomId = 'elsewhere';
+    minutes(60); assert.equal(noise.length, 0, 'off its ground, nothing');
+    me.roomId = 'r'; z.wearsTrait = (_s, t) => t === 'grave-clothed';
+    minutes(60); assert.equal(noise.length, 0, 'the grave-cloth keeps it off you');
+    z.wearsTrait = () => false; z.inGatehouse.add('me');
+    minutes(60); assert.equal(noise.length, 0, 'and so does a gatehouse door');
+    z.inGatehouse.clear(); z.events.get('fever-strand').phase = 'aftermath';
+    minutes(60); assert.equal(noise.length, 0, 'and it stops when the fever lifts');
+  });
+  check('the fever rat holds its ground twelve hours, and the fever\'s cough builds after it settles and fades after it lifts (2026-11-05)', () => {
+    assert.equal(FEVER_RAT_HOLD_MS, 12 * 3_600_000, 'twelve hours before it goes back down on its own');
+    const H = 3_600_000, t0 = Date.now();
+    const z = { inGatehouse: new Set(), wearsTrait: () => false, bandOf: () => 'mountain', events: new Map() };
+    const me = { pubkey: 'me', roomId: 'r' };
+    const st = { phase: 'active', until: t0 + H, onAt: t0 };
+    z.events.set('fever-hill', st);
+    assert.equal(feverCoughs(z, me, t0), 0, 'nothing in the air the moment it settles');
+    const mid = feverCoughs(z, me, t0 + 1.5 * H);
+    assert.ok(mid > 0.3 && mid < 0.7, 'halfway up after an hour and a half: ' + mid);
+    assert.equal(feverCoughs(z, me, t0 + 5 * H), 1, 'full once it has built');
+    feverLifts(Object.assign(z, { roomFeedBands: () => {}, world: null }), 'the-hill-graves', t0 + 5 * H);
+    assert.equal(st.phase, 'aftermath');
+    const going = feverCoughs(z, me, t0 + 6 * H);
+    assert.ok(going > 0.3 && going < 0.7, 'still in the air an hour after the rat is killed: ' + going);
+    st.phase = 'idle';
+    assert.ok(feverCoughs(z, me, t0 + 6 * H) > 0.3, 'and after the aftermath is over too');
+    assert.equal(feverCoughs(z, me, t0 + 8 * H), 0, 'and gone after two hours');
+    st.phase = 'active'; st.liftedAt = undefined; delete st.onAt;
+    assert.equal(feverCoughs(z, me, t0), 1, 'a fever already on from before this is at full');
   });
   check('the Litter Chamber is warm: no chill sets in there, and it dries you (2026-10-31)', () => {
     const { me, minutes } = coughWorld();

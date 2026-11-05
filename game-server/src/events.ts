@@ -83,7 +83,7 @@ import {
   PACK_TELEGRAPH_MS, PACK_ACTIVE_MIN_MS, PACK_ACTIVE_MAX_MS, PACK_AFTERMATH_MS,
   PACK_DOGS, PACK_WOLVES, PACK_HYENAS, PACK_HEAD_ODDS, PACK_HEADS_BAD,
   PACK_HEAD, PACK_DOG, PACK_WOLF, PACK_HYENA,
-  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_GRAVES, FEVER_RISES, FEVER_EVERY_MIN_MS, FEVER_EVERY_MAX_MS, FEVER_FIRST_MIN_MS, FEVER_FIRST_MAX_MS, FEVER_RAIN_SOON_MIN_MS, FEVER_RAIN_SOON_MAX_MS, FEVER_RAT_HOLD_MS, FEVER_RAT_HOME, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
+  FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_GRAVES, FEVER_RISES, FEVER_EVERY_MIN_MS, FEVER_EVERY_MAX_MS, FEVER_FIRST_MIN_MS, FEVER_FIRST_MAX_MS, FEVER_RAIN_SOON_MIN_MS, FEVER_RAIN_SOON_MAX_MS, FEVER_RAT_HOLD_MS, FEVER_RAT_HOME, FEVER_COUGH_RISE_MS, FEVER_COUGH_FADE_MS, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
   DAY_CYCLE_MS, BUGLE_EVERY_DAYS, BUGLE_SALUTERS, BUGLE_REVEILLE, BUGLE_TAPS, BUGLE_FAR, BUGLE_SALUTE_ONE, BUGLE_SALUTE_MANY,
 } from "./zone-data";
 
@@ -638,6 +638,21 @@ function feverSooner(z: ZoneDO, band: string, now: number): void {
 export function feverBites(z: ZoneDO, s: Session): boolean {
   return fevered(z, s.roomId) && !feverrat.spared(z, s);
 }
+// ...and HOW THICK THE FEVER IS IN THE AIR where they stand, 0 to 1, for the
+// cough (zone-data FEVER_COUGH_PER_MIN): building over FEVER_COUGH_RISE_MS from
+// when it settled, and after it lifts thinning over FEVER_COUGH_FADE_MS. A fever
+// already on from before this has no onAt and is at full. Nothing through the
+// grave-cloth, and nothing behind a gatehouse door, where the keeper's fire and
+// walls keep the air off you.
+export function feverCoughs(z: ZoneDO, s: Session, now = Date.now()): number {
+  if (z.inGatehouse.has(s.pubkey) || feverrat.spared(z, s)) return 0;
+  const g = feverGravesOf(z.bandOf(s.roomId));
+  const st = g ? z.events.get(FEVER_GRAVES[g]!.key) : undefined;
+  if (!st) return 0;
+  if (st.phase === "active") return st.onAt ? Math.min(1, Math.max(0, (now - st.onAt) / FEVER_COUGH_RISE_MS)) : 1;
+  const since = now - (st.liftedAt ?? 0);
+  return st.liftedAt && since < FEVER_COUGH_FADE_MS ? 1 - since / FEVER_COUGH_FADE_MS : 0;
+}
 // The graves a room's rat belongs to: the room itself, or the graves whose
 // rises it is one of (the fortress's three).
 export function feverGravesAt(roomId: string | undefined): string {
@@ -654,6 +669,7 @@ export function feverLifts(z: ZoneDO, home: string = FEVER_RAT_HOME, now = Date.
   st.phase = "aftermath";
   st.until = now + FEVER_AFTERMATH_MS;
   st.data = undefined;
+  st.liftedAt = now;   // the cough fades from here (feverCoughs)
   z.roomFeedBands(feverBandsOf(graves), "The wind comes round, cold and clean, all at once, and the ground lets go of the fever as if it had been holding it in its teeth.", "evt");
   chronicle.fever(z, feverRoom(z, graves), true);
 }
@@ -2645,6 +2661,7 @@ function tickOneFever(z: ZoneDO, now: number, graves: string): void {
       st.phase = "active";
       st.until = now + randInt(FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS);
       st.data = String(now + FEVER_RAT_HOLD_MS); // the latest the rat can hold it
+      st.onAt = now; st.liftedAt = undefined;   // the cough builds from here (feverCoughs)
       st.where = pick(FEVER_RISES(graves).filter((r) => z.world!.rooms.has(r))); // where its rat comes up
       z.roomFeedBands(bands, FEVER_GRAVES[graves]!.rise ?? "It settles over the whole ground. Sleep will not take, food does you no good, and a dressing may as well be a rag. Out in the old village, among the graves, something is digging its way up.", "evt");
       feverrat.comes(z, now, st.where);
@@ -2662,6 +2679,7 @@ function tickOneFever(z: ZoneDO, now: number, graves: string): void {
       st.data = undefined;
       st.phase = "aftermath";
       st.until = now + FEVER_AFTERMATH_MS;
+      st.liftedAt = now;   // and the cough fades from here
       z.roomFeedBands(bands, "The wind comes round again, cold and clean, and the ground lets go of it.", "evt");
       chronicle.fever(z, feverRoom(z, graves), true);
       break;

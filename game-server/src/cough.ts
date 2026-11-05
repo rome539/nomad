@@ -3,7 +3,8 @@
 // so it brings the curious. Something has happened to you, and now you are loud.
 //
 // What brings one on:
-//   - the rat king's sickness, while it lives, anywhere in the fortress (ratking.ts)
+//   - the fever, while it is on, anywhere on its ground (events.feverCoughs;
+//     it was the rat king's, in the fortress, until rome moved it 2026-11-05)
 //   - the drowned's black water, for a while after one drags you under
 //   - a chill: cold and wet long enough with nothing to warm you, until you do.
 //     It is being WET that counts, not the rain (rome, 2026-10-29): the rain or
@@ -25,6 +26,7 @@ import {
   WET_DRY_MS, CHILL_BITE_MS, CHILL_FLOOR,
   COUGH_WATER_MS, COUGH_WATER_PER_MIN, COUGH_CHILL_AFTER_MS, COUGH_CHILL_PER_MIN, COUGH_SMOKE_PER_MIN,
   COUGH_WATER_LINES, COUGH_CHILL_LINES, COUGH_SMOKE_LINES, COUGH_DUST_LINES,
+  FEVER_COUGH_PER_MIN, FEVER_COUGH_LINES,
 } from "./zone-data";
 
 // Heard as well as read: the one coughing, the room, and through the wall.
@@ -149,6 +151,7 @@ export function tick(z: ZoneDO, now: number): void {
     if (out) continue;
     // One cough a minute at most, whatever is causing it.
     if ((s.coughWaterUntil ?? 0) > now && chance(COUGH_WATER_PER_MIN)) cough(z, s, pick(COUGH_WATER_LINES));
+    else if (chance(FEVER_COUGH_PER_MIN * events.feverCoughs(z, s, now))) cough(z, s, pick(FEVER_COUGH_LINES));
     else if (smoky(z, s.roomId) && chance(COUGH_SMOKE_PER_MIN)) cough(z, s, pick(COUGH_SMOKE_LINES));
     else if (s.chilled && chance(COUGH_CHILL_PER_MIN)) cough(z, s, pick(COUGH_CHILL_LINES));
   }

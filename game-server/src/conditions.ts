@@ -14,8 +14,8 @@
 //            go thin and weak, and some die where nobody is looking, which
 //            puts bodies on the ground for everything that eats the dead. Ends
 //            when the herd has fallen below CONDITION_MURRAIN_ENDS of its limit.
-//            (Not the rat king's sickness: that is a cough among people in the
-//            fortress, cough.ts. This is the animals', out on the surface.)
+//            (Not the fever's cough: that is among people on a fevered
+//            ground, cough.ts. This is the animals', out on the surface.)
 //   HUNTED   players have been killing hard here: CONDITION_HUNTED_AT kills,
 //            fading by half every CONDITION_KILL_HALF_MS. Ends below
 //            CONDITION_HUNTED_CLEARS.

@@ -2836,7 +2836,7 @@ export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all w
 export const FEVER_BANDS = new Set(["den", "wood"]);  // the ground the fever sits over
 export const FEVER_RAT = "fever-rat";
 export const FEVER_RAT_HOME = "the-fever-graves";
-export const FEVER_RAT_HOLD_MS = 4 * 3_600_000;       // left alone this long, it goes back into the graves
+export const FEVER_RAT_HOLD_MS = 12 * 3_600_000;      // left alone this long, it goes back into the graves (rome, 2026-11-05: was 4 hours)
 // THE FEVER GOES FURTHER (rome, 2026-11-04): three graves now, the old
 // village's and one in each hamlet copied from it, and EACH HAS A FEVER OF ITS
 // OWN, on its own clock, with its own rat - so one, two or all three can be up
@@ -2848,6 +2848,23 @@ export const FEVER_RAT_HOLD_MS = 4 * 3_600_000;       // left alone this long, i
 // THE FORTRESS HAS ONE TOO (rome, 2026-11-04): its rat comes up out of the
 // Ossuary, the Catacomb or the Plague Trench, and its fever lies over the
 // inside and the open ground round it - not the deep, which is its own ground.
+// THE FEVER SETS YOU COUGHING (rome, 2026-11-05: the rat king's cough, given
+// to the fever instead). While a fever is on, whoever stands on its ground
+// coughs about once in four minutes, at the rate the king's air had; not
+// through the fever rat's grave-cloth, and not behind a gatehouse door. A cough
+// is loud and carries (cough.ts), so the fever brings the curious too.
+export const FEVER_COUGH_PER_MIN = 0.25;
+// ...not at full the moment the fever settles, nor gone the moment it lifts
+// (rome, 2026-11-05, as the king's cough did): it builds to FEVER_COUGH_PER_MIN
+// over the first FEVER_COUGH_RISE_MS and thins back to nothing over
+// FEVER_COUGH_FADE_MS after the rat is killed or goes back down.
+export const FEVER_COUGH_RISE_MS = 3 * 3_600_000;
+export const FEVER_COUGH_FADE_MS = 2 * 3_600_000;
+export const FEVER_COUGH_LINES = [
+  "The warm air off the graves catches in your chest, and you cough, hard, and it carries.",
+  "You cough before you can stop it, a dry hacking that will not let go of you.",
+  "Your chest tightens on the sweetish air and you cough, loud, over and over.",
+];
 export const FEVER_GRAVES: Record<string, { key: string; bands: string[]; rises?: string[]; rise?: string; keeper?: string[] }> = {
   "the-fever-graves": { key: "fever", bands: ["den", "wood"] },
   "the-strand-graves": { key: "fever-strand", bands: ["crossing"] },
@@ -7371,25 +7388,14 @@ export const COUGH_DUST_LINES = [
   "The dust comes down over you and you cough and cough in it, half blind.",
   "You get a mouthful of stone dust and cough it out, loud in the settling quiet.",
 ];
-// The omen while it lives (ratking.ts): a cough about every four minutes for
-// whoever is in the fortress, and now and then a sign.
-export const RAT_KING_COUGH_PER_MIN = 0.25;
+// The omen while it lives (ratking.ts): now and then a sign, for whoever is in
+// the fortress. (Its cough went to the fever, rome 2026-11-05: FEVER_COUGH_PER_MIN.)
 export const RAT_KING_OMEN_PER_MIN = 0.1;
-// The cough is not at full the moment he comes, nor gone the moment he dies
-// (rome, 2026-10-27): it builds to RAT_KING_COUGH_PER_MIN over the first hours
-// of his reign, and after he falls it thins back to nothing.
-export const RAT_KING_COUGH_RISE_MS = 3 * 3_600_000;
-export const RAT_KING_COUGH_FADE_MS = 2 * 3_600_000;
 // THE KEEPER MENTIONS IT, HE DOES NOT GO ON ABOUT IT (rome, 2026-10-24: he
 // was saying it every ten minutes on the omen's own rate). His own odds, and
 // once said, not again to that wanderer for RAT_KING_KEEPER_GAP_MS.
 export const RAT_KING_KEEPER_PER_MIN = 0.05;
 export const RAT_KING_KEEPER_GAP_MS = 30 * 60_000;
-export const RAT_KING_COUGH_LINES = [
-  "Something in the air down here catches in your chest, and you cough, hard, and it carries.",
-  "You cough before you can stop it, a dry hacking that goes on and echoes off the stone.",
-  "Your chest tightens and you cough, loud, and the dark around you gives it back.",
-];
 export const RAT_KING_OMEN_LINES = [
   "A rat runs past your feet in plain view, not hiding at all, going somewhere in a hurry.",
   "There is a dead rat here on its back, swollen, with the blood dried black at its mouth.",

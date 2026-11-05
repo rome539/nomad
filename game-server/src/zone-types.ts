@@ -298,6 +298,8 @@ export interface EventState {
   bands?: string[]; // WEATHER ONLY: the grounds it is over right now (none = the old all-over weather)
   since?: Record<string, number>; // RAIN: when it reached each ground, for how long the ground stays wet after
   moveAt?: number; // STORM: when it next rolls to drift onto the raining ground next door
+  onAt?: number; // THE FEVER: when it settled, for its cough building up
+  liftedAt?: number; // THE FEVER: when it lifted, for its cough fading out
 }
 
 export interface RotEntry {
