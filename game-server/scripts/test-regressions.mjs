@@ -3569,8 +3569,7 @@ try {
     const seen = new Set(); for (let i = 0; i < 200; i++) seen.add(eventAmbient(z, 'graves-x'));
     assert.ok([...seen].some((l) => /facing the graves|loose earth|breathing among the graves/.test(l)), 'the old village sounds of it');
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
-    assert.match(ev, /case "active": return feverrat\.rat\(z, FEVER_RAT_HOME\)\n\s+\? " The fever sits over the whole ground, on a wind off the fever graves/, 'the status line names the graves while it is up');
-    assert.match(ev, /The fever sits over the wood, on a wind off the old village's graves/);
+    assert.doesNotMatch(ev, /The fever sits over/, 'the room text never names a settled fever: the cough tells you (2026-11-06)');
     assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /feverrat\.keeper\(this, now\);/, 'the keeper is asked every beat');
   });
 

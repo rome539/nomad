@@ -859,15 +859,12 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       default: break;
     }
   }
-  // THE FORTRESS'S FEVER (2026-11-04), in and out, ahead of the keep's own: a
-  // bad bandage has to say why, here as on the hamlets' ground.
+  // THE FORTRESS'S FEVER (2026-11-04), in and out, ahead of the keep's own: the
+  // warning only. Once it has settled the cough tells you (cough.ts).
   const fortBand = z.bandOf(roomId);
   if (fortBand === "upper" || fortBand === "gate" || fortBand === "out") {
     switch (feverPhase(z, fortBand)) {
       case "telegraph": return " A warm breath has got into the stone from somewhere below, off the old burials, and it smells faintly of the pit.";
-      case "active": return feverrat.rat(z, "the-fortress")
-        ? " The fever sits over the whole fortress, on a breath off its dead, where something has broken up out of them. Sleep will not take here, and nothing you eat or bind does you any good."
-        : " The fever sits over the whole fortress. Sleep will not take here, and nothing you eat or bind does you any good.";
       default: break;
     }
   }
@@ -1006,11 +1003,9 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       case "aftermath": return " The mast is picked over now — the floor goes back to being the floor.";
       default: break;
     }
-    // The fever reaches the wood too (FEVER_BANDS), and cuts mending as hard
-    // here as in the village, so it says so here as it does there.
+    // The fever reaches the wood too (FEVER_BANDS): the warning only, as elsewhere.
     switch (feverPhase(z, "wood")) {
       case "telegraph": return " The wind through the trees is coming off the old village's graves, warm and wrong.";
-      case "active": return " The fever sits over the wood, on a wind off the old village's graves. Sleep will not take here, and nothing you eat or bind does you any good.";
       default: break;
     }
   }
@@ -1020,14 +1015,11 @@ export function skyClause(z: ZoneDO, roomId: string): string {
       case "active": return " There are dogs in among the houses, working the ground in a body.";
       default: break;
     }
-    // The one of the five with teeth in it: rest, food and dressings are all
-    // cut to FEVER_MEND_MULT on this ground and every one of them says nothing
-    // about why. Without this line a bad bandage reads as a bug.
+    // The one of the five with teeth in it: rest, food and dressings are all cut
+    // to FEVER_MEND_MULT on this ground. Once it has settled the room text says
+    // nothing (rome, 2026-11-06): the cough is what tells you (cough.ts).
     switch (feverPhase(z, "den")) {
       case "telegraph": return " The wind is off the graves, warm and wrong, and this ground smells faintly of the pit.";
-      case "active": return feverrat.rat(z, FEVER_RAT_HOME)
-        ? " The fever sits over the whole ground, on a wind off the fever graves, where the earth has been broken open from below. Sleep will not take here, and nothing you eat or bind does you any good."
-        : " The fever sits over the whole ground. Sleep will not take here, and nothing you eat or bind does you any good.";
       default: break;
     }
   }
@@ -1035,9 +1027,6 @@ export function skyClause(z: ZoneDO, roomId: string): string {
   if (region === "crossing" || region === "mountain") {
     switch (feverPhase(z, region)) {
       case "telegraph": return " The wind is off the old hamlet's graves, warm and wrong, and this ground smells faintly of the pit.";
-      case "active": return feverrat.rat(z, feverGravesOf(region))
-        ? " The fever sits over the whole ground, on a wind off the old hamlet's graves, where the earth has been broken open from below. Sleep will not take here, and nothing you eat or bind does you any good."
-        : " The fever sits over the whole ground. Sleep will not take here, and nothing you eat or bind does you any good.";
       default: break;
     }
   }
