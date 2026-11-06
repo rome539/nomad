@@ -16,11 +16,11 @@ import * as beasts from "./beasts";
 import { ate, creatureMoves, hungers, mountainHomes, preyFalls } from "./ai";
 import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
-  MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
+  DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS,
 } from "./zone-data";
 
-export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number }
+export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number; moveAt?: number; kept?: boolean }
 export interface GroupsState { at: number; flownAt?: number; packs: Record<string, Group>; gone: Record<string, number>; tally?: beasts.Tally; lastTally?: beasts.Tally }
 export interface Plan { home: string; group?: string; lone?: boolean }
 
@@ -129,7 +129,9 @@ export function tick(z: ZoneDO, now: number): void {
     } else if (MOUNTAIN_GROUPS.has(line) && !c.lone) {
       if (!undecided && !c.target) undecided = c;
     } else {
-      moveIfLean(z, [c], line, now, c.leanSince, (t) => { c.leanSince = t; }, (home) => { c.home = home; });
+      const move = (home: string): void => { c.home = home; c.moveAt = undefined; c.kept = undefined; };
+      moveIfLean(z, [c], line, now, c.leanSince, (t) => { c.leanSince = t; }, move);
+      moveIfDue(z, [c], line, now, c, move);
     }
   }
   for (const [id, g] of Object.entries(state.packs)) {
@@ -143,10 +145,14 @@ export function tick(z: ZoneDO, now: number): void {
       delete state.packs[id];
     } else {
       for (const c of list) c.home = g.home;
-      moveIfLean(z, list, g.line, now, g.leanSince, (t) => { g.leanSince = t; }, (home) => {
+      const move = (home: string): void => {
         g.home = home;
+        g.moveAt = undefined;
+        g.kept = undefined;
         for (const c of list) c.home = home;
-      });
+      };
+      moveIfLean(z, list, g.line, now, g.leanSince, (t) => { g.leanSince = t; }, move);
+      moveIfDue(z, list, g.line, now, g, move);
     }
   }
   // Animals alive from before there were groups take their place one at a time,
@@ -155,6 +161,28 @@ export function tick(z: ZoneDO, now: number): void {
     const p = plan(z, lineOf(z, undecided.templateId), now);
     if (p) join(undecided, p);
   }
+}
+
+/** Time up on this home: draws a new one, once a well-fed one has had its extra game day. */
+function moveIfDue(
+  z: ZoneDO, animals: Creature[], line: string, now: number,
+  clock: { moveAt?: number; kept?: boolean }, move: (home: string) => void,
+): void {
+  if (clock.moveAt === undefined) {
+    clock.moveAt = now + randInt(HOME_MIN_DAYS * DAY_CYCLE_MS, HOME_MAX_DAYS * DAY_CYCLE_MS);
+    return;
+  }
+  if (now < clock.moveAt || animals.some((c) => c.target || c.heldBy || c.holding)) return;
+  const hungry = animals.filter((c) => hungers(c.templateId) && c.hunger >= HUNGRY_AT).length;
+  if (!clock.kept && hungry * 2 <= animals.length) {
+    clock.kept = true;
+    clock.moveAt = now + HOME_FED_EXTRA_DAYS * DAY_CYCLE_MS;
+    return;
+  }
+  const home = pickHome(z, line, now, animals[0].home ?? animals[0].roomId);
+  if (!home) return;
+  move(home);
+  beasts.note(z, "moved", now);
 }
 
 function moveIfLean(
@@ -218,7 +246,7 @@ export async function holdGround(
   if (onGround && (rival.drivenOff = (rival.drivenOff ?? 0) + 1) >= GROUND_DRIVEN_LEAVES) {
     rival.drivenOff = undefined;
     const home = pickHome(z, lineOf(z, rival.templateId), now, group!.home);
-    if (home) rival.home = home;
+    if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; }
   }
   await flee(rival);
   // The chase: a stolen meal holds it here; otherwise it runs after, a beat behind.

@@ -2,7 +2,7 @@
 // beat on a private copy of the local D1, with no players and a false clock, and
 // prints one region's animals at intervals. See living-regions.md at the repo root.
 //   node --no-warnings scripts/sim-mountain.mjs old|new|hunted [hours]
-// old = with the mountain's new rules switched off, new = as written, hunted = new
+// old = with every rule from living-regions.md switched off, new = as written, hunted = new
 // with two wanderers' worth of kills and a wiped pack every 12 hours. Each run starts
 // from a freshly placed world, not the live one. To run several at once just start
 // several: each takes its own copy of the database.
@@ -35,6 +35,9 @@ z.persist=async()=>{}; z.ensureAlarm=async()=>{};
 if(scenario==='old'){ // what shipped before all of this
   zd.MOUNTAIN_ROAMERS.clear(); zd.MOUNTAIN_GROUPS.clear(); zd.MOUNTAIN_FLIERS.clear(); zd.GROUND_HOLDERS.clear();
   for(const w of ['hill-wolf','lead-wolf','grey-wolf','dire-wolf']) zd.PREYS_ON.get(w)?.delete('rat');
+  for(const [h,bs] of [['lynx',['scarp-raven','mountain-chough','hill-eagle','eagle-owl','bone-breaker']],['glutton',['scarp-raven','mountain-chough','bone-breaker']],['lead-wolf',['scarp-raven','mountain-chough','bone-breaker']],['hill-wolf',['mountain-chough']],['wildcat',['mountain-chough','scarp-raven']],['the-tom',['mountain-chough','scarp-raven']]]) for(const b of bs) zd.PREYS_ON.get(h)?.delete(b);
+  zd.PACK_PREY.get('hill-wolf')?.delete('scarp-raven'); zd.PACK_PREY.get('hill-wolf')?.delete('bone-breaker');
+  for(const b of ['scarp-raven','the-old-raven','grey-heron','bittern','tawny-owl','great-gull','black-backed-gull','hill-eagle','eagle-owl','bone-breaker','the-bone-dropper','eyrie-holder','carrion-vulture','brooding-vulture','great-vulture']) zd.SMALL_PREY.delete(b);
 }
 await z.init('door');
 const W=z.world; const mt=(r)=>z.regionOf(r)==='mountain';

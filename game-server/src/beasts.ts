@@ -8,8 +8,8 @@ import { GROUND_OF } from "./mountain-ground";
 import { MOUNTAIN_ROAMERS } from "./zone-data";
 
 const DAY_MS = 24 * 3_600_000;
-export interface Tally { since: number; flights: number; chases: number; caught: number; stolen: number; kills: Record<string, Record<string, number>> }
-type Event = "flights" | "chases" | "caught" | "stolen";
+export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Record<string, Record<string, number>> }
+type Event = "moved" | "flights" | "chases" | "caught" | "stolen";
 
 const SHOWN = [
   "rat", "mountain-hare", "ptarmigan", "red-hind", "feral-goat", "hill-wolf", "hill-fox", "wildcat", "ermine", "snow-fox",
@@ -28,7 +28,8 @@ function tally(z: ZoneDO, now: number): Tally {
 }
 
 export function note(z: ZoneDO, what: Event, now = Date.now()): void {
-  tally(z, now)[what]++;
+  const t = tally(z, now);
+  t[what] = (t[what] ?? 0) + 1;
 }
 
 /** A mountain animal has died. `by` is what killed it: a creature's template, or "wanderers". */
@@ -83,7 +84,7 @@ export function lines(z: ZoneDO, now: number): string[] {
   out.push("", `Birds: ${up} in the air now, most in one room ${busiest ? `${busiest[1]} at ${roomName(busiest[0])}` : "none"}`);
 
   const t = tally(z, now);
-  const told = (b: Tally) => `${b.flights} flights, ${b.chases} chases, ${b.caught} small hunters caught, ${b.stolen} kills stolen`;
+  const told = (b: Tally) => `${b.moved ?? 0} homes given up, ${b.flights} flights, ${b.chases} chases, ${b.caught} small hunters caught, ${b.stolen} kills stolen`;
   out.push("", `In ${hoursAgo(now, t.since)}: ${told(t)}`);
   if (z.groups.lastTally) out.push(`The 24 hours before: ${told(z.groups.lastTally)}`);
   const killed = Object.entries(t.kills)

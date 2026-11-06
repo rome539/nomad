@@ -2395,6 +2395,12 @@ export const FLIGHT_CHECK_MS = 10_000;
 // hare and the ptarmigan will only settle with grazing inside ROUND_RANGE of home.
 export const SETTLES_BY_PREY = new Set(["lynx"]);
 export const SETTLES_BY_GRAZING = new Set(["mountain-hare", "ptarmigan"]);
+// NOTHING STAYS FOR GOOD (rome, 2026-11-06). A mountain animal or group holds a home
+// for 2-5 game days (DAY_CYCLE_MS each), then draws a new one. One that is well fed
+// when its time comes gets a single game day more, so good ground is worth holding.
+export const HOME_MIN_DAYS = 2;
+export const HOME_MAX_DAYS = 5;
+export const HOME_FED_EXTRA_DAYS = 1;
 export const GROUP_SWEEP_MS = 60_000;         // how often the groups are looked over
 export const GROUP_LEAN_MS = 2 * 3_600_000;   // hungry this long, and it gives up the ground
 export const GROUP_GONE_MS = 6 * 3_600_000;   // nothing new settles on ground where a group was broken

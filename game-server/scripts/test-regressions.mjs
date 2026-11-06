@@ -4393,6 +4393,41 @@ try {
     groupTick(z5, now); groupTick(z5, now + 3 * HOUR);
     assert.equal(fed[0].home, 'm15', 'a fed group stays put');
 
+    // Nothing stays for good: 2-5 game days of 4 hours, a well-fed one a game day more.
+    const GAME = 4 * HOUR;
+    const z7 = mk();
+    z7.groups.packs.q = { line: 'hill-wolf', home: 'm15', size: 4, peak: 3 };
+    const stay = ['x', 'y', 'w'].map((id) => wolf(z7, id, { group: 'q', home: 'm15', hunger: 80 }));
+    groupTick(z7, now);
+    const due = z7.groups.packs.q.moveAt;
+    assert.ok(due >= now + 2 * GAME && due <= now + 5 * GAME, 'the clock is two to five game days');
+    z7.groups.packs.q.leanSince = undefined;
+    for (const c of stay) c.hunger = 10;
+    groupTick(z7, due - 60_000);
+    assert.equal(stay[0].home, 'm15', 'not before its time');
+    groupTick(z7, due);
+    assert.equal(stay[0].home, 'm15', 'a well-fed group gets more');
+    assert.equal(z7.groups.packs.q.moveAt, due + GAME, 'one game day more');
+    stay[0].target = 'someone';
+    groupTick(z7, due + GAME);
+    assert.equal(stay[0].home, 'm15', 'nothing leaves in a fight');
+    stay[0].target = null;
+    groupTick(z7, due + GAME + 60_000);
+    const gone2 = stay[0].home;
+    assert.notEqual(gone2, 'm15', 'then it goes, fed or not');
+    assert.ok(Math.abs(Number(gone2.slice(1)) - 15) > 3, 'and not next door');
+    assert.ok(stay.every((c) => c.home === gone2), 'all of it together');
+    assert.equal(z7.groups.packs.q.moveAt, undefined, 'and starts a fresh clock');
+    assert.equal(z7.groups.tally.moved, 1, 'and the keeper\'s count has it');
+    const z8 = mk();
+    const hungryOne = wolf(z8, 'l', { lone: true, hunger: 10 });
+    groupTick(z8, now);
+    assert.ok(hungryOne.moveAt >= now + 2 * GAME, 'a loner keeps its own clock');
+    const dueL = hungryOne.moveAt;
+    hungryOne.kept = true;
+    groupTick(z8, dueL);
+    assert.notEqual(hungryOne.home, 'm20', 'and goes when it is up');
+
     // Animals from before groups take their place one at a time; a loner stays out of it.
     const z6 = mk();
     const olds = ['o1', 'o2', 'o3'].map((id) => wolf(z6, id));
@@ -4663,13 +4698,13 @@ try {
     assert.match(read, /hill wolf: 4 of 2/, 'alive against the limit, and it can read over');
     assert.match(read, /scarp raven: 3 of 0/, 'the wood raven is not the mountain\'s, in the count or the limit');
     assert.match(read, /Birds: 1 in the air now, most in one room 2 at The First Crag/);
-    assert.match(read, /2 flights, 1 chases, 1 small hunters caught, 1 kills stolen/);
+    assert.match(read, /0 homes given up, 2 flights, 1 chases, 1 small hunters caught, 1 kills stolen/);
     assert.match(read, /scarp raven 1: lynx 1/, 'who killed what, and not off the mountain');
     assert.match(read, /hill wolf 1: wanderers 1/, 'wanderers count too');
     beasts.note(z, 'flights', now + DAY);
     const later = beasts.lines(z, now + DAY).join('\n');
-    assert.match(later, /In the last hour: 1 flights/, 'a new day starts fresh');
-    assert.match(later, /The 24 hours before: 2 flights/, 'and keeps the day before');
+    assert.match(later, /In the last hour: 0 homes given up, 1 flights/, 'a new day starts fresh');
+    assert.match(later, /The 24 hours before: 0 homes given up, 2 flights/, 'and keeps the day before');
     const vs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.match(vs, /export function cmdBeasts\(z: ZoneDO, session: Session\): void \{\n\s*if \(session\.pubkey !== CENSUS_PUBKEY\)/, 'only the keeper reads it');
     const census = vs.slice(vs.indexOf('export async function cmdCensus'));

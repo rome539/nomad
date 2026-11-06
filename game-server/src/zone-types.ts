@@ -232,6 +232,8 @@ export interface Creature {
   group?: string;     // the group it lives in (groups.ts); shares that group's home
   lone?: boolean;     // a group line's animal that goes alone, by chance or as the last of its group
   drivenOff?: number; // how many times a pack has run this small hunter off (groups.holdGround)
+  moveAt?: number;    // a lone mountain animal: when it gives up this home (groups.ts)
+  kept?: boolean;     // ...it has had its one extra game day for being well fed
   leanSince?: number; // a lone mountain animal: hungry since this moment (groups.ts)
   roundFor?: string;  // the feeding ground a herd animal is out on this hour (herds.roundGround)
   roundAt?: number;   // when that answer is worth asking again

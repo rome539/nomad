@@ -2,11 +2,11 @@
 
 How a region's animals stop being fixed furniture and start deciding where to live. The mountain is the first region built this way (November 2026). Use this as the standard for the others.
 
-**Status:** live on the mountain since November 6, 2026. Its numbers are first settings from simulation; update this file when real play changes them.
+**Status:** live on the mountain since November 6, 2026. The numbers are first settings from simulation; update this file when real play changes them.
 
 ## The goal
 
-A player who comes back finds the region changed, because of what other players did or because the animals moved on their own. Wipe out a wolf pack and the next one lives somewhere else. A pack can move into a hamlet because the food is easy. The world is shared and persistent, so nothing rerolls at login; it changes because animals die, get born and go hungry.
+A player who comes back finds the region changed, because of what other players did or because the animals moved on their own. Wipe out a wolf pack and the next one lives somewhere else. A pack can move into a hamlet because the food is easy. The world is shared and persistent, so nothing rerolls at login; it changes because animals die, get born, go hungry, get driven off and outstay their homes.
 
 ## The rules
 
@@ -17,10 +17,11 @@ A player who comes back finds the region changed, because of what other players 
 5. **Animals that live in company do, and the rest live alone.** A group shares one home and new animals join while it has room. A share of each group line goes without a group.
 6. **A broken group is finished.** Down to one or none, it ends. A survivor goes on as a loner where it stands, and nothing new settles near that ground for 6 hours.
 7. **Hunger moves them.** A group where more than half have stayed hungry for 2 hours, or a hungry loner, picks a new home and walks there. Hunger itself is never tuned down: starving is the world working.
-8. **Packs hold their ground.** A pack wolf goes for smaller hunters on its ground: mostly a chase, sometimes a kill. Twice run off, the small one draws a new home. A pack wolf takes any fresh kill it finds a smaller hunter on. A lone wolf only chases one off a meal, kills nothing and drives nothing from its home.
-9. **Birds walk day to day and fly for food.** Hungry with nothing within 3 rooms, a bird flies to the nearest food within 25 rooms, off the map while in the air. It stays until fed, up to 30 minutes, then flies home. It can't take off in a fight, while targeted, held, stunned, asleep or badly hurt, so flying is never an escape.
-
-10. **Nothing is untouchable except by choice.** Bigger birds have hunters too: on the mountain lynx take any bird, gluttons and lead wolves take ravens, choughs and bone-breakers, wildcats and hill wolves take choughs, and two hill wolves take a raven or bone-breaker. A hunter is given what it could realistically win. A flying bird is half as easy to catch, and flying birds never trigger the boom event.
+8. **Nothing stays for good.** A home lasts 2-5 game days (8-20 real hours), then the animal or whole group draws a new one, away from the old ground. One that's well fed when its time comes gets one game day more. Nothing leaves in a fight.
+9. **Packs hold their ground.** A pack wolf goes for smaller hunters on its ground: mostly a chase, sometimes a kill. Twice run off, the small one draws a new home. A pack wolf takes any fresh kill it finds a smaller hunter on. A lone wolf only chases one off a meal, kills nothing and drives nothing from its home.
+10. **Birds walk day to day and fly for food.** Hungry with nothing within 3 rooms, a bird flies to the nearest food within 25 rooms, off the map while in the air. It stays until fed, up to 30 minutes, then flies home. It can't take off in a fight, while targeted, held, stunned, asleep or badly hurt, so flying is never an escape.
+11. **Nothing is untouchable except by choice.** Bigger birds have hunters too: on the mountain lynx take any bird, gluttons and lead wolves take ravens, choughs and bone-breakers, wildcats and hill wolves take choughs, and two hill wolves take a raven or bone-breaker. A hunter is given what it could realistically win. A flying bird is half as easy to catch, and flying birds never trigger the boom event.
+12. **Every bird is a small meal.** Mostly feather and hollow bone, so even a big one takes only 25 off a hunter's hunger, the same as eating its body. A hind or goat still fills one. This list (`SMALL_PREY`) covers the whole game, not just the mountain.
 
 ## What never moves
 
@@ -34,6 +35,7 @@ Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a n
 | Goats, hinds, choughs, ptarmigan | 4-8, 3-6, 3-6, 3-6 / 1 in 10, ptarmigan about 1 in 7 | `MOUNTAIN_GROUPS` |
 | Nearest a wolf settles to a gate | 10 steps | `MOUNTAIN_GROUPS` |
 | Hungry this long, then moves | 2 hours | `GROUP_LEAN_MS` |
+| A home lasts / extra if well fed | 2-5 game days / 1 game day (a game day is 4 real hours) | `HOME_MIN_DAYS`, `HOME_MAX_DAYS`, `HOME_FED_EXTRA_DAYS` |
 | Broken ground stays empty | 6 hours | `GROUP_GONE_MS` |
 | Wolf goes for a small hunter | 35% a turn, then 10 minutes' rest | `GROUND_CHASE_ODDS`, `RIVAL_REST_MS` |
 | Chase ends in a kill | 10% | `GROUND_KILL_ODDS` |
@@ -66,7 +68,7 @@ These are all written for the mountain by name. **The first region after it shou
 5. **Decide what food the birds fly to**, and leave vultures and anything with its own feeding rule alone.
 6. **Add a regression check for each rule**, and confirm it fails when the rule is broken. Every room in the region must have a kind of ground, or the test fails.
 7. **Simulate before shipping**: see below.
-8. **Ship only when rome says "ship".** Animals already alive stay where they are, except group animals sorting themselves one per minute. No reseed.
+8. **Ship only when rome says "ship".** Animals already alive keep their homes at first, except group animals sorting themselves one per minute; each home's time limit starts then, so those moves begin about 8 hours later. No reseed.
 
 ## Simulating
 
@@ -77,7 +79,7 @@ node --no-warnings scripts/sim-mountain.mjs new 48
 node --no-warnings scripts/sim-mountain.mjs hunted 48
 ```
 
-It runs the real game engine on a private copy of the local database, with no players and a false clock. Run the old rules once and the new rules at least twice, because each run differs. 48 hours takes about 10 minutes.
+It runs the real game engine on a private copy of the local database, with no players and a false clock. Run the old rules once and the new rules at least twice, because each run differs. 48 hours takes about 4-6 minutes. `old` switches off everything in this standard, so it shows the world as it was before the mountain's rules.
 
 Read it for: counts against the region's limit, packs and loners, flights, meals, who killed what, and errors. **Hunger is not a score.** Animals are not meant to be full, and nearly every animal reads as hungry under the old rules too. Never judge a change by how hungry animals are, or tune to make them less so. Then ask:
 
@@ -91,7 +93,7 @@ Its limits: it starts from a freshly placed world, not the live one; its "player
 
 ## Checking it live
 
-`beasts` (keeper's key only, kept out of `census`) shows the mountain as it stands: wolf packs and where they live, loners, wolves in the hamlet, each animal alive against its limit, birds in the air and the busiest bird room, and in the last 24 hours flights, chases, small hunters caught, kills stolen and who killed what. Hunger is left out on purpose. The next region should add its own section here, not a new command.
+`beasts` (keeper's key only, kept out of `census`) shows the mountain as it stands: wolf packs and where they live, loners, wolves in the hamlet, each animal alive against its limit, birds in the air and the busiest bird room, and in the last 24 hours homes given up, flights, chases, small hunters caught, kills stolen and who killed what. Hunger is left out on purpose. The next region should add its own section here, not a new command.
 
 ## What the mountain taught us
 
@@ -99,5 +101,7 @@ Its limits: it starts from a freshly placed world, not the live one; its "player
 - **Check the wait against the work.** Birds were given 4 minutes at a meal that takes about 15 on average to find. At 30 minutes, ravens, bone-breakers and owls got about 50-70% more meals.
 - **Moving one animal moves its hunting.** Limiting lynx to crag and stone took them off the hinds and put them on the goats.
 - **The old world already had too many hunters for its prey.** Hares and ptarmigan fall by half or more under the old rules too. Always run the old rules to see what's new.
+- **More hunters can mean more prey.** Hares and ptarmigan did better under the new rules because wolves switched to rats: about 107 fewer of them killed by wolves in 48 hours, and about 129 more rats dead. Count births, arrivals and deaths before believing or dismissing a result like that; here they added up exactly.
+- **Rats over their limit are not a bug.** Each new rat has a 5% chance of being a brood mother, whose pups don't count against the limit. The next region should check this before chasing it.
 - **A six-hour reading can mislead.** It looked like a crash; by 48 hours the prey had levelled off.
 - **Small lines are fragile.** The mountain has only 4-7 of each small hunter, so a pack's kills show quickly.
