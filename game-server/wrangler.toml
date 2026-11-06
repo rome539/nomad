@@ -63,11 +63,12 @@ directory = "./public"
 enabled = true
 head_sampling_rate = 1
 
-# Keep application diagnostics, but do not retain automatic request-URL logs
-# (socket URLs contain short-lived authentication tickets).
+# Request logs on, so a restart of the world shows its reason (the outcome of the
+# call that died). Cloudflare stores socket URLs with the ticket value redacted,
+# and a ticket is single-use and dies in 90 seconds either way.
 [observability.logs]
 enabled = true
-invocation_logs = false
+invocation_logs = true
 
 # Secrets (do NOT put these here — use `wrangler secret put` or .dev.vars):
 #   JWT_SECRET   - random string for signing session tokens
