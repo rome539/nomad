@@ -36,7 +36,7 @@ import type { Creature } from "./zone-types";
 import { chance, randInt } from "./rng";
 import { isHerd } from "./herds";
 import {
-  PREYS_ON, OUTDOOR_REGIONS,
+  PREYS_ON, OUTDOOR_REGIONS, MOUNTAIN_FLIERS,
   CONDITION_STEP_MS, CONDITION_BOOM_AFTER_MS, CONDITION_BOOM_ENDS, CONDITION_MURRAIN_LINES,
   CONDITION_MURRAIN_AFTER_MS, CONDITION_MURRAIN_ENDS, CONDITION_MURRAIN_HP, CONDITION_MURRAIN_DEATH_PER_H,
   CONDITION_HUNTED_AT, CONDITION_HUNTED_CLEARS, CONDITION_KILL_HALF_MS, CONDITION_AMBIENT_ODDS,
@@ -131,7 +131,8 @@ export function tick(z: ZoneDO, now: number, silent: boolean): void {
   const prey = new Set<string>();
   for (const eats of PREYS_ON.values()) for (const p of eats) prey.add(p);
   for (const [key, k] of caps) {
-    const [line] = key.split("@");
+    const [line, band] = key.split("@");
+    if (band === "mountain" && MOUNTAIN_FLIERS.has(line)) continue; // the mountain's flying birds are no herd to boom
     if (!isHerd(world, line) || PREYS_ON.has(line) || !prey.has(line) || k < CONDITION_BOOM_MIN_HERD) continue;
     const n = standing.get(key)?.length ?? 0;
     const fk = `full:${key}`;

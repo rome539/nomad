@@ -229,6 +229,10 @@ export interface Creature {
   huntFor?: string;     // the room it is walking to because its own ground has nothing left to eat (ai.huntGround)
   forageFor?: string; // a bear's walk to its own feeding ground (ai.forageErrand)
   forageAt?: number;  // when that answer is worth asking again
+  group?: string;     // the group it lives in (groups.ts); shares that group's home
+  lone?: boolean;     // a group line's animal that goes alone, by chance or as the last of its group
+  drivenOff?: number; // how many times a pack has run this small hunter off (groups.holdGround)
+  leanSince?: number; // a lone mountain animal: hungry since this moment (groups.ts)
   roundFor?: string;  // the feeding ground a herd animal is out on this hour (herds.roundGround)
   roundAt?: number;   // when that answer is worth asking again
   huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)
@@ -249,6 +253,9 @@ export interface Creature {
   nextAirAt?: number;     // ...and the soonest it may go up again
   // THE PASSAGE (ai.drakePassage). The air ABOVE is a fight; this is the air
   // ACROSS — the summit's animal off its mountain entirely, hunting the world.
+  flightTo?: string;      // a mountain bird in the air: the room it comes down in (flight.ts)
+  awayUntil?: number;     // ...down at a meal, away from home: when it gives up and flies back
+  flightRestUntil?: number; // ...it came home hungry: no new flight before this
   aloft?: number;      // ms it comes back down. While this is set the creature is OFF THE MAP: creaturesInRoom skips it, so no room holds it and nothing can reach it
   flightPlan?: string[]; // the bands it crosses, out and home again (the route is a line because the world is one)
   flightIdx?: number;    // how far along that line it is
@@ -349,6 +356,7 @@ export interface SimState {
   conditions?: Record<string, { kind: "boom" | "murrain" | "hunted" | "thick"; line?: string; since: number }>; // region -> what is going on there (conditions.ts)
   condTrack?: Record<string, number>; // the conditions' clocks: recent kills, full-since, rest-until
   herds?: Record<string, number>; // "line@region" -> part of a body owed, and "_at" -> the herds' clock (herds.ts)
+  groups?: import("./groups").GroupsState; // the mountain's groups and the ground they lost (groups.ts)
   openDoors: string[]; // "roomId:dir" unlocked for everyone, until the boss returns
   doorCloseAt?: Record<string, number>; // "roomId:dir" -> ms epoch a timed door re-seals (the deep door: a heart buys a window, not a thoroughfare)
   fenceOut?: Record<string, number>;

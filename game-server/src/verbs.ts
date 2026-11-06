@@ -1,3 +1,4 @@
+import * as beasts from "./beasts";
 import * as chronicle from "./chronicle";
 import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
@@ -2844,6 +2845,12 @@ export async function recordCensus(z: ZoneDO, now: number): Promise<void> {
   for (const snap of q.snaps) if (snap.at - lastSaved >= CENSUS_SNAP_MS || !hist.length) hist.push(snap);
   q.snaps = [];
   await z.saveCensusHistory(hist.slice(-CENSUS_KEEP));
+}
+
+// The mountain's own count, behind the census's key and kept out of it (beasts.ts).
+export function cmdBeasts(z: ZoneDO, session: Session): void {
+  if (session.pubkey !== CENSUS_PUBKEY) return z.send(session, "The deep keeps its own count.");
+  z.send(session, beasts.lines(z, Date.now()).join("\n"));
 }
 
 export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {

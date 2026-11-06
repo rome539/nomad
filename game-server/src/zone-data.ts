@@ -1028,6 +1028,11 @@ export const SMALL_PREY = new Set([
   "rat", "fleet-rat", "albino-rat", "brood-rat",                  // the rats
   "mountain-hare", "snow-hare",                                   // the hares
   "ptarmigan", "mountain-chough", "oystercatcher", "gibbet-crow", // the small birds
+  // ...and every other bird (rome, 2026-11-06): mostly feather and hollow bone, so
+  // even a big one does not fill a hunter the way a hind does.
+  "scarp-raven", "the-old-raven", "grey-heron", "bittern", "tawny-owl", "great-gull", "black-backed-gull",
+  "hill-eagle", "eagle-owl", "bone-breaker", "the-bone-dropper", "eyrie-holder",
+  "carrion-vulture", "brooding-vulture", "great-vulture",
   "hedgehog", "ermine",                                           // the small biters
   "gill-adder", "fen-viper", "stone-adder",                       // the snakes
   "wrack-crab",                                                   // the little crab
@@ -2339,6 +2344,60 @@ export const THIEVES = new Set([
 // now keep the homes they woke at, and each re-roll happens when one dies and
 // the next arrives. Animals do not relocate because a constant changed.
 export const ROAMING_DENS = new Set(["masterless-dog", "footpad", "roe-deer", "grey-wolf"]);
+// THE MOUNTAIN TAKES FRESH GROUND (rome, 2026-11-06, the trial of random homes).
+// A newborn or stray of these lines takes a room of the mountain at random, food
+// tipping the odds (groups.ts), no further out than the line's own spawn rows reach
+// and no nearer a gate unless MOUNTAIN_GROUPS says, so the count and the height stay
+// as they were and only the address moves.
+// Left out on purpose: the rat (the Shieling hamlet is its ground, the fever
+// rat's), the fold's animals, anything on a post, a nest or a named lair, the
+// rooted, the carrion birds, and the bosses.
+export const MOUNTAIN_ROAMERS = new Set([
+  "feral-goat", "red-hind", "hill-fox", "mountain-hare", "wildcat", "ptarmigan", "ermine", "eagle-owl",
+  "scarp-raven", "lynx", "hill-eagle", "hill-wolf", "bone-breaker", "mountain-chough", "snow-fox", "glutton",
+]);
+
+// WHO LIVES IN COMPANY ON THE MOUNTAIN (rome, 2026-11-06). Each of these lines
+// settles as groups sharing one home ground (groups.ts): `min`..`max` to a group,
+// and `lone` the share that go without one. `near` lets a line settle closer to a
+// gate than its own rows reach. The hares, cats, foxes, owls, gluttons, ravens,
+// eagles and bone-breakers are not here because they live alone.
+export const MOUNTAIN_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
+  ["hill-wolf", { min: 3, max: 5, lone: 0.2, near: 10 }],
+  ["feral-goat", { min: 4, max: 8, lone: 0.1 }],
+  ["red-hind", { min: 3, max: 6, lone: 0.1 }],
+  ["mountain-chough", { min: 3, max: 6, lone: 0.1 }],
+  ["ptarmigan", { min: 3, max: 6, lone: 0.15 }],
+]);
+// A WOLF PACK HOLDS ITS GROUND (rome, 2026-11-06). A pack wolf that finds one of
+// these smaller hunters on its ground goes for it. Mostly the small one runs and
+// stays off the room for RIVAL_AVOID_MS; run off GROUND_DRIVEN_LEAVES times, it
+// gives up its home and draws a new one; GROUND_KILL_ODDS of the time it is caught.
+// Either way a pack wolf takes any fresh kill it finds it on, and so does a lone
+// wolf, which holds no ground and only chases it off the meal.
+export const GROUND_HOLDERS = new Set(["hill-wolf"]);
+export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox"]);
+export const GROUND_CHASE_ODDS = 0.35;
+export const GROUND_KILL_ODDS = 0.1;
+export const GROUND_DRIVEN_LEAVES = 2;
+// THE MOUNTAIN'S BIRDS FLY OUT TO FEED (rome, 2026-11-06). They live on foot like
+// anything else; when hungry with nothing near, one takes off and is off the map
+// until it lands by the nearest food within FLIGHT_RANGE rooms (flight.ts).
+export const MOUNTAIN_FLIERS = new Set(["hill-eagle", "eagle-owl", "scarp-raven", "mountain-chough", "bone-breaker"]);
+export const BIRD_CATCH_MULT = 0.5; // a flying bird is half as easy to catch on the mountain (ai.catchMult)
+export const FLIGHT_RANGE = 25;
+export const FLIGHT_MS_PER_ROOM = 5_000;
+export const FLIGHT_MIN_MS = 15_000;
+export const FLIGHT_STAY_MS = 30 * 60_000;   // it stays down until fed, up to this: scavenging takes about 15 minutes (FORAGE_FIND_MS)
+export const FLIGHT_REST_MS = 20 * 60_000;   // home hungry: the rest before it tries again
+export const FLIGHT_CHECK_MS = 10_000;
+// The lynx has no wings, so it will only settle where living prey is close. The
+// hare and the ptarmigan will only settle with grazing inside ROUND_RANGE of home.
+export const SETTLES_BY_PREY = new Set(["lynx"]);
+export const SETTLES_BY_GRAZING = new Set(["mountain-hare", "ptarmigan"]);
+export const GROUP_SWEEP_MS = 60_000;         // how often the groups are looked over
+export const GROUP_LEAN_MS = 2 * 3_600_000;   // hungry this long, and it gives up the ground
+export const GROUP_GONE_MS = 6 * 3_600_000;   // nothing new settles on ground where a group was broken
 
 // WAKING (rome, 2026-11-02). A fresh wanderer, and the dead, wake at a GATE
 // (any one of the world's gates, each one slot) or anywhere out on the ROAD
@@ -3920,6 +3979,12 @@ export const RIDDLES: { q: string; a: string[] }[] = [
   { q: "I rise red once in thirteen moons. What am I?", a: ["moon", "blood moon", "the moon"] },
   { q: "I fall and I am not rain, and the wood's floor fills with me. What am I?", a: ["mast", "beechmast", "beech mast"] },
   { q: "I am above the whole world and I have never broken. What am I?", a: ["lid", "the lid", "sky", "the sky"] },
+  { q: "While I live, the mountain lies white. What am I?", a: ["drake", "pale drake"] },
+  { q: "I come to the hamlets on a black rat, and whoever stands on my ground coughs. What am I?", a: ["fever"] },
+  { q: "I tell you who has died, and then I forget them. What am I?", a: ["keeper"] },
+  { q: "They were scraped from the faces, chiselled from the stones and cut from the tabards. What am I?", a: ["name", "names"] },
+  { q: "I was tipped in by the cartload, and I lie crusted over the dead. What am I?", a: ["lime"] },
+  { q: "I am a crown over three notches, struck on every door in the wood. What am I?", a: ["mark", "the holding's mark"] },
 ];
 export const RIDDLE_ASK = "The black door speaks, from somewhere in the iron: \"{q}\" (answer it with 'say')";
 export const RIDDLE_OPEN_LINE = "The door is still a moment. \"So you have walked the world,\" it says, \"and the world has kept you.\" The iron grinds open.";
@@ -4823,19 +4888,19 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // of everything on this tier, which is true of a grown red deer and is also
   // the tier telling you what it is: the animals that can take one live higher.
   ["hill-fox", new Set(["rat", "mountain-hare", "ptarmigan"])],
-  ["wildcat", new Set(["rat", "mountain-hare", "ptarmigan"])],
+  ["wildcat", new Set(["rat", "mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan"])],
   // THE TOM (mig 247) hunts what the wildcat hunts. Variants do NOT inherit their
   // base's feeding sets — every one of them has to be listed by hand, and eight
   // of the mountain's nine were. This one was missed, so an 8% roll produced an
   // aggressive cat with no way to eat, pinned at the hunger cap for life.
-  ["the-tom", new Set(["mountain-hare", "ptarmigan"])],
+  ["the-tom", new Set(["mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan"])],
   ["hill-eagle", new Set(["mountain-hare", "ptarmigan", "feral-goat"])],
   // TIER TWO (mig 229). The first predator on this mountain big enough for a
   // deer — and still not big enough for the stag, which at 48hp/4-8 outweighs a
   // lynx in every sense that matters. A lynx takes hinds and calves. The animal
   // that can have HIM lives higher than this, and that is the tier telling you
   // where you are rather than a gap in the table.
-  ["lynx", new Set(["red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
+  ["lynx", new Set(["scarp-raven", "mountain-chough", "hill-eagle", "eagle-owl", "bone-breaker", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
   // The owl takes the stoat, which is the one honest way to put a predator on
   // top of another predator at this size: 40hp/5-8 against 18hp/3-5, at night,
   // silently, is not a fight the stoat is in.
@@ -4849,16 +4914,16 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // is a smaller animal than a lynx and takes what a fox takes; what changes is
   // that there are seven of them and they call. The hind, the goat and the stag
   // are all in PACK_PREY instead, behind a strength requirement.
-  ["hill-wolf", new Set(["mountain-hare", "snow-hare", "ptarmigan"])],
+  ["hill-wolf", new Set(["rat", "mountain-chough", "mountain-hare", "snow-hare", "ptarmigan"])],
   // The lead wolf is the one animal on this mountain that has the stag alone.
   // 54hp/6-9 against 48hp/4-8 is a thin edge and that is the correct width of
   // it: he wins, and not easily, and he is rare blood off a refill rather than a
   // population.
-  ["lead-wolf", new Set(["red-stag", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
+  ["lead-wolf", new Set(["rat", "scarp-raven", "mountain-chough", "bone-breaker", "red-stag", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
   // The glutton kills small and EATS big — SCAVENGERS is where it actually
   // feeds, off whatever the wolves left. The stoat is on the list for the same
   // reason the owl has it: 50hp/6-9 against 18hp/3-5 is not a fight.
-  ["glutton", new Set(["ermine", "mountain-hare", "snow-hare", "ptarmigan"])],
+  ["glutton", new Set(["scarp-raven", "mountain-chough", "bone-breaker", "ermine", "mountain-hare", "snow-hare", "ptarmigan"])],
   // TIER FOUR (mig 233). One row, because one of the tier's four new lines
   // hunts at all. 26hp/3-5 against a chough at 12/1-2 and a hare at 12/1-2 is
   // clean, and it is still not how the fox mostly eats — SCAVENGERS is.
@@ -4985,13 +5050,13 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // meet — the goats are the road's and the wolves are the wood's, so a goat
   // only feeds a wolf that has actually drifted onto the road, or a goat that
   // has drifted into the wood. Both are MIGRANTS, so both do happen.
-  ["grey-wolf", new Set(["roe-deer", "white-roe", "feral-goat", "old-billy", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
+  ["grey-wolf", new Set(["rat", "roe-deer", "white-roe", "feral-goat", "old-billy", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
   // the roaming pack (RANGERS): small game anywhere, a deer when it can, and the
   // smaller hunters it shares the ground with - the foxes, the ermine and the
   // snakes, as a coyote kills a fox on its range. The rare foxes are not on it.
   ["coyote", new Set(["roe-deer", "white-roe", "mountain-hare", "snow-hare", "ptarmigan", "rat", "fleet-rat", "oystercatcher", "wrack-crab", "otter",
     "hill-fox", "snow-fox", "ermine", "gill-adder", "fen-viper", "stone-adder"])],
-  ["dire-wolf", new Set(["roe-deer", "white-roe", "wild-boar", "wood-stag", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
+  ["dire-wolf", new Set(["rat", "roe-deer", "white-roe", "wild-boar", "wood-stag", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   // THE STRAYS EAT SOMETHING NOW (2026-08-12). The west road's seven masterless
   // dogs had NO feeding route in the world at all — not grazers, not scavengers,
@@ -5072,7 +5137,7 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   // and THREE take the stag that nothing below could touch. Read down the
   // numbers and the tier's difficulty curve is written in them — it is not that
   // the wolves are strong, it is that there are enough of them.
-  ["hill-wolf", new Map([["feral-goat", 2], ["red-hind", 2], ["red-stag", 3]])],
+  ["hill-wolf", new Map([["feral-goat", 2], ["red-hind", 2], ["red-stag", 3], ["scarp-raven", 2], ["bone-breaker", 2]])],
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —

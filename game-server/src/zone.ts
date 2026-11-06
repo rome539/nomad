@@ -15,6 +15,8 @@ export function bodyNewerThanSave<B extends { savedAt: number }>(body: B | undef
 }
 import * as exhaustion from "./exhaustion";
 import * as herds from "./herds";
+import * as groups from "./groups";
+import * as beasts from "./beasts";
 import * as conditions from "./conditions";
 import * as chase from "./chase";
 // One Durable Object per zone: the authoritative simulation — who's where,
@@ -401,6 +403,7 @@ export class ZoneDO implements DurableObject {
   public conditions = new Map<string, conditions.Condition>(); // what is going on in each region (conditions.ts)
   public condTrack = new Map<string, number>(); // its clocks
   public herds = new Map<string, number>(); // what each region's herd is owed, and the herds' clock (herds.ts)
+  public groups: import("./groups").GroupsState = { at: 0, packs: {}, gone: {} }; // the mountain's groups and the ground they lost (groups.ts)
   public openDoors = new Set<string>();
   public wanderer: wanderer.Wanderer | null = null; // the one other nomad (wanderer.ts)
   public doorCloseAt = new Map<string, number>(); // "roomId:dir" -> ms epoch the iron remembers its shape (the deep door's timer)
@@ -821,6 +824,7 @@ export class ZoneDO implements DurableObject {
       this.gibbetCut = saved.gibbetCut ?? false;
       this.arrivals = new Map(Object.entries(saved.arrivals));
       this.herds = new Map(Object.entries(saved.herds ?? {}));
+      this.groups = saved.groups ?? { at: 0, packs: {}, gone: {} };
       this.conditions = new Map(Object.entries(saved.conditions ?? {}));
       this.condTrack = new Map(Object.entries(saved.condTrack ?? {}));
       this.openDoors = new Set(saved.openDoors);
@@ -1088,6 +1092,7 @@ export class ZoneDO implements DurableObject {
 
       for (const c of this.creatures.values()) {
         const tmpl = world.mobTemplates.get(c.templateId)!;
+        if (c.aloft !== undefined && !tmpl.is_boss) continue; // a bird in the air (flight.ts)
         c.target = null;
         c.hp = Math.min(tmpl.max_hp, c.hp + CREATURE_HEAL_PER_MIN * mins);
         // THE FLAT RATE ON PURPOSE, and this is the one hunger site that does
@@ -1153,6 +1158,7 @@ export class ZoneDO implements DurableObject {
       if (liveRooms.has(c.roomId)) continue;
       const tmpl = world.mobTemplates.get(c.templateId)!;
       if (tmpl.is_boss || c.templateId === ESCAPE_TMPL) continue; // always-live: the fast beat owns them
+      if (c.aloft !== undefined) continue; // in the air, in no room (flight.ts)
       c.target = null; // nobody out here to fight — mirror of catchUp's rule
       if (c.asleep) {
         if (now < (c.sleepUntil ?? 0)) continue; // dead to the world, out here too
@@ -1187,7 +1193,7 @@ export class ZoneDO implements DurableObject {
       if (HOARDERS.has(c.templateId)) ai.scavengerScoops(this, c);
       // ...and two crawlers sharing a room out here fight for it too (rome,
       // 2026-10-18: the far world is not frozen, so neither are they).
-      const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now) || await ai.rivalsFight(this, c, now);
+      const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now) || await ai.rivalsFight(this, c, now) || await groups.holdGround(this, c, now);
       if (!hunted && c.nextWanderAt <= now && (!tmpl.is_boss || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
           && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
         await ai.creatureMoves(this, c, now, "wander", true);
@@ -1219,6 +1225,7 @@ export class ZoneDO implements DurableObject {
       gibbetCut: this.gibbetCut,
       arrivals: Object.fromEntries(this.arrivals),
       herds: Object.fromEntries(this.herds),
+      groups: this.groups,
       conditions: Object.fromEntries(this.conditions),
       condTrack: Object.fromEntries(this.condTrack),
       openDoors: [...this.openDoors],
@@ -1319,6 +1326,7 @@ export class ZoneDO implements DurableObject {
     this.gibbetCut = false;
     this.arrivals.clear();
     this.herds.clear();
+    this.groups = { at: 0, packs: {}, gone: {} };
     this.conditions.clear();
     this.condTrack.clear();
     this.openDoors.clear();
@@ -2419,6 +2427,7 @@ export class ZoneDO implements DurableObject {
       case "inventory": return verbs.cmdInventory(this, session);
       case "who": return verbs.cmdWho(this, session);
       case "census": return verbs.cmdCensus(this, session);
+      case "beasts": return verbs.cmdBeasts(this, session);
       case "skies": return verbs.cmdSkies(this, session);
       case "name": return verbs.cmdName(this, session, cmd.arg);
       case "rest": return verbs.cmdRest(this, session);
@@ -5940,6 +5949,7 @@ export class ZoneDO implements DurableObject {
         // A grip already taken outranks looking for a fresh one — it worries
         // what it has until that kills or slips (ai.worryPrey).
         const hunted = (await ai.worryPrey(this, creature, now)) || await ai.predation(this, creature, now)
+          || await groups.holdGround(this, creature, now) // a pack wolf runs the small hunters off its ground
           || await ai.wolfTests(this, creature, now); // a fed wolf testing a lone wanderer holds its ground
         if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)
             && !ai.allCrouched(this, creature.roomId)) {
@@ -7126,6 +7136,7 @@ export class ZoneDO implements DurableObject {
     // (`splits-on-death` stood here and was cut — a trait may change a creature,
     // it may not create one. See the note above reconcilePopulation in ai.ts.)
     this.fxDied(creature.roomId, creature.templateId);
+    beasts.noteKill(this, creature, "wanderers");
     this.creatures.delete(creature.id);
     if (creature.templateId === RAT_KING) ratking.fell(this); // its rats go leaderless (ratking.ts)
     if (creature.templateId === WHITE_ROE) whiteroe.slain(this, killer); // the wood turns on its killer (whiteroe.ts)

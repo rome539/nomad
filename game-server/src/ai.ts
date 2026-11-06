@@ -17,6 +17,9 @@ import * as clues from "./clues";
 import * as keys from "./keys";
 import { randInt, chance, uuid, pick } from "./rng";
 import * as ratking from "./ratking";
+import { MOUNTAIN_QUARTER_ROOMS } from "./detail";
+import { settlesOn } from "./mountain-ground";
+import * as beasts from "./beasts";
 import { cap, isNight, isFullMoon, isBloodMoon, morphOf } from "./zone-util";
 import * as events from "./events";
 import * as styles from "./styles";
@@ -47,7 +50,7 @@ import {
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
-  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, MOUNTAIN_ROAMERS, MOUNTAIN_GROUPS, MOUNTAIN_FLIERS, BIRD_CATCH_MULT, SETTLES_BY_GRAZING, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
@@ -2118,6 +2121,13 @@ export async function rivalsFight(z: ZoneDO, creature: Creature, now: number): P
   return true;
 }
 
+// A flying bird on the mountain is harder to catch than anything on foot (rome,
+// 2026-11-06). Every other animal's odds are untouched.
+export function catchMult(z: ZoneDO, victim: Creature): number {
+  const line = z.variantBase.get(victim.templateId) ?? victim.templateId;
+  return MOUNTAIN_FLIERS.has(line) && z.regionOf(victim.home ?? victim.roomId) === "mountain" ? BIRD_CATCH_MULT : 1;
+}
+
 export async function predation(z: ZoneDO, creature: Creature, now: number): Promise<boolean> {
     const prey = preyHere(z, creature);
     const strays = huntsStrays(creature.templateId);
@@ -2170,7 +2180,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     const hour = dark
       ? (NOCTURNAL.has(creature.templateId) ? DARK_HUNT_MULT : SIGHT_HUNTERS.has(creature.templateId) ? SIGHT_DARK_MULT : 1)
       : (DAY_BLIND_HUNTERS.has(creature.templateId) ? DAY_BLIND_MULT : 1);
-    const odds = (HUNT_SUCCESS[creature.templateId] ?? HUNT_SUCCESS_DEFAULT) * (victim.asleep ? 2 : 1) * hour;
+    const odds = (HUNT_SUCCESS[creature.templateId] ?? HUNT_SUCCESS_DEFAULT) * (victim.asleep ? 2 : 1) * hour * catchMult(z, victim);
     if (!chance(Math.min(0.9, odds))) {
       exhaustion.creatureAttempt(creature, now);
       victim.asleep = false;
@@ -2202,7 +2212,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     // THE HENHOUSE KILL: it does not eat it, and it does not hold on to it.
     if (sport) {
       if (victim.hp <= 0) {
-        preyFalls(z, victim, vt);
+        preyFalls(z, victim, vt, creature.templateId);
         z.roomFeed(creature.roomId, `${cap(tmpl.name)} kills ${vt.name}, and leaves it lying, and does not eat.`, undefined, false);
         z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.", undefined, undefined, false, { mob: creature.templateId, act: "fight" });
         z.refreshRoomCtx(creature.roomId);
@@ -2213,7 +2223,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       return true;
     }
     if (victim.hp <= 0) {
-      preyFalls(z, victim, vt);
+      preyFalls(z, victim, vt, creature.templateId);
       creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0; // small prey is a mouthful
       ate(creature);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
@@ -2288,7 +2298,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     if (spined(z, creature, tmpl, victim, vt)) return true;
     if (victim.hp > 0) return true;
     releaseHold(z, creature);
-    preyFalls(z, victim, vt);
+    preyFalls(z, victim, vt, creature.templateId);
     creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0; // small prey is a mouthful
     ate(creature);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
@@ -2311,7 +2321,7 @@ function spined(z: ZoneDO, creature: Creature, tmpl: MobTemplate, victim: Creatu
     if (creature.hp > 0) return false;
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} lets go of ${vt.name} with its mouth full of spines, and goes down, and does not get up.`, undefined, false);
     preyFalls(z, creature, tmpl);
-    if (victim.hp <= 0) preyFalls(z, victim, vt); // the bite that took it took them both
+    if (victim.hp <= 0) preyFalls(z, victim, vt, creature.templateId); // the bite that took it took them both
     z.refreshRoomCtx(creature.roomId);
     return true;
   }
@@ -2320,7 +2330,8 @@ function spined(z: ZoneDO, creature: Creature, tmpl: MobTemplate, victim: Creatu
   // corpse-key, no revenant rise — just a body. Its spoils drop where it fell
   // (emergent loot to recover), a corpse trace feeds the scavengers, and
   // migration refills it like any other death.
-function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate): void {
+export function preyFalls(z: ZoneDO, victim: Creature, vt: MobTemplate, by?: string): void {
+    if (by) beasts.noteKill(z, victim, by);
     releaseHold(z, victim); // it may have had something by the throat itself
     for (const s of z.sessions.values()) {
       if (s.target === victim.id) s.target = null;
@@ -3901,6 +3912,51 @@ export function spookFromNoise(z: ZoneDO, sourceRoomId: string, now: number): vo
 
   // The dead stay dead — but the dungeon refills. When a population is below
   // its cap, a migrant is already on its way; it arrives here.
+// How far each room is from the nearest gate, walking through open ways only.
+// A room behind a keyed door has no entry, so nothing is ever homed behind one.
+const gateSteps = new WeakMap<object, Map<string, number>>();
+function stepsFromGates(world: NonNullable<ZoneDO["world"]>): Map<string, number> {
+  let dist = gateSteps.get(world);
+  if (dist) return dist;
+  dist = new Map();
+  const queue = [...world.entryRooms];
+  for (const g of queue) dist.set(g, 0);
+  for (let i = 0; i < queue.length; i++) {
+    const at = queue[i];
+    for (const e of world.exits.get(at) ?? []) {
+      if (e.key_item || dist.has(e.to_room)) continue;
+      dist.set(e.to_room, dist.get(at)! + 1);
+      queue.push(e.to_room);
+    }
+  }
+  gateSteps.set(world, dist);
+  return dist;
+}
+
+// Every room a MOUNTAIN_ROAMERS line may call home: the mountain within the
+// reach of its own rows, off the gates, the hideaways and the drake's ground, on
+// the kind of ground it belongs on (mountain-ground.ts).
+export function mountainHomes(z: ZoneDO, templateId: string): string[] {
+  const world = z.world!;
+  const dist = stepsFromGates(world);
+  let near = Infinity, far = -1;
+  for (const s of world.mobSpawns) {
+    if (s.template_id !== templateId || z.regionOf(s.room_id) !== "mountain") continue;
+    const d = dist.get(s.room_id);
+    if (d === undefined) continue;
+    if (d < near) near = d;
+    if (d > far) far = d;
+  }
+  near = Math.min(near, MOUNTAIN_GROUPS.get(templateId)?.near ?? near);
+  const barred = new Set([...(MOUNTAIN_QUARTER_ROOMS.summit ?? []), ...(MOUNTAIN_QUARTER_ROOMS.territory ?? [])]);
+  return [...world.rooms.keys()].filter((r) => {
+    const d = dist.get(r);
+    return d !== undefined && d >= near && d <= far && z.regionOf(r) === "mountain"
+      && !world.entryRooms.has(r) && !world.safeRooms.has(r) && !barred.has(r) && settlesOn(templateId, r)
+      && (!SETTLES_BY_GRAZING.has(templateId) || [...z.nearby(r, ROUND_RANGE).keys()].some((n) => SURFACE_FORAGE.has(n)));
+  });
+}
+
 // Where a creature of this line should wake. Normally its den — one of the
 // rooms the spawn table gave it. For a ROAMING_DENS line the den is re-rolled
 // across the whole band instead, so the road never has fixed addresses. Falls
@@ -3923,6 +3979,10 @@ export function rollDen(z: ZoneDO, templateId: string, fallback: string): string
     if (pick.length) return pick[randInt(0, pick.length - 1)];
     const anywhere = [...world.rooms.keys()].filter((r) => ok(r) && z.regionOf(r) === band);
     if (anywhere.length) return anywhere[randInt(0, anywhere.length - 1)];
+  }
+  if (MOUNTAIN_ROAMERS.has(templateId) && z.regionOf(fallback) === "mountain") {
+    const pool = mountainHomes(z, templateId);
+    return pool.length ? pool[randInt(0, pool.length - 1)] : fallback;
   }
   if (!ROAMING_DENS.has(templateId)) return fallback;
   const bands = new Set(
@@ -4651,7 +4711,7 @@ function drakeStoops(z: ZoneDO, creature: Creature, band: string): boolean {
   z.roomFeed(roomId, `The whole room goes dark at once — and ${vt.name} is simply not there any more. Something enormous is already climbing away east with it, and it never touched the ground.`);
   z.roomSound(roomId, "Something screams once {dir}, a long way up, and is cut off.", undefined, undefined, false, { act: "scream" });
   skySight(z, band, "Something screams a long way off, high up, and stops before it should.", roomId);
-  preyFalls(z, victim, vt);
+  preyFalls(z, victim, vt, creature.templateId);
   creature.prey = vt.name;
   z.refreshRoomCtx(roomId);
   return true;

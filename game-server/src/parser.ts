@@ -35,6 +35,7 @@ export type Verb =
   | "inventory"
   | "who"
   | "census"
+  | "beasts"
   | "skies"
   | "name"
   | "rest"
@@ -171,6 +172,7 @@ export const VERB_ALIASES: Record<string, Verb> = {
   inventory: "inventory", inv: "inventory", i: "inventory", bag: "inventory", items: "inventory",
   who: "who", players: "who",
   census: "census",
+  beasts: "beasts",
   skies: "skies",
   name: "name", rename: "name", callme: "name",
   rest: "rest", sleep: "rest", sit: "rest", camp: "rest",
