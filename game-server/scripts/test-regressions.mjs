@@ -4249,6 +4249,19 @@ try {
     assert.equal(eatingShown(z, { ...v, eatingUntil: 0 }, now), 'eat', 'a scavenger over remains reads as tearing into them, so it shows it');
   });
 
+  // 2026-11-05: bodies, chests and bags lie nearer than the standing line, but the
+  // fog mix for that line was set on the whole row, so they read paler than the
+  // clear ground around them.
+  check('what lies on the ground takes no fog mix, and the living still do', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /#mobs \.mob\.dead \{ --mobfog: initial; \}/, 'bodies and things drop out of the mix');
+    assert.doesNotMatch(pub, /mobsEl\.style\.filter = /, 'the mix is not set on the whole row');
+    assert.match(pub, /mobsEl\.style\.setProperty\("--mobfog", mx \? "url\(#fogmix\)" : ""\)/, 'the living are mixed through the variable');
+    const rules = pub.match(/#mobs\.t-[^{]*\.mob \{ filter:[^}]*\}/g);
+    assert.ok(rules.length >= 14, 'the hour rules were found');
+    for (const rule of rules) assert.match(rule, /var\(--mobfog, \);/, 'an hour rule cannot drop the fog from the living: ' + rule.slice(0, 60));
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

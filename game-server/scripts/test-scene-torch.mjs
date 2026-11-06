@@ -83,7 +83,7 @@ const skyEl = { style: style(), dataSky: "", setAttribute(k, v) { if (k === "dat
 const fogCtx = { drew: [], clearRect() {}, drawImage(im) { this.drew.push(im.src); }, fillRect() {} };
 const veilEl = { className: "", style: {}, dataset: {}, firstChild: { width: 0, height: 0, getContext: () => fogCtx } };
 const fogMix = { values: "", setAttribute(k, v) { if (k === "values") this.values = v; } };
-const mobsEl = { className: "", style: {}, dataset: {} };
+const mobsEl = { className: "", style: { setProperty(k, v) { this[k] = v; } }, dataset: {} };
 // THE TIDE SHEET. A stub with no style bag throws the moment paintFlood sets the
 // mask, and paintScene calls it on every layered paint — so leaving it out
 // stopped the whole file rather than failing one check.
@@ -826,9 +826,9 @@ ctx.paint("mountain", "fog", "gully", "fm-torch", 1, 0, "", 0, 0, false, 1, 0);
 t("...a torch at night takes the night plate's mask", veilEl.className === "f-night masked" && /gully-night\.webp/.test(veilEl.dataset.mask) && /gully-night\.webp/.test(fogCtx.drew[fogCtx.drew.length - 1]), veilEl.className + " " + veilEl.dataset.mask);
 ctx.paint("mountain", "fog", "scree", "fm-none", 0, 0, "", 0, 0, false, 0, 0);
 t("...a plate without a mask keeps the veil", veilEl.className === "f-day" && !veilEl.dataset.mask, veilEl.className + " " + veilEl.dataset.mask);
-t("...and the creatures stand in it, mixed toward the fog's colour", mobsEl.style.filter === "url(#fogmix)" && /^0\.\d+ 0 0 0 0\.\d+ /.test(fogMix.values) && fogMix.values.split(" ")[0] !== "1", mobsEl.style.filter + " " + fogMix.values);
+t("...and the creatures stand in it, mixed toward the fog's colour", mobsEl.style["--mobfog"] === "url(#fogmix)" && /^0\.\d+ 0 0 0 0\.\d+ /.test(fogMix.values) && fogMix.values.split(" ")[0] !== "1", mobsEl.style["--mobfog"] + " " + fogMix.values);
 ctx.paint("mountain", "rain", "gully", "fm-rain", 0, 0, "", 0, 0, false, 0, 0);
-t("...not in the rain", mobsEl.style.filter === "", mobsEl.style.filter);
+t("...not in the rain", mobsEl.style["--mobfog"] === "", mobsEl.style["--mobfog"]);
 t("...and rain is never masked", veilEl.className === "" && !veilEl.dataset.mask, veilEl.className + " " + veilEl.dataset.mask);
 ctx.paint("mountain", "day", "gully", "fm-clear", 0, 0, "", 0, 0, false, 0, 0);
 t("...and when it clears the mask goes too", veilEl.className === "" && !veilEl.dataset.mask, veilEl.className + " " + veilEl.dataset.mask);

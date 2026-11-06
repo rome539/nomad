@@ -1400,12 +1400,12 @@ export const PAGE = `<!doctype html>
      had before anything moved; the number changed only to keep the relationship
      that was already there. */
   /* ...and what stands on the dawn ground takes the dawn ground's own grade (2026-10-26). */
-  body[data-view="image"] #mobs.t-dawn img, body[data-view="image"] #mobs.t-dawn .mob { filter: brightness(.66) saturate(.62) sepia(.18) hue-rotate(-8deg) contrast(1.05) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-dusk img, body[data-view="image"] #mobs.t-dusk .mob { filter: brightness(.42) saturate(.95) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-night img, body[data-view="image"] #mobs.t-night .mob { filter: brightness(.26) saturate(.70) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-wet-night img, body[data-view="image"] #mobs.t-wet-night .mob { filter: brightness(.24) saturate(.60) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-wet-dusk img, body[data-view="image"] #mobs.t-wet-dusk .mob { filter: brightness(.32) saturate(.62) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-wet-dawn img, body[data-view="image"] #mobs.t-wet-dawn .mob { filter: brightness(.34) saturate(.62) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-dawn img, body[data-view="image"] #mobs.t-dawn .mob { filter: brightness(.66) saturate(.62) sepia(.18) hue-rotate(-8deg) contrast(1.05) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-dusk img, body[data-view="image"] #mobs.t-dusk .mob { filter: brightness(.42) saturate(.95) sepia(.30) hue-rotate(-16deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-night img, body[data-view="image"] #mobs.t-night .mob { filter: brightness(.26) saturate(.70) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-wet-night img, body[data-view="image"] #mobs.t-wet-night .mob { filter: brightness(.24) saturate(.60) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-wet-dusk img, body[data-view="image"] #mobs.t-wet-dusk .mob { filter: brightness(.32) saturate(.62) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-wet-dawn img, body[data-view="image"] #mobs.t-wet-dawn .mob { filter: brightness(.34) saturate(.62) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
   /* A CARRIED FLAME INVERTS THE RULE ABOVE. Every other hour a creature is
      DARKER than the ground it stands on, because open ground faces the sky and
      a creature stands edge-on to it. A torch is the opposite kind of light: it
@@ -1415,12 +1415,12 @@ export const PAGE = `<!doctype html>
      double and the creature standing on it lifts further, which is what puts it
      in the light rather than on it. Warm, and short of daylight: the flame is
      orange and it does not reach far. */
-  body[data-view="image"] #mobs.t-night-torch img, body[data-view="image"] #mobs.t-night-torch .mob { filter: brightness(.80) saturate(1.04) sepia(.22) hue-rotate(-14deg) drop-shadow(0 3px 6px rgba(0,0,0,.8)); }
-  body[data-view="image"] #mobs.t-eclipse img, body[data-view="image"] #mobs.t-eclipse .mob { filter: brightness(.48) saturate(.45) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-night-torch img, body[data-view="image"] #mobs.t-night-torch .mob { filter: brightness(.80) saturate(1.04) sepia(.22) hue-rotate(-14deg) drop-shadow(0 3px 6px rgba(0,0,0,.8)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-eclipse img, body[data-view="image"] #mobs.t-eclipse .mob { filter: brightness(.48) saturate(.45) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
   /* The full moon LIGHTS the ground — the scene brightens to 1.10 — and a
      creature standing on lit ground is the thing between you and it. It stays
      dark; the difference from an ordinary night is that you can see its shape. */
-  body[data-view="image"] #mobs.t-moon img, body[data-view="image"] #mobs.t-moon .mob { filter: brightness(.52) saturate(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-moon img, body[data-view="image"] #mobs.t-moon .mob { filter: brightness(.52) saturate(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
   /* A TRACE OF RED, NOT A SHEET OF IT (rome, 2026-09-09). This was
      brightness(.52) sepia(1) saturate(1.5) hue-rotate(-38deg) — a solid red
      figure, calibrated against a ground that was itself being washed red. That
@@ -1434,19 +1434,19 @@ export const PAGE = `<!doctype html>
      night's .26 rather than at dawn's .44, because its sky is the darkest in the
      game (mean 13, against night's 47 and dawn's 85). It is still a full moon,
      so there is light; there is just very little of it and it is red. */
-  body[data-view="image"] #mobs.t-blood img, body[data-view="image"] #mobs.t-blood .mob { filter: brightness(.28) saturate(.85) sepia(.30) hue-rotate(-24deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-blood img, body[data-view="image"] #mobs.t-blood .mob { filter: brightness(.28) saturate(.85) sepia(.30) hue-rotate(-24deg) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
   /* Fog and falling snow are the two that also push a shape AWAY from you:
      less contrast and less colour is what distance looks like through weather,
      and it is what stops a creature reading as a cut-out on a flat wash. */
-  body[data-view="image"] #mobs.t-after-rain img, body[data-view="image"] #mobs.t-after-rain .mob { filter: brightness(.94) saturate(.82) contrast(.97) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-fog img, body[data-view="image"] #mobs.t-fog .mob { filter: brightness(.78) saturate(.35) contrast(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-rain img, body[data-view="image"] #mobs.t-rain .mob { filter: brightness(.58) saturate(.70) contrast(1.04) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
-  body[data-view="image"] #mobs.t-snow img, body[data-view="image"] #mobs.t-snow .mob { filter: brightness(.82) saturate(.45) contrast(.92) drop-shadow(0 3px 6px rgba(0,0,0,.75)); }
+  body[data-view="image"] #mobs.t-after-rain img, body[data-view="image"] #mobs.t-after-rain .mob { filter: brightness(.94) saturate(.82) contrast(.97) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-fog img, body[data-view="image"] #mobs.t-fog .mob { filter: brightness(.78) saturate(.35) contrast(.80) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-rain img, body[data-view="image"] #mobs.t-rain .mob { filter: brightness(.58) saturate(.70) contrast(1.04) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-snow img, body[data-view="image"] #mobs.t-snow .mob { filter: brightness(.82) saturate(.45) contrast(.92) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
   #mobs img, #mobs .mob {
     display: block;
     width: auto;
     image-rendering: pixelated;
-    filter: drop-shadow(0 3px 6px rgba(0,0,0,.75));
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, );
     /* THE ROW HAS TO FIT THE WINDOW IT IS IN. A sprite is sized in vh, so its
        WIDTH in vw depends on the shape of the viewport — and a phone held
        upright is the case that breaks it: the same four creatures that take
@@ -1470,6 +1470,11 @@ export const PAGE = `<!doctype html>
      frames compress almost to nothing because they are nearly identical.
      aspect-ratio carries ONE frame's shape, so setting height still gives the
      right width the way it does for an img. */
+  /* WHAT LIES ON THE GROUND TAKES NO FOG MIX (2026-11-05). The fog colour is mixed
+     by the strength at the standing line, further back than where a body or a
+     chest lies, so it came out paler than the clear ground around it. The mix is
+     per creature now, carried by --mobfog, and these drop out of it. */
+  #mobs .mob.dead { --mobfog: initial; }
   /* A BODY IS NOT TRANSPARENT (rome, 2026-09-08). This carried opacity .68, on
      the reasoning that a corpse should read differently from a living thing and
      that opacity was the only property which composes with the hour tints —
@@ -14057,8 +14062,8 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
         var fc = FOG_RGB[veil] || FOG_RGB.day, k = Math.min(.8, fogF >= 0 ? fogF * .9 : .35), m = (1 - k).toFixed(3);
         var mx = typeof document !== "undefined" && document.getElementById ? document.getElementById("fogmixm") : null;
         if (mx) mx.setAttribute("values", m + " 0 0 0 " + (k * fc[0] / 255).toFixed(3) + " 0 " + m + " 0 0 " + (k * fc[1] / 255).toFixed(3) + " 0 0 " + m + " 0 " + (k * fc[2] / 255).toFixed(3) + " 0 0 0 1 0");
-        if (mobsEl.style) mobsEl.style.filter = mx ? "url(#fogmix)" : "";
-      } else if (mobsEl.style) mobsEl.style.filter = "";
+        if (mobsEl.style) mobsEl.style.setProperty("--mobfog", mx ? "url(#fogmix)" : "");
+      } else if (mobsEl.style) mobsEl.style.setProperty("--mobfog", "");
       mobsEl.className = lit || snowLight ? "t-night-torch" : mobHour ? "t-" + (wxHour && mobHour === wxKind ? (wxHour === "night" ? "night" : "wet-" + wxHour) : mobHour) : "";
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you
