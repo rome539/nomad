@@ -33,7 +33,7 @@ const state={storage,getWebSockets:()=>[],blockConcurrencyWhile:(f)=>f(),setWebS
 const z=new ZoneDO(state,{DB:db});
 z.persist=async()=>{}; z.ensureAlarm=async()=>{};
 if(scenario==='old'){ // what shipped before all of this
-  zd.MOUNTAIN_ROAMERS.clear(); zd.MOUNTAIN_GROUPS.clear(); zd.MOUNTAIN_FLIERS.clear(); zd.GROUND_HOLDERS.clear();
+  zd.MOUNTAIN_ROAMERS.clear(); zd.MOUNTAIN_GROUPS.clear(); zd.FOOD_FLIERS.clear(); zd.GROUND_HOLDERS.clear();
   for(const w of ['hill-wolf','lead-wolf','grey-wolf','dire-wolf']) zd.PREYS_ON.get(w)?.delete('rat');
   for(const [h,bs] of [['lynx',['scarp-raven','mountain-chough','hill-eagle','eagle-owl','bone-breaker']],['glutton',['scarp-raven','mountain-chough','bone-breaker']],['lead-wolf',['scarp-raven','mountain-chough','bone-breaker']],['hill-wolf',['mountain-chough']],['wildcat',['mountain-chough','scarp-raven']],['the-tom',['mountain-chough','scarp-raven']]]) for(const b of bs) zd.PREYS_ON.get(h)?.delete(b);
   zd.PACK_PREY.get('hill-wolf')?.delete('scarp-raven'); zd.PACK_PREY.get('hill-wolf')?.delete('bone-breaker');
@@ -51,7 +51,7 @@ const of=z.roomFeed.bind(z); z.roomFeed=function(r,t,...a){ if(typeof t==='strin
   else if(/catches .* before it can turn/.test(t))ev.caught++; else if(/over its kill/.test(t))ev.stolen++; else if(/does not wait for it, and runs/.test(t))ev.chase++; }
  return of(r,t,...a); };
 const snap=(h)=>{const n={},hungry={},rooms=new Map();let aloft=0;const off=[];
- for(const c of z.creatures.values()){const home=c.home??c.roomId; if(!mt(home))continue; const l=lineOf(c); if(!LINES.includes(l))continue; n[l]=(n[l]??0)+1; if(c.hunger>=50)hungry[l]=(hungry[l]??0)+1; if(c.aloft!==undefined)aloft++; else if(zd.MOUNTAIN_FLIERS.has(l)) rooms.set(c.roomId,(rooms.get(c.roomId)??0)+1);
+ for(const c of z.creatures.values()){const home=c.home??c.roomId; if(!mt(home))continue; const l=lineOf(c); if(!LINES.includes(l))continue; n[l]=(n[l]??0)+1; if(c.hunger>=50)hungry[l]=(hungry[l]??0)+1; if(c.aloft!==undefined)aloft++; else if(zd.FOOD_FLIERS.has(l)) rooms.set(c.roomId,(rooms.get(c.roomId)??0)+1);
   if(scenario!=='old'&&md.settlesOn&&zd.MOUNTAIN_ROAMERS.has(l)&&!md.settlesOn(l,home))off.push(l);}
  const packs=Object.values(z.groups.packs).filter(g=>g.line==='hill-wolf');const size=new Map();let lone=0,hamlet=0,undec=0;
  for(const c of z.creatures.values()){if(lineOf(c)!=='hill-wolf')continue;if(c.group)size.set(c.group,(size.get(c.group)??0)+1);else if(c.lone)lone++;else undec++;if(HAMLET.has(c.home))hamlet++;}

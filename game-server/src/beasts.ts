@@ -5,7 +5,7 @@
 import type { ZoneDO } from "./zone";
 import type { Creature } from "./zone-types";
 import { GROUND_OF } from "./mountain-ground";
-import { MOUNTAIN_ROAMERS } from "./zone-data";
+import { FOOD_FLIERS, MOUNTAIN_ROAMERS } from "./zone-data";
 
 const DAY_MS = 24 * 3_600_000;
 export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Record<string, Record<string, number>> }
@@ -13,7 +13,7 @@ type Event = "moved" | "flights" | "chases" | "caught" | "stolen";
 
 const SHOWN = [
   "rat", "mountain-hare", "ptarmigan", "red-hind", "feral-goat", "hill-wolf", "hill-fox", "wildcat", "ermine", "snow-fox",
-  "lynx", "glutton", "eagle-owl", "hill-eagle", "scarp-raven", "mountain-chough", "bone-breaker",
+  "lynx", "glutton", "eagle-owl", "hill-eagle", "scarp-raven", "mountain-chough", "bone-breaker", "carrion-vulture",
 ];
 const lineOf = (z: ZoneDO, id: string): string => SHOWN.includes(id) || MOUNTAIN_ROAMERS.has(id) ? id : (z.variantBase.get(id) ?? id);
 const onMountain = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "mountain";
@@ -63,7 +63,7 @@ export function lines(z: ZoneDO, now: number): string[] {
     alive.set(line, (alive.get(line) ?? 0) + 1);
     if (line === "hill-wolf") wolves.push(c);
     if (c.aloft !== undefined && c.flightTo) up++;
-    else if (["hill-eagle", "eagle-owl", "scarp-raven", "mountain-chough", "bone-breaker"].includes(line)) birdsIn.set(c.roomId, (birdsIn.get(c.roomId) ?? 0) + 1);
+    else if (FOOD_FLIERS.has(line)) birdsIn.set(c.roomId, (birdsIn.get(c.roomId) ?? 0) + 1);
   }
 
   const packs = new Map<string, number>();

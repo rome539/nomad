@@ -133,6 +133,8 @@ export const SETTLES_ON = new Map<string, string[]>([
   ["mountain-chough", ["crag"]],
   ["hill-eagle", ["crag"]],
   ["bone-breaker", ["crag", "bones"]],
+  ["carrion-vulture", ["crag", "bones"]],
+  ["stone-adder", ["stone", "crag", "hamlet"]],
 ]);
 
 /** Whether this line would settle in this room. A room with no entry refuses nobody. */

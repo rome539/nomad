@@ -19,13 +19,13 @@ A player who comes back finds the region changed, because of what other players 
 7. **Hunger moves them.** A group where more than half have stayed hungry for 2 hours, or a hungry loner, picks a new home and walks there. Hunger itself is never tuned down: starving is the world working.
 8. **Nothing stays for good.** A home lasts 2-5 game days (8-20 real hours), then the animal or whole group draws a new one, away from the old ground. One that's well fed when its time comes gets one game day more. Nothing leaves in a fight.
 9. **Packs hold their ground.** A pack wolf goes for smaller hunters on its ground: mostly a chase, sometimes a kill. Twice run off, the small one draws a new home. A pack wolf takes any fresh kill it finds a smaller hunter on. A lone wolf only chases one off a meal, kills nothing and drives nothing from its home.
-10. **Birds walk day to day and fly for food.** Hungry with nothing within 3 rooms, a bird flies to the nearest food within 25 rooms, off the map while in the air. It stays until fed, up to 30 minutes, then flies home. It can't take off in a fight, while targeted, held, stunned, asleep or badly hurt, so flying is never an escape.
-11. **Nothing is untouchable except by choice.** Bigger birds have hunters too: on the mountain lynx take any bird, gluttons and lead wolves take ravens, choughs and bone-breakers, wildcats and hill wolves take choughs, and two hill wolves take a raven or bone-breaker. A hunter is given what it could realistically win. A flying bird is half as easy to catch, and flying birds never trigger the boom event.
+10. **Birds walk day to day and fly for food, across the whole game.** Hungry with nothing within 3 rooms, a bird flies to the nearest food in its own region within 25 rooms, under open sky, off the map while in the air. Each flies to what it eats: hunters to prey, scavengers to bodies, grazers to feeding ground. Nesting mothers and the ptarmigan stay down. It stays until fed, up to 30 minutes, then flies home. A bird never picks a full room: if its room fills in flight it turns for home, and if home is full it lands close by. It can't take off in a fight, while targeted, held, stunned, asleep or badly hurt, so flying is never an escape.
+11. **Nothing is untouchable except by choice.** Bigger birds have hunters too: on the mountain lynx take any bird, gluttons and lead wolves take ravens, choughs and bone-breakers, wildcats and hill wolves take choughs, and two hill wolves take a raven or bone-breaker. A hunter is given what it could realistically win. Anywhere in the game, a flying bird is half as easy to catch and never triggers the boom event.
 12. **Every bird is a small meal.** Mostly feather and hollow bone, so even a big one takes only 25 off a hunter's hunger, the same as eating its body. A hind or goat still fills one. This list (`SMALL_PREY`) covers the whole game, not just the mountain.
 
 ## What never moves
 
-Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a named place. Ask what each animal is for before putting it on a roaming list. On the mountain, rats stay at the Shieling hamlet because it is the fever rat's ground, and other animals may still move in on them.
+Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a named place. Ask what each animal is for before putting it on a roaming list. On the mountain, rats stay at the Shieling hamlet because it is the fever rat's ground, and other animals may still move in on them. The stone adder used to be rooted and now moves like the rest.
 
 ## The numbers we use
 
@@ -43,13 +43,15 @@ Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a n
 | Flying bird caught in a hunt | Half the usual chance | `BIRD_CATCH_MULT` |
 | Bird flight reach / speed | 25 rooms / 5 seconds a room, 15 minimum | `FLIGHT_RANGE`, `FLIGHT_MS_PER_ROOM`, `FLIGHT_MIN_MS` |
 | Bird stays down / rest if it came home hungry | 30 / 20 minutes | `FLIGHT_STAY_MS`, `FLIGHT_REST_MS` |
+| Hungry bird with no food in reach looks again | About 1 minute | `FLIGHT_LOOK_MS` |
+| Most mobs a bird will land among | Lands only with fewer than 5 in the room | `CROWD_CAP` |
 
 The numbers are first guesses tested in simulation. A new region can start from them. The only hunting chance this work changes is the flying birds' one; leave the rest alone.
 
 ## Where it lives
 
 - `game-server/src/groups.ts`: choosing homes, groups, broken groups, hunger moves, packs holding ground
-- `game-server/src/flight.ts`: birds flying out to feed
+- `game-server/src/flight.ts`: birds flying out to feed, in every region
 - `game-server/src/beasts.ts`: the `beasts` command and its daily count
 - `game-server/src/mountain-ground.ts`: each room's kind of ground, and what each animal settles on
 - `game-server/src/zone-data.ts`: the lists and numbers above
@@ -57,7 +59,7 @@ The numbers are first guesses tested in simulation. A new region can start from 
 - `game-server/src/herds.ts`: births and strays go through the plan
 - `game-server/scripts/sim-mountain.mjs`: the simulator
 
-These are all written for the mountain by name. **The first region after it should turn them into per-region tables, not copy them.**
+Apart from flight, these are written for the mountain by name. **The first region after it should turn them into per-region tables, not copy them.**
 
 ## Doing another region
 
@@ -65,7 +67,7 @@ These are all written for the mountain by name. **The first region after it shou
 2. **Decide who roams.** List each animal and whether it roams, stays, or is tied to a place, and why.
 3. **Use the prey lists.** Decide who lives in groups from what the lists and descriptions say the animal is. Make sure each animal's food exists in that region.
 4. **Give each animal its ground, then measure it.** For each one count possible homes, grazers with grazing in range, and hunters with prey within 3 rooms. Compare with today's spawn rows. Find problems here, not after shipping.
-5. **Decide what food the birds fly to**, and leave vultures and anything with its own feeding rule alone.
+5. **Birds already fly everywhere.** A new bird joins `FOOD_FLIERS` unless it nests or feeds on the ground, and needs its food in `PREYS_ON`, `GRAZERS` or as a scavenger.
 6. **Add a regression check for each rule**, and confirm it fails when the rule is broken. Every room in the region must have a kind of ground, or the test fails.
 7. **Simulate before shipping**: see below.
 8. **Ship only when rome says "ship".** Animals already alive keep their homes at first, except group animals sorting themselves one per minute; each home's time limit starts then, so those moves begin about 8 hours later. No reseed.

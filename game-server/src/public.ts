@@ -8404,7 +8404,7 @@ var MAP_BANDS = [
 // these are the only names on the paper (rome, 2026-10-10: the map should name
 // the regions on far zoom), so they hold a readable size there and the quarters
 // wait until you come in close enough to tell them apart.
-var MAP_MAJOR_REGIONS = { sky: 1, out: 1, upper: 1, warrens: 1, deep: 1, road: 1, eastroad: 1, wood: 1, den: 1, mountain: 1, crossing: 1 };
+var MAP_MAJOR_REGIONS = { sky: 1, out: 1, upper: 1, warrens: 1, deep: 1, road: 1, eastroad: 1, wood: 1, den: 1, mountain: 1, crossing: 1, salthamlet: 1, shieling: 1 };
 var MAP_FAR_SCALE = 0.35;
 var MAP_REGION_LABELS = {
   sky: "THE OVERWORKS",
@@ -15297,8 +15297,6 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   // form does, so they belong here and nowhere else:
   "work-pull",      // the milker, pulling at the pail. She is rooted and this is
                     // her ordinary work, not an event
-  "twisting-leap",  // the dancer. A stoat dancing IS a stoat at rest — it is
-                    // what the animal is named for and when it does it
   "call-uphill",    // the last dog, still calling for people who are not coming
   // AND THE CROSSING'S DEAD, WHICH IS THE SAME LESSON AT NINE TIMES THE SIZE
   // (2026-09-13). The region's whole idea is that these people drowned and the
@@ -15446,6 +15444,18 @@ var WINGBEAT_HZ = 4;        // and wings beat this fast...
 var WINGBEAT_HZ_FAST = 8;   // ...except the ptarmigan, which whirrs
 var SWAY = 0.11;            // body sway while travelling, as a fraction of width
 var HOP = 0.16;             // how far a hare or the dancer leaves the ground, of its height
+// THE DANCER LEAPS AND COMES DOWN. Its twisting-leap is a picture of the animal in
+// mid-air, so it cannot be held like a resting pose: once every LEAP_EVERY_S, at a
+// different moment each time, it goes up and back down in LEAP_S, and between leaps
+// it stands in its idle. Answers how far through a leap it is at time t, or -1.
+var LEAP_S = 0.7;
+var LEAP_EVERY_S = 5;
+var leapAt = function (t, slot) {
+  var c = Math.floor(t / LEAP_EVERY_S);
+  var r = Math.abs(Math.sin(c * 12.9898 + slot * 78.233) * 43758.5453) % 1;
+  var u = (t - c * LEAP_EVERY_S - r * (LEAP_EVERY_S - LEAP_S)) / LEAP_S;
+  return u >= 0 && u < 1 ? u : -1;
+};
 var BOB = 0.024;            // and how much everything else nods as it walks
 var LIFT = 0.9;             // a flying drake rises about its own height
 // A BIRD CLIMBS TO THE SAME HEIGHT WHATEVER ITS SIZE (rome, 2026-09-30). Counted
@@ -16308,6 +16318,10 @@ function poseAt(a, now) {
     name = a.calm === "keep-the-seat" ? a.calm
          : a.calm && Math.floor(t / 3) % 2 ? calmNow(t / 3) : "idle";
     s *= 1 + Math.sin(t * 2) * BREATH;
+    if (f["twisting-leap"] !== undefined) {
+      var leap = leapAt(t, a.slot | 0);
+      if (leap >= 0) { name = "twisting-leap"; air = Math.sin(leap * Math.PI) * HOP; }
+    }
   }
   if (a.phase !== "hit") a.rot = 0;
   if (f[name] === undefined) name = "idle";

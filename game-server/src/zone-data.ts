@@ -2351,10 +2351,10 @@ export const ROAMING_DENS = new Set(["masterless-dog", "footpad", "roe-deer", "g
 // as they were and only the address moves.
 // Left out on purpose: the rat (the Shieling hamlet is its ground, the fever
 // rat's), the fold's animals, anything on a post, a nest or a named lair, the
-// rooted, the carrion birds, and the bosses.
+// rooted, and the bosses.
 export const MOUNTAIN_ROAMERS = new Set([
   "feral-goat", "red-hind", "hill-fox", "mountain-hare", "wildcat", "ptarmigan", "ermine", "eagle-owl",
-  "scarp-raven", "lynx", "hill-eagle", "hill-wolf", "bone-breaker", "mountain-chough", "snow-fox", "glutton",
+  "scarp-raven", "lynx", "hill-eagle", "hill-wolf", "bone-breaker", "mountain-chough", "snow-fox", "glutton", "carrion-vulture", "stone-adder",
 ]);
 
 // WHO LIVES IN COMPANY ON THE MOUNTAIN (rome, 2026-11-06). Each of these lines
@@ -2380,17 +2380,23 @@ export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox
 export const GROUND_CHASE_ODDS = 0.35;
 export const GROUND_KILL_ODDS = 0.1;
 export const GROUND_DRIVEN_LEAVES = 2;
-// THE MOUNTAIN'S BIRDS FLY OUT TO FEED (rome, 2026-11-06). They live on foot like
-// anything else; when hungry with nothing near, one takes off and is off the map
-// until it lands by the nearest food within FLIGHT_RANGE rooms (flight.ts).
-export const MOUNTAIN_FLIERS = new Set(["hill-eagle", "eagle-owl", "scarp-raven", "mountain-chough", "bone-breaker"]);
-export const BIRD_CATCH_MULT = 0.5; // a flying bird is half as easy to catch on the mountain (ai.catchMult)
+// BIRDS FLY OUT TO FEED, the whole world over (rome, 2026-11-06). They live on foot
+// like anything else; when hungry with nothing near, one takes off and is off the
+// map until it lands by the nearest food in its own region within FLIGHT_RANGE
+// rooms (flight.ts). Nesting mothers stay on the nest and the ptarmigan feeds on
+// the ground. A rare variant flies as its line does.
+export const FOOD_FLIERS = new Set([
+  "hill-eagle", "eagle-owl", "scarp-raven", "mountain-chough", "bone-breaker", "carrion-vulture",
+  "great-gull", "black-backed-gull", "gibbet-crow", "tawny-owl", "grey-heron", "bittern", "oystercatcher",
+]);
+export const BIRD_CATCH_MULT = 0.5; // a flying bird is half as easy to catch (ai.catchMult)
 export const FLIGHT_RANGE = 25;
 export const FLIGHT_MS_PER_ROOM = 5_000;
 export const FLIGHT_MIN_MS = 15_000;
 export const FLIGHT_STAY_MS = 30 * 60_000;   // it stays down until fed, up to this: scavenging takes about 15 minutes (FORAGE_FIND_MS)
 export const FLIGHT_REST_MS = 20 * 60_000;   // home hungry: the rest before it tries again
 export const FLIGHT_CHECK_MS = 10_000;
+export const FLIGHT_LOOK_MS = 60_000; // a hungry bird that found nothing looks again about this much later: the search walks every room in reach, so it is not done every check
 // The lynx has no wings, so it will only settle where living prey is close. The
 // hare and the ptarmigan will only settle with grazing inside ROUND_RANGE of home.
 export const SETTLES_BY_PREY = new Set(["lynx"]);
@@ -3573,6 +3579,9 @@ export const THIRST_RADIUS = 12;
 
 export const THIRST_MIN_MS = 2 * 3_600_000;
 export const THIRST_MAX_MS = 4 * 3_600_000;
+// A timer that ran out with nobody near does not send the animal off the moment someone
+// walks up: water runs only around a player, so otherwise everything overdue goes at once.
+export const THIRST_LATE_MS = 60_000;
 // CALLS: one primitive, three meanings — prey calls AWAY (a fleeing rat's
 // squeal fear-marks its room for the warren nearby), predators call TOWARD
 // (a feeding grave-hyena laughs ONE adjacent packmate in; the dire is a
@@ -5816,15 +5825,13 @@ export const DEN_MOVES = new Map<string, string>([
 // answers you already carry — a lurker wakes on entry and noise odds, so a
 // quiet pack walks past one, and it fears a torch.
 export const ROOTED = new Set([
-  // mig 247, the mountain's rare blood: the-gravid-adder
-  "the-gravid-adder",
 "root-thing",
-  // THE MOUNTAIN, TIER FIVE (mig 235). Two things that are PART OF THE GROUND in
-  // the plainest sense of this set: an adder lying on warm rock is not going to
-  // be anywhere else today, and a bird that has been sitting a nest for six
-  // weeks is not going to start wandering now. Neither is drawn by noise,
-  // neither joins a scrum, and neither ever leaves the room it belongs to.
-  "stone-adder", "brooding-vulture",
+  // THE MOUNTAIN, TIER FIVE (mig 235). PART OF THE GROUND in the plainest sense of
+  // this set: a bird that has been sitting a nest for six weeks is not going to
+  // start wandering now. It is not drawn by noise, does not join a scrum, and never
+  // leaves the room it belongs to. (The stone adder was here too until it joined
+  // the mountain's movers, 2026-11-06.)
+  "brooding-vulture",
   // THE SEA CAVE'S CRABS (mig 281). A crab in a cave pool holds its stone and
   // waits for the water to bring it something; it does not go looking. That is
   // true of crabs, and it is also the only thing that keeps them in the cave —
