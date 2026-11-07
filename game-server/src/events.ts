@@ -283,7 +283,12 @@ function tickRainbows(z: ZoneDO, now: number): void {
 // cloud over the rain is the sky here too - grey, and the rain under it in
 // plain sight. Returns that ground, or "".
 export function rainNearby(z: ZoneDO, roomId: string): string {
-  if (!OUTDOOR_ROOMS.has(roomId) || phaseOf(z, "rain") !== "active" || wxCovers(z, "rain", roomId)) return "";
+  return OUTDOOR_ROOMS.has(roomId) ? rainNextDoor(z, roomId) : "";
+}
+// ...and the same asked of the ground a roof stands on, for the sky in its window:
+// someone under it can't be told about the weather, but can see it (rome, 2026-11-06).
+export function rainNextDoor(z: ZoneDO, roomId: string): string {
+  if (phaseOf(z, "rain") !== "active" || wxCovers(z, "rain", roomId)) return "";
   const st = z.events.get("rain");
   if (!st?.bands) return "";
   for (const b of weatherGrounds(z).next.get(wxGround(z, roomId)) ?? []) if (st.bands.includes(b)) return b;

@@ -15453,6 +15453,13 @@ var HOP = 0.16;             // how far a hare or the dancer leaves the ground, o
 // mid-air, so it cannot be held like a resting pose: once every LEAP_EVERY_S, at a
 // different moment each time, it goes up and back down in LEAP_S, and between leaps
 // it stands in its idle. Answers how far through a leap it is at time t, or -1.
+// A BIRD THAT STRIKES FROM THE AIR DOES IT IN THE AIR (rome, 2026-11-06). The rules
+// are untouched: it can be hit when it strikes and when it has not climbed back. The
+// picture keeps it up: it hangs at SWOOP_HOVER of its height, dips to SWOOP_DIP at the
+// blow and rises again. FLIER_KIND's hunters and mobbers (a test holds the two lists
+// together); crows and ravens fight on foot, and the words say so.
+var SWOOPERS = { "eagle-owl": 1, "tawny-owl": 1, "hill-eagle": 1, "eyrie-holder": 1, "bone-breaker": 1, "the-bone-dropper": 1, "great-gull": 1, "black-backed-gull": 1 };
+var SWOOP_HOVER = 0.55, SWOOP_DIP = 0.2;
 var LEAP_S = 0.7;
 var LEAP_EVERY_S = 5;
 var leapAt = function (t, slot) {
@@ -15986,7 +15993,10 @@ function applyState(doing) {
     var a = anims[i], st = (doing && doing[a.slot]) || "";
     if (a.phase === "death") continue;
     if (st === a.state) continue;
-    a.landing = a.state === "aloft";   // out of the sky: it comes down to strike (poseAt)
+    var wasUp = a.state === "aloft";
+    if (wasUp && (st === "hunt" || st === "fight") && SWOOPERS[a.id]) { a.swoop = true; a.swoopDrop = true; }
+    else if (st !== "aloft" && st !== "hunt" && st !== "fight") a.swoop = false; // knocked out of the air, or the fight is over
+    a.landing = wasUp && !a.swoop;     // out of the sky: it comes down to strike (poseAt)
     a.state = st;
     a.asleep = st === "rest";
     a.t = 0;
@@ -16326,6 +16336,17 @@ function poseAt(a, now) {
     if (f["twisting-leap"] !== undefined) {
       var leap = leapAt(t, a.slot | 0);
       if (leap >= 0) { name = "twisting-leap"; air = Math.sin(leap * Math.PI) * HOP; }
+    }
+  }
+  if (a.swoop && a.phase !== "death") {
+    if (a.state === "aloft") air = Math.max(air, lift * SWOOP_HOVER);
+    else if (a.phase === "attack") {
+      a.swoopDrop = false;
+      air = lift * (SWOOP_HOVER - (SWOOP_HOVER - SWOOP_DIP) * Math.sin(Math.min(Math.max(t, 0) / ATTACK_S, 1) * Math.PI));
+    } else {
+      if (a.swoopDrop && t >= 0.5) a.swoopDrop = false;
+      air = lift * (SWOOP_HOVER + (a.swoopDrop ? (1 - SWOOP_HOVER) * (1 - t / 0.5) : 0));
+      if (a.phase === "idle" && f.glide !== undefined) name = f.up !== undefined && (t % 3) < 0.6 ? (Math.floor(t * WINGBEAT_HZ) % 2 ? "up" : "down") : "glide";
     }
   }
   if (a.phase !== "hit") a.rot = 0;

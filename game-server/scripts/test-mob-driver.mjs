@@ -372,4 +372,35 @@ gull.phase = "travel"; gull.t = 0.1;
 const gp = inv["great-gull"][ctx.poseAt(gull, Date.now()).k];
 t("a bird with no takeoff drawn does not invent one", gp !== "takeoff", "pose=" + gp);
 
+// A BIRD THAT STRIKES FROM THE AIR STAYS IN THE AIR (rome, 2026-11-06).
+{
+  const up = (id) => { const b = mk(id); b.state = "aloft"; ctx.set([b]); return b; };
+  const at = (b, phase, tt) => { b.phase = phase; b.t = tt; return ctx.poseAt(b, Date.now()); };
+  for (const id of ["eagle-owl", "tawny-owl", "hill-eagle", "eyrie-holder", "bone-breaker", "great-gull"]) {
+    const b = up(id); ctx.applyState(["hunt"]);
+    t(id + " leaves the sky to strike and does not land", b.swoop === true && !b.landing);
+    const hang = at(b, "idle", 2).air, blow = at(b, "attack", ctx.ATTACK_S / 2), end = at(b, "attack", ctx.ATTACK_S).air;
+    t("...it hangs in the air", hang > 0, "air=" + hang);
+    t("...strikes lower, on its blow, still off the floor", blow.air > 0 && blow.air < hang, "air=" + blow.air);
+    t("...and rises off it to where it was", Math.abs(end - hang) < 1e-9, end + " " + hang);
+    t("...and a blow on it does not put it down", at(b, "hit", 0.1).air > 0);
+    b.phase = "idle"; ctx.applyState(["aloft"]); b.t = 0;
+    t("...and climbing starts from where it hangs, not the floor", ctx.poseAt(b, Date.now()).air >= hang - 1e-9);
+    b.t = 2;
+    t("...and it climbs back up above that", ctx.poseAt(b, Date.now()).air > hang, "air=" + ctx.poseAt(b, Date.now()).air);
+  }
+  const owl = up("eagle-owl"); ctx.applyState(["hunt"]);
+  t("in the air it is on its flying frames", inv["eagle-owl"][at(owl, "idle", 2).k] === "glide", inv["eagle-owl"][at(owl, "idle", 2).k]);
+  t("and strikes with its attack frame", inv["eagle-owl"][at(owl, "attack", ctx.ATTACK_S / 2).k] === "attack");
+  const down = up("eagle-owl"); ctx.applyState(["reel"]);
+  t("knocked out of the air it comes down", !down.swoop && down.landing === true);
+  t("and is on the floor after", at(down, "idle", 2).air === 0);
+  const over = up("eagle-owl"); ctx.applyState(["hunt"]); ctx.applyState([""]);
+  t("when the fight is over it does not hang there", !over.swoop && at(over, "idle", 2).air === 0);
+  const foot = up("scarp-raven"); ctx.applyState(["hunt"]);
+  t("a raven comes down and fights on foot, as the words say", !foot.swoop && foot.landing === true && at(foot, "attack", ctx.ATTACK_S / 2).air === 0);
+  const never = mk("eagle-owl"); ctx.set([never]); ctx.applyState(["hunt"]);
+  t("one that never went up strikes from where it stands", !never.swoop && at(never, "attack", ctx.ATTACK_S / 2).air === 0);
+}
+
 console.log(fail?"\n"+fail+" FAILED":"\nall pass");process.exit(fail?1:0);

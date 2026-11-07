@@ -65,7 +65,7 @@ try {
         "export * as conditions from './conditions';",
         "export * as clues from './clues';",
         "export {biggestFields, saveSim, loadSim, newCache} from './simstore';",
-        "export {wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn} from './events';",
+        "export {rainNextDoor, rainNearby, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn} from './events';",
         "export * as study from './study';",
         "export {cmdStudy, cmdJournal, refreshStudied, journalKey} from './lore';",
         "export * as rising from './rising';",
@@ -96,7 +96,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
+  const { rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2631,6 +2631,28 @@ try {
     assert.match(zone, /ai\.mealWords\(this, creature, tmpl\.name, eatingWas, eatingSeen, now\);/, 'the beat asks');
     assert.match(readFileSync(new URL('../src/simstore.ts', import.meta.url), 'utf8'), /"eatSayAt"\]\);/, 'and a line of a meal never forces a save');
   });
+  check('a window under a roof shows the grey of rain on the ground next door (2026-11-06)', () => {
+    const band = { hill: 'mountain', roof: 'mountain', shore: 'crossing' };
+    const z = { bandOf: (r) => band[r], regionOf: (r) => band[r], events: new Map([['rain', { phase: 'active', until: Date.now() + 9e6, bands: ['crossing'] }]]),
+      world: { rooms: new Map(Object.keys(band).map((r) => [r, {}])), exits: new Map([['hill', [{ to_room: 'shore' }]], ['shore', [{ to_room: 'hill' }]], ['roof', [{ to_room: 'hill' }]]]) } };
+    OUTDOOR_ROOMS.add('hill'); OUTDOOR_ROOMS.add('shore');
+    try {
+      assert.equal(rainNextDoor(z, 'roof'), 'crossing', 'the roof stands on ground with rain beside it');
+      assert.equal(rainNearby(z, 'roof'), '', 'but nobody under it is told of the rain in words');
+      assert.equal(rainNearby(z, 'hill'), 'crossing', 'outside it is both');
+      z.events.get('rain').bands = ['mountain'];
+      assert.equal(rainNextDoor(z, 'roof'), '', 'rain on its own ground is not rain next door');
+    } finally { OUTDOOR_ROOMS.delete('hill'); OUTDOOR_ROOMS.delete('shore'); }
+  });
+  check('the picture and the rules agree on which birds strike from the air (2026-11-06)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const kinds = zd.slice(zd.indexOf('export const FLIER_KIND'), zd.indexOf('export const FLIERS ='));
+    const want = [...kinds.matchAll(/"([a-z-]+)": "(hunter|mobber)"/g)].map((m) => m[1]).sort();
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const got = [...pub.match(/var SWOOPERS = \{([^}]*)\}/)[1].matchAll(/"([a-z-]+)"/g)].map((m) => m[1]).sort();
+    assert.deepEqual(got, want);
+    assert.ok(!got.includes('scarp-raven') && !got.includes('gibbet-crow'), 'crows and ravens fight on foot, and the words say so');
+  });
   check('the dancer leaps and comes down, and stands between leaps (2026-11-06)', () => {
     const src = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const block = src.slice(src.indexOf('var LEAP_S ='), src.indexOf('var BOB ='));
@@ -4134,7 +4156,7 @@ try {
     // one rule for both: the lid shut, less the full moon that shows through
     assert.match(zu, /export function skyCovered\(now = Date\.now\(\)\): boolean \{\n  return !lidOpen\(now\) && !\(isNight\(now\) && isFullMoon\(now\)\);/);
     // the picture: a covered spell is drawn as the after-rain sky at its hour
-    assert.match(z, /\|\| !!events\.rainNearby\(this, session\.roomId\) \|\| skyCovered\(\);/, 'the page is sent the grey sky');
+    assert.match(z, /\|\| !!\(seesOut \? events\.rainNextDoor\(this, session\.roomId\) : events\.rainNearby\(this, session\.roomId\)\) \|\| skyCovered\(\);/, 'the page is sent the grey sky');
     // the words: look sky says the cloud has it, ahead of the stars and the moon
     const i = ev.indexOf('if (skyCovered() &&'), j = ev.indexOf('if (isNight()) return `${SKY_NIGHT}');
     assert.ok(i > 0 && i < j, 'the covered line answers before the starry night');

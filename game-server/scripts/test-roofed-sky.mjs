@@ -32,7 +32,7 @@ const ROOMS = {
   "the-black-hut":    { region: "den",   outdoor: false },   // a roof in a band with no plates
   "the-marshals-lodging": { region: "out", outdoor: false },   // a roof whose picture is the ground outside
 };
-function skyFor(id, { night = false, raining = false, inside = false } = {}) {
+function skyFor(id, { night = false, raining = false, inside = false, rainNext = false } = {}) {
   const ctx = {
     seesArt: () => true,
     OUTDOOR_ROOMS: { has: (r) => !!ROOMS[r]?.outdoor },
@@ -40,7 +40,9 @@ function skyFor(id, { night = false, raining = false, inside = false } = {}) {
     events: {
       weatherNow: () => (raining ? "rain" : ""), snowed: () => false,
       foggy: () => false, raining: () => raining, phaseOf: () => "",
-      wxPhase: () => "", afterRainCleared: () => true, rainNearby: () => false,
+      wxPhase: () => "", afterRainCleared: () => true,
+      // As the real pair: words stop at the door, the window does not.
+      rainNearby: (z, r) => rainNext && !!ROOMS[r]?.outdoor, rainNextDoor: () => rainNext,
     },
     isNight: () => night, isBloodMoon: () => false, isFullMoon: () => false,
     eclipsePhase: () => "idle", isDusk: () => false, isDawn: () => false, skyCovered: () => false,
@@ -68,6 +70,15 @@ t("...and the day by day", skyFor("the-carters-rest") === "day", skyFor("the-car
 // client's now; the server says what the sky is doing.
 t("...and the rain outside it", skyFor("the-carters-rest", { raining: true }) === "rain",
   skyFor("the-carters-rest", { raining: true }));
+// ...AND THE RAIN ON THE GROUND NEXT DOOR (rome, 2026-11-06: the Hill Smithy's window
+// showed a clear blue day with the sky outside it gone grey).
+t("...and the grey of rain next door", skyFor("the-carters-rest", { rainNext: true }) === "after-rain",
+  skyFor("the-carters-rest", { rainNext: true }));
+t("...which is the same grey the open road beside it has", skyFor("the-east-paving", { rainNext: true }) === "after-rain",
+  skyFor("the-east-paving", { rainNext: true }));
+t("...and a wet night by night", skyFor("the-carters-rest", { rainNext: true, night: true }) === "wet-night",
+  skyFor("the-carters-rest", { rainNext: true, night: true }));
+t("a sealed room still has no sky at all", skyFor("the-deep-cell", { rainNext: true }) === "in", skyFor("the-deep-cell", { rainNext: true }));
 // The open road beside it is unchanged in every respect.
 t("the open road still takes the night", skyFor("the-east-paving", { night: true }) === "night",
   skyFor("the-east-paving", { night: true }));

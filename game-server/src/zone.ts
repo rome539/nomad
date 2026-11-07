@@ -9342,7 +9342,7 @@ export class ZoneDO implements DurableObject {
     // ...and the covered spells, which are the same grey sky without the rain
     // (zone-util skyCovered: no sun, no moon, no stars; `look sky` says so too)
     const wet = (events.wxPhase(this, "rain", session.roomId) === "aftermath" && !events.afterRainCleared(this, session.roomId))
-      || !!events.rainNearby(this, session.roomId) || skyCovered();
+      || !!(seesOut ? events.rainNextDoor(this, session.roomId) : events.rainNearby(this, session.roomId)) || skyCovered();
     return (!OUTDOOR_ROOMS.has(session.roomId) && !seesOut) ? "in"
     : (seesOut ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId)) ? "snow"
     : (seesOut ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId)) ? "fog"
