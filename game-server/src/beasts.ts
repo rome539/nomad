@@ -4,8 +4,7 @@
 // groups; everything else is read off the living world when asked.
 import type { ZoneDO } from "./zone";
 import type { Creature } from "./zone-types";
-import { GROUND_OF } from "./mountain-ground";
-import { FOOD_FLIERS, MOUNTAIN_ROAMERS } from "./zone-data";
+import { FOOD_FLIERS, MOUNTAIN_ROAMERS, SHIELING_HAMLET_ROOMS } from "./zone-data";
 
 const DAY_MS = 24 * 3_600_000;
 export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Record<string, Record<string, number>> }
@@ -70,8 +69,9 @@ export function lines(z: ZoneDO, now: number): string[] {
   for (const c of wolves) if (c.group) packs.set(c.group, (packs.get(c.group) ?? 0) + 1);
   const alone = wolves.filter((c) => !c.group && c.lone).length;
   const unsorted = wolves.filter((c) => !c.group && !c.lone).length;
-  const hamlet = wolves.filter((c) => GROUND_OF.get(c.home ?? "")?.includes("hamlet")).length;
-  out.push(`Wolves: ${wolves.length} alive, ${alone} alone, ${hamlet} living in the hamlet${unsorted ? `, ${unsorted} not sorted yet` : ""}`);
+  const inHamlet = new Set(SHIELING_HAMLET_ROOMS);
+  const hamlet = wolves.filter((c) => inHamlet.has(c.home ?? "") || inHamlet.has(c.roomId)).length;
+  out.push(`Wolves: ${wolves.length} alive, ${alone} alone, ${hamlet} in the hamlet${unsorted ? `, ${unsorted} not sorted yet` : ""}`);
   for (const [id, n] of packs) out.push(`  pack of ${n} at ${roomName(z.groups.packs[id]?.home ?? "")}`);
   if (!packs.size) out.push("  no packs");
 

@@ -1270,6 +1270,10 @@ export function winded(creature: Creature, now: number): boolean {
 }
 
 export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean, chased = false): Promise<void> {
+    // HELD MEANS HELD (rome, 2026-11-06). A grip only pushed the wander clock back
+    // a minute, so big prey, which takes longer to kill, strolled out of it most of
+    // the time. It leaves by breaking the grip (worryPrey) or being driven off.
+    if (mode === "wander" && creature.heldBy) return;
     const world = z.world!;
     const tmpl = world.mobTemplates.get(creature.templateId)!;
     let exits = (world.exits.get(creature.roomId) ?? []).filter(

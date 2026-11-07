@@ -1177,6 +1177,22 @@ try {
     const d = mk(); d.creatures.set('s', { ...stray(), roomId: 'ride' }); whiteroe.roll(d, 1_000_000);
     assert.equal(d.creatures.has('s'), true, 'one in the wood stays');
   });
+  await checkAsync('a gripped animal stays gripped: it cannot walk out of the hold (2026-11-06)', async () => {
+    const z = new ZoneDO({}, {});
+    const ex = (pairs) => pairs.map(([dir, to_room]) => ({ dir, to_room, key_item: null }));
+    z.world = { mobTemplates: new Map([['feral-goat', { id: 'feral-goat', name: 'a feral goat', max_hp: 26, is_boss: 0 }], ['hill-eagle', { id: 'hill-eagle', name: 'an eagle', max_hp: 34, is_boss: 0 }]]), mobSpawns: [], itemTemplates: new Map(),
+      rooms: new Map([['a', { id: 'a', region: 'out' }], ['b', { id: 'b', region: 'out' }]]), exits: new Map([['a', ex([['east', 'b']])], ['b', ex([['west', 'a']])]]), entryRooms: new Set(), safeRooms: new Set() };
+    z.send = () => {}; z.roomFeed = () => {}; z.roomSound = () => {}; z.refreshRoomCtx = () => {}; z.noteCreaturesChanged = () => {};
+    const goat = { id: 'g', templateId: 'feral-goat', roomId: 'a', home: 'a', hp: 26, target: null, grudges: [], hunger: 0, nextWanderAt: 0, heldBy: 'e' };
+    const eagle = { id: 'e', templateId: 'hill-eagle', roomId: 'a', home: 'a', hp: 34, target: null, grudges: [], hunger: 0, nextWanderAt: 0, holding: 'g' };
+    z.creatures = new Map([['g', goat], ['e', eagle]]);
+    await creatureMoves(z, goat, Date.now(), 'wander', true);
+    assert.equal(goat.roomId, 'a', 'its wander clock running out does not let it walk off');
+    assert.equal(goat.heldBy, 'e');
+    goat.heldBy = undefined; eagle.holding = undefined;
+    await creatureMoves(z, goat, Date.now(), 'wander', true);
+    assert.equal(goat.roomId, 'b', 'let go, it walks like anything else');
+  });
   check('the mountain has twelve hill wolves, the four new rows carrying ids and standing on wolf ground (2026-11-06)', () => {
     const mig = readFileSync(new URL('../migrations/375_more_wolves_on_the_hill.sql', import.meta.url), 'utf8');
     const rows = [...mig.matchAll(/VALUES \('(spawn-hill-wolf@([a-z-]+))', 'hill-wolf', '([a-z-]+)'\)/g)];
@@ -5068,7 +5084,7 @@ try {
     beasts.noteKill(z, creatures.get('w1'), 'wanderers', now);
     beasts.noteKill(z, creatures.get('off'), 'lynx', now);
     const read = beasts.lines(z, now).join('\n');
-    assert.match(read, /Wolves: 4 alive, 1 alone, 2 living in the hamlet, 1 not sorted yet/);
+    assert.match(read, /Wolves: 4 alive, 1 alone, 2 in the hamlet, 1 not sorted yet/);
     assert.match(read, /pack of 2 at The Shiel Street/);
     assert.match(read, /hill wolf: 4 of 2/, 'alive against the limit, and it can read over');
     assert.match(read, /scarp raven: 3 of 0/, 'the wood raven is not the mountain\'s, in the count or the limit');
@@ -5080,6 +5096,13 @@ try {
     const later = beasts.lines(z, now + DAY).join('\n');
     assert.match(later, /In the last hour: 0 homes given up, 1 flights/, 'a new day starts fresh');
     assert.match(later, /The 24 hours before: 0 homes given up, 2 flights/, 'and keeps the day before');
+    // The hamlet is the hamlet's real rooms, whether a wolf lives there or just stands there (2026-11-06).
+    add('w5', 'hill-wolf', 'the-spring-green', { lone: true });              // home in the hamlet, on green ground
+    add('w6', 'hill-wolf', 'the-turf-wall', { lone: true });                 // a fold near the Shieling, not the hamlet
+    add('w7', 'hill-wolf', 'the-north-scree', { lone: true, roomId: 'the-shiel-street' }); // lives away, stands in it
+    add('w8', 'hill-wolf', 'the-hill-graves', { lone: true, roomId: 'the-first-crag' }); // lives in it, out hunting
+    assert.match(beasts.lines(z, now + 2 * DAY).join('\n'), /Wolves: 8 alive, 5 alone, 5 in the hamlet/);
+    for (const id of ['w5', 'w6', 'w7', 'w8']) creatures.delete(id);
     const vs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.match(vs, /export function cmdBeasts\(z: ZoneDO, session: Session\): void \{\n\s*if \(session\.pubkey !== CENSUS_PUBKEY\)/, 'only the keeper reads it');
     const census = vs.slice(vs.indexOf('export async function cmdCensus'));
