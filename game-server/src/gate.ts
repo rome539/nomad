@@ -2596,6 +2596,12 @@ export async function deathStash(z: ZoneDO, victim: Session): Promise<string[]> 
 
   const held = await loadContainer(z.env.DB, victim.pubkey, "lockbox");
   const saved: string[] = [];
+  // THE WHY, WRITTEN DOWN (2026-11-07): a map and a book went onto a stiff body
+  // with the box showing room, and nothing on record said why. Every dying hand
+  // that carries one logs what it found and what it did with it.
+  const why: string[] = [`charts=${charts.length}(${charts.map((c) => c.itemId).join("|")}) best=${chart?.itemId ?? "none"}:${chartBest}`,
+    `books=${books.length}(${books.map((c) => c.itemId).join("|")}) best=${book?.itemId ?? "none"}:${bookBest}`,
+    `box=${held.length} rows/${z.slotsUsed(held, "lockbox")} slots of ${LOCKBOX_CAP}`];
   // The chart goes in first when only one slot is left. A book fills wherever
   // you fight; a chart only fills where you WALK, and walking somewhere new is
   // the slower half of this world to redo.
@@ -2603,13 +2609,17 @@ export async function deathStash(z: ZoneDO, victim: Session): Promise<string[]> 
     if (!c) continue;
     // Both are loose, single-slot things — if the first won't fit, neither will
     // the second, and the stones get them the way they always did.
-    if (!z.hasRoom(held, c.itemId, LOCKBOX_CAP, "lockbox")) break;
-    victim.items.splice(victim.items.indexOf(c), 1);
+    if (!z.hasRoom(held, c.itemId, LOCKBOX_CAP, "lockbox")) { why.push(`no room for ${c.itemId}`); break; }
+    const at = victim.items.indexOf(c);
+    if (at === -1) { why.push(`${c.itemId} not in hand`); continue; }
+    victim.items.splice(at, 1);
     c.equipped = false;
     await setContainer(z.env.DB, c.rowId, "lockbox"); // container != '' — the death sweep no longer deletes the row
     held.push(c);
     saved.push(world.itemTemplates.get(c.itemId)?.name ?? c.itemId);
+    why.push(`saved ${c.itemId}`);
   }
+  console.log(`dying hand ${victim.name} in ${victim.roomId}: ${why.join("; ")}`);
   return saved;
 }
 

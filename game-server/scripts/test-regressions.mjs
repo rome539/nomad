@@ -1400,6 +1400,30 @@ try {
     await cmdSmoke(z, me);
     assert.match(said.pop(), /work one loose and light it/, 'the lockbox rides with you');
   });
+  // 2026-11-07: a map and a journal went onto a stiff body in the ossuary with the
+  // box at 4 of 8. The dying hand now writes down why, every time.
+  await checkAsync('a vital death puts the map and the book in a box with room, and says why either way', async () => {
+    const run = async (boxed) => {
+      const { z, me, db, wolf } = bodyWorld();
+      for (const k of ['hasRoom', 'slotsUsed', 'stackable', 'isGear']) z[k] = ZoneDO.prototype[k].bind(z);
+      z.world.itemTemplates.set('surveyor-map', { id: 'surveyor-map', name: "a surveyor's map", slot: '' });
+      z.world.itemTemplates.set('hunters-journal', { id: 'hunters-journal', name: "a hunter's journal", slot: '' });
+      for (let i = 0; i < boxed; i++) { z.world.itemTemplates.set('g' + i, { id: 'g' + i, name: 'g' + i, slot: 'weapon' }); db.prepare("INSERT INTO player_items(id, item_id, pubkey, container, journal_id) VALUES (?, ?, 'me', 'lockbox', '')").run('lb' + i, 'g' + i); }
+      db.prepare("INSERT INTO player_items(id, item_id, pubkey, journal_id) VALUES ('m1', 'surveyor-map', 'me', 'map-1')").run();
+      db.prepare("INSERT INTO player_items(id, item_id, pubkey, journal_id) VALUES ('j1', 'hunters-journal', 'me', 'jrn-1')").run();
+      me.items.push({ rowId: 'm1', itemId: 'surveyor-map', serial: null, journalId: 'map-1', condition: 100 }, { rowId: 'j1', itemId: 'hunters-journal', serial: null, journalId: 'jrn-1', condition: 100 });
+      const logged = [], log = console.log; console.log = (m) => logged.push(String(m));
+      try { await z.onPlayerDeath(me, wolf, undefined, true); } finally { console.log = log; }
+      const at = Object.fromEntries(db.prepare("SELECT id, container FROM player_items WHERE id IN ('m1','j1')").all().map((r) => [r.id, r.container]));
+      return { at, line: logged.find((l) => l.startsWith('dying hand')) ?? '' };
+    };
+    const room = await run(4);
+    assert.deepEqual(room.at, { m1: 'lockbox', j1: 'lockbox' }, 'four of eight: both go in the box, not onto the body');
+    assert.match(room.line, /box=4 rows\/4 slots of 8; saved surveyor-map; saved hunters-journal/, room.line);
+    const full = await run(8);
+    assert.deepEqual(full.at, { m1: 'body:moor', j1: 'body:moor' }, 'a full box: they stay on the body');
+    assert.match(full.line, /box=8 rows\/8 slots of 8; no room for surveyor-map/, full.line);
+  });
   await checkAsync("a creature's vital shot leaves the kit on a stiff body, the owner's alone (2026-10-23)", async () => {
     const { z, me, wolf, said, where } = bodyWorld();
     await z.onPlayerDeath(me, wolf, undefined, true);
@@ -1452,6 +1476,19 @@ try {
     } finally { Date.now = realNow; }
     assert.deepEqual(where(), [], 'the rows are gone');
     assert.deepEqual([...(z.ground.get('moor') ?? [])].sort(), ['knife', 'tin'], 'and it lies on the floor');
+  });
+  // 2026-11-07: the hold is half an hour, not an hour.
+  await checkAsync('a stiff body holds for half an hour, then lets go', async () => {
+    const { z, me, wolf, where, said } = bodyWorld();
+    await z.onPlayerDeath(me, wolf, undefined, true);
+    assert.match(said.join(' '), /within 30 minutes/, 'the dead are told half an hour');
+    const realNow = Date.now, t0 = realNow();
+    try {
+      Date.now = () => t0 + 29 * 60_000; await body.sweep(z, Date.now());
+      assert.deepEqual(where(), ['body:moor', 'body:moor'], 'at 29 minutes it still holds');
+      Date.now = () => t0 + 31 * 60_000; await body.sweep(z, Date.now());
+      assert.deepEqual(where(), [], 'at 31 it has let go');
+    } finally { Date.now = realNow; }
   });
   await checkAsync('after a deploy the zone finds the bodies again from the database', async () => {
     const { z, me, wolf } = bodyWorld();

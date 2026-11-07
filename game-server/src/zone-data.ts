@@ -10048,7 +10048,7 @@ export const VITALS_ARMOR_FULL = 11;  // total armor that counts as 'fully cover
 // roe) and the rats at any size. A rat still can't lottery your kit away.
 // A creature's vital shot stiffens the body round its kit for this long; only
 // its owner can 'fetch' from it, and then it lets go and spills (body.ts).
-export const BODY_HOLD_MS = 60 * 60_000;
+export const BODY_HOLD_MS = 30 * 60_000; // half an hour (rome, 2026-11-07; was an hour)
 export const BODY_SWEEP_MS = 30_000;
 export const VITALS_SPARED_LEVEL = 1;
 export const VITALS_SPARED = new Set<string>(["rat", "fleet-rat", "brood-rat", "albino-rat"]);
