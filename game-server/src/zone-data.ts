@@ -4956,9 +4956,9 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // TIER THREE (mig 231). THE STAG STOPS BEING UNTOUCHABLE, and the two notes
   // above have been promising exactly this since the foot shipped. One hill wolf
   // is a smaller animal than a lynx and takes what a fox takes; what changes is
-  // that there are seven of them and they call. The hind, the goat and the stag
-  // are all in PACK_PREY instead, behind a strength requirement.
-  ["hill-wolf", new Set(["rat", "mountain-chough", "mountain-hare", "snow-hare", "ptarmigan"])],
+  // that there are seven of them and they call. The hind and the stag
+  // are in PACK_PREY instead, behind a strength requirement.
+  ["hill-wolf", new Set(["rat", "mountain-chough", "mountain-hare", "snow-hare", "ptarmigan", "feral-goat"])], // the goat alone (rome, 2026-11-06)
   // The lead wolf is the one animal on this mountain that has the stag alone.
   // 54hp/6-9 against 48hp/4-8 is a thin edge and that is the correct width of
   // it: he wins, and not easily, and he is rare blood off a refill rather than a
@@ -5177,11 +5177,11 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   ["dire-hyena", new Map([["grey-wolf", 2]])],  // ...and it takes two of them to push a wolf off a kill
   ["masterless-dog", new Map([["feral-goat", 2], ["great-gull", 2]])], // one stray circles a goat; two bring it down — and the gull is bigger than either of them
   // THE MOUNTAIN, TIER THREE (mig 231). The whole point of putting a pack on
-  // this mountain: one hill wolf takes hares, two take the goat and the hind,
+  // this mountain: one hill wolf takes hares and the goat, two take the hind,
   // and THREE take the stag that nothing below could touch. Read down the
   // numbers and the tier's difficulty curve is written in them — it is not that
   // the wolves are strong, it is that there are enough of them.
-  ["hill-wolf", new Map([["feral-goat", 2], ["red-hind", 2], ["red-stag", 3], ["scarp-raven", 2], ["bone-breaker", 2]])],
+  ["hill-wolf", new Map([["red-hind", 2], ["red-stag", 3], ["scarp-raven", 2], ["bone-breaker", 2]])],
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —

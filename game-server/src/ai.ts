@@ -76,6 +76,8 @@ export function rollBloodline(z: ZoneDO, tmpl: MobTemplate, room?: string): MobT
     const world = z.world!;
     for (const v of world.mobVariants) {
       if (v.baseId !== tmpl.id || !chance(v.chance)) continue;
+      // The white roe is the wood's: a roe born anywhere else stays a plain roe.
+      if (v.variantId === WHITE_ROE && (!room || z.regionOf(room) !== "wood")) continue;
       // A nester is immortal and sessile, so every extra mother is forever.
       // Her law (rome, 2026-07-10): mothers may spread across the dungeon, but
       // only into a den of her line, and never two to a room — a promotion

@@ -3,7 +3,8 @@
 // that ground, it takes off, is off the map while it flies (the drake's `aloft`,
 // which every room index already honours), and comes down by the nearest food.
 // Once down it feeds or hunts by the ordinary rules, then flies home; if it finds
-// nothing it goes home hungry and rests before it tries again. A bird in a fight,
+// nothing it goes home hungry and rests before it tries again. A hunter whose prey
+// has left does not sit out its time: it flies to the next thing it eats. A bird in a fight,
 // held, hurt or asleep does not go, so flying is never an escape.
 import type { ZoneDO } from "./zone";
 import type { Creature } from "./zone-types";
@@ -43,7 +44,7 @@ function nearHome(z: ZoneDO, home: string): string {
 }
 
 /** The nearest food in the air's reach, unless there is some on the ground it can walk. */
-function findFood(z: ZoneDO, c: Creature, line: string): { room: string; dist: number } | undefined {
+function findFood(z: ZoneDO, c: Creature, line: string, nearToo = false): { room: string; dist: number } | undefined {
   const world = z.world!;
   const summit = MOUNTAIN_QUARTER_ROOMS.summit ?? [];
   const region = z.regionOf(c.home ?? c.roomId);
@@ -53,7 +54,14 @@ function findFood(z: ZoneDO, c: Creature, line: string): { room: string; dist: n
     if (z.regionOf(room) !== region || !underSky(z, room) || world.entryRooms.has(room) || world.safeRooms.has(room) || summit.includes(room)) continue;
     if (foodIn(z, c, line, room) && hasSpace(z, room)) best = { room, dist };
   }
-  return best && best.dist > TERRITORY_RADIUS ? best : undefined;
+  return best && (nearToo || best.dist > TERRITORY_RADIUS) ? best : undefined;
+}
+
+/** A hunting bird down at a meal with nothing left to hunt: given a minute on the ground, and not blown from a rush or on a chase. */
+function preyHasLeft(z: ZoneDO, c: Creature, line: string, now: number): boolean {
+  if (!(PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line))?.size) return false;
+  if (now < c.awayUntil! - FLIGHT_STAY_MS + FLIGHT_LOOK_MS || (c.huntRestUntil ?? 0) > now || c.chase) return false;
+  return !foodIn(z, c, line, c.roomId);
 }
 
 function canGo(z: ZoneDO, c: Creature): boolean {
@@ -126,6 +134,17 @@ export function tick(z: ZoneDO, now: number): void {
         const home = c.home ?? c.roomId;
         const dist = z.nearby(c.roomId, FLIGHT_RANGE).get(home) ?? FLIGHT_RANGE;
         takeOff(z, c, home, dist, now);
+      } else if (preyHasLeft(z, c, line, now)) {
+        // A hunter's meal walks off, where a scavenger's does not: it looks again
+        // for what it eats, near or far, and in the wrong hours or with nothing
+        // in reach it goes home.
+        const inHours = NOCTURNAL.has(c.templateId) ? isNight(now) : !isNight(now);
+        const food = inHours ? findFood(z, c, line, true) : undefined;
+        if (food) takeOff(z, c, food.room, food.dist, now);
+        else {
+          const home = c.home ?? c.roomId;
+          takeOff(z, c, home, z.nearby(c.roomId, FLIGHT_RANGE).get(home) ?? FLIGHT_RANGE, now);
+        }
       }
       continue;
     }

@@ -8411,6 +8411,7 @@ var MAP_BANDS = [
 // wait until you come in close enough to tell them apart.
 var MAP_MAJOR_REGIONS = { sky: 1, out: 1, upper: 1, warrens: 1, deep: 1, road: 1, eastroad: 1, wood: 1, den: 1, mountain: 1, crossing: 1, salthamlet: 1, shieling: 1 };
 var MAP_FAR_SCALE = 0.35;
+var MAP_FAR_BELOW = { shieling: 1 }; // the Shieling hamlet lies below the mountain's name
 var MAP_REGION_LABELS = {
   sky: "THE OVERWORKS",
   out: "THE OPEN GROUND",
@@ -8463,6 +8464,13 @@ var MAP_REGION_LABELS = {
   eyots: "THE EYOTS",
   farstrand: "THE FAR STRAND",
   saltings: "THE SALTINGS",
+  // THE MOUNTAIN'S SIX TIERS: detail.MOUNTAIN_QUARTER_ROOMS, named as they were built.
+  foot: "THE FOOT",
+  middle: "THE MIDDLE",
+  cloud: "THE CLOUD LINE",
+  high: "THE HIGH GROUND",
+  territory: "THE TERRITORY",
+  summit: "THE SUMMIT",
   // THE TWO HAMLETS (rome, 2026-11-04), caption-only like the quarters: zone-data.HAMLET_CAPTIONS.
   salthamlet: "THE SALT HAMLET",
   shieling: "THE SHIELING HAMLET",
@@ -8604,7 +8612,7 @@ function buildMapGraph(f) {
           if (nr === ba.region && !nd.q) { bareX += pl.x; bareY += pl.y; bare++; }
         }
       }
-      if (anyHere) labels.push({ x: ba.x, y: ba.y, z: bz, text: text, major: MAP_MAJOR_REGIONS[ba.region] ? 1 : 0,
+      if (anyHere) labels.push({ x: ba.x, y: ba.y, z: bz, text: text, major: MAP_MAJOR_REGIONS[ba.region] ? 1 : 0, below: !!MAP_FAR_BELOW[ba.region],
         cx: bare ? bareX / bare : own ? sumX / own : ba.x, cy: bare ? bareY / bare : own ? sumY / own : ba.y, n: own });
     }
   } else {
@@ -8671,6 +8679,29 @@ function buildMapGraph(f) {
     }
   }
   return { nodes: nodes, order: order, placed: placed, edges: edges, stubs: stubs, labels: labels, here: anchor };
+}
+
+// Where a far name goes. One that would land on a name already set tries a line
+// or two above and below its own ground before it is left off. A name in
+// MAP_FAR_BELOW never climbs over its neighbour: it stays on its line or under
+// it, sliding sideways a little to fit, because above would put it on the wrong
+// side of what it sits below.
+function mapFarSpot(below, fx, fy0, fw, lh, pad, rects) {
+  var tries = below ? [0, 1, 2, 3] : [0, -1, 1, -2, 2];
+  var slides = below ? [0, 1, -1, 2, -2, 3, -3, 4, -4] : [0];
+  for (var t = 0; t < tries.length; t++) {
+    var y = fy0 + tries[t] * lh * 1.15;
+    for (var m = 0; m < slides.length; m++) {
+      var x = fx + slides[m] * fw / 8;
+      var cand = { x: x - fw / 2 - pad, y: y - lh / 2, w: fw + 2 * pad, h: lh }, hit = false;
+      for (var q = 0; q < rects.length && !hit; q++) {
+        var o = rects[q];
+        hit = cand.x < o.x + o.w && cand.x + cand.w > o.x && cand.y < o.y + o.h && cand.y + cand.h > o.y;
+      }
+      if (!hit) return { x: x, y: y, rect: cand };
+    }
+  }
+  return null;
 }
 
 function mapResize() {
@@ -8888,20 +8919,10 @@ function drawMap() {
         // pixels across - wide names knocked whole regions off the paper.
         var ft = farLabels[fl].text;
         var fw = ctx.measureText(ft).width, fx = sx(farLabels[fl].cx), fy0 = sy(farLabels[fl].cy);
-        // A name that would land on one already set tries a line or two above
-        // and below its own ground before it is left off.
-        var fr = null, fy = fy0, tries = [0, -1, 1, -2, 2];
-        for (var ft2 = 0; ft2 < tries.length && !fr; ft2++) {
-          var y2 = fy0 + tries[ft2] * lh * 1.15;
-          var cand = { x: fx - fw / 2 - 4 * mapDpr, y: y2 - lh / 2, w: fw + 8 * mapDpr, h: lh };
-          var hit = false;
-          for (var fq = 0; fq < lrects.length && !hit; fq++) {
-            var o2 = lrects[fq];
-            hit = cand.x < o2.x + o2.w && cand.x + cand.w > o2.x && cand.y < o2.y + o2.h && cand.y + cand.h > o2.y;
-          }
-          if (!hit) { fr = cand; fy = y2; }
-        }
-        if (!fr) continue;
+        var fspot = mapFarSpot(farLabels[fl].below, fx, fy0, fw, lh, 4 * mapDpr, lrects);
+        if (!fspot) continue;
+        var fr = fspot.rect, fy = fspot.y;
+        fx = fspot.x;
         lrects.push(fr);
         // A dark plate under the name: far out it sits on top of the very
         // rooms it names, and a thin outline was not enough to lift it off them.

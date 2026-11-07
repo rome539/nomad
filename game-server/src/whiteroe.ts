@@ -82,11 +82,27 @@ export function woodSteps<E extends { to_room: string }>(z: ZoneDO, exits: E[]):
   return open.length ? open : exits;
 }
 
+// One standing off the wood (a roe born on the road before the bloodline roll
+// kept to the wood) walks off the map, unless it is in a fight.
+function leavesOffWood(z: ZoneDO): void {
+  for (const c of [...z.creatures.values()]) {
+    if (c.templateId !== WHITE_ROE || c.hp <= 0 || z.regionOf(c.roomId) === "wood") continue;
+    if (c.aloft !== undefined || c.target || c.heldBy || c.holding) continue;
+    if ([...z.sessions.values()].some((s) => s.target === c.id)) continue;
+    const room = c.roomId;
+    z.creatures.delete(c.id);
+    z.noteCreaturesChanged();
+    z.roomFeed(room, "A white roe walks away, unhurried, and does not look back.", undefined, false);
+    z.refreshRoomCtx(room);
+  }
+}
+
 // Once a minute: with no roe, the roll; with one, the keeper's word.
 export function roll(z: ZoneDO, now: number): void {
   const s = st(z);
   if (now - s.lastRoll < 60_000) return;
   s.lastRoll = now;
+  leavesOffWood(z);
   if (roe(z, now)) { keeper(z, now); return; }
   if (chance(WHITE_ROE_ROLL_PER_MIN)) comes(z, now);
 }
