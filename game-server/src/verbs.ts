@@ -67,7 +67,7 @@ import {
   LANTERN_ITEM, LANTERN_FAT_MS, SLOT_WORD,
   RANGERS, HUNGRY_AT, PATROLS, patrolRoute,
 } from "./zone-data";
-import { gatehouseFeed, inStock, throughTheDoor, worksBar, boxedByName, benchTake } from "./gate";
+import { gatehouseFeed, inStock, throughTheDoor, worksBar, boxedByName, boxToHand, benchStore } from "./gate";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
 export function cmdXyzzy(z: ZoneDO, session: Session): void {
@@ -2460,13 +2460,16 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
   if (!arg) return z.send(session, "Equip what?");
   let carried = z.findCarried(session, arg);
   // Not in the pack: the lockbox rides with you, so a piece in it comes into the
-  // pack and then into your hand.
+  // pack and then into your hand, and what it replaces goes back into the box.
+  let putAway: CarriedItem | undefined, boxedAlready = false;
   if (!carried) {
     const boxed = await boxedByName(z, session, arg);
     const bt = boxed ? z.world!.itemTemplates.get(boxed.itemId) : undefined;
     if (boxed && bt && bt.slot !== "") {
-      const stop = await benchTake(z, session, boxed.rowId);
-      if (stop) return z.send(session, stop);
+      if (z.inCombat(session) && bt.slot !== "weapon") return z.send(session, "You cannot change your gear while something wants your blood.");
+      const got = await boxToHand(z, session, boxed);
+      if (got.stop) return z.send(session, got.stop);
+      putAway = got.old; boxedAlready = !!got.boxedAlready;
       carried = session.items.find((c) => c.rowId === boxed.rowId) ?? null;
     }
   }
@@ -2533,6 +2536,7 @@ export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promis
     : `You pull on ${z.displayName(carried)}${current ? `, shrugging off ${z.displayName(current.carried)}` : ""}.`)
     + wallNote
     + (fighting ? " Your eyes leave the fight for a heartbeat — an opening." : ""), "sfx-handle");
+  if (putAway && (boxedAlready || !await benchStore(z, session, putAway.rowId, "lockbox"))) z.send(session, `${cap(z.displayName(putAway))} goes into your lockbox.`, "sfx-box");
   z.sendCtx(session); // your loadout changed — refresh the chips (the equip chip was going stale)
 }
 

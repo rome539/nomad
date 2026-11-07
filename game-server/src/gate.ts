@@ -1989,15 +1989,59 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
 
   // Manage what you're wearing/wielding, right from the bench (always safe here,
   // so none of combat's armor/opening rules apply).
+// TWO_HANDED steel wants both hands — the same refusal cmdEquip gives,
+// missing from the window until 2026-07-22 (the modal let a two-handed weapon
+// and a shield both read "equipped" at once — real inconsistent state, since
+// block/load-law would both fire).
+export function handRefusal(z: ZoneDO, session: Session, tmpl: { name: string; slot: string; traits?: string }): string | undefined {
+  if (tmpl.slot === "weapon" && hasTrait(tmpl as any, "two-handed") && z.equippedItem(session, "shield")) {
+    return `${tmpl.name[0].toUpperCase()}${tmpl.name.slice(1)} wants both hands — put up your shield first.`;
+  }
+  if (tmpl.slot === "shield") {
+    const inHand = z.equippedItem(session, "weapon");
+    if (inHand && hasTrait(inHand.tmpl, "two-handed")) return `Both your hands are full of ${inHand.tmpl.name}. Lower it first.`;
+  }
+  return undefined;
+}
+
+// OUT OF THE LOCKBOX AND INTO YOUR HAND (2026-11-07). The piece comes into the
+// pack, and what it replaces goes back into the box in its place: a swap. With
+// the pack full, the old one goes in first to make the room, and comes back to
+// hand if the new one still cannot come out. Returns what to put away after the
+// new one is taken up, if anything.
+export async function boxToHand(z: ZoneDO, session: Session, boxed: CarriedItem): Promise<{ stop?: string; old?: CarriedItem; boxedAlready?: boolean }> {
+  const tmpl = z.world!.itemTemplates.get(boxed.itemId);
+  if (!tmpl) return { stop: "You aren't carrying that." };
+  if (tmpl.slot === "") return { stop: `You can't wear or wield ${tmpl.name}.` };
+  const bar = handRefusal(z, session, tmpl);
+  if (bar) return { stop: bar };
+  const old = z.equippedItem(session, tmpl.slot)?.carried;
+  if (old && !z.packRoom(session, boxed.itemId)) {
+    const full = await benchStore(z, session, old.rowId, "lockbox");
+    if (full) return { stop: full };
+    const stop = await benchTake(z, session, boxed.rowId);
+    if (stop) {
+      if (!await benchTake(z, session, old.rowId)) {
+        const back = session.items.find((c) => c.rowId === old.rowId);
+        if (back) { back.equipped = true; await setEquipped(z.env.DB, back.rowId, true); }
+      }
+      return { stop };
+    }
+    return { old, boxedAlready: true };
+  }
+  const stop = await benchTake(z, session, boxed.rowId);
+  return stop ? { stop } : { old };
+}
+
 export async function benchEquip(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
-    // Out of the lockbox, it comes into the pack first and then into your hand.
+    // Out of the lockbox: into the pack, and what it replaces back into the box.
+    let putAway: CarriedItem | undefined;
     if (!session.items.some((c) => c.rowId === row)) {
       const boxed = (await loadContainer(z.env.DB, session.pubkey, "lockbox")).find((c) => c.rowId === row);
-      const bt = boxed ? z.world!.itemTemplates.get(boxed.itemId) : undefined;
-      if (bt && bt.slot === "") return `You can't wear or wield ${bt.name}.`;
       if (boxed) {
-        const stop = await benchTake(z, session, row);
-        if (stop) return stop;
+        const got = await boxToHand(z, session, boxed);
+        if (got.stop) return got.stop;
+        if (!got.boxedAlready) putAway = got.old;
       }
     }
     const carried = session.items.find((c) => c.rowId === row);
@@ -2005,19 +2049,8 @@ export async function benchEquip(z: ZoneDO, session: Session, row: string): Prom
     const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
     if (tmpl.slot === "") return `You can't wear or wield ${tmpl.name}.`;
     if (carried.equipped) return undefined;
-    // TWO_HANDED steel wants both hands — the same refusal cmdEquip gives,
-    // missing here until now (rome, 2026-07-22: the modal let a two-handed
-    // weapon and a shield both read "equipped" at once — real inconsistent
-    // state, not just a display bug, since block/load-law would both fire).
-    if (tmpl.slot === "weapon" && hasTrait(tmpl, "two-handed") && z.equippedItem(session, "shield")) {
-      return `${tmpl.name[0].toUpperCase()}${tmpl.name.slice(1)} wants both hands — put up your shield first.`;
-    }
-    if (tmpl.slot === "shield") {
-      const inHand = z.equippedItem(session, "weapon");
-      if (inHand && hasTrait(inHand.tmpl, "two-handed")) {
-        return `Both your hands are full of ${inHand.tmpl.name}. Lower it first.`;
-      }
-    }
+    const bar = handRefusal(z, session, tmpl);
+    if (bar) return bar;
     const current = z.equippedItem(session, tmpl.slot);
     if (current) {
       current.carried.equipped = false;
@@ -2025,6 +2058,7 @@ export async function benchEquip(z: ZoneDO, session: Session, row: string): Prom
     }
     carried.equipped = true;
     await setEquipped(z.env.DB, carried.rowId, true);
+    if (putAway) await benchStore(z, session, putAway.rowId, "lockbox");
     return undefined;
   }
 

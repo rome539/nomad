@@ -2763,14 +2763,17 @@ try {
         all: async () => ({ results: [...rows.values()].filter((r) => r.container === a[1]) }),
         run: async () => {
           if (/SET container = '', equipped = 0/.test(q)) { const r = rows.get(a[1]); if (!r || r.container !== a[3]) return { meta: { changes: 0 } }; r.container = ''; }
+          if (/SET container = \?, equipped = 0/.test(q)) rows.get(a[2]).container = a[0];
           return { meta: { changes: 1 } };
         },
       }) }) };
-      const itemTemplates = new Map([['maul', { id: 'maul', name: 'a studded maul', slot: 'weapon', traits: '' }], ['tin', { id: 'tin', name: 'a tin of dry cigarettes', slot: '' }]]);
+      rows.set('sw', { id: 'sw', item_id: 'sword', container: '', condition: 100, acquired_at: 5 });
+      const itemTemplates = new Map([['maul', { id: 'maul', name: 'a studded maul', slot: 'weapon', traits: '' }], ['tin', { id: 'tin', name: 'a tin of dry cigarettes', slot: '' }], ['sword', { id: 'sword', name: 'a short sword', slot: 'weapon', traits: '' }]]);
       const sent = [];
       const s = { pubkey: 'p', roomId: 'r', items: [] };
       const z = { env: { DB }, world: { itemTemplates, entryRooms: new Set() }, foodCapped: () => false, torchCapped: () => false, dressingCapped: () => false, packRoom: () => true, packCap: () => 20,
-        equippedItem: () => null, inCombat: () => false, carriesLight: () => false, send: (_s, m) => sent.push(m), sendCtx: () => {},
+        equippedItem: (ss, slot) => { const c = ss.items.find((k) => k.equipped && itemTemplates.get(k.itemId).slot === slot); return c ? { carried: c, tmpl: itemTemplates.get(c.itemId) } : null; },
+        hasRoom: () => true, isGear: () => true, stackable: () => false, inCombat: () => false, carriesLight: () => false, send: (_s, m) => sent.push(m), sendCtx: () => {},
         findCarried: (ss, arg) => ss.items.find((c) => itemTemplates.get(c.itemId).name.includes(arg)) ?? null,
         gearName: (_id, n) => n, displayName: (c) => itemTemplates.get(c.itemId).name };
       return { rows, s, z, sent };
@@ -2787,6 +2790,26 @@ try {
     w = mkWorld(); w.z.packRoom = () => false;
     assert.match(await benchEquip(w.z, w.s, 'bx'), /pack is full/, 'no room in the pack, it stays put');
     assert.equal(w.rows.get('bx').container, 'lockbox');
+    // ...and what it replaces goes back into the box in its place.
+    const armed = () => { const w = mkWorld(); w.s.items.push({ rowId: 'sw', itemId: 'sword', equipped: true, condition: 100 }); return w; };
+    w = armed();
+    assert.equal(await benchEquip(w.z, w.s, 'bx'), undefined);
+    assert.ok(w.s.items.find((c) => c.rowId === 'bx')?.equipped, 'the maul in hand');
+    assert.equal(w.rows.get('sw').container, 'lockbox', 'the sword it replaced goes into the box');
+    assert.ok(!w.s.items.some((c) => c.rowId === 'sw'), 'and out of the pack');
+    w = armed(); w.z.packRoom = (ss) => ss.items.length < 1;
+    assert.equal(await benchEquip(w.z, w.s, 'bx'), undefined, 'a full pack swaps too');
+    assert.ok(w.s.items.find((c) => c.rowId === 'bx')?.equipped && w.rows.get('sw').container === 'lockbox', 'the sword went in first to make room');
+    w = armed(); w.z.packRoom = (ss) => ss.items.length < 1; w.z.torchCapped = (_ss, id) => id === 'maul'; w.z.torchFullNote = () => 'too many lights';
+    assert.equal(await benchEquip(w.z, w.s, 'bx'), 'too many lights', 'the new one cannot come out');
+    assert.ok(w.s.items.find((c) => c.rowId === 'sw')?.equipped && w.rows.get('sw').container === '' && w.rows.get('bx').container === 'lockbox', 'no swap possible, everything back as it was');
+    w = armed();
+    await cmdEquip(w.z, w.s, 'maul');
+    assert.ok(w.s.items.find((c) => c.rowId === 'bx')?.equipped && w.rows.get('sw').container === 'lockbox', 'typed wield swaps too');
+    assert.ok(w.sent.some((m) => /a short sword goes into your lockbox/i.test(m)), 'and says where it went: ' + w.sent.join(' | '));
+    w = armed(); w.z.packRoom = (ss) => ss.items.length < 1;
+    await cmdEquip(w.z, w.s, 'maul');
+    assert.ok(w.sent.some((m) => /a short sword goes into your lockbox/i.test(m)), 'a full-pack swap says so too: ' + w.sent.join(' | '));
     w = mkWorld();
     assert.equal((await boxedByName(w.z, w.s, 'maul'))?.rowId, 'bx', 'found by name in the box');
     const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
