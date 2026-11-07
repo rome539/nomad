@@ -2865,10 +2865,13 @@ try {
   });
   // 2026-11-07: the hide ward's line said a raven "drags claws", and opened on
   // the creature's name so it read as a second blow after the hit.
-  check('the hide ward says what it turned, and reads as the same hit', () => {
+  check('the guard, the hide and the mail say what they turned, and read as the same hit', () => {
     const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
     assert.ok(!zs.includes('drags claws through the thick hide'), 'no claws on a beak');
-    assert.match(zs, /const by = BEAKS\.has\(tmpl\.id\) \? "beak" : BITERS\.has\(tmpl\.id\) \? "teeth" : "blow";\n\s+this\.send\(victim, `Your thick hide turns the \$\{by\} — no wound opens\.`, "block"\);/, 'beak, teeth or the blow, told from your side');
+    assert.match(zs, /const by = BEAKS\.has\(tmpl\.id\) \? "beak" : BITERS\.has\(tmpl\.id\) \? "teeth" : "blow";\n\s+if \(victim\.stance === "guarded"/, 'beak, teeth or the blow');
+    for (const line of ['`Your guard turns the worst of the ${by} — no wound opens.`', '`Your thick hide turns the ${by} — no wound opens.`', '`The ${by} skates across your rings — no wound opens.`'])
+      assert.ok(zs.includes(line), 'told from your side: ' + line);
+    assert.ok(!zs.includes('rakes for you, but your guard') && !zs.includes('rakes across the rings'), 'the guard and the mail no longer read as a new blow');
     const word = (id) => BEAKS.has(id) ? 'beak' : BITERS.has(id) ? 'teeth' : 'blow';
     assert.equal(word('scarp-raven'), 'beak'); assert.equal(word('hill-wolf'), 'teeth'); assert.equal(word('the-old-raven'), 'beak', 'a beak that also bites is still a beak');
   });
