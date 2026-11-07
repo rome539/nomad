@@ -2403,6 +2403,11 @@ export const MOUNTAIN_GROUPS = new Map<string, { min: number; max: number; lone:
 // wolf, which holds no ground and only chases it off the meal.
 export const GROUND_HOLDERS = new Set(["hill-wolf"]);
 export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox"]);
+// A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
+// one pack pick one hind or goat within this many rooms of home and close on it
+// together, so the two a hind needs are in the room at once.
+export const PACK_QUARRY = new Set(["red-hind", "feral-goat"]);
+export const PACK_HUNT_RANGE = 12;
 export const GROUND_CHASE_ODDS = 0.35;
 export const GROUND_KILL_ODDS = 0.1;
 export const GROUND_DRIVEN_LEAVES = 2;

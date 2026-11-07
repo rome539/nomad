@@ -18,9 +18,10 @@ import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
   DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS,
+  PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS,
 } from "./zone-data";
 
-export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number; moveAt?: number; kept?: boolean }
+export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number; moveAt?: number; kept?: boolean; quarry?: string; quarryAt?: number }
 export interface GroupsState { at: number; flownAt?: number; packs: Record<string, Group>; gone: Record<string, number>; tally?: beasts.Tally; lastTally?: beasts.Tally }
 export interface Plan { home: string; group?: string; lone?: boolean }
 
@@ -256,4 +257,34 @@ export async function holdGround(
   }
   z.refreshRoomCtx(roomId);
   return true;
+}
+
+/** Where a hungry pack wolf is going: the room its pack's quarry stands in, or
+ *  nothing. A pack hunts when two or more of it are hungry; it keeps one animal
+ *  until that one is dead or out of reach, then picks the nearest other. */
+export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefined {
+  const g = c.group ? z.groups.packs[c.group] : undefined;
+  if (!g || !GROUND_HOLDERS.has(g.line) || (c.hunger ?? 0) < HUNGRY_AT) return undefined;
+  let hungry = 0;
+  for (const m of z.creatures.values()) if (m.group === c.group && (m.hunger ?? 0) >= HUNGRY_AT) hungry++;
+  if (hungry < 2) { g.quarry = undefined; return undefined; }
+  const reach = z.nearby(g.home, PACK_HUNT_RANGE);
+  const fit = (q: Creature | undefined): q is Creature =>
+    !!q && q.hp > 0 && PACK_QUARRY.has(lineOf(z, q.templateId)) && q.aloft === undefined && reach.has(q.roomId);
+  let q = g.quarry ? z.creatures.get(g.quarry) : undefined;
+  if (!fit(q)) {
+    q = undefined;
+    g.quarry = undefined;
+    if ((g.quarryAt ?? 0) > now) return undefined; // looked a moment ago and found none
+    g.quarryAt = now + HUNT_RECHECK_MS;
+    let best = Infinity;
+    for (const o of z.creatures.values()) {
+      if (!fit(o)) continue;
+      const d = reach.get(o.roomId)!;
+      if (d < best) { best = d; q = o; }
+    }
+    if (!q) return undefined;
+    g.quarry = q.id;
+  }
+  return q.roomId;
 }

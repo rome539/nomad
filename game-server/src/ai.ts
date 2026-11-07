@@ -24,6 +24,7 @@ import { cap, isNight, isFullMoon, isBloodMoon, morphOf } from "./zone-util";
 import * as events from "./events";
 import * as styles from "./styles";
 import * as whiteroe from "./whiteroe";
+import * as groups from "./groups";
 import { underCover, MAP_QUARTERS } from "./detail";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
@@ -1392,7 +1393,10 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // which is the precedent this follows.
       // A BEAR GOES OUT TO FEED (forageErrand) before it goes after prey: its
       // food is ground it knows, not an animal that might not be there.
-      const anchor = creature.wateringTo ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
+      // A HUNGRY PACK closes on its quarry (groups.packQuarry), all the way into its room.
+      const quarry = creature.wateringTo ? undefined : groups.packQuarry(z, creature, now);
+      if (quarry === creature.roomId) return; // there: it stays with the pack's kill
+      const anchor = creature.wateringTo ?? quarry ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
       // ONE capped walk out from the den answers both halves — am I inside my
       // range, and which of these exits are. This is the hottest distance query
       // in the game (every wandering creature, every beat); routing it through
@@ -1422,11 +1426,11 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
           if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
         }
       } else {
-        const within = exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
+        const within = quarry ? exits.filter((e) => (near.get(e.to_room) ?? Infinity) < d) : exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
         if (within.length) exits = within;
         // ...and inside its range, the hour decides which ground it keeps to:
         // out on the feeding ground in its waking hours, back in cover after.
-        exits = herds.roundExits(z, creature, exits, now);
+        if (!quarry) exits = herds.roundExits(z, creature, exits, now);
       }
     }
     // A patroller's route IS its territory. It leaves the circuit sometimes — it

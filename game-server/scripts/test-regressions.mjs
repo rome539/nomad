@@ -43,7 +43,7 @@ try {
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
         "export {rollBloodline, reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep} from './ai';",
         "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult} from './ai';",
-        "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround} from './groups';",
+        "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry} from './groups';",
         "export {PREYS_ON, PACK_PREY, SMALL_PREY} from './zone-data';",
         "export * as beasts from './beasts';",
         "export {tick as flightTick} from './flight';",
@@ -96,7 +96,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
+  const { packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1177,6 +1177,37 @@ try {
     const d = mk(); d.creatures.set('s', { ...stray(), roomId: 'ride' }); whiteroe.roll(d, 1_000_000);
     assert.equal(d.creatures.has('s'), true, 'one in the wood stays');
   });
+  await checkAsync('a hungry pack goes after one hind together, into its room, and stays with it (2026-11-07)', async () => {
+    const mk = () => {
+      const z = new ZoneDO({}, {});
+      const ex = (pairs) => pairs.map(([dir, to_room]) => ({ dir, to_room, key_item: null }));
+      const line = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+      z.world = { mobTemplates: new Map([['hill-wolf', { id: 'hill-wolf', name: 'a hill wolf', max_hp: 36, is_boss: 0 }], ['red-hind', { id: 'red-hind', name: 'a red hind', max_hp: 30, is_boss: 0 }]]), mobSpawns: [], itemTemplates: new Map(),
+        rooms: new Map(line.map((r) => [r, { id: r, region: 'mountain' }])),
+        exits: new Map(line.map((r, i) => [r, ex([...(i ? [['west', line[i - 1]]] : []), ...(i < line.length - 1 ? [['east', line[i + 1]]] : [])])])), entryRooms: new Set(), safeRooms: new Set() };
+      z.send = () => {}; z.roomFeed = () => {}; z.roomSound = () => {}; z.refreshRoomCtx = () => {}; z.noteCreaturesChanged = () => {};
+      z.groups = { at: 0, packs: { p: { line: 'hill-wolf', home: 'a', size: 3, peak: 2 } }, gone: {} };
+      const wolf = (id, hunger) => ({ id, templateId: 'hill-wolf', roomId: 'a', home: 'a', group: 'p', hp: 36, target: null, grudges: [], hunger, nextWanderAt: 0 });
+      const hind = { id: 'h', templateId: 'red-hind', roomId: 'f', home: 'f', hp: 30, target: null, grudges: [], hunger: 0, nextWanderAt: 0 };
+      return { z, wolf, hind };
+    };
+    { const { z, wolf, hind } = mk(); const w1 = wolf('w1', 80), w2 = wolf('w2', 80);
+      z.creatures = new Map([['w1', w1], ['w2', w2], ['h', hind]]);
+      for (let i = 0; i < 12; i++) { await creatureMoves(z, w1, Date.now(), 'wander', true); await creatureMoves(z, w2, Date.now(), 'wander', true); }
+      assert.equal(z.groups.packs.p.quarry, 'h', 'the pack picks the hind');
+      assert.equal(w1.roomId, 'f', 'the first wolf walks right into its room, five rooms out');
+      assert.equal(w2.roomId, 'f', 'and so does the second, so there are two');
+      await creatureMoves(z, w1, Date.now(), 'wander', true);
+      assert.equal(w1.roomId, 'f', 'there, it stays with it'); }
+    { const { z, wolf, hind } = mk(); const w1 = wolf('w1', 80), w2 = wolf('w2', 10);
+      z.creatures = new Map([['w1', w1], ['w2', w2], ['h', hind]]);
+      assert.equal(packQuarry(z, w1, Date.now()), undefined, 'one hungry wolf is not a hunting pack'); }
+    { const { z, wolf, hind } = mk(); const w1 = wolf('w1', 80), w2 = wolf('w2', 80); hind.roomId = 'g'; z.groups.packs.p.home = 'a';
+      z.creatures = new Map([['w1', w1], ['w2', w2], ['h', hind]]);
+      assert.equal(packQuarry(z, w1, Date.now()), 'g', 'it reaches out a long way from home');
+      w1.group = undefined; assert.equal(packQuarry(z, w1, Date.now()), undefined, 'a lone wolf does not'); }
+  });
+
   await checkAsync('a gripped animal stays gripped: it cannot walk out of the hold (2026-11-06)', async () => {
     const z = new ZoneDO({}, {});
     const ex = (pairs) => pairs.map(([dir, to_room]) => ({ dir, to_room, key_item: null }));
