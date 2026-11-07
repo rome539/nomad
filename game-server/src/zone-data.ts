@@ -984,6 +984,7 @@ export const HUNGER_PER_MIN = 0.5;
 // holds the animal over it this long, reading as eating, so a wanderer can
 // walk in and see it feed. Before, every meal was an instant.
 export const EAT_SHOW_MS = 2 * 60_000;
+export const MEAL_MIN_MS = 40_000; // the quickest meal: a mouthful, a graze (ai.ate; a full body takes EAT_SHOW_MS)
 // ...AND THE WORDS GO ON WITH IT (rome, 2026-11-06). The picture shows a meal for as
 // long as it lasts; someone reading the room heard about the first bite at most. One
 // of these every EAT_SAY_MIN-MAX_MS while it eats, and one when it stops ({name} is
@@ -2433,7 +2434,7 @@ export const BIRD_CATCH_MULT = 0.5; // a flying bird is half as easy to catch (a
 export const FLIGHT_RANGE = 25;
 export const FLIGHT_MS_PER_ROOM = 5_000;
 export const FLIGHT_MIN_MS = 15_000;
-export const FLIGHT_STAY_MS = 30 * 60_000;   // it stays down until fed, up to this: scavenging takes about 15 minutes (FORAGE_FIND_MS)
+export const FLIGHT_STAY_MS = 10 * 60_000;   // down at most this long, walking the ground round where it landed, then it flies (rome, 2026-11-07: was 30, pinned to one room)
 export const FLIGHT_REST_MS = 20 * 60_000;   // home hungry: the rest before it tries again
 export const FLIGHT_CHECK_MS = 10_000;
 export const FLIGHT_LOOK_MS = 60_000; // a hungry bird that found nothing looks again about this much later: the search walks every room in reach, so it is not done every check
@@ -7802,6 +7803,13 @@ export const THICK_HUNTERS = new Set<string>([
 export const WARY_BOLT_ODDS = 0.6;   // a wary animal bolts as you walk in, at full load; a light tread halves it at the most
 export const WARY_STAYS_IN = 0.5;    // of the wary, this share keep to cover through a feeding hour
 export const ROUND_RANGE = 5; // how far from home an animal will go to feed
+// GRASS IS EATEN DOWN (rome, 2026-11-07), on the mountain only. A grazing room
+// holds this many mouthfuls; each meal there takes one, and one grows back
+// every GRASS_REGROW_MS, so a room grazed bare is whole again in two hours. A
+// bare room feeds nothing, and a hungry grazer walks on to grass. Rats and
+// thieves live on muck and scraps, which are not grass (grass.ts).
+export const GRASS_BITES = 6;
+export const GRASS_REGROW_MS = 20 * 60_000;
 // Not everything feeds on grass. A carrion eater's waking hours are spent on
 // the carrion ground (CARRION_ROOMS — the mountain's bone fan) as well as the
 // open ground the grazers die on; an adder's on the warm rock, where what it

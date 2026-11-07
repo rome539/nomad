@@ -24,7 +24,7 @@ import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STU
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, GLUT_FREE, GLUT_FLOOR, GLUT_EASE_MS, GLUT_EASE_SHARE, CIGARETTES, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, FENCE_MATS, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
-  MAP_ITEMS, FULL_MAP, DETAILED_MAP,
+  MAP_ITEMS, FULL_MAP, DETAILED_MAP, SLOT_WORD,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, SOUP_ITEM, SOUP_WARM_MS, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
   GATEHOUSE_RAIN, GATEHOUSE_AFTER_RAIN, GATEHOUSE_FOG, GATEHOUSE_COLD, GATEHOUSE_CROWS, GATEHOUSE_NIGHT, GATEHOUSE_DAY,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
@@ -742,11 +742,11 @@ export function cmdBarter(z: ZoneDO, session: Session): void {
     if (!t) continue;
     // What he isn't carrying is still named, without a price — you can't buy it,
     // but you can know it exists and come back for it.
-    if (!inStock(z, s.itemId)) { absent.push(t.name); continue; }
+    if (!inStock(z, s.itemId)) { absent.push(t.name + (t.slot && SLOT_WORD[t.slot] ? ` (${SLOT_WORD[t.slot]})` : "")); continue; }
     const k = shelfOf(z, t.id);
     if (!onShelf.has(k)) onShelf.set(k, []);
     const left = matLeft(z, s.itemId);
-    onShelf.get(k)!.push(`  ${z.gearName(t.id)}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade${left !== null ? `, ${left} on the shelf` : ""}`);
+    onShelf.get(k)!.push(`  ${z.gearName(t.id)}${t.slot && SLOT_WORD[t.slot] ? ` · ${SLOT_WORD[t.slot]}` : ""}${z.itemStat(t)} [${t.rarity}] — ${s.cost} in trade${left !== null ? `, ${left} on the shelf` : ""}`);
   }
   const many = onShelf.size > 1;
   for (const [k, label] of SHELVES) {
@@ -3003,6 +3003,20 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
 // `arriving` is walking in (or coming back to it): the room and who is in it. The
 // fixtures and what is pinned or carved on them wait for a look (rome, 2026-11-06).
 export function describeGatehouse(z: ZoneDO, session: Session, arriving = false): string {
+  const p = gatehouseParts(z, session, arriving);
+  return [...p.head, ...p.fixtures, ...p.tail].join("\n");
+}
+
+// THE LOOK, IN THREE VOICES (rome, 2026-11-07): the room, then what hangs by
+// the door and the hatch in the lore look, then who is here.
+export function lookGatehouse(z: ZoneDO, session: Session): void {
+  const p = gatehouseParts(z, session, false);
+  z.send(session, p.head.join("\n"));
+  if (p.fixtures.length) z.send(session, p.fixtures.join("\n"), "lore");
+  z.send(session, p.tail.join("\n"));
+}
+
+function gatehouseParts(z: ZoneDO, session: Session, arriving: boolean): { head: string[]; fixtures: string[]; tail: string[] } {
   const others = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
   // Titled exactly as the status bar names it, so the client's knownRooms map
   // recognises it and paints it gold like any other room. It IS a room.
@@ -3010,23 +3024,25 @@ export function describeGatehouse(z: ZoneDO, session: Session, arriving = false)
   // same question GATE_TELLINGS asks — not regionOf(), which answers "gate" at
   // every threshold and would hand all fourteen doors the fortress's walls.
   const band = (z.world!.rooms.get(session.roomId)?.region ?? "") as Region;
-  const lines = [
+  const head = [
     "The Gatehouse",
     GATEHOUSE_ROOM[band]
       ?? "A low room behind the gate, warm and close. The keeper's hatch is shut in the far wall; a bench runs under it, and the brazier keeps its coals. The dungeon is on the other side of a very old door, and it stays there.",
   ];
+  const fixtures: string[] = [];
+  const lines: string[] = [];
   // The wall chart, plastered by the door: the players' own map, in whatever
   // state they've left it. The line grows with the wall.
   const marks = [...z.wallOf(session.pubkey)].filter((r) => z.world!.rooms.has(r)).length;
-  if (!arriving) lines.push(marks === 0
+  if (!arriving) fixtures.push(marks === 0
     ? "By the door, a stretch of wall plastered smooth and scratched over with other people's chalk — none of it in a hand you can read. Your own corner is bare. ('carve' what you've walked)"
     : `By the door, the wall chart — and ${marks} halls of it are yours. ('study' it; 'carve' to add what you've walked)`);
-  if (!arriving) lines.push("Beside the hatch hangs the keeper's slate, with the sky chalked on it. ('look slate')");
+  if (!arriving) fixtures.push("Beside the hatch hangs the keeper's slate, with the sky chalked on it. ('look slate')");
   // The board, beside the hatch. Only spoken of when it has something on it: an
   // empty board is furniture, and the room already has enough of that.
   const notices = boardLive(z).length;
   if (notices > 0 && !arriving) {
-    lines.push(notices === 1
+    fixtures.push(notices === 1
       ? "One notice hangs on the board beside the hatch, pinned at a corner. ('board' to read it)"
       : `The board beside the hatch carries ${notices} notices, pinned over one another. ('board' to read them)`);
   }
@@ -3056,7 +3072,7 @@ export function describeGatehouse(z: ZoneDO, session: Session, arriving = false)
       : `Here: ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}.`);
   }
   lines.push("(Anything you type in here is spoken aloud. 'out' returns you to the world.)");
-  return lines.join("\n");
+  return { head, fixtures, tail: lines };
 }
 
 // In through the door. Idempotent; gate-only.
@@ -3148,7 +3164,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     // Bare 'look' takes in the room. With a name, look at whoever's by the fire:
     // the gate roomId is shared, but gatehouse folk are OUT of the world, so the
     // dungeon's own player-lookup skips them — the fire keeps its own roll-call.
-    if (!target) return z.send(session, describeGatehouse(z, session));
+    if (!target) return lookGatehouse(z, session);
     // Yourself, same as out in the dark. It was the world's look that answered
     // this and the world's look never runs in here.
     if (/^(self|me|myself)$/i.test(target)) return z.send(session, selfExamine(z, session), "study");
@@ -3181,9 +3197,10 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
     // Read AFTER your own kit on purpose, so a name you own always wins — a bar
     // of forge iron in the vault answers `look forge` before the brazier does.
     const fixture = gatehouseFixture(z, session, target);
-    if (fixture) return z.send(session, fixture, "study");
+    // A close look is the world speaking: the lore look (rome, 2026-11-07).
+    if (fixture) return fixture === describeGatehouse(z, session) ? lookGatehouse(z, session) : z.send(session, fixture, "lore");
     const carved = carving.lookPlaced(z, session, target);
-    if (carved) return z.send(session, carved, "study");
+    if (carved) return z.send(session, carved, "lore");
     // YOUR OWN NAME (rome, 2026-11-02). The fire's roll-call above skips you, so
     // `look irongate` from Irongate named nobody and was said out loud. Out in
     // the dark your name finds you; in here it finds you too. Last, so a thing

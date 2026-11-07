@@ -1106,6 +1106,7 @@ export class ZoneDO implements DurableObject {
         // rate for unobserved time is the sheltered one.
         if (ai.hungers(c.templateId)) {
           c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * (SLOW_EATERS[c.templateId] ?? 1) * mins);
+          ai.digest(this, c, t);
           if (c.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, c, true, t);
         } else c.hunger = 0; // clears whatever the old rules already banked, so a live drowner isn't stuck "restless" forever
         // Same "stays put" rule as the live tick: the drowned holds its water and
@@ -1170,7 +1171,7 @@ export class ZoneDO implements DurableObject {
       // Who eats at all lives in ai.hungers now — one predicate for all three
       // hunger sites, because this exemption used to be written out by hand
       // here and nowhere else.
-      if (ai.hungers(c.templateId)) c.hunger = Math.min(HUNGER_MAX, c.hunger + ai.hungerRate(this, c) * mins);
+      if (ai.hungers(c.templateId)) { c.hunger = Math.min(HUNGER_MAX, c.hunger + ai.hungerRate(this, c) * mins); ai.digest(this, c, now); }
       else c.hunger = 0;
       if (c.grudges.length) {
         const ms = ai.forgetMs(this, tmpl);
@@ -5849,6 +5850,7 @@ export class ZoneDO implements DurableObject {
       }
       if (ai.hungers(creature.templateId)) {
         creature.hunger = Math.min(HUNGER_MAX, creature.hunger + ai.hungerRate(this, creature) * tickMins);
+        ai.digest(this, creature, now);
       } else creature.hunger = 0;
       // Time wears grudges away, each kind at its own pace (the boss never lets go).
       if (creature.grudges.length && !tmpl.is_boss) {

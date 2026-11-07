@@ -72,6 +72,8 @@ try {
         "export {loadLeaderboard} from './world';",
         "export {handleBench} from './gate';",
         "export {benchEquip, boxedByName} from './gate';",
+        "export * as grass from './grass';",
+        "export {digest} from './ai';",
         "export {FORAGE_ROOMS, SHIELING_HAMLET_ROOMS} from './zone-data';",
         "export {cmdEquip} from './verbs';",
         "export {sendCtx} from './chips';",
@@ -99,7 +101,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
+  const { digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2219,10 +2221,10 @@ try {
     const { z, me, wolf, said, seen } = studyWorld();
     await cmdStudy(z, me, 'wolf');
     assert.equal(seen(), 'asleep');
-    assert.match(said.at(-1), /You watch a hill wolf sleeping/);
-    assert.match(said.at(-1), /still to see it about its business, eating, hungry and dead/);
+    assert.match(said.slice(-2).join('\n'), /You watch a hill wolf sleeping/);
+    assert.match(said.slice(-2).join('\n'), /still to see it about its business, eating, hungry and dead/);
     await cmdStudy(z, me, 'wolf');
-    assert.match(said.at(-1), /already set down a hill wolf sleeping/);
+    assert.match(said.slice(-2).join('\n'), /already set down a hill wolf sleeping/);
     wolf.asleep = false; wolf.hunger = 60;
     await cmdStudy(z, me, 'wolf');
     assert.equal(seen(), 'asleep,hungry');
@@ -2233,10 +2235,10 @@ try {
     z.traces.set('r', [body, { kind: 'blood', at: Date.now(), label: 'Rome', id: 'nomad' }]);
     await cmdStudy(z, me, 'dead wolf');
     assert.equal(seen(), 'dead', 'the living wolf in the room is not the one studied');
-    assert.match(said.at(-1), /Any weapon can find the gap/);
+    assert.match(said.slice(-2).join('\n'), /Any weapon can find the gap/);
     assert.deepEqual(z.traces.get('r').map((t) => t.id), ['nomad'], 'the wolf body is gone; a nomad is never a study');
     await cmdStudy(z, me, 'dead wolf');
-    assert.match(said.at(-1), /Nothing by that name/);
+    assert.match(said.slice(-2).join('\n'), /Nothing by that name/);
   });
   await checkAsync('a dead body names everything it gives, the cuts included (2026-11-05)', async () => {
     // The page named only the trophy and keys, so a kind whose kill cuts leather,
@@ -2246,23 +2248,23 @@ try {
       ['fat', { id: 'fat', name: 'a lump of fat' }], ['bone-offcuts', { id: 'bone-offcuts', name: 'a handful of bone and horn' }]]);
     z.traces.set('r', [{ kind: 'blood', at: Date.now(), label: 'a hill wolf', id: 'hill-wolf' }]);
     await cmdStudy(z, me, 'dead wolf');
-    assert.match(said.at(-1), /Its body gives [^.]*a handful of leather offcuts/, 'the leather a hill wolf is cut for');
-    assert.doesNotMatch(said.at(-1), /nothing worth carrying/);
+    assert.match(said.slice(-2).join('\n'), /Its body gives [^.]*a handful of leather offcuts/, 'the leather a hill wolf is cut for');
+    assert.doesNotMatch(said.slice(-2).join('\n'), /nothing worth carrying/);
   });
   await checkAsync('study does not print what an animal hunts; the journal still has it (2026-11-06)', async () => {
     const { z, me, wolf, said } = studyWorld();
     z.world.mobTemplates.set('rat', { id: 'rat', name: 'a scabby rat', level: 1 });
     wolf.asleep = false; wolf.hunger = 0; wolf.eatingUntil = Date.now() + 90_000; wolf.eatingIn = wolf.roomId; wolf.eatingOn = 'kill';
     await cmdStudy(z, me, 'wolf');
-    assert.match(said.at(-1), /You watch .* eating a while/, 'it was watched feeding');
-    assert.doesNotMatch(said.at(-1), /It hunts|its own kind about it|eats the dead/, 'and none of that is printed');
+    assert.match(said.slice(-2).join('\n'), /You watch .* eating a while/, 'it was watched feeding');
+    assert.doesNotMatch(said.slice(-2).join('\n'), /It hunts|its own kind about it|eats the dead/, 'and none of that is printed');
     assert.match(study.line(z, z.world.mobTemplates.get(wolf.templateId), 'feeding'), /It hunts/, 'the journal page keeps it');
   });
   await checkAsync('a full account wants every behaviour and the kills (2026-10-24)', async () => {
     const { z, me, wolf, said, db } = studyWorld();
     db.prepare("INSERT INTO journal_logs VALUES ('jrn-1', 'hill-wolf', 6, 1, 'about,feeding,hungry,dead', '')").run();
     await cmdStudy(z, me, 'wolf');
-    assert.match(said.at(-1), /Its account is complete/);
+    assert.match(said.slice(-2).join('\n'), /Its account is complete/);
     db.prepare("UPDATE journal_logs SET seen = 'about,feeding,hungry', kills = 6").run();
     wolf.asleep = false; wolf.hunger = 0;
     await cmdStudy(z, me, 'wolf'); // about, already seen
@@ -2792,6 +2794,90 @@ try {
     assert.ok(settlesOn('stone-adder', 'the-first-crag') && !settlesOn('stone-adder', 'the-deer-lawn-high'), 'rock, not grass');
     assert.ok(settlesOn('stone-adder', 'the-shiel-street'), 'and some may lie up in the Shieling');
   });
+  // 2026-11-07: a meal landed whole at the first bite and the eating after was
+  // only shown. Now it is eaten down over the meal, and cut short gives back the rest.
+  check('a meal is eaten over its time; cut short, the animal is owed the rest and the body keeps it', () => {
+    const t = 1_000_000;
+    const traces = new Map();
+    const z = { traces, addTrace(r, tr) { traces.set(r, [...(traces.get(r) ?? []), tr]); } };
+    const mk = () => ({ id: 'w', templateId: 'hill-wolf', roomId: 'r', hunger: 80, hp: 20, nextWanderAt: 0 });
+    let c = mk(); c.hunger = 5; ate(c, t, 'carrion', 75, { roomId: 'r', prey: 'red-hind', meat: 40 });
+    assert.equal(c.eatingUntil - t, 120_000, 'a whole body takes two minutes');
+    digest(z, c, t + 60_000);
+    assert.equal(c.hunger, 5, 'eating, nothing is given back');
+    digest(z, c, t + 120_000);
+    assert.equal(c.meal, undefined, 'finished, the meal is done');
+    assert.equal(traces.size, 0, 'and nothing goes back on the floor');
+    c = mk(); c.hunger = 5; ate(c, t, 'carrion', 75, { roomId: 'r', prey: 'red-hind', meat: 40 });
+    c.roomId = 'elsewhere';
+    digest(z, c, t + 60_000);
+    assert.equal(c.hunger, 5 + 37.5, 'walked off halfway: half the meal is owed back');
+    assert.deepEqual(traces.get('r')?.map((tr) => [tr.kind, tr.prey, tr.meat]), [['remains', 'red-hind', 20]], 'and half the body is still lying there');
+    c = mk(); c.hunger = 30; ate(c, t, 'kill', 25);
+    assert.equal(c.eatingUntil - t, 40_000, 'a mouthful is quicker');
+    c.target = 'someone';
+    digest(z, c, t + 30_000);
+    assert.equal(c.hunger, 30 + 25 * 0.25, 'set on three quarters in, it is owed the last quarter');
+    c = mk(); ate(c, t, 'kill', 0);
+    assert.equal(c.meal, undefined, 'a meal that took nothing off owes nothing');
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.equal((zsrc.match(/ai\.digest\(this, (c|creature), (t|now)\)/g) ?? []).length, 3, 'the meal goes on wherever hunger does: the live beat, the slow world and the catch-up');
+  });
+  // 2026-11-07: rats were finishing a wolf's body. A feeder smaller than the dead
+  // takes its own size off it and leaves the rest.
+  check('a small thing does not eat a big body whole; a big one still does', () => {
+    const mobTemplates = new Map([['rat', { id: 'rat', name: 'a scabby rat', max_hp: 8 }], ['hill-wolf', { id: 'hill-wolf', name: 'a hill wolf', max_hp: 30 }],
+      ['carrion-vulture', { id: 'carrion-vulture', name: 'a carrion vulture', max_hp: 40 }], ['mountain-hare', { id: 'mountain-hare', name: 'a mountain hare', max_hp: 6 }]]);
+    const mk = (body) => { const z = { world: { mobTemplates }, traces: new Map([['r', [{ kind: 'remains', at: 1, ...body }]]]), fxFed() {}, refreshRoomCtx() {}, roomFeed() {}, roomSound() {}, sessions: new Map() }; return z; };
+    const feed = (z, templateId) => scavengerFeeds(z, { id: templateId + Math.random(), templateId, roomId: 'r', hunger: 90, hp: 1, fed: 9 }, true);
+    let z = mk({ prey: 'hill-wolf' });
+    feed(z, 'rat');
+    assert.equal(z.traces.get('r')?.[0]?.meat, 22, 'a rat takes its own size off a wolf');
+    feed(z, 'rat'); feed(z, 'rat');
+    assert.equal(z.traces.get('r')?.[0]?.meat, 6, 'three rats in, there is still a body');
+    feed(z, 'rat');
+    assert.equal(z.traces.get('r'), undefined, 'the fourth finishes it');
+    z = mk({ label: 'a hill wolf' });
+    feed(z, 'rat');
+    assert.equal(z.traces.get('r')?.[0]?.meat, 22, 'a body named only by its label weighs the same');
+    z = mk({ prey: 'hill-wolf' });
+    feed(z, 'carrion-vulture');
+    assert.equal(z.traces.get('r'), undefined, 'a vulture bigger than the wolf takes all of it');
+    z = mk({ prey: 'mountain-hare' });
+    feed(z, 'rat');
+    assert.equal(z.traces.get('r'), undefined, 'and a rat eats a hare whole');
+  });
+  // 2026-11-07: close looks and what a study finds wear the lore look, as the
+  // last hand on found gear does; the study's own line and its count stay plain.
+  check('close looks and study findings are told in the lore look', () => {
+    const v = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(v, /if \(feature\) return z\.send\(session, feature \+ await chronicle\.under\(z, session\.roomId, feature\), "lore"\);/, 'a room feature');
+    assert.match(v, /if \(placed\) return z\.send\(session, placed, "lore"\);/, 'a carving in the room');
+    const g = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(g, /if \(fixture\) return fixture === describeGatehouse\(z, session\) \? lookGatehouse\(z, session\) : z\.send\(session, fixture, "lore"\);/, 'the gatehouse fixtures');
+    assert.match(g, /if \(!target\) return lookGatehouse\(z, session\);/, 'and the room look splits the chart, slate and board off');
+    assert.match(g, /if \(p\.fixtures\.length\) z\.send\(session, p\.fixtures\.join\("\\n"\), "lore"\);/, 'into the lore look');
+    for (const line of ["By the door, the wall chart", "Beside the hatch hangs the keeper's slate", 'fixtures.push(notices === 1']) assert.ok(g.includes('fixtures.push(') && g.slice(g.indexOf('function gatehouseParts')).includes(line), line);
+    assert.match(g, /fixtures\.push\("Beside the hatch hangs the keeper's slate/, 'the slate is one of them');
+    for (const [where, re] of [['the body', /bodyRead\(z, session\.roomId, body\.tr, body\.tmpl\.id, body\.tmpl\.name\), "lore"\)/], ['the far look', /seen\.slice\(0, 2\)\.map\(\(l\) => l\.text\)\.join\(" "\), "lore"\)/],
+      ['the sky', /if \(skyNow\) return z\.send\(session, skyNow, "lore"\);/], ['listening', /z\.send\(session, lines\.join\("\\n"\), "lore", undefined, cues\.slice\(0, 4\)\);/],
+      ['the wanderer', /wanderer\.LOOK_TEXT, "lore"\)/], ['a sprung chest', /forcing again\.`, "lore"\)/]]) assert.match(v, re, where);
+    assert.match(readFileSync(new URL('../src/lore.ts', import.meta.url), 'utf8'), /are on both stones\.` \+ \(record \? `\\n\$\{record\}` : ""\), "lore"\);/, 'the name stones');
+    assert.match(g, /if \(carved\) return z\.send\(session, carved, "lore"\);/, 'and its carvings');
+    const l = readFileSync(new URL('../src/lore.ts', import.meta.url), 'utf8');
+    assert.match(l, /set down what you see\.\$\{tail\}`, "study"\);\n[^\n]*\n    z\.send\(session, \[ai\.creatureRead\([\s\S]*?\]\.filter\(Boolean\)\.join\("\\n"\), "lore"\);/, 'what a study sees');
+    assert.match(l, /if \(found\) z\.send\(session, found, "lore"\);/, 'and what it finds in a body');
+  });
+  // 2026-11-07: the barter window named gear without saying what kind it is,
+  // where the pack window says weapon, helm and the rest.
+  check('the barter window and the keeper\'s typed list say what kind of gear each piece is', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const row = pub.slice(pub.indexOf('function tradeItemNode('), pub.indexOf('\n}\n', pub.indexOf('function tradeItemNode(')));
+    assert.match(row, /if \(it\.slot && SLOT_WORD\[it\.slot\]\) \{ var kd = document\.createElement\("span"\); kd\.className = "kind"; kd\.textContent = " \\u00b7 " \+ SLOT_WORD\[it\.slot\]/, 'stock and goods rows carry the kind');
+    assert.match(pub, /nm\.textContent = it\.name \+ \(it\.slot && SLOT_WORD\[it\.slot\] \? " \\u00b7 " \+ SLOT_WORD\[it\.slot\] : ""\);/, 'and what he is not carrying');
+    const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(gsrc, /\$\{z\.gearName\(t\.id\)\}\$\{t\.slot && SLOT_WORD\[t\.slot\] \? ` · \$\{SLOT_WORD\[t\.slot\]\}` : ""\}/, 'the typed list says it too');
+  });
   // 2026-11-07: the Shieling's rats were always hungry: only five of its rooms
   // were forage ground and none of its rats lived on them.
   check('every room of the Shieling hamlet is forage ground, like Assart End', () => {
@@ -2979,14 +3065,14 @@ try {
     const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
     const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
     const body = gsrc.slice(gsrc.indexOf('export function describeGatehouse'), gsrc.indexOf('// In through the door. Idempotent'));
-    assert.match(body, /if \(!arriving\) lines\.push\(marks === 0/, 'the wall chart');
-    assert.match(body, /if \(!arriving\) lines\.push\("Beside the hatch hangs/, 'the slate');
+    assert.match(body, /if \(!arriving\) fixtures\.push\(marks === 0/, 'the wall chart');
+    assert.match(body, /if \(!arriving\) fixtures\.push\("Beside the hatch hangs/, 'the slate');
     assert.match(body, /if \(notices > 0 && !arriving\)/, 'the board');
     assert.match(body, /if \(!arriving\) lines\.push\(\.\.\.carving\.roomLines/, 'the carvings');
     const enter = gsrc.slice(gsrc.indexOf('export async function enterGatehouse'), gsrc.indexOf('export function gatehouseHeard'));
     assert.equal((enter.match(/describeGatehouse\(z, session, true\)/g) ?? []).length, 2, 'both ways in arrive');
     assert.doesNotMatch(enter, /describeGatehouse\(z, session\)/, 'neither reads the whole room');
-    assert.match(gsrc, /if \(!target\) return z\.send\(session, describeGatehouse\(z, session\)\);/, 'a bare look reads it all');
+    assert.match(gsrc, /if \(!target\) return lookGatehouse\(z, session\);/, 'a bare look reads it all');
     assert.match(gsrc, /is\("room", "here", "around", "gatehouse", "inside", "place"\)\) \{\s*return describeGatehouse\(z, session\);/, 'and so does look room');
     assert.match(zsrc, /if \(!seamless\) this\.send\(session, gate\.describeGatehouse\(this, session, true\)\);/, 'coming back to it arrives');
   });
@@ -3400,6 +3486,35 @@ try {
     assert.ok(eat('carrion-vulture').hunger < 80, 'a vulture on the same ground still eats it');
     assert.equal(herds.feedsAt('grave-hyena', 'the-cart-tip'), false, 'the pits are not its feeding ground');
     assert.equal(herds.feedsAt('carrion-vulture', 'the-cart-tip'), true);
+  });
+
+  // 2026-11-07: grazing ground never ran dry, so a herd could stand in one room
+  // and eat there for ever. On the mountain the grass is eaten down now.
+  await checkAsync('on the mountain the grass is eaten down and grows back, and a hungry grazer walks on to grass', async () => {
+    const z = new ZoneDO({}, {});
+    const rooms = new Map([['the-deer-lawn-high', { id: 'the-deer-lawn-high', region: 'mountain' }], ['the-heather-shelf', { id: 'the-heather-shelf', region: 'mountain' }],
+      ['the-shiel-street', { id: 'the-shiel-street', region: 'mountain' }], ['the-long-glade', { id: 'the-long-glade', region: 'wood' }]]);
+    z.world = { mobTemplates: new Map(['feral-goat', 'rat', 'roe-deer'].map((id) => [id, { id, name: 'a ' + id, max_hp: 20 }])),
+      itemTemplates: new Map(), rooms, exits: new Map(), mobSpawns: [], entryRooms: new Set() };
+    z.regionOf = (r) => rooms.get(r)?.region ?? '';
+    z.ground = new Map(); z.roomFeed = () => {}; z.roomSound = () => {}; z.refreshRoomCtx = () => {}; z.addTrace = () => {}; z.fxGrazed = () => {};
+    grass.resetForTest(z);
+    const t = 1_000_000_000_000;
+    const eat = (templateId, roomId, at = t) => { const c = { id: templateId, templateId, roomId, hp: 10, hunger: 80, forageFrom: at - 24 * 3600_000 }; creatureEatsHere(z, c, true, at); return c.hunger < 80; };
+    for (let i = 0; i < 6; i++) assert.ok(eat('feral-goat', 'the-deer-lawn-high'), 'mouthful ' + (i + 1));
+    assert.ok(!eat('feral-goat', 'the-deer-lawn-high'), 'grazed bare, it feeds nothing');
+    assert.ok(!eat('feral-goat', 'the-deer-lawn-high', t + 19 * 60_000), 'nothing back in nineteen minutes');
+    assert.ok(eat('feral-goat', 'the-deer-lawn-high', t + 20 * 60_000), 'one mouthful back in twenty');
+    assert.equal(grass.has(z, 'feral-goat', 'the-deer-lawn-high', t + 21 * 60_000), false, 'eaten again, bare again');
+    assert.equal(grass.left(z, 'the-deer-lawn-high', t + 20 * 60_000 + 120 * 60_000), 6, 'whole again two hours on');
+    assert.ok(eat('feral-goat', 'the-heather-shelf'), 'the next lawn has its own grass');
+    for (let i = 0; i < 10; i++) assert.ok(eat('rat', 'the-shiel-street'), 'a rat on muck never runs out');
+    for (let i = 0; i < 10; i++) assert.ok(eat('roe-deer', 'the-long-glade'), 'and off the mountain the ground never runs dry');
+    // The hungry step and the daily round pass a bare room by.
+    const asrc = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(asrc, /exits\.find\(\(e\) => forageGround\(z, tmpl\.id, e\.to_room\) && grass\.has\(z, tmpl\.id, e\.to_room, now\)\)/, 'the hungry step looks for grass');
+    const hsrc = readFileSync(new URL('../src/herds.ts', import.meta.url), 'utf8');
+    assert.match(hsrc, /feedsAt\(c\.templateId, room\) && z\.regionOf\(room\) === band && grass\.has\(z, c\.templateId, room, now\)/, 'and the round for the nearest grass');
   });
 
   check('no creature speaks a cousin habit: one list each (2026-10-30, the feral goat said it was the old billy)', () => {
@@ -5161,7 +5276,8 @@ try {
     beat(z, eagle.aloft);
     assert.equal(eagle.roomId, 'm25'); assert.equal(eagle.aloft, undefined, 'it comes down there');
     assert.ok(z.feed.some(([r, t]) => r === 'm25' && /comes down/.test(t)), 'and the room sees it');
-    assert.ok(eagle.nextWanderAt > noon, 'it stays by the food');
+    assert.equal(eagle.awayAt, 'm25', 'it remembers where it came down');
+    assert.ok(eagle.nextWanderAt <= eagle.awayUntil - 9 * 60_000, 'and is free to walk at once, not pinned to the room (2026-11-07)');
     // Fed, it goes home.
     eagle.hunger = 5;
     const fedAt = noon + 200_000;
@@ -5177,7 +5293,8 @@ try {
     const gone = add(z2, 'h', 'mountain-hare', 'm25');
     beat(z2, noon); z2.creatures.delete(gone.id); const back0 = lost.aloft; beat(z2, back0);
     const landed = lost.awayUntil;
-    assert.ok(landed - lost.nextWanderAt === 0 && landed - back0 >= 30 * 60_000, 'a hungry bird stays down long enough to find a meal');
+    assert.equal(landed - back0, 10 * 60_000, 'down ten minutes at most, never thirty (2026-11-07)');
+    assert.ok(lost.nextWanderAt <= back0, 'walking from the moment it lands');
     beat(z2, back0 + 30_000);
     assert.equal(lost.aloft, undefined, 'it gives the empty ground a minute');
     beat(z2, back0 + 61_000);
@@ -5192,12 +5309,16 @@ try {
     // A hunter whose prey has left flies to the next thing it eats, near or far (2026-11-06).
     const down = (id = 'hill-eagle', extra = {}) => {
       const y = mk(); const c = add(y, 'e', id, 'm5', extra);
-      c.awayUntil = noon + 30 * 60_000; c.nextWanderAt = c.awayUntil;
+      c.awayUntil = noon + 10 * 60_000; c.nextWanderAt = noon; c.awayAt = 'm5';
       return [y, c];
     };
     const afterMinute = noon + 61_000;
     { const [y, c] = down(); add(y, 'h', 'mountain-hare', 'm7'); beat(y, afterMinute);
-      assert.equal(c.flightTo, 'm7', 'its prey gone, it flies to the next, even close by'); assert.equal(c.awayUntil, undefined); }
+      assert.equal(c.aloft, undefined, 'prey two rooms off it walks to, on foot (2026-11-07)'); }
+    { const [y, c] = down(); add(y, 'h', 'mountain-hare', 'm9'); beat(y, afterMinute);
+      assert.equal(c.flightTo, 'm9', 'past its walking ground, it flies to the next, even close by'); assert.equal(c.awayUntil, undefined); }
+    { const [y, c] = down(); c.roomId = 'm12'; c.awayAt = 'm12'; add(y, 'h', 'mountain-hare', 'm12'); beat(y, noon + 10 * 60_000);
+      assert.equal(c.flightTo, 'm5', 'ten minutes down and still hungry, it leaves, prey or no prey'); }
     { const [y, c] = down(); add(y, 'h', 'mountain-hare', 'm25'); beat(y, afterMinute);
       assert.equal(c.flightTo, 'm25', 'or a long way off'); }
     { const [y, c] = down(); add(y, 'h', 'mountain-hare', 'm5'); add(y, 'p', 'ptarmigan', 'm7'); beat(y, afterMinute);
@@ -5208,10 +5329,13 @@ try {
       assert.equal(c.aloft, undefined, 'not while blown from a rush'); }
     { const [y, c] = down('hill-eagle', { chase: { to: 'm6' } }); add(y, 'p', 'ptarmigan', 'm7'); beat(y, afterMinute);
       assert.equal(c.aloft, undefined, 'not while it is on a chase'); }
-    { const [y, c] = down(); c.roomId = 'm12'; add(y, 'p', 'ptarmigan', 'm7'); c.awayUntil = night + 30 * 60_000; beat(y, night + 61_000);
+    { const [y, c] = down(); c.roomId = 'm12'; add(y, 'p', 'ptarmigan', 'm7'); c.awayUntil = night + 10 * 60_000; c.awayAt = 'm12'; beat(y, night + 61_000);
       assert.equal(c.flightTo, 'm5', 'and in the dark an eagle goes home rather than hunting on'); }
     { const [y, c] = down('carrion-vulture'); y.traces.set('m7', [{ kind: 'blood', at: noon, prey: 'mountain-hare' }]); beat(y, afterMinute);
       assert.equal(c.aloft, undefined, 'a scavenger still waits out its time'); }
+
+    // ...and the walk is anchored where it came down (ai.creatureMoves).
+    assert.match(readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8'), /const anchor = creature\.wateringTo \?\? quarry \?\? landed \?\?/, 'it walks the ground round where it landed');
 
     // A BIRD THAT EATS ONLY THE DEAD FLIES TO BODIES CLOSE BY (2026-11-07): a vulture
     // two rooms from the dead passed them over, too near to fly to, too far to smell.

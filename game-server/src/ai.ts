@@ -7,6 +7,7 @@ import * as exhaustion from "./exhaustion";
 import type { ZoneDO } from "./zone";
 import * as den from "./den";
 import * as herds from "./herds";
+import * as grass from "./grass";
 import * as chase from "./chase";
 import { shelteredInDen, rattle, hearthWarm } from "./den";
 import type { Creature, Session } from "./zone-types";
@@ -67,7 +68,7 @@ import {
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING, WHITE_ROE, FEVER_RAT, bossStands, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
-  EAT_SHOW_MS, EAT_SAY_MIN_MS, EAT_SAY_MAX_MS, EAT_WORDS,
+  EAT_SHOW_MS, MEAL_MIN_MS, EAT_SAY_MIN_MS, EAT_SAY_MAX_MS, EAT_WORDS,
   RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS,
 } from "./zone-data";
 
@@ -135,8 +136,9 @@ export async function arrivalHabits(z: ZoneDO, creature: Creature, tmpl: MobTemp
         z.roomSound(here, "Snarling {dir}, and then a deep cough that ends it.", undefined, undefined, false, { mob: tmpl.id, act: "fight" });
       }
       for (const w of wolves) await creatureMoves(z, w, now, "flee", silent);
+      const fedFrom1 = creature.hunger;
       creature.hunger = 0;
-      ate(creature, now);
+      ate(creature, now, undefined, fedFrom1 - creature.hunger);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + 8);
       if (!silent) { z.fxFed(here, tmpl.id); z.refreshRoomCtx(here); }
     }
@@ -1396,7 +1398,9 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // A HUNGRY PACK closes on its quarry (groups.packQuarry), all the way into its room.
       const quarry = creature.wateringTo ? undefined : groups.packQuarry(z, creature, now);
       if (quarry === creature.roomId) return; // there: it stays with the pack's kill
-      const anchor = creature.wateringTo ?? quarry ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
+      // A bird down from the sky walks the ground round where it landed (flight.ts).
+      const landed = creature.awayUntil !== undefined && creature.aloft === undefined ? creature.awayAt : undefined;
+      const anchor = creature.wateringTo ?? quarry ?? landed ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
       // ONE capped walk out from the den answers both halves — am I inside my
       // range, and which of these exits are. This is the hottest distance query
       // in the game (every wandering creature, every beat); routing it through
@@ -1601,7 +1605,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // instead of drifting blind and starving. Its place-fear (avoids) already
       // steered the exits, so it won't loop back into a room it just fled.
       const larder = !mark && grazer
-        ? exits.find((e) => forageGround(z, tmpl.id, e.to_room))
+        ? exits.find((e) => forageGround(z, tmpl.id, e.to_room) && grass.has(z, tmpl.id, e.to_room, now))
         : undefined;
       const smells = mark ?? larder ?? exits.find((e) =>
         (z.ground.get(e.to_room) ?? []).some((id) => world.itemTemplates.get(id)?.lure),
@@ -1917,8 +1921,9 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       // no spawn row for it.
       z.roamed.delete(`${eaten}@${creature.roomId}`);
       const tmpl = world.mobTemplates.get(creature.templateId)!;
-      creature.hunger = Math.max(0, creature.hunger - MEAL_ITEM); // a found meal, not a kill
-      ate(creature, undefined, "scraps");
+      const fedFrom2 = creature.hunger;
+      creature.hunger = Math.max(0, creature.hunger - MEAL_ITEM);
+      ate(creature, undefined, "scraps", fedFrom2 - creature.hunger);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
       z.addTrace(creature.roomId, { kind: "scraps", at });
       if (!silent) {
@@ -1951,7 +1956,8 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // strays, the outworks' rats). The bone ground is the answer the fiction was
     // already giving; this makes the code agree with it.
     const carrionEater = SCAVENGERS.has(creature.templateId) && !HUNTS_NOT_CARRION.has(creature.templateId) && CARRION_ROOMS.has(creature.roomId);
-    const grazeHere = grazer && forageGround(z, creature.templateId, creature.roomId);
+    // ...and on the mountain the grass is eaten down: a bare room feeds nothing (grass.ts).
+    const grazeHere = grazer && forageGround(z, creature.templateId, creature.roomId) && grass.has(z, creature.templateId, creature.roomId, at);
     // WEATHER KEYS THE FORAGE: a hard cold freezes the ground (nothing to
     // graze), and the mud after a good rain brings up more than the ground
     // usually gives. Carrion is carrion whatever the sky does.
@@ -1970,8 +1976,10 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       // the same hundred minutes a deer would have. It comes back to the ground
       // within the hour now, which is what a thing living on scraps does.
       // A bear on its own feeding ground eats a real meal (OWN_FORAGE_MEAL_LEFT).
+      const fedFrom3 = creature.hunger;
       creature.hunger = grazeHere && OWN_FORAGE_ROOMS.has(creature.templateId) ? Math.min(creature.hunger, OWN_FORAGE_MEAL_LEFT) : Math.max(0, creature.hunger - MEAL_GRAZE);
-      ate(creature, at, grazeHere ? "graze" : "scraps");
+      ate(creature, at, grazeHere ? "graze" : "scraps", fedFrom3 - creature.hunger);
+      if (grazeHere) grass.crop(z, creature.templateId, creature.roomId, at);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.mastOn(z) ? Math.round(FORAGE_HEAL * MAST_FORAGE_MULT)
         : grazeHere && events.wrackIn(z, creature.roomId) ? Math.round(FORAGE_HEAL * WRACK_FORAGE_MULT)
         : grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT)
@@ -2234,8 +2242,9 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     }
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt, creature.templateId);
-      creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0; // small prey is a mouthful
-      ate(creature);
+      const fedFrom4 = creature.hunger;
+      creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
+      ate(creature, undefined, undefined, fedFrom4 - creature.hunger);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`, undefined, false);
@@ -2309,8 +2318,9 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     if (victim.hp > 0) return true;
     releaseHold(z, creature);
     preyFalls(z, victim, vt, creature.templateId);
-    creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0; // small prey is a mouthful
-    ate(creature);
+    const fedFrom5 = creature.hunger;
+    creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
+    ate(creature, undefined, undefined, fedFrom5 - creature.hunger);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} finishes it, and stands over what is left.`, undefined, false);
@@ -2745,10 +2755,23 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const idx = list.findIndex((tr) => CORPSE_TRACES.has(tr.kind) && !(spareKin && tr.label === tmpl.name));
     if (idx === -1) return;
     const eaten = list[idx];
-    list.splice(idx, 1);
-    if (list.length === 0) z.traces.delete(creature.roomId);
-    creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) ? MEAL_SMALL : MEAL_CORPSE)); // a whole body, and it still is not a kill (small prey is a mouthful)
-    ate(creature, undefined, "carrion");
+    // A SMALL THING DOES NOT EAT A BIG BODY WHOLE (rome, 2026-11-07: rats were
+    // finishing a wolf). The dead thing has as much on it as it had hit points;
+    // a feeder smaller than it takes its own size off and leaves the rest for
+    // the next. One as big or bigger takes all of it, as before.
+    const deadT = eaten.prey ? z.world!.mobTemplates.get(eaten.prey)
+      : eaten.label ? [...z.world!.mobTemplates.values()].find((t) => t.name === eaten.label) : undefined;
+    const left = (eaten.meat ?? deadT?.max_hp ?? 0) - tmpl.max_hp;
+    const gone = !deadT || tmpl.max_hp >= deadT.max_hp || left <= 0;
+    if (gone) {
+      list.splice(idx, 1);
+      if (list.length === 0) z.traces.delete(creature.roomId);
+    } else eaten.meat = left;
+    const fedFrom6 = creature.hunger;
+    creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) ? MEAL_SMALL : MEAL_CORPSE));
+    // A body it took whole, or the share of one it took, goes back if it is cut short.
+    const taken = gone ? (eaten.meat ?? deadT?.max_hp ?? 0) : tmpl.max_hp;
+    ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken });
     // WHAT THE CORPSE IS WORTH TO THIS ONE. A bone-cracker gets through to the
     // marrow and takes double; a sour-gutted thing eats and is no better for it.
     // Both make the FLOOR of a fight tactical rather than scenery: with bodies
@@ -2777,7 +2800,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
       // ...and it is SEEN doing it. The line below has always said so; the
       // picture never did, because nothing on the wire carried the meal.
       z.fxFed(creature.roomId, creature.templateId);
-      z.refreshRoomCtx(creature.roomId);   // ...and the body leaves the floor
+      if (gone) z.refreshRoomCtx(creature.roomId);   // ...and the body leaves the floor
       // The dire-hyena feeding on a fallen hyena — its own included — is a colder
       // thing than gnawing a rat. Name it when it happens.
       const hyenaKin = new Set([...SCAVENGERS].map((id) => z.world!.mobTemplates.get(id)?.name));
@@ -4744,8 +4767,9 @@ function drakeLands(z: ZoneDO, creature: Creature, tmpl: MobTemplate): void {
   creature.prey = undefined;
   creature.nextWanderAt = Date.now();
   if (prey) {
+    const fedFrom7 = creature.hunger;
     creature.hunger = 0;
-    ate(creature);
+    ate(creature, undefined, undefined, fedFrom7 - creature.hunger);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + SCAVENGER_HEAL);
     z.addTrace(creature.roomId, { kind: "remains", at: Date.now(), label: prey });
     skySight(z, "mountain", "It comes back over the mountain lower and slower than it went, and it is carrying something. Whatever it took was not small.", creature.roomId);
@@ -4959,11 +4983,43 @@ export function mealWords(z: ZoneDO, c: Creature, name: string, was: string, sho
   }
 }
 
-export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "kill"): void {
+// A MEAL TAKES ITS TIME (rome, 2026-11-07). It used to land whole at the first
+// bite and the eating after was only shown. Now the animal is owed the meal it
+// started (`drop`, the hunger it takes off) and eats it down across the meal:
+// a full body takes EAT_SHOW_MS, a mouthful MEAL_MIN_MS. Its hunger reads the
+// finished meal from the first bite, so a feeding animal does not go looking
+// for another; but stopped part way (walked off, fought, driven off) it gets
+// back the part it never ate, and what it was eating goes back on the floor.
+export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "kill", drop = 0,
+  body?: { roomId: string; prey?: string; label?: string; meat: number }): void {
+  const dur = drop > 0 ? Math.min(EAT_SHOW_MS, Math.max(MEAL_MIN_MS, EAT_SHOW_MS * drop / MEAL_CORPSE)) : EAT_SHOW_MS;
   c.eatingOn = on;
-  c.eatingUntil = now + EAT_SHOW_MS;
+  c.eatingUntil = now + dur;
   c.eatingIn = c.roomId;
   c.nextWanderAt = Math.max(c.nextWanderAt, c.eatingUntil);
+  if (drop > 0) c.meal = { owed: drop, from: now, to: now + dur, body };
+  else c.meal = undefined;
+}
+
+/** The meal goes on, or stops: finished, it is done; cut short, the uneaten part is given back. */
+export function digest(z: ZoneDO, c: Creature, now: number): void {
+  const m = c.meal;
+  if (!m) return;
+  if (now >= m.to) { c.meal = undefined; return; }
+  const cut = c.eatingIn !== c.roomId || c.eatingUntil === undefined || !!c.target || c.hp <= 0;
+  if (!cut) return;
+  c.meal = undefined;
+  const left = Math.max(0, Math.min(1, (m.to - now) / Math.max(1, m.to - m.from)));
+  if (left <= 0) return;
+  c.hunger = Math.min(HUNGER_MAX, c.hunger + m.owed * left);
+  // What it was eating stays where it lay, for the next mouth.
+  const meat = m.body ? Math.round(m.body.meat * left) : 0;
+  if (m.body && meat > 0) {
+    const list = z.traces.get(m.body.roomId) ?? [];
+    const lying = list.find((t) => t.kind === "remains" && (t.prey ?? t.label) === (m.body!.prey ?? m.body!.label));
+    if (lying) lying.meat = (lying.meat ?? 0) + meat;
+    else z.addTrace(m.body.roomId, { kind: "remains", at: now, prey: m.body.prey, label: m.body.label, meat });
+  }
 }
 
 export function hungers(templateId: string): boolean {

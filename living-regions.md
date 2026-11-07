@@ -12,17 +12,19 @@ A player who comes back finds the region changed, because of what other players 
 
 1. **Where they settle is chance, and food tips the odds.** Every fit room can be drawn. A room counts for more the more food is within 3 rooms. Never "always pick the best room".
 2. **Animals only settle on their own kind of ground.** A hind on grass, a raven on a crag. This limits homes only: a chased or hungry animal can still cross anything.
-3. **Prey needs food too.** A grazer only settles with grazing inside its feeding range. Check this for every grazer, or it starves where it landed.
+3. **Prey needs food too.** A grazer only settles with grazing inside its feeding range. Check this for every grazer, or it starves where it landed. On the mountain the grass is eaten down: a grazing room holds 6 mouthfuls and grows one back every 20 minutes, so a bare room feeds nothing and a hungry grazer walks on to grass, while its daily round goes to the nearest room with grass left. Rats and thieves live on muck and scraps, which never run out. Everywhere else the ground still never runs dry.
 4. **A hunter with no wings needs prey close.** It only settles within 3 rooms of living prey, when any exists.
 5. **Animals that live in company do, and the rest live alone.** A group shares one home and new animals join while it has room. A share of each group line goes without a group.
 6. **A broken group is finished.** Down to one or none, it ends. A survivor goes on as a loner where it stands, and nothing new settles near that ground for 6 hours.
 7. **Hunger moves them.** A group where more than half have stayed hungry for 2 hours, or a hungry loner, picks a new home and walks there. Hunger itself is never tuned down: starving is the world working.
 8. **Nothing stays for good.** A home lasts 2-5 game days (8-20 real hours), then the animal or whole group draws a new one, away from the old ground. One that's well fed when its time comes gets one game day more. Nothing leaves in a fight.
 9. **Packs hold their ground.** A pack wolf goes for smaller hunters on its ground: mostly a chase, sometimes a kill. Twice run off, the small one draws a new home. A pack wolf takes any fresh kill it finds a smaller hunter on. A lone wolf only chases one off a meal, kills nothing and drives nothing from its home. When two or more of a pack are hungry, the pack picks the nearest hind or goat within 12 rooms of home and closes on it together, into its room, so the two wolves a hind needs are there at once. One hill wolf takes a goat alone. An animal a hunter has gripped stays gripped until it breaks free or the hunter is driven off; it does not walk out of the grip.
-10. **Birds walk day to day and fly for food, across the whole game.** Hungry with nothing within 3 rooms, a bird flies to the nearest food in its own region within 25 rooms, under open sky, off the map while in the air. Each flies to what it eats: hunters to prey, scavengers to bodies, grazers to feeding ground. A bird that eats only the dead (vulture, bone-breaker, raven, chough, gibbet crow) has nothing to find on foot, so it flies to the nearest bodies however close, unless it is standing on its meal. Nesting mothers and the ptarmigan stay down. A scavenger stays until fed, up to 30 minutes, then flies home. A hunter whose prey has left gives the room a minute, then flies to the next thing it eats, or home if there is none in reach or it is outside its hours. A bird done eating at its own home stays there rather than flying home. A bird never picks a full room: if its room fills in flight it turns for home, and if home is full it lands close by. It can't take off in a fight, while targeted, held, stunned, asleep or badly hurt, so flying is never an escape.
+10. **Birds walk day to day and fly for food, across the whole game.** Hungry with nothing within 3 rooms, a bird flies to the nearest food in its own region within 25 rooms, under open sky, off the map while in the air. Each flies to what it eats: hunters to prey, scavengers to bodies, grazers to feeding ground. A bird that eats only the dead (vulture, bone-breaker, raven, chough, gibbet crow) has nothing to find on foot, so it flies to the nearest bodies however close, unless it is standing on its meal. Nesting mothers and the ptarmigan stay down. Down, it walks the 3 rooms round where it landed, hunting or picking over them on foot, and flies when fed or after 10 minutes, never pinned to one room. A hunter with nothing it eats left on that ground gives it a minute, then flies to the next thing it eats, or home if there is none in reach or it is outside its hours. A bird done eating at its own home stays there rather than flying home. A bird never picks a full room: if its room fills in flight it turns for home, and if home is full it lands close by. It can't take off in a fight, while targeted, held, stunned, asleep or badly hurt, so flying is never an escape.
 11. **Nothing is untouchable except by choice.** Bigger birds have hunters too: on the mountain lynx take any bird, gluttons and lead wolves take ravens, choughs and bone-breakers, wildcats and hill wolves take choughs, and two hill wolves take a raven or bone-breaker. A hunter is given what it could realistically win. Anywhere in the game, a flying bird is half as easy to catch and never triggers the boom event.
 12. **Every bird is a small meal.** Mostly feather and hollow bone, so even a big one takes only 25 off a hunter's hunger, the same as eating its body. A hind or goat still fills one. This list (`SMALL_PREY`) covers the whole game, not just the mountain.
 13. **Hunters hold their land.** A hunter's land is its home and the 3 rooms round it. A new one does not settle on land held by another of its kind, or by a bigger hunter after the same food, while there is other ground; with none, it settles anyway. On its own land it runs off another of its kind, or a smaller hunter after its food: mostly a chase, sometimes a bite, never a kill. Run off twice, the intruder draws a new home. On the mountain: lynx, glutton, wildcat, hill fox, snow fox, ermine, eagle and eagle owl. Grazers share their ground as herds and scavengers gather at bodies, so neither holds land. Before building it, measure that each kind fits at its limit with homes 4 rooms apart; on the mountain each fits 5 to 10 times over.
+
+14. **Bodies and meals take their time, across the whole game.** A body has as much on it as the dead thing had hit points; a feeder smaller than it takes its own size and leaves the rest, so four rats finish a wolf where one did. A meal is eaten over its time, 2 minutes for a body and 40 seconds for a mouthful or a graze; an animal cut short by walking off or a fight is owed back what it did not eat, and what was left of the body goes back on the floor.
 
 ## What never moves
 
@@ -44,9 +46,11 @@ Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a n
 | Run off this many times, loses home | 2 | `GROUND_DRIVEN_LEAVES` |
 | Hunters holding land / a run-off that bites | Home + 3 rooms / 1 in 4 | `LAND_HOLDERS`, `TERRITORY_RADIUS`, `LAND_BITE_ODDS` |
 | Pack goes after a hind or goat | 2 hungry, within 12 rooms of home | `PACK_QUARRY`, `PACK_HUNT_RANGE` |
+| Grass in a mountain grazing room / grows back | 6 mouthfuls / one every 20 minutes | `GRASS_BITES`, `GRASS_REGROW_MS` |
+| A meal takes | 2 minutes for a body, 40 seconds at the least | `EAT_SHOW_MS`, `MEAL_MIN_MS` |
 | Flying bird caught in a hunt | Half the usual chance | `BIRD_CATCH_MULT` |
 | Bird flight reach / speed | 25 rooms / 5 seconds a room, 15 minimum | `FLIGHT_RANGE`, `FLIGHT_MS_PER_ROOM`, `FLIGHT_MIN_MS` |
-| Bird stays down at most / rest if it came home hungry | 30 / 20 minutes | `FLIGHT_STAY_MS`, `FLIGHT_REST_MS` |
+| Bird stays down at most, walking / rest if it came home hungry | 10 / 20 minutes | `FLIGHT_STAY_MS`, `FLIGHT_REST_MS` |
 | Hungry bird with no food in reach looks again | About 1 minute | `FLIGHT_LOOK_MS` |
 | Most mobs a bird will land among | Lands only with fewer than 5 in the room | `CROWD_CAP` |
 
@@ -56,6 +60,7 @@ The numbers are first guesses tested in simulation. A new region can start from 
 
 - `game-server/src/groups.ts`: choosing homes, groups, broken groups, hunger moves, packs holding ground and hunting together, hunters holding land
 - `game-server/src/flight.ts`: birds flying out to feed, in every region
+- `game-server/src/grass.ts`: the mountain's grass, eaten down and growing back
 - `game-server/src/beasts.ts`: the `beasts` command and its daily count
 - `game-server/src/mountain-ground.ts`: each room's kind of ground, and what each animal settles on
 - `game-server/src/zone-data.ts`: the lists and numbers above
@@ -104,7 +109,7 @@ Its limits: it starts from a freshly placed world, not the live one; its "player
 ## What the mountain taught us
 
 - **Measure food before calling it done.** The first ground table left 36 ptarmigan homes with nothing to graze. Nobody had asked whether prey had food.
-- **Check the wait against the work.** Birds were given 4 minutes at a meal that takes about 15 on average to find. At 30 minutes, ravens, bone-breakers and owls got about 50-70% more meals.
+- **Check the wait against the work.** Birds were given 4 minutes at a meal that takes about 15 on average to find. At 30 minutes, ravens, bone-breakers and owls got about 50-70% more meals. But a bird held in one room for half an hour looked wrong, so it is now 10 minutes spent walking the ground round where it landed.
 - **Moving one animal moves its hunting.** Limiting lynx to crag and stone took them off the hinds and put them on the goats.
 - **The old world already had too many hunters for its prey.** Hares and ptarmigan fall by half or more under the old rules too. Always run the old rules to see what's new.
 - **More hunters can mean more prey.** Hares and ptarmigan did better under the new rules because wolves switched to rats: about 107 fewer of them killed by wolves in 48 hours, and about 129 more rats dead. Count births, arrivals and deaths before believing or dismissing a result like that; here they added up exactly.

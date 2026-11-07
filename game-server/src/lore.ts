@@ -64,7 +64,7 @@ export async function milestoneRead(z: ZoneDO, session: Session): Promise<void> 
   // THE ROAD'S RECORD is cut on the same stone (chronicle.ts): read it with the names.
   const record = (await chronicle.recordAt(z, session.roomId)).trim();
   if (!cut.length) {
-    return z.send(session, `The old cut has weathered past reading, and below it the stone is bare. Nobody has set their name down here. (carve)` + (record ? `\n${record}` : ""), "study");
+    return z.send(session, `The old cut has weathered past reading, and below it the stone is bare. Nobody has set their name down here. (carve)` + (record ? `\n${record}` : ""), "lore");
   }
   // The whole point of there being TWO stones: a name on both is somebody who
   // went on. Nothing tracks that — the comparison IS the record.
@@ -76,7 +76,7 @@ export async function milestoneRead(z: ZoneDO, session: Session): Promise<void> 
   const both = newestFirst.filter((c) => far.has(c.name)).length;
   z.send(session, `Names, crowded into the lee of ${stone.stone}, the newest cut over the oldest:\n${lines.join("\n")}` +
     (rest > 0 ? `\n  …and ${rest} more, cut deeper and read harder.` : "") +
-    `\n${both} of the ${newestFirst.length} are on both stones.` + (record ? `\n${record}` : ""), "study");
+    `\n${both} of the ${newestFirst.length} are on both stones.` + (record ? `\n${record}` : ""), "lore");
 }
 
 // ---- maps: open a chart you carry (the modal draws it) ----
@@ -750,17 +750,20 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
     // and gone through, there is nothing left of it for the crows or the next
     // pair of hands.
     study.useUp(z, session.roomId, corpse.tr);
-    z.send(session, `You kneel over the dead ${tmpl.name.replace(/^(a|an|the) /i, "")} and go through it, hide to bone, setting down what you find. When you stand there is nothing left of it worth the name.${tail}`
-      + "\n" + study.line(z, tmpl, "dead"), "study");
+    z.send(session, `You kneel over the dead ${tmpl.name.replace(/^(a|an|the) /i, "")} and go through it, hide to bone, setting down what you find. When you stand there is nothing left of it worth the name.${tail}`, "study");
+    // What you found is the world speaking: the lore look (rome, 2026-11-07).
+    const found = study.line(z, tmpl, "dead");
+    if (found) z.send(session, found, "lore");
     z.roomFeed(session.roomId, `${session.name} kneels over the dead ${tmpl.name.replace(/^(a|an|the) /i, "")} and takes it apart, taking notes.`, session.pubkey, false);
   } else {
     // AND SAY WHAT YOU SAW (rome, 2026-08-21): the close read is the same one
     // `look` gives (ai.creatureRead), so a clause added to a close look reaches
     // the journal too.
-    z.send(session, `You watch ${tmpl.name} ${study.DOING[doing]} a while and set down what you see.${tail}`
-      + "\n" + ai.creatureRead(z, visible!, session.pubkey)
+    z.send(session, `You watch ${tmpl.name} ${study.DOING[doing]} a while and set down what you see.${tail}`, "study");
+    // What you saw is the world speaking: the lore look (rome, 2026-11-07).
+    z.send(session, [ai.creatureRead(z, visible!, session.pubkey),
       // What it eats is for the journal to tell, not the room's text (rome, 2026-11-06).
-      + adds.filter((b) => b !== "feeding").map((b) => study.line(z, tmpl, b)).filter(Boolean).map((l) => "\n" + l).join(""), "study");
+      ...adds.filter((b) => b !== "feeding").map((b) => study.line(z, tmpl, b))].filter(Boolean).join("\n"), "lore");
     z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
   }
   z.sendCtx(session); // drop the now-redundant `study` chip without waiting for the next refresh

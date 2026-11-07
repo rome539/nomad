@@ -65,7 +65,9 @@ const eatsOnlyDead = (c: Creature, line: string): boolean =>
 function preyHasLeft(z: ZoneDO, c: Creature, line: string, now: number): boolean {
   if (!(PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line))?.size) return false;
   if (now < c.awayUntil! - FLIGHT_STAY_MS + FLIGHT_LOOK_MS || (c.huntRestUntil ?? 0) > now || c.chase) return false;
-  return !foodIn(z, c, line, c.roomId);
+  // It walks the ground round where it landed, so prey it can walk to has not left.
+  for (const room of z.nearby(c.awayAt ?? c.roomId, TERRITORY_RADIUS).keys()) if (foodIn(z, c, line, room)) return false;
+  return true;
 }
 
 function canGo(z: ZoneDO, c: Creature): boolean {
@@ -80,7 +82,7 @@ function canGo(z: ZoneDO, c: Creature): boolean {
 /** Done with a meal away, and already standing at home: no flight, it is simply home. */
 function homeAlready(z: ZoneDO, c: Creature, now: number): boolean {
   if (c.roomId !== (c.home ?? c.roomId)) return false;
-  c.awayUntil = undefined;
+  c.awayUntil = undefined; c.awayAt = undefined;
   c.nextWanderAt = now;
   if (hungers(c.templateId) && c.hunger >= HUNGRY_AT) c.flightRestUntil = now + FLIGHT_REST_MS;
   z.noteCreaturesChanged();
@@ -95,7 +97,7 @@ function takeOff(z: ZoneDO, c: Creature, to: string, dist: number, now: number):
   c.flightTo = to;
   beasts.note(z, "flights", now);
   c.aloft = now + Math.max(FLIGHT_MIN_MS, dist * FLIGHT_MS_PER_ROOM);
-  c.awayUntil = undefined;
+  c.awayUntil = undefined; c.awayAt = undefined;
   c.huntFor = undefined;
   z.noteCreaturesChanged();
   z.refreshRoomCtx(from);
@@ -120,10 +122,15 @@ function land(z: ZoneDO, c: Creature, now: number): void {
   c.aloft = undefined;
   if (wentHome) {
     c.awayUntil = undefined;
+    c.awayAt = undefined;
     if (hungers(c.templateId) && c.hunger >= HUNGRY_AT) c.flightRestUntil = now + FLIGHT_REST_MS;
   } else {
+    // DOWN, IT WALKS (rome, 2026-11-07). It was held in the one room it landed
+    // in for the whole stay; now it hunts or picks over the rooms round it on
+    // foot (ai.creatureMoves anchors it here), and flies when fed or at the end.
     c.awayUntil = now + FLIGHT_STAY_MS;
-    c.nextWanderAt = c.awayUntil; // it stays by the food
+    c.awayAt = to;
+    c.nextWanderAt = now;
   }
   z.noteCreaturesChanged();
   z.roomFeed(to, `${cap(t.name)} comes down out of the sky.`, undefined, false);

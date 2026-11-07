@@ -251,8 +251,9 @@ export async function holdGround(
   rival.asleep = false;
   rival.sleepUntil = undefined;
   const feed = (from: string): void => {
+    const fedFrom = wolf.hunger;
     wolf.hunger = SMALL_PREY.has(from) ? Math.max(0, wolf.hunger - MEAL_SMALL) : 0;
-    ate(wolf, now);
+    ate(wolf, now, undefined, fedFrom - wolf.hunger);
     z.fxFed(roomId, wolf.templateId);
   };
   if (onGround && chance(GROUND_KILL_ODDS)) {

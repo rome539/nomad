@@ -7543,6 +7543,8 @@ function tradeItemNode(it, place) {
   var nm = document.createElement("span");
   nm.className = "nm";
   nm.appendChild(gearNameSpan(it.name, it.rarity, it.slot));
+  // WHAT KIND OF GEAR IT IS, as the pack window says it (rome, 2026-11-07).
+  if (it.slot && SLOT_WORD[it.slot]) { var kd = document.createElement("span"); kd.className = "kind"; kd.textContent = " \u00b7 " + SLOT_WORD[it.slot]; nm.appendChild(kd); }
   if (it.n > 1) nm.appendChild(document.createTextNode(" (x" + it.n + ")"));
   wrap.appendChild(nm);
   if (it.stat) {
@@ -7666,7 +7668,7 @@ function fillTradeCol(el, title, items, place, gone) {
     row.className = "trow tgone";
     var nm = document.createElement("span");
     nm.className = "nm";
-    nm.textContent = it.name;
+    nm.textContent = it.name + (it.slot && SLOT_WORD[it.slot] ? " \u00b7 " + SLOT_WORD[it.slot] : "");
     row.appendChild(nm);
     var dash = document.createElement("span");
     dash.className = "tcost";

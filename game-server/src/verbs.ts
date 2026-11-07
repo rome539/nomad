@@ -705,12 +705,12 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
       seen.push({ d, text: band.replace("{dir}", facing) });
     }
     if (!seen.length) {
-      return z.send(session, `You look ${facing} and get open country and the weather over it — nothing in that direction is big enough, or near enough, to take a bearing from.`, "study");
+      return z.send(session, `You look ${facing} and get open country and the weather over it — nothing in that direction is big enough, or near enough, to take a bearing from.`, "lore");
     }
     // Nearest first: you notice the thing in front of you, and then the thing
     // behind it. Two is what a look is worth; a list is a map, and maps are bought.
     seen.sort((a, b) => a.d - b.d);
-    return z.send(session, seen.slice(0, 2).map((l) => l.text).join(" "), "study");
+    return z.send(session, seen.slice(0, 2).map((l) => l.text).join(" "), "lore");
   }
 
   // The lightless deep takes the WHOLE room from you — the glance already says
@@ -755,7 +755,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // never names a death; looking at the body is how you learn whose it was.
   const body = blind || events.tideFlooded(z, session.roomId) ? null
     : study.findCorpse(z, session.roomId, askDead.dead ? askDead.rest : arg);
-  if (body) return z.send(session, bodyRead(z, session.roomId, body.tr, body.tmpl.id, body.tmpl.name), "study");
+  if (body) return z.send(session, bodyRead(z, session.roomId, body.tr, body.tmpl.id, body.tmpl.name), "lore");
   // A chest is a FIXTURE of the room, and 'look' could never see one (rome,
   // 2026-07-26) — every cache carries real description prose in D1 that nothing
   // ever showed. Resolved room-scoped by name, exactly as 'unlock' does, and
@@ -769,16 +769,16 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   if (cacheHere) {
     const keyT = world.itemTemplates.get(cacheHere.keyItem);
     if (!z.cacheLocked(cacheHere)) {
-      return z.send(session, `${cacheHere.description} It hangs sprung and empty. Give it time to be worth forcing again.`);
+      return z.send(session, `${cacheHere.description} It hangs sprung and empty. Give it time to be worth forcing again.`, "lore");
     }
     if (cacheHere.keyItem === "") {
       // A prize box: the door was the lock, so there is no lock to read.
-      return z.send(session, `${cacheHere.description} There is no lock on it — the door that guards this room is the only lock it has.`);
+      return z.send(session, `${cacheHere.description} There is no lock on it — the door that guards this room is the only lock it has.`, "lore");
     }
     const hasKey = keys.keyFor(session, cacheHere.keyItem);
     const fits = hasKey && hasKey.itemId !== cacheHere.keyItem ? world.itemTemplates.get(hasKey.itemId) : keyT;
     return z.send(session, `${cacheHere.description} It is locked.`
-      + (keyT ? (hasKey ? ` ${cap(fits?.name ?? keyT.name)} in your pack fits that lock.` : ` The lock wants ${keyT.name}.`) : ""));
+      + (keyT ? (hasKey ? ` ${cap(fits?.name ?? keyT.name)} in your pack fits that lock.` : ` The lock wants ${keyT.name}.`) : ""), "lore");
   }
 
   // Items get a real inspection (rome, 2026-07-11): the prose, then what the
@@ -833,7 +833,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   if (other) return z.send(session, describePlayer(z, session, other), "study");
   const piece = blind ? null : lookOnPlayer(z, session, arg, [...z.sessions.values()].filter((s) => s.roomId === session.roomId && z.reachable(s)));
   if (piece) return z.send(session, piece, "study");
-  if (!blind && wanderer.named(z, session.roomId, arg)) return z.send(session, wanderer.LOOK_TEXT, "study");
+  if (!blind && wanderer.named(z, session.roomId, arg)) return z.send(session, wanderer.LOOK_TEXT, "lore");
   // Not in hand, not on the floor — maybe in the lockbox (rome, 2026-07-11:
   // look reaches into your own keeping too). Not mid-fight: nobody unlatches
   // a box with something trying to kill them.
@@ -914,7 +914,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     // outdoors in that second. It was not a probe word, so `look moon` did not
     // even reach the sky. A month you cannot look up at is not a month.
     const skyNow = events.skyLook(z, session.roomId, arg);
-    if (skyNow) return z.send(session, skyNow, "study");
+    if (skyNow) return z.send(session, skyNow, "lore");
     // NO SKY FROM HERE, AND SAY WHICH KIND OF NO (rome, 2026-08-31, asking after
     // the sun from inside the Stripped Armory and being told about the cloud).
     // skyLook returns null for every room that is not outdoors, and the probe
@@ -933,7 +933,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     // that there was a roof over him. The region alone cannot answer it: the
     // mountain is a surface band with twenty-one roofed rooms inside it.
     if (!OUTDOOR_ROOMS.has(session.roomId)) {
-      return z.send(session, SURFACE_BANDS.has(z.regionOf(session.roomId)) ? SKY_ROOFED : SKY_UNDER, "study");
+      return z.send(session, SURFACE_BANDS.has(z.regionOf(session.roomId)) ? SKY_ROOFED : SKY_UNDER, "lore");
     }
     // Outdoors with a quiet sky: fall through to the region's own standing line
     // about it — the low country's lid, the mountain's moving one.
@@ -945,10 +945,11 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     // warrens are dug, not built. The map's reading is the finer one and it is
     // the honest one to describe ground with.
     const placed = carving.lookPlaced(z, session, arg);
-    if (placed) return z.send(session, placed, "study");
+    // A CLOSE LOOK IS THE WORLD SPEAKING (rome, 2026-11-07): the lore look, as the last hand on found gear.
+    if (placed) return z.send(session, placed, "lore");
     const feature = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
     // A region's record reads its newest rows under its own close look (chronicle.ts).
-    if (feature) return z.send(session, feature + await chronicle.under(z, session.roomId, feature), "study");
+    if (feature) return z.send(session, feature + await chronicle.under(z, session.roomId, feature), "lore");
   }
   // In the dark, "nothing like that here" would be a lie dressed as an answer —
   // you didn't fail to find it, you failed to SEE. Say which.
@@ -3474,7 +3475,7 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
       lines.push(`  ...and past that, ${dirPhrase(f.dir)} again: ${beyond}, faint.`);
     }
   }
-  z.send(session, lines.join("\n"), "study", undefined, cues.slice(0, 4));
+  z.send(session, lines.join("\n"), "lore", undefined, cues.slice(0, 4));
 }
 
 // ---- dive: the tide's other half ----

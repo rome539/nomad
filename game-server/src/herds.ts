@@ -25,6 +25,7 @@
 import type { ZoneDO } from "./zone";
 import type { World } from "./world";
 import type { Creature } from "./zone-types";
+import * as grass from "./grass";
 import { isNight, skyBand } from "./zone-util";
 import { randInt } from "./rng";
 import { mintCreature } from "./ai";
@@ -310,7 +311,7 @@ export function roundGround(z: ZoneDO, c: Creature, now: number): string | undef
   const out = z.nearby(c.home, ROUND_RANGE);
   let best: string | undefined, bestD = Infinity;
   for (const [room, d] of out) {
-    if (d < bestD && feedsAt(c.templateId, room) && z.regionOf(room) === band) { bestD = d; best = room; }
+    if (d < bestD && feedsAt(c.templateId, room) && z.regionOf(room) === band && grass.has(z, c.templateId, room, now)) { bestD = d; best = room; }
   }
   return (c.roundFor = best);
 }
