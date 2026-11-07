@@ -751,7 +751,7 @@ t("the effects lift the cloud's shadow where the plate is lit", /k \*= mix\(clou
       strip(sceneEl.style.backgroundImage) + " | " + lamp.className + " | " + inner.style.backgroundImage);
   }
   t("...and in the snow at night the lantern lies over the torch's light, under the flame's",
-    /<div id="snowlight"[^>]*><\/div>\s*<div id="lamplight"[^>]*><i><\/i><\/div>\s*<canvas id="scene-fx"/.test(src));
+    /<div id="snowlight"[^>]*><canvas><\/canvas><\/div>\s*<div id="lamplight"[^>]*><i><\/i><\/div>\s*<canvas id="scene-fx"/.test(src));
   t("...and a room painted before the light maps arrived is painted again when they do",
     /fogMasks = m;[\s\S]{0,400}if \(paintScene\.last\) paintScene\.apply\(null, paintScene\.last\);/.test(src)
     && /paintScene\.last = Array\.prototype\.slice\.call\(arguments\)/.test(src));

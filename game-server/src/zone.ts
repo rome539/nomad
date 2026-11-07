@@ -132,7 +132,7 @@ import { FORGE_STOCK,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
-  ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS,
+  ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS, PICKED_CLEAN_MS,
   HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
@@ -6490,8 +6490,11 @@ export class ZoneDO implements DurableObject {
       }
     }
     list.push(trace);
+    // A BODY IS NOT PUSHED OUT BY TRACKS (rome, 2026-11-07: a body went from the
+    // picture as an animal walked in to eat it - its prints were the thirteenth
+    // thing in the room). The dead stay until they are eaten or rot, like words.
     while (list.length > TRACE_CAP) {
-      const i = list.findIndex((t) => t.kind !== "carve");
+      const i = list.findIndex((t) => t.kind !== "carve" && !CORPSE_TRACES.has(t.kind));
       if (i === -1) break;
       list.splice(i, 1);
     }
@@ -6504,9 +6507,12 @@ export class ZoneDO implements DurableObject {
       // prints go twice as fast — the season hides what walked it.
       const snowedHere = this.snowUntil > now && this.world!.rooms.get(roomId)?.region === "mountain";
       const lifeMult = snowedHere ? SNOW_TRACE_LIFE_MULT : 1;
-      const alive = list.filter((t) => now - t.at < (TRACE_LIFE_MS[t.kind] ?? 0) * lifeMult);
+      // ...and a body picked clean goes once its last meal is done (ai.scavengerFeeds).
+      const alive = list.filter((t) => now - t.at < (TRACE_LIFE_MS[t.kind] ?? 0) * lifeMult
+        && !(t.meat === 0 && now > (t.eatenTill ?? 0) + PICKED_CLEAN_MS));
       if (alive.length === 0) this.traces.delete(roomId);
       else if (alive.length !== list.length) this.traces.set(roomId, alive);
+      if (alive.length !== list.length && list.some((t) => t.meat === 0 && !alive.includes(t))) this.refreshRoomCtx(roomId); // the picture lets it go too
     }
   }
 

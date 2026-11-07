@@ -1666,7 +1666,8 @@ export const SOFT_GROUND = new Set<string>([
   "the-cold-seep", "the-drinking-pool", "the-wet-hollow",
   "the-mud-shore", "the-drained-creek", "the-mud-causey", "the-creek-mouth", "the-gull-flats",
 ]);
-export const TRACE_CAP = 12; // per room; oldest non-carving forgotten first
+export const TRACE_CAP = 12; // per room; oldest non-carving, non-body forgotten first
+export const PICKED_CLEAN_MS = 60_000; // a body picked clean leaves this long after its last meal is due to end, if nothing cleared it sooner
 export const CARVE_CAP = 5; // wall space is finite
 export const CARVE_MAX_LEN = 40;
 

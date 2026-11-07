@@ -259,7 +259,7 @@ export interface Creature {
   flightTo?: string;      // a mountain bird in the air: the room it comes down in (flight.ts)
   awayUntil?: number;     // ...down at a meal, away from home: when it gives up and flies back
   awayAt?: string;
-  meal?: { owed: number; from: number; to: number; body?: { roomId: string; prey?: string; label?: string; meat: number } }; // a meal being eaten down (ai.ate/digest)        // ...and where it came down: it walks the ground round it while it is down
+  meal?: { owed: number; from: number; to: number; body?: { roomId: string; prey?: string; label?: string; meat: number; key?: string; id?: string } }; // a meal being eaten down (ai.ate/digest)        // ...and where it came down: it walks the ground round it while it is down
   flightRestUntil?: number; // ...it came home hungry: no new flight before this
   aloft?: number;      // ms it comes back down. While this is set the creature is OFF THE MAP: creaturesInRoom skips it, so no room holds it and nothing can reach it
   flightPlan?: string[]; // the bands it crosses, out and home again (the route is a line because the world is one)
@@ -290,6 +290,7 @@ export interface Trace {
   on?: "mud";
   prey?: string;    // a predator's kill: what it was (the crows read its size, and that it was eaten where it fell)
   meat?: number;    // what is left on a body small feeders have been at, in the dead thing's hit points (ai.scavengerFeeds)
+  eatenTill?: number; // when the last meal on a body picked clean is done; it leaves the floor after (zone.pruneTraces)
   // A track's heading: which way the thing that made it went (clues.ts).
   dir?: string;
   at: number;

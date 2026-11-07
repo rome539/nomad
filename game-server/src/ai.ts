@@ -2772,7 +2772,10 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const fedFrom6 = creature.hunger;
     creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) ? MEAL_SMALL : MEAL_CORPSE));
     // A body it took whole, or the share of one it took, goes back if it is cut short.
-    ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken });
+    ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken, key: bodyKey(eaten), id: eaten.id });
+    // A body picked clean goes once the last meal on it is done, even if the
+    // one eating it is killed or wanders off before digest can see it finish.
+    if (eaten.meat === 0 && creature.meal) eaten.eatenTill = Math.max(eaten.eatenTill ?? 0, creature.meal.to);
     // WHAT THE CORPSE IS WORTH TO THIS ONE. A bone-cracker gets through to the
     // marrow and takes double; a sour-gutted thing eats and is no better for it.
     // Both make the FLOOR of a fight tactical rather than scenery: with bodies
@@ -4991,7 +4994,7 @@ export function mealWords(z: ZoneDO, c: Creature, name: string, was: string, sho
 // for another; but stopped part way (walked off, fought, driven off) it gets
 // back the part it never ate, and what it was eating goes back on the floor.
 export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "kill", drop = 0,
-  body?: { roomId: string; prey?: string; label?: string; meat: number }): void {
+  body?: { roomId: string; prey?: string; label?: string; meat: number; key?: string; id?: string }): void {
   const dur = drop > 0 ? Math.min(EAT_SHOW_MS, Math.max(MEAL_MIN_MS, EAT_SHOW_MS * drop / MEAL_CORPSE)) : EAT_SHOW_MS;
   c.eatingOn = on;
   c.eatingUntil = now + dur;
@@ -5016,7 +5019,7 @@ export function digest(z: ZoneDO, c: Creature, now: number): void {
   if (m.body && meat > 0) {
     const lying = bodyLying(z, m.body);
     if (lying) lying.meat = (lying.meat ?? 0) + meat;
-    else z.addTrace(m.body.roomId, { kind: "remains", at: now, prey: m.body.prey, label: m.body.label, meat });
+    else z.addTrace(m.body.roomId, { kind: "remains", at: now, prey: m.body.prey, label: m.body.label, id: m.body.id, meat });
   }
   clearEaten(z, m.body);
 }
@@ -5027,8 +5030,16 @@ export function edibleBody(t: Trace): boolean {
 }
 
 type MealBody = NonNullable<NonNullable<Creature["meal"]>["body"]>;
+// Which body a trace is, the same way every time: a body laid by a death has
+// its name and template but no prey, so prey-or-label alone never matched it.
+function bodyKey(t: { prey?: string; label?: string; id?: string }): string | undefined {
+  return t.prey ?? t.label ?? t.id;
+}
+function mealKey(b: MealBody): string | undefined {
+  return b.key ?? b.prey ?? b.label;
+}
 function sameBody(t: Trace, b: MealBody): boolean {
-  return CORPSE_TRACES.has(t.kind) && (t.prey ?? t.label) === (b.prey ?? b.label);
+  return CORPSE_TRACES.has(t.kind) && bodyKey(t) === mealKey(b);
 }
 // The body a meal came off, the one being finished first.
 function bodyLying(z: ZoneDO, b: MealBody): Trace | undefined {
@@ -5043,7 +5054,7 @@ function clearEaten(z: ZoneDO, b: MealBody | undefined): void {
   if (!list || idx === -1) return;
   for (const o of z.creatures.values()) {
     const ob = o.meal?.body;
-    if (ob && ob.roomId === b.roomId && (ob.prey ?? ob.label) === (b.prey ?? b.label) && o.hp > 0) return;
+    if (ob && ob.roomId === b.roomId && mealKey(ob) === mealKey(b) && o.hp > 0) return;
   }
   list.splice(idx, 1);
   if (list.length === 0) z.traces.delete(b.roomId);

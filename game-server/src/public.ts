@@ -1320,6 +1320,9 @@ export const PAGE = `<!doctype html>
   @media (prefers-reduced-motion: reduce) { body[data-view="image"] #snowlight.on { animation: none; } }
   /* ...and at dawn the torch plate itself, through the same map: not added, shown. */
   body[data-view="image"] #snowlight.plate { filter: none; mix-blend-mode: normal; animation: none; }
+  /* Drawn from the light map loaded with the picture, so it lands with it (see put). */
+  #snowlight > canvas { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  #snowlight.drawn > canvas { display: block; }
   /* THE GATE LANTERNS BURN AS BRIGHT WITHOUT YOUR TORCH (rome, 2026-10-28). Round
      the painted lanterns only (the gradients on the outer box), the torch plate
      through its light map (the inner one). */
@@ -2656,7 +2659,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   </div>
   <div id="sky" aria-hidden="true"></div>
   <div id="scene" aria-hidden="true"></div>
-  <div id="snowlight" aria-hidden="true"></div>
+  <div id="snowlight" aria-hidden="true"><canvas></canvas></div>
   <div id="lamplight" aria-hidden="true"><i></i></div>
   <canvas id="scene-fx" aria-hidden="true"></canvas>
   <canvas id="scene-sparks" aria-hidden="true"></canvas>
@@ -13509,7 +13512,7 @@ function readySceneImage(url, done) {
   var entry = cache.get(url);
   if (entry) {
     cache.delete(url); cache.set(url, entry);
-    if (entry.ready) done(true); else entry.wait.push(done);
+    if (entry.ready) done(true, entry.image); else entry.wait.push(done);
     return;
   }
   var img = new Image();
@@ -13526,7 +13529,7 @@ function readySceneImage(url, done) {
     entry.ready = ok;
     if (!ok && cache.get(url) === entry) cache.delete(url);
     var listeners = entry.wait; entry.wait = [];
-    listeners.forEach(function (fn) { fn(ok); });
+    listeners.forEach(function (fn) { fn(ok, ok ? img : null); });
   }
   function decoded() {
     if (settled || decoding) return;
@@ -14140,12 +14143,31 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
         + "%, #000, rgba(0,0,0,.78) 25%, rgba(0,0,0,.37) 50%, rgba(0,0,0,.1) 75%, transparent)";
     });
     if (typeof snowLightEl !== "undefined" && snowLightEl) {
-      snowLightEl.className = snowLight ? (snowPlate ? "on plate" : "on") : "";
+      // THE TORCH ON THE SNOW LANDS WITH THE PICTURE (rome, 2026-11-07: the
+      // scene came in and the torch's light seconds after). A CSS mask is fetched
+      // again by the browser after the picture is up, as the fog's was; so it is
+      // drawn here from the light map and the picture already loaded for it.
+      var slCv = snowLightEl.firstChild, slDrawn = false, slBase = snowPlate ? snowPlateImg : sceneImg;
+      if (snowLight && snowMaskImg && slBase && slCv && slCv.getContext) {
+        var slW = slBase.naturalWidth, slH = slBase.naturalHeight, slX = slCv.getContext("2d");
+        if (slX && slW && slH && snowMaskImg.naturalWidth) {
+          if (slCv.width !== slW) slCv.width = slW;
+          if (slCv.height !== slH) slCv.height = slH;
+          slX.globalCompositeOperation = "source-over";
+          slX.clearRect(0, 0, slW, slH);
+          slX.drawImage(slBase, 0, 0, slW, slH);
+          slX.globalCompositeOperation = "destination-in";
+          slX.drawImage(snowMaskImg, 0, 0, slW, slH);
+          slX.globalCompositeOperation = "source-over";
+          slDrawn = true;
+        }
+      }
+      snowLightEl.className = snowLight ? (snowPlate ? "on plate" : "on") + (slDrawn ? " drawn" : "") : "";
       if (snowLightEl.style) {
-        snowLightEl.style.backgroundImage = snowLight ? (snowPlate ? "url(" + snowPlate + ")" : url) : "";
+        snowLightEl.style.backgroundImage = snowLight && !slDrawn ? (snowPlate ? "url(" + snowPlate + ")" : url) : "";
         // (Round a gate's lantern the lantern layer lies over this light, so the
         // torch's light never reaches the lantern.)
-        snowLightEl.style.webkitMaskImage = snowLightEl.style.maskImage = snowLight ? "url(" + snowLight + ")" : "";
+        snowLightEl.style.webkitMaskImage = snowLightEl.style.maskImage = snowLight && !slDrawn ? "url(" + snowLight + ")" : "";
       }
     }
     if (typeof lampLightEl !== "undefined" && lampLightEl) {
@@ -14194,7 +14216,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     ready = ready && ok;
     if (--waiting === 0 && ready) put();
   }
-  readySceneImage(scene ? scene + "?v=" + BG_V : "", loaded);
+  // The decoded picture and light map, kept to draw the torch on the snow from in put().
+  var sceneImg = null, snowMaskImg = null, snowPlateImg = null;
+  var keep = function (set) { return function (ok, img) { set(ok && img ? img : null); loaded(ok); }; };
+  readySceneImage(scene ? scene + "?v=" + BG_V : "", keep(function (i) { sceneImg = i; }));
   if (!skyParts.length) readySceneImage(sky ? sky + "?v=" + SKY_V : "", loaded);
   for (var sp = 0; sp < skyParts.length; sp++) readySceneImage("/sky/" + skyParts[sp] + ".webp?v=" + SKY_V, loaded);
   var fogImg = null;   // the decoded mask, kept to draw the fog from in put()
@@ -14203,10 +14228,10 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     fogImg = ok && e ? e.image : null;
     loaded(ok);
   });
-  readySceneImage(snowLight, loaded);
+  readySceneImage(snowLight, keep(function (i) { snowMaskImg = i; }));
   readySceneImage(lampMap, loaded);
   readySceneImage(lampSrc, loaded);
-  readySceneImage(snowLight ? snowPlate : "", loaded);
+  readySceneImage(snowLight ? snowPlate : "", keep(function (i) { snowPlateImg = i; }));
   // The mist, reflections, shadows and flames belong to the same picture.
   // Prepare their maps alongside the ground and sky, before any layer swaps.
   if (typeof sceneFx !== "undefined" && sceneFx.prepare) {

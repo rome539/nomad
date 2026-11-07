@@ -2875,6 +2875,46 @@ try {
     const word = (id) => BEAKS.has(id) ? 'beak' : BITERS.has(id) ? 'teeth' : 'blow';
     assert.equal(word('scarp-raven'), 'beak'); assert.equal(word('hill-wolf'), 'teeth'); assert.equal(word('the-old-raven'), 'beak', 'a beak that also bites is still a beak');
   });
+  // 2026-11-07: a body went from the picture as an animal walked in to eat it:
+  // a room keeps twelve marks, and the newcomer's prints pushed out the oldest,
+  // the body. And a body laid by a death (a name and a template, no prey) never
+  // matched its own meal, so a meal cut short laid a second, unseen body and the
+  // first lay picked clean for good; and one whose eater was killed did the same.
+  check('a body stays in the picture until there is nothing left on it', () => {
+    const mobTemplates = new Map([['rat', { id: 'rat', name: 'a scabby rat', max_hp: 8 }], ['hill-wolf', { id: 'hill-wolf', name: 'a hill wolf', max_hp: 30 }]]);
+    const zone = () => { const z = { world: { mobTemplates, rooms: new Map([['r', { region: 'mountain' }]]) }, snowUntil: 0, events: new Map(), bandOf: () => 'upper', regionOf: () => 'mountain', weather: {}, creatures: new Map(), traces: new Map(), fxFed() {}, refreshRoomCtx() { z.redrawn = (z.redrawn ?? 0) + 1; }, roomFeed() {}, roomSound() {}, sessions: new Map() };
+      z.addTrace = (room, tr) => ZoneDO.prototype.addTrace.call(z, room, tr); return z; };
+    let z = zone();
+    const now = Date.now();
+    z.addTrace('r', { kind: 'blood', at: now, label: 'a hill wolf', id: 'hill-wolf' });
+    for (let i = 0; i < 14; i++) z.addTrace('r', { kind: 'track', at: now, id: 'beast' + i, dir: 'east' });
+    assert.ok(z.traces.get('r').some((t) => t.id === 'hill-wolf'), 'prints walking in never push a body out');
+    assert.ok(z.traces.get('r').length <= 13, 'the prints still keep to the cap');
+    z = zone();
+    z.addTrace('r', { kind: 'blood', at: now, label: 'a hill wolf', id: 'hill-wolf' });
+    const feed = () => { const c = { id: 'rat' + Math.random(), templateId: 'rat', roomId: 'r', hunger: 90, hp: 1, fed: 9, nextWanderAt: 0 }; z.creatures.set(c.id, c); scavengerFeeds(z, c, true); return c; };
+    const body = () => z.traces.get('r')?.filter((t) => t.kind === 'blood' || t.kind === 'remains') ?? [];
+    const a = feed();
+    a.roomId = 'away'; digest(z, a, a.meal.from + (a.meal.to - a.meal.from) / 2);
+    assert.equal(body().length, 1, 'a meal cut short on a body a death laid puts what it left back on that body, not a second one');
+    assert.equal(body()[0].meat, 26, 'the half it did not eat');
+    assert.equal(body()[0].id, 'hill-wolf', 'and the body is still the one drawn');
+    body()[0].meat = 8;
+    const b = feed();
+    assert.equal(body()[0].meat, 0, 'the last of it taken');
+    digest(z, b, b.meal.to);
+    assert.equal(z.traces.get('r'), undefined, 'and gone when that meal is done');
+    z = zone();
+    z.addTrace('r', { kind: 'blood', at: now, label: 'a scabby rat', id: 'rat' });
+    const c = feed();
+    z.creatures.delete(c.id); // killed at its meal
+    const due = c.meal.to;
+    ZoneDO.prototype.pruneTraces.call(z, due);
+    assert.equal(body().length, 1, 'a body picked clean lies there while its meal would still be going');
+    ZoneDO.prototype.pruneTraces.call(z, due + 61_000);
+    assert.equal(z.traces.get('r'), undefined, 'and goes after, even when the one eating it was killed');
+    assert.ok(z.redrawn >= 1, 'and the picture lets it go');
+  });
   // 2026-11-07: a body looked the same whole or three parts eaten.
   check('looking at a body says how much has been eaten off it', () => {
     const z = { world: { mobTemplates: new Map([['hill-wolf', { id: 'hill-wolf', max_hp: 30 }]]) } };
@@ -2887,6 +2927,18 @@ try {
     assert.equal(at(0), 'picked down to the bone', 'the last of it being finished');
     const v = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.match(v, /return eaten \? `\$\{lies\}, and \$\{eaten\}\.` : `\$\{lies\}\.`;/, 'the look says it');
+  });
+  // 2026-11-07: on a snow night the scene came in and the torch's light seconds
+  // later: its light map was a CSS mask, which the browser fetched again after
+  // the picture was up. It is drawn from the map loaded with the picture.
+  check('the torch on the snow is drawn from the light map loaded with the picture', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /readySceneImage\(snowLight, keep\(function \(i\) \{ snowMaskImg = i; \}\)\);/, 'the light map is kept as it loads');
+    assert.match(pub, /readySceneImage\(scene \? scene \+ "\?v=" \+ BG_V : "", keep\(function \(i\) \{ sceneImg = i; \}\)\);/, 'and the picture');
+    assert.match(pub, /listeners\.forEach\(function \(fn\) \{ fn\(ok, ok \? img : null\); \}\);/, 'handed over by the loader, not looked up in a cache that may have let it go');
+    assert.match(pub, /slX\.drawImage\(slBase, 0, 0, slW, slH\);\n\s+slX\.globalCompositeOperation = "destination-in";\n\s+slX\.drawImage\(snowMaskImg, 0, 0, slW, slH\);/, 'drawn through the map');
+    assert.match(pub, /snowLightEl\.style\.webkitMaskImage = snowLightEl\.style\.maskImage = snowLight && !slDrawn \?/, 'and the CSS mask only when it could not be drawn');
+    assert.match(pub, /<div id="snowlight" aria-hidden="true"><canvas><\/canvas><\/div>/, 'on its own canvas');
   });
   // 2026-11-07: close looks and what a study finds wear the lore look, as the
   // last hand on found gear does; the study's own line and its count stay plain.
