@@ -3123,6 +3123,10 @@ export function gatehouseHeard(text: string): { say: string } | { cmd: Command }
   // There is nobody to follow out of a room with no ways out, so in here
   // "follow me" is a thing a person says.
   if (v === "follow") return { say: text };
+  // ...and what can only be done out in the dungeon (go, attack, fish, listen...)
+  // is a thing said in here, not turned away at the door (rome, 2026-11-07).
+  // `get` still reaches the handler: your own carving by the fire can be taken up.
+  if (GATEHOUSE_BARRED.has(v) && v !== "get") return { say: text };
   // A no-argument command carrying trailing words was a SENTENCE, not a command:
   // "i am trying to quit" is speech, not inventory; "who knows" is speech, not
   // the roster. Bare, they still command. This is the whole fix for a chat line's
@@ -3395,9 +3399,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // Your own carving, set down by this fire, can be taken up again. Anything
   // else `get` names is still out on the floor beyond the door.
   if (v === "get" && await carving.pickUp(z, session, cmd.arg)) return z.sendGateCtx(session);
-  if (GATEHOUSE_BARRED.has(v)) {
-    return z.send(session, "Not from in here — the dungeon is on the other side of that door. ('out' to step back into it.)");
-  }
+  if (GATEHOUSE_BARRED.has(v)) return gatehouseSay(z, session, text); // a `get` that was not your carving: said
   await z.dispatch(session, cmd); // bench, vault, forge, hatch, kit, keys, the lot
   // Any of those may have changed the scrap/meat you hold (smelt, cure, salvage,
   // bank) — refresh the smelt/cure chip availability and re-push chips so they

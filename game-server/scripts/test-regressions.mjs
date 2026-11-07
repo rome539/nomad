@@ -74,7 +74,7 @@ try {
         "export {benchEquip, boxedByName} from './gate';",
         "export * as grass from './grass';",
         "export {digest} from './ai';",
-        "export {FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, BEAKS, BITERS} from './zone-data';",
+        "export {FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, BEAKS, BITERS, GATEHOUSE_BARRED} from './zone-data';",
         "export {cmdEquip} from './verbs';",
         "export {sendCtx} from './chips';",
         "export * as carving from './carving';",
@@ -101,7 +101,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
+  const { GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1067,7 +1067,7 @@ try {
     Object.assign(z, { packRoom: () => true, inGatehouse: new Set(['me', 'you']) });
     said.length = heard.length = 0;
     await handleGatehouse(z, other, 'get ' + kind);
-    assert.match(heard.join(' '), /Not from in here/, 'someone else cannot take it');
+    assert.match(heard.join(' '), /You say: get /, 'someone else cannot take it: it is only said (2026-11-07)');
     assert.equal(carving.roomLines(z, me).length, 1, 'and it still stands');
     await handleGatehouse(z, me, 'pick up stone ' + kind);
     assert.match(said.join(' '), /You take up a stone .* again/, 'its carver takes it back');
@@ -2940,6 +2940,15 @@ try {
     assert.match(pub, /snowLightEl\.style\.webkitMaskImage = snowLightEl\.style\.maskImage = snowLight && !slDrawn \?/, 'and the CSS mask only when it could not be drawn');
     assert.match(pub, /<div id="snowlight" aria-hidden="true"><canvas><\/canvas><\/div>/, 'on its own canvas');
   });
+  // 2026-11-07: typing "fish" in the gatehouse was turned away at the door.
+  check('in the gatehouse what is done out in the dungeon is said, not refused', () => {
+    for (const line of ['fish', 'fish are biting at the ford', 'cast a line', 'listen to me', 'go on then', 'attack is the best defence', 'north', 'drop it', 'light the fire'])
+      assert.deepEqual(gatehouseHeard(line), { say: line }, line);
+    assert.ok('cmd' in gatehouseHeard('cure fish'), 'curing a fish at the racks is still a command');
+    const g = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.ok(!g.includes('Not from in here — the dungeon is on the other side of that door.'), 'nothing is turned away at the door');
+    assert.match(g, /if \(GATEHOUSE_BARRED\.has\(v\)\) return gatehouseSay\(z, session, text\);/, 'a get that is not your carving is said');
+  });
   // 2026-11-07: close looks and what a study finds wear the lore look, as the
   // last hand on found gear does; the study's own line and its count stay plain.
   check('close looks and study findings are told in the lore look', () => {
@@ -4689,8 +4698,10 @@ try {
 
   check('every command goes through in the gatehouse: none turns into speech unless meant to, and every one has a handler (2026-11-03)', () => {
     // Said, not run, by design: speech itself, follow (no ways out of the
-    // gatehouse), and the no-argument verbs with words after them (a sentence).
-    const SAID = new Set(['say', 'follow']);
+    // gatehouse), what can only be done out in the dungeon (2026-11-07; `get` is
+    // still run, for your own carving, and said if it is not that), and the
+    // no-argument verbs with words after them (a sentence).
+    const SAID = new Set(['say', 'follow', ...[...GATEHOUSE_BARRED].filter((v) => v !== 'get')]);
     const failures = [];
     for (const [word, verb] of Object.entries(VERB_ALIASES)) {
       const bare = gatehouseHeard(word);
