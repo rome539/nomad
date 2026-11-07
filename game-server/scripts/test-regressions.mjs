@@ -25,7 +25,7 @@ try {
     stdin: {
       contents: [
         "export {ZoneDO, bodyNewerThanSave} from './zone';",
-        "export {eatingShown} from './ai';",
+        "export {eatingShown, mealWords} from './ai';",
         "export {parse} from './parser';",
         "export * as den from './den';",
         "export {cmdMap, copyCounts, worldGrid} from './lore';",
@@ -96,7 +96,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
+  const { mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2550,6 +2550,87 @@ try {
     assert.ok(settlesOn('stone-adder', 'the-first-crag') && !settlesOn('stone-adder', 'the-deer-lawn-high'), 'rock, not grass');
     assert.ok(settlesOn('stone-adder', 'the-shiel-street'), 'and some may lie up in the Shieling');
   });
+  await checkAsync('the cold and the dead are a shelf in the menu their stow chip opens (2026-11-06)', async () => {
+    const rows = new Map([['pk', { id: 'pk', item_id: 'haunch', container: '', condition: 100, acquired_at: 5 }], ['bx', { id: 'bx', item_id: 'haunch', container: 'lockbox', condition: 100, acquired_at: 5 }], ['ot', { id: 'ot', item_id: 'haunch', container: 'other', condition: 100, acquired_at: 5 }]]);
+    const DB = { prepare: (q) => ({ bind: (...a) => ({
+      all: async () => ({ results: [...rows.values()].filter((r) => r.container === a[1]) }),
+      run: async () => {
+        if (/SET container = \?/.test(q)) rows.get(a[2]).container = a[0];
+        if (/SET acquired_at = \?/.test(q)) rows.get(a[1]).acquired_at = a[0];
+        return { meta: { changes: 1 } };
+      },
+    }) }) };
+    const itemTemplates = new Map([['haunch', { name: 'a haunch', edible: 1 }]]);
+    const z = { env: { DB }, world: { itemTemplates, rooms: new Map() }, isGear: () => false, slotsUsed: (l) => l.length, foodCapped: () => false, torchCapped: () => false, dressingCapped: () => false, packRoom: () => true, dens: new Map(), holdings: new Map(), den: new Map() };
+    const mk = (roomId) => ({ pubkey: 'p', roomId, items: [{ rowId: 'pk', itemId: 'haunch', equipped: false, condition: 100, acquiredAt: 5 }] });
+    const s = mk('the-shieling');
+    assert.equal((await den.keepHere(z, s)).name, 'The cold');
+    assert.equal(await den.benchStow(z, s, 'pk'), undefined, 'from the pack into the cold');
+    assert.equal(rows.get('pk').container, 'cold'); assert.equal(s.items.length, 0);
+    assert.equal(await den.benchStow(z, s, 'bx'), undefined, 'and from the box');
+    assert.equal(rows.get('bx').container, 'cold');
+    assert.equal((await den.keepHere(z, s)).held.length, 2, 'the column reads them back');
+    assert.equal(await den.benchFetch(z, s, 'pk'), undefined, 'and back to the pack');
+    assert.equal(rows.get('pk').container, ''); assert.equal(s.items[0].rowId, 'pk');
+    assert.ok(rows.get('pk').acquired_at > 5, 'as young as it went in: the clock restarts');
+    assert.ok(await den.benchFetch(z, s, 'ot'), 'nothing of another keeping comes out of the cold');
+    rows.get('pk').acquired_at = 5; rows.get('pk').container = '';
+    const o = mk('deep-ossuary');
+    assert.equal((await den.keepHere(z, o)).name, 'The dead');
+    await den.benchStow(z, o, 'pk'); assert.equal(rows.get('pk').container, 'ossuary', 'the dead keep their own');
+    await den.benchFetch(z, o, 'pk'); assert.equal(rows.get('pk').acquired_at, 5, 'and give nothing back younger');
+    assert.equal(await den.keepHere(z, mk('the-road')), null, 'no such shelf elsewhere');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const gate = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(gate, /keep: keep \? 1 : 0,/, 'the frame says so'); assert.match(gate, /shelf: sortKit\(group\(shelfHeld\)\),/, 'and carries it');
+    assert.match(pub, /benchHasShelf = benchAtDen \|\| !!state\.keep;/, 'the client knows'); assert.match(pub, /classList\.toggle\("hasden", benchHasShelf\)/, 'and makes room');
+    assert.match(pub, /if \(benchHasShelf\) \{\s*bshelf\.style\.display = "";/, 'and fills the column');
+    assert.match(pub, /#bench\.hasden:not\(\.nogate\) \.bcols \{ grid-template-columns: repeat\(4/, 'a fourth beside the vault at the Shieling');
+  });
+  check('the herd people live at least ten steps from any gate, and walk there (2026-11-06)', () => {
+    const mig = readFileSync(new URL('../migrations/374_the_herd_people_go_up_the_hill.sql', import.meta.url), 'utf8');
+    const moved = [...mig.matchAll(/SET room_id = '([a-z-]+)' WHERE id = '(spawn-(the-herd|the-milker|a-fold-dog)@([a-z-]+)#\d+)'/g)];
+    assert.equal(moved.length, 14, 'all five herds, four milkers and five dogs');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    for (const [, , id, , old] of moved) assert.ok(zd.includes(`["${id}", "${old}"]`), id + ' is carried along on load (DEN_MOVES)');
+    const links = new Map();
+    const dirUrl = new URL('../regions/', import.meta.url);
+    for (const f of readdirSync(dirUrl).filter((n) => n.endsWith('.rooms'))) {
+      let at = '';
+      for (const line of readFileSync(new URL(f, dirUrl), 'utf8').split('\n')) {
+        const h = line.match(/^## ([a-z0-9-]+) \|/); if (h) at = h[1];
+        const e = line.match(/^> \w+\s+([a-z0-9-]+)/); if (e && at) { (links.get(at) ?? links.set(at, new Set()).get(at)).add(e[1]); (links.get(e[1]) ?? links.set(e[1], new Set()).get(e[1])).add(at); }
+      }
+    }
+    const dist = new Map(['the-shieling', 'the-stell', 'the-shelter-crag', 'the-slabs'].map((g) => [g, 0])); const q = [...dist.keys()];
+    for (const r of q) for (const t of links.get(r) ?? []) if (!dist.has(t)) { dist.set(t, dist.get(r) + 1); q.push(t); }
+    for (const [, room] of moved) { assert.ok(dist.has(room), room + ' is on the map'); assert.ok(dist.get(room) >= 10, room + ' is only ' + dist.get(room) + ' steps from a gate'); }
+    assert.ok(dist.get('the-last-pasture') < 10, 'the measure itself sees the old ground as too close');
+  });
+  check('someone reading the room is told an animal is eating, all through the meal and when it stops (2026-11-06)', () => {
+    const now = Date.UTC(2026, 5, 21, 12);
+    const feed = []; const z = { roomFeed: (r, t) => feed.push(t) };
+    const owl = { templateId: 'eagle-owl', roomId: 'r', eatingIn: 'r', eatingOn: 'kill', eatingUntil: now + 120_000 };
+    const beat = (t, was, shown) => mealWords(z, owl, 'an eagle owl', was, shown, t);
+    beat(now, '', 'eat');
+    assert.equal(feed.length, 0, 'the first bite has its own line already');
+    assert.ok(owl.eatSayAt >= now + 45_000 && owl.eatSayAt <= now + 90_000);
+    beat(now + 44_000, 'eat', 'eat'); assert.equal(feed.length, 0, 'not on every beat');
+    beat(now + 91_000, 'eat', 'eat');
+    assert.equal(feed.length, 1); assert.match(feed[0], /^An eagle owl pulls another strip off its kill/, 'in the body it has');
+    beat(now + 92_000, 'eat', 'eat'); assert.equal(feed.length, 1, 'then it waits again');
+    beat(now + 121_000, 'eat', ''); assert.match(feed[1], /^An eagle owl wipes its bill/, 'and the end of it is told');
+    feed.length = 0;
+    const walked = { ...owl, eatingIn: 'elsewhere', eatSayAt: 0 }; mealWords(z, walked, 'an eagle owl', 'eat', '', now); assert.equal(feed.length, 0, 'walked off, it has not finished here');
+    const sleeper = { ...owl, asleep: true, eatSayAt: 0 }; mealWords(z, sleeper, 'an eagle owl', 'eat', 'eat', now); assert.equal(feed.length, 0, 'asleep it says nothing');
+    const fighter = { ...owl, target: 'x', eatSayAt: 0 }; mealWords(z, fighter, 'an eagle owl', 'eat', 'eat', now); assert.equal(feed.length, 0, 'nor in a fight');
+    const hind = { templateId: 'red-hind', roomId: 'r', eatingIn: 'r', eatingOn: 'graze', eatingUntil: now + 9, eatSayAt: 0 }; mealWords(z, hind, 'a red hind', 'graze', 'graze', now); assert.match(feed[0], /^A red hind crops at the ground/); feed.length = 0;
+    const adder = { templateId: 'stone-adder', roomId: 'r', eatingIn: 'r', eatingOn: 'kill', eatingUntil: now + 9, eatSayAt: 0 }; mealWords(z, adder, 'a stone adder', 'eat', 'eat', now); assert.match(feed[0], /^A stone adder's jaws work/); feed.length = 0;
+    const vulture = { templateId: 'carrion-vulture', roomId: 'r', eatSayAt: 0 }; mealWords(z, vulture, 'a carrion vulture', 'eat', 'eat', now); assert.match(feed[0], /carcass/, 'a scavenger on a body is on carrion');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /ai\.mealWords\(this, creature, tmpl\.name, eatingWas, eatingSeen, now\);/, 'the beat asks');
+    assert.match(readFileSync(new URL('../src/simstore.ts', import.meta.url), 'utf8'), /"eatSayAt"\]\);/, 'and a line of a meal never forces a save');
+  });
   check('the dancer leaps and comes down, and stands between leaps (2026-11-06)', () => {
     const src = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const block = src.slice(src.indexOf('var LEAP_S ='), src.indexOf('var BOB ='));
@@ -3838,7 +3919,7 @@ try {
 
   check('in your den a lockbox piece goes straight onto the shelf (2026-10-31)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    assert.match(pub, /if \(place === "lockbox" && benchAtDen\) btnQ\("\\\\u2192 shelf", "stow"\);/, 'the box row has a shelf button in a den');
+    assert.match(pub, /if \(place === "lockbox" && benchHasShelf\) btnQ\("\\\\u2192 shelf", "stow"\);/, 'the box row has a shelf button in a den');
     const den = readFileSync(new URL('../src/den.ts', import.meta.url), 'utf8');
     const fn = den.slice(den.indexOf('export async function benchStow'));
     const body = fn.slice(0, fn.indexOf('\n}\n'));

@@ -984,6 +984,32 @@ export const HUNGER_PER_MIN = 0.5;
 // holds the animal over it this long, reading as eating, so a wanderer can
 // walk in and see it feed. Before, every meal was an instant.
 export const EAT_SHOW_MS = 2 * 60_000;
+// ...AND THE WORDS GO ON WITH IT (rome, 2026-11-06). The picture shows a meal for as
+// long as it lasts; someone reading the room heard about the first bite at most. One
+// of these every EAT_SAY_MIN-MAX_MS while it eats, and one when it stops ({name} is
+// the animal, already capitalised).
+export const EAT_SAY_MIN_MS = 45_000;
+export const EAT_SAY_MAX_MS = 90_000;
+export const EAT_WORDS: Record<"beak" | "coil" | "body", Record<"kill" | "carrion" | "graze" | "scraps", { on: string; done: string }>> = {
+  beak: {
+    kill: { on: "{name} pulls another strip off its kill and tips its head back to swallow.", done: "{name} wipes its bill on the ground, side to side, and leaves what is left of its kill." },
+    carrion: { on: "{name} drives its bill into the carcass and comes up with something.", done: "{name} lifts its head out of the carcass and wipes its bill on the ground." },
+    graze: { on: "{name} picks at the ground, and picks again.", done: "{name} stops picking at the ground and looks up." },
+    scraps: { on: "{name} picks something off the ground and swallows it.", done: "{name} stops picking at the ground and looks up." },
+  },
+  coil: {
+    kill: { on: "{name}'s jaws work, and the shape in its throat moves a little further down.", done: "{name} settles, with the last of its kill gone down." },
+    carrion: { on: "{name}'s jaws work, and the shape in its throat moves a little further down.", done: "{name} settles, with the meal gone down." },
+    graze: { on: "{name}'s jaws work slowly at something.", done: "{name} settles, with the meal gone down." },
+    scraps: { on: "{name}'s jaws work slowly at something.", done: "{name} settles, with the meal gone down." },
+  },
+  body: {
+    kill: { on: "{name} braces a foot on its kill and tears off another mouthful.", done: "{name} lifts its head from what is left of its kill and licks its mouth." },
+    carrion: { on: "{name} worries at the carcass and comes away chewing.", done: "{name} lifts its head from the carcass and licks its mouth." },
+    graze: { on: "{name} crops at the ground, lifts its head to look round, and goes back to it.", done: "{name} lifts its head and stops grazing." },
+    scraps: { on: "{name} noses through the scraps and chews at what it finds.", done: "{name} lifts its head from the ground, done with it." },
+  },
+};
 export const HUNGER_MAX = 100;
 export const HUNGRY_AT = 50;
 
@@ -5799,6 +5825,21 @@ export const PRICK_LINES = [
   "The spines drive into your fist and stay there",
 ];
 export const DEN_MOVES = new Map<string, string>([
+  // mig 374: the herd people, up off the gates and onto the shelves
+  ["spawn-the-herd@the-last-pasture#627", "the-last-pasture"],
+  ["spawn-the-herd@the-high-fold#626", "the-high-fold"],
+  ["spawn-the-herd@the-wether-ledge#628", "the-wether-ledge"],
+  ["spawn-the-herd@the-hanging-turf#625", "the-hanging-turf"],
+  ["spawn-the-herd@the-bealach#624", "the-bealach"],
+  ["spawn-the-milker@the-milking-fold#632", "the-milking-fold"],
+  ["spawn-the-milker@the-turf-wall#635", "the-turf-wall"],
+  ["spawn-the-milker@the-peat-hags#633", "the-peat-hags"],
+  ["spawn-the-milker@the-rush-hollow#634", "the-rush-hollow"],
+  ["spawn-a-fold-dog@the-goat-track#3", "the-goat-track"],
+  ["spawn-a-fold-dog@the-bracken-slope#0", "the-bracken-slope"],
+  ["spawn-a-fold-dog@the-cotton-grass#1", "the-cotton-grass"],
+  ["spawn-a-fold-dog@the-first-rise#2", "the-first-rise"],
+  ["spawn-a-fold-dog@the-track-head#4", "the-track-head"],
   // mig 346: four grave-hyenas out of the halls and into the pits; mig 357
   // spread two of them across it (hyena-1 and hyena-3, from where 346 put them)
   ["hyena-1", "the-den-mouths"], ["hyena-2", "kennels"], ["hyena-3", "the-laughing-ground"], ["hyena-4", "larder"],

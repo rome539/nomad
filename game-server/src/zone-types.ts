@@ -184,6 +184,7 @@ export interface Creature {
   eatingOn?: "kill" | "carrion" | "scraps" | "graze"; // what the meal is, for the look
   eatingIn?: string;   // the room the meal is in: walk off it and the meal is over (rome, 2026-10-28)
   eatingSeen?: string;  // what the sprite was last told about eating, so a meal starting or ending redraws the room (ai.eatingShown; ephemeral)
+  eatSayAt?: number;    // when the room next reads a line of this meal (ai.mealWords; never worth a save)
   eatingUntil?: number; // a meal holds it over the food until then, and it reads as eating (study.ts EAT_SHOW_MS; ephemeral)
   asleep?: boolean; // warm blood only: dozing — skips its whole act loop; wakes to entry/noise rolls (the wakeListeners law), a blow, or its own clock
   sleepUntil?: number; // when the doze ends on its own

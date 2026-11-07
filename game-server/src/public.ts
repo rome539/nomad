@@ -482,6 +482,8 @@ export const PAGE = `<!doctype html>
   /* Under a roof of your own the shelf takes the third column. A den is never a
      gate, so the vault and the shelf can never both want it. */
   #bench.nogate.hasden .bcols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* The Shieling is a gate with a cold store, so there the shelf is a fourth. */
+  #bench.hasden:not(.nogate) .bcols { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   #bench .bcol {
     border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 8px;
     overflow-y: auto; min-width: 0; min-height: 120px;
@@ -552,7 +554,7 @@ export const PAGE = `<!doctype html>
       padding-bottom: 12px;
     }
     #bench .bbody > * { flex-shrink: 0; }
-    #bench .bcols, #bench.nogate .bcols, #bench.nogate.hasden .bcols {
+    #bench .bcols, #bench.nogate .bcols, #bench.nogate.hasden .bcols, #bench.hasden:not(.nogate) .bcols {
       flex: 0 0 auto; grid-template-columns: minmax(0, 1fr);
       overflow: visible; grid-auto-rows: max-content; align-content: start;
       padding-bottom: 0;
@@ -6990,7 +6992,8 @@ var bvault = document.getElementById("bvault");
 var bshelf = document.getElementById("bshelf");
 var bnote = document.getElementById("bnote");
 var benchAtGate = false; // vault + seal only when the bench is opened at a gate
-var benchAtDen = false;  // the shelf column, only under a roof you may keep in
+var benchAtDen = false;  // under a roof you may keep in
+var benchHasShelf = false; // the shelf column: that roof, the cold or the dead
 document.getElementById("bclose").addEventListener("click", function () { benchSend("close"); });
 
 document.getElementById("bgear").addEventListener("click", function () {
@@ -7138,7 +7141,7 @@ function benchItemNode(it, place) {
     btnQ("\\u2192 box", "stash");
     // The shelf, when you're standing under your own roof. Sits next to the box
     // because it is the same act — putting a thing down somewhere it keeps.
-    if (benchAtDen) btnQ("\\u2192 shelf", "stow");
+    if (benchHasShelf) btnQ("\\u2192 shelf", "stow");
     // The vault is the gate's business — only offered at a gate. Everything can
     // go to it, and unsealed gear is sealed on the way in (rome, 2026-10-14), so
     // the window has no seal button of its own (rome, 2026-10-20): vaulting
@@ -7167,7 +7170,7 @@ function benchItemNode(it, place) {
     // vaults, unsealed gear is sealed on the way in, so no seal button.)
     if (place === "lockbox" && benchAtGate) btnQ("\\u2192 vault", "vault");
     // ...and in your den, straight onto the shelf (rome, 2026-10-31).
-    if (place === "lockbox" && benchAtDen) btnQ("\\u2192 shelf", "stow");
+    if (place === "lockbox" && benchHasShelf) btnQ("\\u2192 shelf", "stow");
     // The vice reaches the keeping too (rome, 2026-10-16): the box's steel can be
     // broken down where it rests, the same scrap button as the pack's.
     if (benchAtGate && it.fix && it.slot && it.salv && (place === "lockbox" || place === "vault")) armBtn("scrap", "salvage", "scrap");
@@ -7376,10 +7379,11 @@ function renderBench(state) {
   document.getElementById("bgear").hidden = !state.sheet;
   benchAtGate = !!state.atGate;
   benchAtDen = !!state.den;
+  benchHasShelf = benchAtDen || !!state.keep;
   if (state.sfx) sndOne(state.sfx);
   // At a gate you truly step out of the world; in the dungeon you only crouch to
   // dig through your lockbox — still in the open, still in reach. Say so plainly.
-  document.getElementById("btitle").textContent = benchAtGate ? "The gatehouse bench" : benchAtDen ? "Under your own roof" : "Your lockbox";
+  document.getElementById("btitle").textContent = benchAtGate ? "The gatehouse bench" : benchAtDen ? "Under your own roof" : state.keep ? state.denName : "Your lockbox";
   document.getElementById("bsub").textContent = benchAtGate
     ? "You've stepped out of the world. Nothing can reach you here \\u2014 sort your kit."
     : benchAtDen
@@ -7387,9 +7391,10 @@ function renderBench(state) {
     : "You crouch to dig through your kit \\u2014 but you're still in the dungeon, in the open and in reach. Keep your eyes up.";
   setNote(bnote, state.note || ((benchAtGate ? ""
     : benchAtDen ? "Nothing here is sealed against time: food ages on the shelf and iron rusts \\u2014 though iron left here never rusts away to nothing."
+    : state.keep ? ""
     : "Away from a gate \\u2014 lockbox only. The vault and the seal wait at the gates.")));
   benchEl.classList.toggle("nogate", !benchAtGate);
-  benchEl.classList.toggle("hasden", benchAtDen);
+  benchEl.classList.toggle("hasden", benchHasShelf);
   renderDoll(state.sheet);
   var storeUsed = function (items, used) { return typeof used === "number" ? used : (items || []).filter(function (it) { return !it.equipped; }).length; };
   var others = [["lockbox", storeUsed(state.lockbox, state.lockboxUsed), state.lockboxCap]];
@@ -7416,9 +7421,9 @@ function renderBench(state) {
   // The shelf. Its header carries the den's own law instead of an n/cap, because
   // its law is not an n/cap: gear on it is endless and everything else is
   // capped, and the header is the only place that can say so at a glance.
-  if (benchAtDen) {
+  if (benchHasShelf) {
     bshelf.style.display = "";
-    fillBenchCol(bshelf, "Your shelf \\u00b7 " + (state.denName || "your den"), state.shelf || [], 0, "shelf");
+    fillBenchCol(bshelf, state.keep ? state.denName : "Your shelf \\u00b7 " + (state.denName || "your den"), state.shelf || [], 0, "shelf");
     var lawEl = bshelf.querySelector(".cnt");
     if (lawEl) lawEl.textContent = (state.shelfGear || 0) + " gear, no limit \\u00b7 "
       + (state.shelfRest || 0) + "/" + (state.denCap || 0) + " else";

@@ -66,7 +66,7 @@ import {
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING, WHITE_ROE, FEVER_RAT, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
-  EAT_SHOW_MS,
+  EAT_SHOW_MS, EAT_SAY_MIN_MS, EAT_SAY_MAX_MS, EAT_WORDS,
   RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS,
 } from "./zone-data";
 
@@ -4931,6 +4931,22 @@ export function eatingShown(z: ZoneDO, c: Creature, now = Date.now()): "" | "eat
     if ((z.traces.get(c.roomId) ?? []).some((tr) => CORPSE_TRACES.has(tr.kind) && !(spareKin && tr.label === tmpl?.name))) return "eat";
   }
   return "";
+}
+
+// What someone in the room reads while an animal eats, and when it stops. `was` and
+// `shown` are eatingShown before and after this beat.
+export function mealWords(z: ZoneDO, c: Creature, name: string, was: string, shown: string, now: number): void {
+  if (shown && !was) c.eatSayAt = now + randInt(EAT_SAY_MIN_MS, EAT_SAY_MAX_MS);
+  if (c.asleep || c.target || c.aloft !== undefined) return;
+  const body = BEAKS.has(c.templateId) ? "beak" : COILS.has(c.templateId) ? "coil" : "body";
+  const on = eatingNow(c, now) || c.eatingIn === c.roomId ? c.eatingOn ?? "kill" : "carrion";
+  const say = (line: string): void => z.roomFeed(c.roomId, line.replace("{name}", cap(name)), undefined, false);
+  if (shown && now >= (c.eatSayAt ?? 0)) {
+    c.eatSayAt = now + randInt(EAT_SAY_MIN_MS, EAT_SAY_MAX_MS);
+    say(EAT_WORDS[body][on].on);
+  } else if (was && !shown && c.eatingIn === c.roomId) {
+    say(EAT_WORDS[body][on].done);
+  }
 }
 
 export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "kill"): void {

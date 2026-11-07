@@ -2103,7 +2103,7 @@ export async function benchBurn(z: ZoneDO, session: Session, row: string): Promi
       // And the den's shelf, now that it is a column of this modal — otherwise
       // the burn button sitting on every shelf row would refuse every time.
       if (!carried) {
-        const shelf = await den.shelfHere(z, session);
+        const shelf = (await den.shelfHere(z, session)) ?? (await den.keepHere(z, session));
         carried = shelf?.held.find((c) => c.rowId === row);
       }
     }
@@ -2274,7 +2274,9 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
     // roof you may keep things in (den.ts). Nothing else about the modal changes
     // — same box, same buttons — and it is gone the moment you step outside.
     const shelf = await den.shelfHere(z, session);
-    const counts = await lore.copyCounts(z, session, session.items, lockbox, vault, shelf?.held ?? []); // " (42 rooms)" after each map and journal, as the text list has it
+    const keep = await den.keepHere(z, session); // the cold or the dead: a shelf with no roof
+    const shelfHeld = shelf?.held ?? keep?.held ?? [];
+    const counts = await lore.copyCounts(z, session, session.items, lockbox, vault, shelfHeld); // " (42 rooms)" after each map and journal, as the text list has it
     const ser = (c: CarriedItem) => {
       const t = world.itemTemplates.get(c.itemId);
       const gear = z.isGear(c.itemId);
@@ -2334,7 +2336,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
       }
       return out;
     };
-    const shelfRest = shelf ? z.slotsUsed(shelf.held.filter((c) => !z.isGear(c.itemId)), "lockbox") : 0;
+    const shelfRest = z.slotsUsed(shelfHeld.filter((c) => !z.isGear(c.itemId)), "lockbox");
     const payload = {
       v: 0, t: "bench", open: true, note: note ?? "", sfx: sfx ?? "",
       inGatehouse: z.inGatehouse.has(session.pubkey) && world.entryRooms.has(session.roomId),
@@ -2345,9 +2347,10 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
       // law is unlike theirs: gear on it is UNLIMITED and everything else is
       // capped, so it reports two numbers rather than one out of a ceiling.
       den: shelf ? 1 : 0,
-      denName: shelf ? z.world!.rooms.get(shelf.den.roomId)!.name : "",
-      shelf: shelf ? sortKit(group(shelf.held)) : [],
-      shelfGear: shelf ? shelf.held.filter((c) => z.isGear(c.itemId)).length : 0,
+      keep: keep ? 1 : 0,
+      denName: shelf ? z.world!.rooms.get(shelf.den.roomId)!.name : keep?.name ?? "",
+      shelf: sortKit(group(shelfHeld)),
+      shelfGear: shelfHeld.filter((c) => z.isGear(c.itemId)).length,
       shelfRest, denCap: den.denCap(shelf?.den),
       pack: sortKit(group(session.items)),
       // a lit torch is spent into your hand and is no longer a pack row, but it

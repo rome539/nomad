@@ -1188,6 +1188,21 @@ export async function cmdFetch(z: ZoneDO, session: Session, arg: string): Promis
 // untouched ('stow <item>', 'fetch <item>', 'den'), because the chip has never
 // been the only way to do anything.
 
+// THE COLD AND THE DEAD ARE SHELVES IN THE MODAL TOO. Their chip opens it like a
+// den's, so without a column here it opened on nothing to put things on. The same
+// laws as the typed stow and fetch above.
+function keepAt(roomId: string): { container: string; name: string; label: string } | undefined {
+  if (COLD_STORE_ROOMS.has(roomId)) return { container: COLD_CONTAINER, name: "The cold", label: "The cold keeps" };
+  if (roomId === OSSUARY_ROOM) return { container: OSSUARY_CONTAINER, name: "The dead", label: "The dead keep" };
+  return undefined;
+}
+
+export async function keepHere(z: ZoneDO, session: Session): Promise<{ name: string; held: CarriedItem[] } | null> {
+  const keep = keepAt(session.roomId);
+  if (!keep) return null;
+  return { name: keep.name, held: await loadContainer(z.env.DB, session.pubkey, keep.container) };
+}
+
 export async function shelfHere(z: ZoneDO, session: Session): Promise<{ den: Den; held: CarriedItem[] } | null> {
   const den = keepingDen(z, session);
   if (!den) return null;
@@ -1198,8 +1213,9 @@ export async function shelfHere(z: ZoneDO, session: Session): Promise<{ den: Den
 // unlimited, everything else is capped, and a piece's wear is written down
 // before it goes on the shelf so the lazy rust has an honest starting point.
 export async function benchStow(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
-  const den = keepingDen(z, session);
-  if (!den) return "There is no shelf of yours here.";
+  const keep = keepAt(session.roomId);
+  const den = keep ? undefined : keepingDen(z, session);
+  if (!keep && !den) return "There is no shelf of yours here.";
   // The row may be in the pack, or in the lockbox: straight from the box onto
   // the shelf, no round-trip through the pack (rome, 2026-10-31).
   let carried = session.items.find((c) => c.rowId === row);
@@ -1209,9 +1225,13 @@ export async function benchStow(z: ZoneDO, session: Session, row: string): Promi
     fromBox = !!carried;
   }
   if (!carried) return "You aren't carrying that.";
-  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)), den);
+  const held = keep
+    ? await loadContainer(z.env.DB, session.pubkey, keep.container)
+    : await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den!.roomId)), den!);
   if (!z.isGear(carried.itemId) && z.slotsUsed(held.filter((c) => !z.isGear(c.itemId)), "lockbox") >= denCap(den)) {
-    return `Your shelf here holds ${denCap(den)} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`;
+    return keep
+      ? `${keep.label} ${denCap(den)} of that sort of thing for you and no more.`
+      : `Your shelf here holds ${denCap(den)} of that sort of thing and no more. Gear is another matter — hang as much of it as you like.`;
   }
   if (!fromBox) {
     // Guarded splice (2026-08-20): the shelf read and the condition write above
@@ -1223,16 +1243,19 @@ export async function benchStow(z: ZoneDO, session: Session, row: string): Promi
   }
   carried.equipped = false;
   if (z.isGear(carried.itemId)) await setItemCondition(z.env.DB, carried.rowId, carried.condition);
-  await setContainer(z.env.DB, carried.rowId, container(den.roomId));
+  await setContainer(z.env.DB, carried.rowId, keep ? keep.container : container(den!.roomId));
   return undefined;
 }
 
 // Shelf -> pack, one row. Every pack ceiling the typed 'fetch' respects is
 // respected here too — a modal must never be a way around a cap.
 export async function benchFetch(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
-  const den = keepingDen(z, session);
-  if (!den) return "There is no shelf of yours here.";
-  const held = await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den.roomId)), den);
+  const keep = keepAt(session.roomId);
+  const den = keep ? undefined : keepingDen(z, session);
+  if (!keep && !den) return "There is no shelf of yours here.";
+  const held = keep
+    ? await loadContainer(z.env.DB, session.pubkey, keep.container)
+    : await rustShelf(z, await loadContainer(z.env.DB, session.pubkey, container(den!.roomId)), den!);
   const entry = held.find((c) => c.rowId === row);
   if (!entry) return "Nothing of yours here by that name.";
   if (z.foodCapped(session, entry.itemId)) return z.foodFullNote();
@@ -1240,6 +1263,11 @@ export async function benchFetch(z: ZoneDO, session: Session, row: string): Prom
   if (z.dressingCapped(session, entry.itemId)) return z.dressingFullNote();
   if (!z.packRoom(session, entry.itemId)) return `Your pack is full (${z.packCap(session)} slots). Make room first.`;
   await setContainer(z.env.DB, entry.rowId, "");
+  // The cold's promise, as in the typed fetch: the spoiling clock restarts here.
+  if (keep?.container === COLD_CONTAINER && z.world!.itemTemplates.get(entry.itemId)?.edible && entry.acquiredAt !== undefined) {
+    entry.acquiredAt = Math.floor(Date.now() / 1000);
+    await setItemAcquiredAt(z.env.DB, entry.rowId, entry.acquiredAt);
+  }
   session.items.push(entry);
   return undefined;
 }

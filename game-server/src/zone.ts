@@ -5857,7 +5857,9 @@ export class ZoneDO implements DurableObject {
       }
       // A meal starting or ending changes the picture, with no other event to carry it.
       const eatingSeen = ai.eatingShown(this, creature, now);
+      const eatingWas = creature.eatingSeen ?? "";
       if (eatingSeen !== (creature.eatingSeen ?? "")) { creature.eatingSeen = eatingSeen; this.refreshRoomCtx(creature.roomId); }
+      ai.mealWords(this, creature, tmpl.name, eatingWas, eatingSeen, now);
       if (!creature.target) {
         // Asleep: dead to the world — no feeding, no hunting, no wandering.
         // It wakes to its own clock here; a footfall (wakeListeners), a noise
