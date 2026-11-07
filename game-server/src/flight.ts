@@ -57,6 +57,10 @@ function findFood(z: ZoneDO, c: Creature, line: string, nearToo = false): { room
   return best && (nearToo || best.dist > TERRITORY_RADIUS) ? best : undefined;
 }
 
+/** It eats only the dead (no prey, no grazing): nothing to find on foot on the way, so near bodies are worth the flight (rome, 2026-11-07). */
+const eatsOnlyDead = (c: Creature, line: string): boolean =>
+  !(PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line))?.size && !GRAZERS.has(c.templateId) && !GRAZERS.has(line);
+
 /** A hunting bird down at a meal with nothing left to hunt: given a minute on the ground, and not blown from a rush or on a chase. */
 function preyHasLeft(z: ZoneDO, c: Creature, line: string, now: number): boolean {
   if (!(PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line))?.size) return false;
@@ -162,7 +166,11 @@ export function tick(z: ZoneDO, now: number): void {
     }
     if (!hungry || now < (c.flightRestUntil ?? 0)) continue;
     if (NOCTURNAL.has(c.templateId) ? !isNight(now) : isNight(now)) continue; // out in its own hours
-    const food = findFood(z, c, line);
+    // A carrion bird already standing on its meal does not fly; one with bodies
+    // two or three rooms off flies to them instead of passing them over.
+    const deadOnly = eatsOnlyDead(c, line);
+    if (deadOnly && foodIn(z, c, line, c.roomId)) continue;
+    const food = findFood(z, c, line, deadOnly);
     if (food) takeOff(z, c, food.room, food.dist, now);
     else c.flightRestUntil = now + FLIGHT_LOOK_MS * (0.75 + Math.random() * 0.5); // spread out, so the birds don't all search on one beat
   }

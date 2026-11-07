@@ -5176,6 +5176,17 @@ try {
     { const [y, c] = down('carrion-vulture'); y.traces.set('m7', [{ kind: 'blood', at: noon, prey: 'mountain-hare' }]); beat(y, afterMinute);
       assert.equal(c.aloft, undefined, 'a scavenger still waits out its time'); }
 
+    // A BIRD THAT EATS ONLY THE DEAD FLIES TO BODIES CLOSE BY (2026-11-07): a vulture
+    // two rooms from the dead passed them over, too near to fly to, too far to smell.
+    { const y = mk(); const v = add(y, 'v', 'carrion-vulture', 'm5'); y.traces.set('m7', [{ kind: 'remains', at: noon, label: 'a hare' }]); beat(y, noon);
+      assert.equal(v.flightTo, 'm7', 'two rooms off, it flies to the dead'); }
+    { const y = mk(); const v = add(y, 'v', 'carrion-vulture', 'm5'); y.traces.set('m5', [{ kind: 'remains', at: noon, label: 'a hare' }]); y.traces.set('m7', [{ kind: 'remains', at: noon, label: 'a hare' }]); beat(y, noon);
+      assert.equal(v.aloft, undefined, 'standing on its meal, it stays'); }
+    { const y = mk(); const r = add(y, 'r', 'scarp-raven', 'm5'); y.traces.set('m6', [{ kind: 'remains', at: noon, label: 'a hare' }]); beat(y, noon);
+      assert.equal(r.flightTo, 'm6', 'and so does a raven, next door'); }
+    { const y = mk(); const e = add(y, 'e', 'hill-eagle', 'm5'); add(y, 'h', 'mountain-hare', 'm7'); beat(y, noon);
+      assert.equal(e.aloft, undefined, 'a hunter still walks to prey that close'); }
+
     // NEVER A FLIGHT TO WHERE IT STANDS (2026-11-07): an eagle fed on its kill in its
     // own home room flew off and landed in the same room, gone and still there.
     { const [y, c] = down(); c.roomId = 'm5'; c.home = 'm5'; c.hunger = 10; beat(y, noon + 2000);
