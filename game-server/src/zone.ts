@@ -8436,9 +8436,13 @@ export class ZoneDO implements DurableObject {
   }
 
   // Rooms a chest may roam to: its own tier, minus every gate and hideaway.
+  // A row set on a gate takes the tier of the country that gate stands in:
+  // regionOf calls every gate "gate", and with gates barred that left an empty
+  // pool, so the mountain's three gate chests came back to the doorstep at every
+  // refill.
   private cacheEligibleRooms(cache: Cache): string[] {
     const world = this.world!;
-    const tier = this.regionOf(cache.roomId);
+    const tier = world.rooms.get(cache.roomId)?.region || this.regionOf(cache.roomId);
     const out: string[] = [];
     for (const r of world.rooms.values()) {
       if (world.safeRooms.has(r.id) || world.entryRooms.has(r.id)) continue;
@@ -8463,7 +8467,8 @@ export class ZoneDO implements DurableObject {
     // mig 333 put it back in the glade).
     if (!this.cacheRoams(cache)) return cache.roomId;
     let room = this.cacheRoom.get(cache.id);
-    if (!room) { this.placeCache(cache); room = this.cacheRoom.get(cache.id)!; }
+    // A saved spot on a gate is the old doorstep bug: it moves off at once.
+    if (!room || this.world!.entryRooms.has(room)) { this.placeCache(cache); room = this.cacheRoom.get(cache.id)!; }
     return room;
   }
 

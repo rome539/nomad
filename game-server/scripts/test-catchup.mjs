@@ -51,11 +51,19 @@ try {
       // Age the wander clocks too: a fresh seed with future clocks barely moves
       // during replay and concealed the cost of waking an actual sleeping world.
       z.savedAt = now - gap;
+      // A bird still in the air sits the catch-up out, so it is not stamped or
+      // asked about. One always is: flying birds take off during these replays
+      // and stay up past the frozen clock, which made this fail now and then.
+      const inAir = new Set();
       for (const c of z.creatures.values()) {
+        if (c.aloft !== undefined) { inAir.add(c.id); continue; }
         c.nextWanderAt = z.savedAt;
         c.hp = 1;
         c.target = 'synthetic-offline-target';
       }
+      const bird = [...z.creatures.values()].find((c) => c.aloft === undefined && !z.world.mobTemplates.get(c.templateId).is_boss);
+      bird.aloft = now + 3_600_000;
+      inAir.add(bird.id);
       steps = 0;
       const started = performance.now();
       z.catchUp();
@@ -64,8 +72,9 @@ try {
       assert.equal(z.lastEcologyAt, now);
       for (const c of z.creatures.values()) {
         assert.ok(z.world.rooms.has(c.roomId));
-        if (gap > 0) { assert.equal(c.target, null); assert.ok(c.hp > 1); }
+        if (gap > 0 && !inAir.has(c.id)) { assert.equal(c.target, null); assert.ok(c.hp > 1); }
       }
+      bird.aloft = undefined;
       console.log(`PASS: ${gap / 3_600_000}h offline, ${steps} sweeps, ${Math.round(performance.now() - started)}ms; clock and creatures valid.`);
     }
     z.seededDens.add('00000000-dead-creature-id-not-a-den'); // what an old world carried

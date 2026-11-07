@@ -4003,6 +4003,25 @@ try {
     assert.equal(z.cacheRoomId({ id: 'box-roams', roomId: 'home' }), 'somewhere', 'a roaming chest keeps its saved spot');
   });
 
+  check('a chest set on a gate roams its own country and never comes back to the doorstep (2026-11-06)', () => {
+    const z = new ZoneDO({}, {});
+    const room = (id, region) => [id, { id, region }];
+    z.world = {
+      rooms: new Map([room('the-slabs', 'mountain'), room('crag', 'mountain'), room('ledge', 'mountain'), room('lane', 'road'), room('nook', 'mountain')]),
+      safeRooms: new Set(['nook']), entryRooms: new Set(['the-slabs']),
+    };
+    const locker = { id: 'slabs-locker', roomId: 'the-slabs' };
+    for (let i = 0; i < 60; i++) {
+      z.cacheRoom.delete(locker.id);
+      assert.ok(['crag', 'ledge'].includes(z.cacheRoomId(locker)), 'a fresh chest lands on its own country, off the gate and the hideaway');
+    }
+    z.cacheRoom.set(locker.id, 'the-slabs');
+    assert.ok(['crag', 'ledge'].includes(z.cacheRoomId(locker)), 'one the world saved on the gate moves off it');
+    assert.notEqual(z.cacheRoom.get(locker.id), 'the-slabs', 'and the move is kept');
+    z.cacheRoom.set(locker.id, 'ledge');
+    assert.equal(z.cacheRoomId(locker), 'ledge', 'a chest already out on the ground stays until it is looted');
+  });
+
   await checkAsync('a wanderer\'s aliases stand for one command, never hide a real one, and follow the key (2026-11-03)', async () => {
     const said = [], saved = [];
     const db = { prepare: (sql) => ({ bind: (...a) => ({ run: async () => { saved.push([sql, ...a]); } }) }) };
