@@ -16190,6 +16190,11 @@ function poseAt(a, now) {
     x = -0.085 * Math.exp(-t * 6.5) + Math.sin(t * 22) * 0.03 * Math.exp(-t * 4);
     a.rot = -0.055 * Math.exp(-t * 7) + 0.022 * Math.sin(t * 13) * Math.exp(-t * 3.5);
     s *= 1 - 0.05 * Math.exp(-t * 9);      // it gives, and comes back up
+  } else if (a.phase === "pose" && a.poseAs === "landing") {
+    // COMING DOWN OUT OF THE SKY (flight.ts): it arrives from height, stooping
+    // where it was drawn with one, the words' landing and the picture's at once.
+    name = f.dive !== undefined && t < 0.35 ? "dive" : "landing";
+    air = lift * (1 - Math.min(t / LAND_S, 1));
   } else if (a.phase === "pose") {
     // Held, with a breath: the salute is a thing done and kept, not a lunge.
     name = a.poseAs;
@@ -16359,15 +16364,21 @@ function poseAt(a, now) {
       if (leap >= 0) { name = "twisting-leap"; air = Math.sin(leap * Math.PI) * HOP; }
     }
   }
+  // IN THE AIR IT KEEPS ITS WINGS (rome, 2026-11-07). Struck, waiting its turn or
+  // coming off a blow, a bird up in a fight showed its standing frame, and a hit
+  // dropped it to the ground in the picture while it was still up in the words.
+  var wing = f.glide === undefined ? "" : f.up !== undefined && (t % 3) < 0.6 ? (Math.floor(t * WINGBEAT_HZ) % 2 ? "up" : "down") : "glide";
+  if (a.phase === "hit" && a.state === "aloft") { air = lift; if (wing) name = wing; }
   if (a.swoop && a.phase !== "death") {
     if (a.state === "aloft") air = Math.max(air, lift * SWOOP_HOVER);
     else if (a.phase === "attack") {
       a.swoopDrop = false;
       air = lift * (SWOOP_HOVER - (SWOOP_HOVER - SWOOP_DIP) * Math.sin(Math.min(Math.max(t, 0) / ATTACK_S, 1) * Math.PI));
+      if (wing && name !== (a.blow || a.strike)) name = wing; // only the blow itself is the strike frame
     } else {
       if (a.swoopDrop && t >= 0.5) a.swoopDrop = false;
       air = lift * (SWOOP_HOVER + (a.swoopDrop ? (1 - SWOOP_HOVER) * (1 - t / 0.5) : 0));
-      if (a.phase === "idle" && f.glide !== undefined) name = f.up !== undefined && (t % 3) < 0.6 ? (Math.floor(t * WINGBEAT_HZ) % 2 ? "up" : "down") : "glide";
+      if (wing) name = wing;
     }
   }
   if (a.phase !== "hit") a.rot = 0;
@@ -16388,6 +16399,7 @@ function runAnims() {
 var ATTACK_S = 1.7, HIT_S = 0.9, DEATH_S = 1.1, FEED_S = 2.4;
 var EAT_CYCLE_S = 7, EAT_DOWN_S = 4.5; // a long meal: head down, then up to look round
 var POSE_S = 2.6;         // how long an event pose (the salute, the rise) is held
+var LAND_S = 0.9;         // a bird coming down out of the sky, from height to its feet
 var ROUND_S = 4;          // COMBAT_ROUND_MS, and the beat everything here answers to
 var STAGGER_S = 0.75;     // how far apart blows in the same round are spread
 // WHAT A SLEEPING ONE LOOKS LIKE, best pose first. A wolf curls up, an adder
@@ -16499,7 +16511,7 @@ function stepAnims() {
     if (a.phase === "death") { /* it stays down */ }
     else if (a.phase === "travel") { if (a.t > TRAVEL_MS / 1000 || a.asleep) { a.phase = "idle"; a.t = 0; } }
     else if (a.phase === "attack") { if (a.t > ATTACK_S) { a.t = 0; if (a.thenPose) { a.phase = "pose"; a.poseAs = a.thenPose; a.thenPose = ""; } else a.phase = "idle"; } }
-    else if (a.phase === "pose") { if (a.t > POSE_S) { a.phase = "idle"; a.t = 0; } }
+    else if (a.phase === "pose") { if (a.t > (a.poseAs === "landing" ? LAND_S : POSE_S)) { a.phase = "idle"; a.t = 0; } }
     else if (a.phase === "hit") { if (a.t > HIT_S) { a.phase = "idle"; a.t = 0; } }
     else if (a.phase === "feed") { if (a.t > FEED_S) { a.phase = "idle"; a.t = 0; } }
     // IT ONLY WANDERS WHEN IT HAS NOTHING ELSE ON. Everything above is the world

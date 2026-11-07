@@ -5390,6 +5390,13 @@ export const STARVE_HUNTERS = new Set([
   // whole band. The bear that ignored you last week is the argument for leaving
   // before it stops being fed.
   "the-baited-bear", "the-chain-breaker", "brown-bear"]);   // the crossing's three, and the gull is the one that comes to YOU
+// SMALL HUNTERS LEAVE YOU ALONE (rome, 2026-11-07). Hunger keeps these on their
+// own prey: starving, or with you badly hurt, they still do not turn on a person.
+// The big ones in STARVE_HUNTERS do. A fight you start is a fight either way.
+export const SMALL_HUNTERS = new Set([
+  "tawny-owl", "eagle-owl", "hill-eagle", "great-gull", "black-backed-gull",
+  "wildcat", "the-tom", "the-blue-fox", "albino-rat", "coyote",
+]);
 // The deep eats its own: strayed rats (and worse) die in the dark and rot where
 // they fall, and the pale hunters scavenge the carrion. A dice mint (same law as
 // the stone/torch — cadence × odds, no clock to farm) drops one fresh carcass into

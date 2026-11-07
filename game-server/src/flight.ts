@@ -73,6 +73,16 @@ function canGo(z: ZoneDO, c: Creature): boolean {
   return true;
 }
 
+/** Done with a meal away, and already standing at home: no flight, it is simply home. */
+function homeAlready(z: ZoneDO, c: Creature, now: number): boolean {
+  if (c.roomId !== (c.home ?? c.roomId)) return false;
+  c.awayUntil = undefined;
+  c.nextWanderAt = now;
+  if (hungers(c.templateId) && c.hunger >= HUNGRY_AT) c.flightRestUntil = now + FLIGHT_REST_MS;
+  z.noteCreaturesChanged();
+  return true;
+}
+
 function takeOff(z: ZoneDO, c: Creature, to: string, dist: number, now: number): void {
   const t = z.world!.mobTemplates.get(c.templateId)!;
   const from = c.roomId;
@@ -114,6 +124,7 @@ function land(z: ZoneDO, c: Creature, now: number): void {
   z.noteCreaturesChanged();
   z.roomFeed(to, `${cap(t.name)} comes down out of the sky.`, undefined, false);
   z.refreshRoomCtx(to);
+  z.fxPose(to, c.templateId, "landing"); // and the picture brings it down too (public.ts)
 }
 
 export function tick(z: ZoneDO, now: number): void {
@@ -131,6 +142,7 @@ export function tick(z: ZoneDO, now: number): void {
     const hungry = hungers(c.templateId) && c.hunger >= HUNGRY_AT;
     if (c.awayUntil !== undefined) {
       if (!hungry || now >= c.awayUntil) {
+        if (homeAlready(z, c, now)) continue;
         const home = c.home ?? c.roomId;
         const dist = z.nearby(c.roomId, FLIGHT_RANGE).get(home) ?? FLIGHT_RANGE;
         takeOff(z, c, home, dist, now);
@@ -141,7 +153,7 @@ export function tick(z: ZoneDO, now: number): void {
         const inHours = NOCTURNAL.has(c.templateId) ? isNight(now) : !isNight(now);
         const food = inHours ? findFood(z, c, line, true) : undefined;
         if (food) takeOff(z, c, food.room, food.dist, now);
-        else {
+        else if (!homeAlready(z, c, now)) {
           const home = c.home ?? c.roomId;
           takeOff(z, c, home, z.nearby(c.roomId, FLIGHT_RANGE).get(home) ?? FLIGHT_RANGE, now);
         }

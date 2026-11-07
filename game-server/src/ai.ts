@@ -44,7 +44,7 @@ import {
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS, THIRST_LATE_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
-  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS, HUNTS_NOT_CARRION,
+  PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, SMALL_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS, HUNTS_NOT_CARRION,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_ROUSED_MS, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
@@ -2013,7 +2013,7 @@ export function defendsCave(creature: Creature): boolean {
 }
 
 export function starvingHunts(z: ZoneDO, creature: Creature): boolean {
-    if (!STARVE_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
+    if (!STARVE_HUNTERS.has(creature.templateId) || SMALL_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
     if (SENTINELS.has(creature.templateId) || DROWNERS.has(creature.templateId) || AGGRESSIVE.has(creature.templateId)) return false;
     if ((creature.hunger ?? 0) < huntsAt(creature.templateId)) return false;
     // A hunter that DOES keep a prey map (the surface pack) runs down the easier
@@ -2039,7 +2039,7 @@ export function starvingHunts(z: ZoneDO, creature: Creature): boolean {
   // blows and worsens their fumbles — one meaningful number, one more reason
   // to fear it).
 export function woundedPreyHunts(z: ZoneDO, creature: Creature): boolean {
-    if (!STARVE_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
+    if (!STARVE_HUNTERS.has(creature.templateId) || SMALL_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
     if (SENTINELS.has(creature.templateId) || DROWNERS.has(creature.templateId) || AGGRESSIVE.has(creature.templateId)) return false;
     const prey = PREYS_ON.get(creature.templateId);
     if (prey) {

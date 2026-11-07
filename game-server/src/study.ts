@@ -27,7 +27,7 @@ import * as ai from "./ai";
 import { nameMatches } from "./zone-util";
 import {
   MOVE_SOUNDS, STILL_SOUNDS, TRACK_PRINTS,
-  NAPPERS, NOCTURNAL, SENTINELS, SCAVENGERS, VERMIN, GRAZERS, PREYS_ON, PACK_PREY, STARVE_HUNTERS,
+  NAPPERS, NOCTURNAL, SENTINELS, SCAVENGERS, VERMIN, GRAZERS, PREYS_ON, PACK_PREY, STARVE_HUNTERS, SMALL_HUNTERS,
   THIEVES, LURKERS, HOLLOW, GRAVE_FLESH, BIG_VITALS, OUTDOOR_ROOMS, HUNGRY_AT, CORPSE_TRACES,
   FAT_DROPS, LEATHER_DROPS, BONE_DROPS, FAT_ITEM, LEATHER_ID, BONE_BITS_ID,
 } from "./zone-data";
@@ -176,6 +176,7 @@ function feedLine(z: ZoneDO, id: string): string {
 
 function hungerLine(id: string): string {
   if (THIEVES.has(id)) return "Hungry, it goes robbing, and food is what it grabs first.";
+  if (STARVE_HUNTERS.has(id) && SMALL_HUNTERS.has(id)) return "Hungry, it eyes anything smaller in the room.";
   if (STARVE_HUNTERS.has(id)) return "Hungry, it eyes anything smaller in the room; starving, with nothing smaller about, it will come for you.";
   if (hunts(id)) return "Hungry, it eyes anything smaller in the room, and goes after it.";
   if (SCAVENGERS.has(id)) return "Hungry, it follows the smell of blood.";

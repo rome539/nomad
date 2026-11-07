@@ -392,6 +392,22 @@ t("a bird with no takeoff drawn does not invent one", gp !== "takeoff", "pose=" 
   const owl = up("eagle-owl"); ctx.applyState(["hunt"]);
   t("in the air it is on its flying frames", inv["eagle-owl"][at(owl, "idle", 2).k] === "glide", inv["eagle-owl"][at(owl, "idle", 2).k]);
   t("and strikes with its attack frame", inv["eagle-owl"][at(owl, "attack", ctx.ATTACK_S / 2).k] === "attack");
+  // ...AND KEEPS ITS WINGS BETWEEN BLOWS (rome, 2026-11-07): the standing frame came back after the strike.
+  const fly = (p) => ["glide", "up", "down"].includes(inv["eagle-owl"][p.k]);
+  t("coming off the blow it is back on its wings, not standing", fly(at(owl, "attack", ctx.ATTACK_S * 0.9)), inv["eagle-owl"][at(owl, "attack", ctx.ATTACK_S * 0.9).k]);
+  t("gathering for it, on its wings too", fly(at(owl, "attack", ctx.ATTACK_S * 0.1)), inv["eagle-owl"][at(owl, "attack", ctx.ATTACK_S * 0.1).k]);
+  t("waiting its turn, on its wings", fly(at(owl, "attack", -0.5)), inv["eagle-owl"][at(owl, "attack", -0.5).k]);
+  t("struck while it swoops, on its wings", fly(at(owl, "hit", 0.3)), inv["eagle-owl"][at(owl, "hit", 0.3).k]);
+  const circling = up("eagle-owl");
+  const struck = at(circling, "hit", 0.3);
+  t("struck by a long weapon while it circles, it stays up", struck.air > 0, "air=" + struck.air);
+  t("...on its wings", fly(struck), inv["eagle-owl"][struck.k]);
+  // COMING DOWN OUT OF THE SKY (2026-11-07): the words said it landed and the picture just had it standing.
+  const lander = mk("hill-eagle"); ctx.set([lander]); lander.phase = "pose"; lander.poseAs = "landing";
+  const hi = at(lander, "pose", 0.05), lo = at(lander, "pose", 0.89);
+  t("a bird landing starts high", hi.air > 0.5 * (lo.air + hi.air), "air=" + hi.air);
+  t("...on its landing frame", inv["hill-eagle"][hi.k] === "landing", inv["hill-eagle"][hi.k]);
+  t("...and comes down to its feet", lo.air < hi.air && lo.air < 0.05, "air=" + lo.air);
   const down = up("eagle-owl"); ctx.applyState(["reel"]);
   t("knocked out of the air it comes down", !down.swoop && down.landing === true);
   t("and is on the floor after", at(down, "idle", 2).air === 0);
