@@ -1193,7 +1193,7 @@ export class ZoneDO implements DurableObject {
       if (HOARDERS.has(c.templateId)) ai.scavengerScoops(this, c);
       // ...and two crawlers sharing a room out here fight for it too (rome,
       // 2026-10-18: the far world is not frozen, so neither are they).
-      const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now) || await ai.rivalsFight(this, c, now) || await groups.holdGround(this, c, now);
+      const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now) || await ai.rivalsFight(this, c, now) || await groups.holdGround(this, c, now) || await groups.holdLand(this, c, now);
       if (!hunted && c.nextWanderAt <= now && (!bossStands(tmpl) || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
           && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
         await ai.creatureMoves(this, c, now, "wander", true);
@@ -5952,6 +5952,7 @@ export class ZoneDO implements DurableObject {
         // what it has until that kills or slips (ai.worryPrey).
         const hunted = (await ai.worryPrey(this, creature, now)) || await ai.predation(this, creature, now)
           || await groups.holdGround(this, creature, now) // a pack wolf runs the small hunters off its ground
+          || await groups.holdLand(this, creature, now) // a hunter runs rivals off its land
           || await ai.wolfTests(this, creature, now); // a fed wolf testing a lone wanderer holds its ground
         if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)
             && !ai.allCrouched(this, creature.roomId)) {

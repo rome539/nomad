@@ -2403,6 +2403,15 @@ export const MOUNTAIN_GROUPS = new Map<string, { min: number; max: number; lone:
 // wolf, which holds no ground and only chases it off the meal.
 export const GROUND_HOLDERS = new Set(["hill-wolf"]);
 export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox"]);
+// HOLDING LAND (rome, 2026-11-07). These hunters keep their home and the rooms
+// round it (TERRITORY_RADIUS) as their own. A new one does not settle on the land
+// of another of its kind, or of a bigger hunter that eats the same food, while
+// there is other ground (groups.pickHome); and one on its own land runs off
+// another of its kind, or a smaller hunter after the same food: mostly a chase,
+// sometimes a bite, never a kill. Run off GROUND_DRIVEN_LEAVES times, the
+// intruder draws a new home. The wolf packs keep their own rule (holdGround).
+export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl"]);
+export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a bite in first
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
 // together, so the two a hind needs are in the room at once.

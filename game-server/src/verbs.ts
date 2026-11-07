@@ -67,7 +67,7 @@ import {
   LANTERN_ITEM, LANTERN_FAT_MS, SLOT_WORD,
   RANGERS, HUNGRY_AT, PATROLS, patrolRoute,
 } from "./zone-data";
-import { gatehouseFeed, inStock, throughTheDoor, worksBar } from "./gate";
+import { gatehouseFeed, inStock, throughTheDoor, worksBar, boxedByName, benchTake } from "./gate";
 
 // The old word. Nothing happens — but the dungeon heard you ask.
 export function cmdXyzzy(z: ZoneDO, session: Session): void {
@@ -2458,7 +2458,18 @@ export async function cmdStance(z: ZoneDO, session: Session, arg: string): Promi
 
 export async function cmdEquip(z: ZoneDO, session: Session, arg: string): Promise<void> {
   if (!arg) return z.send(session, "Equip what?");
-  const carried = z.findCarried(session, arg);
+  let carried = z.findCarried(session, arg);
+  // Not in the pack: the lockbox rides with you, so a piece in it comes into the
+  // pack and then into your hand.
+  if (!carried) {
+    const boxed = await boxedByName(z, session, arg);
+    const bt = boxed ? z.world!.itemTemplates.get(boxed.itemId) : undefined;
+    if (boxed && bt && bt.slot !== "") {
+      const stop = await benchTake(z, session, boxed.rowId);
+      if (stop) return z.send(session, stop);
+      carried = session.items.find((c) => c.rowId === boxed.rowId) ?? null;
+    }
+  }
   if (!carried) return z.send(session, "You carry nothing like that.");
   const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
   if (tmpl.slot === "") {

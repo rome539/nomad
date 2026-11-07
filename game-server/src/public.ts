@@ -1472,11 +1472,11 @@ export const PAGE = `<!doctype html>
      frames compress almost to nothing because they are nearly identical.
      aspect-ratio carries ONE frame's shape, so setting height still gives the
      right width the way it does for an img. */
-  /* WHAT LIES ON THE GROUND TAKES NO FOG MIX (2026-11-05). The fog colour is mixed
-     by the strength at the standing line, further back than where a body or a
-     chest lies, so it came out paler than the clear ground around it. The mix is
-     per creature now, carried by --mobfog, and these drop out of it. */
-  #mobs .mob.dead { --mobfog: initial; }
+  /* WHAT LIES ON THE GROUND TAKES THE FOG WHERE IT LIES (2026-11-07). The mix for
+     the standing line was too strong for a body, which lies further forward where
+     the fog is thinner; taking it off altogether left a body sharp in the fog. A
+     body gets its own mix (#fogmixd), measured at the ground it lies on. */
+  #mobs .mob.dead { --mobfog: var(--deadfog, ); }
   /* A BODY IS NOT TRANSPARENT (rome, 2026-09-08). This carried opacity .68, on
      the reasoning that a corpse should read differently from a living thing and
      that opacity was the only property which composes with the hour tints —
@@ -2661,7 +2661,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
   <canvas id="scene-fx" aria-hidden="true"></canvas>
   <canvas id="scene-sparks" aria-hidden="true"></canvas>
   <div id="fogveil" aria-hidden="true"><canvas></canvas></div>
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fogmix" color-interpolation-filters="sRGB"><feColorMatrix id="fogmixm" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><filter id="torchwarm" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1.4 0 0 0 0 0 .83 0 0 0 0 0 .16 0 0 0 0 0 1 0"/></filter></svg>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fogmix" color-interpolation-filters="sRGB"><feColorMatrix id="fogmixm" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><filter id="fogmixd" color-interpolation-filters="sRGB"><feColorMatrix id="fogmixdm" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter><filter id="torchwarm" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1.4 0 0 0 0 0 .83 0 0 0 0 0 .16 0 0 0 0 0 1 0"/></filter></svg>
   <div id="mobs" aria-hidden="true"></div>
   <canvas id="scene-mist" aria-hidden="true"></canvas>
   <canvas id="weather-particles" aria-hidden="true"></canvas>
@@ -7171,6 +7171,10 @@ function benchItemNode(it, place) {
     if (place === "lockbox" && benchAtGate) btnQ("\\u2192 vault", "vault");
     // ...and in your den, straight onto the shelf (rome, 2026-10-31).
     if (place === "lockbox" && benchHasShelf) btnQ("\\u2192 shelf", "stow");
+    // From the lockbox you can take a piece up in hand (it comes into the pack
+    // first) and mend it at a gate, the same as typed 'wield' and 'repair'.
+    if (place === "lockbox" && it.slot) btn1(it.slot === "weapon" ? "wield" : "wear", "equip");
+    if (place === "lockbox" && benchAtGate && it.fix && it.cond !== null && it.cond < 100) btn1("repair", "repair");
     // The vice reaches the keeping too (rome, 2026-10-16): the box's steel can be
     // broken down where it rests, the same scrap button as the pack's.
     if (benchAtGate && it.fix && it.slot && it.salv && (place === "lockbox" || place === "vault")) armBtn("scrap", "salvage", "scrap");
@@ -13469,6 +13473,16 @@ if (weatherMotion.addEventListener) weatherMotion.addEventListener("change", run
 // back by the far wood, its legs by the near grass - so instead the whole
 // animal takes the fog of the ground it is standing on. -1 when the mask is not
 // in hand (the caller falls back to a fixed haze).
+// The colour matrix that mixes a sprite toward the fog's colour by k.
+function fogMixValues(k, fc) {
+  var m = (1 - k).toFixed(3);
+  return m + " 0 0 0 " + (k * fc[0] / 255).toFixed(3) + " 0 " + m + " 0 0 " + (k * fc[1] / 255).toFixed(3) + " 0 0 " + m + " 0 " + (k * fc[2] / 255).toFixed(3) + " 0 0 0 1 0";
+}
+// Where a body lies, as a line on the plate: as far forward of the standing line
+// as fitMobRow lays it (forward * .9, forward capped at 16 and at the plate's foot).
+function deadLineOf(line) {
+  return line + .9 * Math.max(0, Math.min(16, 94 - (line + MAN_VH / 2)));
+}
 function fogAtLine(url, line) {
   var memo = fogAtLine.memo || (fogAtLine.memo = {}), key = url + "@" + line;
   if (memo[key] !== undefined) return memo[key];
@@ -14085,11 +14099,17 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // body like a ghost).
       var fogF = fogMask ? fogAtLine(fogMask, line) : -1;
       if (veil) {
-        var fc = FOG_RGB[veil] || FOG_RGB.day, k = Math.min(.8, fogF >= 0 ? fogF * .9 : .35), m = (1 - k).toFixed(3);
+        var fc = FOG_RGB[veil] || FOG_RGB.day, k = Math.min(.8, fogF >= 0 ? fogF * .9 : .35);
         var mx = typeof document !== "undefined" && document.getElementById ? document.getElementById("fogmixm") : null;
-        if (mx) mx.setAttribute("values", m + " 0 0 0 " + (k * fc[0] / 255).toFixed(3) + " 0 " + m + " 0 0 " + (k * fc[1] / 255).toFixed(3) + " 0 0 " + m + " 0 " + (k * fc[2] / 255).toFixed(3) + " 0 0 0 1 0");
+        if (mx) mx.setAttribute("values", fogMixValues(k, fc));
         if (mobsEl.style) mobsEl.style.setProperty("--mobfog", mx ? "url(#fogmix)" : "");
-      } else if (mobsEl.style) mobsEl.style.setProperty("--mobfog", "");
+        // A body lies forward of the standing line (fitMobRow: forward * .9), where
+        // the fog is thinner, so it is mixed by the fog at that ground instead.
+        var bodyF = fogMask ? fogAtLine(fogMask, deadLineOf(line)) : -1, kd = Math.min(.8, bodyF >= 0 ? bodyF * .9 : .35);
+        var mxd = typeof document !== "undefined" && document.getElementById ? document.getElementById("fogmixdm") : null;
+        if (mxd) mxd.setAttribute("values", fogMixValues(kd, fc));
+        if (mobsEl.style) mobsEl.style.setProperty("--deadfog", mxd ? "url(#fogmixd)" : "");
+      } else if (mobsEl.style) { mobsEl.style.setProperty("--mobfog", ""); mobsEl.style.setProperty("--deadfog", ""); }
       mobsEl.className = lit || snowLight ? "t-night-torch" : mobHour ? "t-" + (wxHour && mobHour === wxKind ? (wxHour === "night" ? "night" : "wet-" + wxHour) : mobHour) : "";
       // ...and standing where this plate's ground actually is. Set every time,
       // never only when it differs: a line left over from the room behind you

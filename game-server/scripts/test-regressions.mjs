@@ -43,7 +43,7 @@ try {
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
         "export {rollBloodline, reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep} from './ai';",
         "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult} from './ai';",
-        "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry} from './groups';",
+        "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry, holdLand} from './groups';",
         "export {PREYS_ON, PACK_PREY, SMALL_PREY} from './zone-data';",
         "export * as beasts from './beasts';",
         "export {tick as flightTick} from './flight';",
@@ -71,6 +71,8 @@ try {
         "export * as rising from './rising';",
         "export {loadLeaderboard} from './world';",
         "export {handleBench} from './gate';",
+        "export {benchEquip, boxedByName} from './gate';",
+        "export {cmdEquip} from './verbs';",
         "export {sendCtx} from './chips';",
         "export * as carving from './carving';",
         "export * as feverrat from './feverrat';",
@@ -96,7 +98,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
+  const { benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1189,6 +1191,70 @@ try {
     }
     const study = readFileSync(new URL('../src/study.ts', import.meta.url), 'utf8');
     assert.match(study, /if \(STARVE_HUNTERS\.has\(id\) && SMALL_HUNTERS\.has\(id\)\) return "Hungry, it eyes anything smaller in the room\.";/, 'and studying one does not say it will come for you');
+  });
+
+  await checkAsync('hunters hold their land: they settle off a rival\'s, and run intruders off their own (2026-11-07)', async () => {
+    const names = ['gate', ...Array.from({ length: 24 }, (_, i) => 'm' + (i + 1))];
+    const exits = new Map(names.map((r) => [r, []]));
+    for (let i = 1; i < names.length; i++) { exits.get(names[i - 1]).push({ dir: 'e', to_room: names[i] }); exits.get(names[i]).push({ dir: 'w', to_room: names[i - 1] }); }
+    const nearby = (from, depth) => { const out = new Map([[from, 0]]), q = [from]; for (const at of q) { const d = out.get(at); if (d < depth) for (const e of exits.get(at)) if (!out.has(e.to_room)) { out.set(e.to_room, d + 1); q.push(e.to_room); } } return out; };
+    const tm = (id, hp) => [id, { id, name: 'a ' + id, max_hp: hp, dmg_min: 4, dmg_max: 6, armor: 0 }];
+    const world = { rooms: new Map(names.map((r) => [r, { id: r, region: 'mountain' }])), exits, entryRooms: new Set(['gate']), safeRooms: new Set(),
+      mobSpawns: ['lynx', 'wildcat', 'ermine', 'hill-fox'].flatMap((t) => [{ template_id: t, room_id: 'm1' }, { template_id: t, room_id: 'm24' }]),
+      mobTemplates: new Map([tm('lynx', 52), tm('wildcat', 28), tm('ermine', 18), tm('hill-fox', 24)]) };
+    const now = 2_000_000_000;
+    const mk = (list) => {
+      const z = { world, nearby, regionOf: () => 'mountain', variantBase: new Map(), creatures: new Map(), sessions: new Map(), traces: new Map(), feed: [],
+        groups: { at: 0, packs: {}, gone: {} }, withinRadius: (a, b, n) => nearby(b, n).has(a), creaturesInRoom: (r) => [...z.creatures.values()].filter((c) => c.roomId === r),
+        roomFeed(_, t) { this.feed.push(t); }, roomSound() {}, fxClash() {}, refreshRoomCtx() {}, noteCreaturesChanged() {} };
+      for (const c of list) z.creatures.set(c.id, { hp: 20, hunger: 0, nextWanderAt: 0, roomId: c.home, ...c });
+      return z;
+    };
+    const land = new Set(nearby('m12', 3).keys());
+    // Settling: never on land held by its own kind or a bigger hunter after its food.
+    for (const [who, holder] of [['wildcat', 'lynx'], ['lynx', 'lynx'], ['ermine', 'wildcat'], ['hill-fox', 'lynx']]) {
+      const z = mk([{ id: 'h', templateId: holder, home: 'm12' }]);
+      for (let i = 0; i < 60; i++) { const h = groupPickHome(z, who, now); assert.ok(h && !land.has(h), who + ' settles off the land of a ' + holder + ': ' + h); }
+    }
+    { const z = mk([{ id: 'h', templateId: 'ermine', home: 'm12' }]); let on = 0;
+      for (let i = 0; i < 200; i++) if (land.has(groupPickHome(z, 'wildcat', now))) on++;
+      assert.ok(on > 0, 'a smaller hunter\'s land does not keep a bigger one off'); }
+    { const z = mk(names.slice(1).filter((_, i) => i % 3 === 0).map((r, i) => ({ id: 'l' + i, templateId: 'lynx', home: r })));
+      assert.ok(groupPickHome(z, 'wildcat', now), 'with every room held, it still settles somewhere'); }
+    // Defending, with scripted odds: 0.1 passes the chase, the second decides a bite.
+    const real = crypto.getRandomValues;
+    const roll = (seq) => { let i = 0; crypto.getRandomValues = (a) => { a.fill(Math.floor(seq[Math.min(i++, seq.length - 1)] * 2 ** (a.BYTES_PER_ELEMENT * 8))); return a; }; };
+    const flee = async (c) => { c.roomId = 'm20'; };
+    try {
+      roll([0.1, 0.9, 0.5]);
+      const z = mk([{ id: 'h', templateId: 'lynx', home: 'm12' }, { id: 'r', templateId: 'wildcat', home: 'm10', roomId: 'm12' }]);
+      const lynx = z.creatures.get('h'), cat = z.creatures.get('r');
+      assert.equal(await holdLand(z, lynx, now, flee), true, 'a lynx on its land goes for the wildcat living there');
+      assert.equal(cat.hp, 20, 'mostly a chase');
+      assert.equal(cat.drivenOff, 1); assert.equal(cat.home, 'm10', 'once does not cost it its home');
+      assert.ok(cat.avoids.some((a) => a.roomId === 'm12'), 'it keeps off the room');
+      assert.equal(lynx.curious, 'm20', 'and the lynx goes after it');
+      roll([0.1, 0.9, 0.5]); cat.roomId = 'm12'; lynx.rivalRestUntil = undefined;
+      await holdLand(z, lynx, now, flee);
+      assert.ok(!land.has(cat.home), 'run off twice, it settles somewhere off the lynx\'s land');
+      roll([0.1, 0.9, 0.5]);
+      const by = mk([{ id: 'h', templateId: 'lynx', home: 'm12' }, { id: 'r', templateId: 'wildcat', home: 'm3', roomId: 'm12', drivenOff: 1 }]);
+      assert.equal(await holdLand(by, by.creatures.get('h'), now, flee), true, 'one passing through is run off too');
+      assert.equal(by.creatures.get('r').home, 'm3', 'but it lives elsewhere, so it keeps its home');
+      roll([0.1, 0.05, 0.5]);
+      const b = mk([{ id: 'h', templateId: 'lynx', home: 'm12' }, { id: 'r', templateId: 'wildcat', home: 'm3', roomId: 'm12', hp: 3 }]);
+      await holdLand(b, b.creatures.get('h'), now, flee);
+      assert.ok(b.creatures.get('r').hp >= 1 && b.creatures.get('r').hp < 3, 'sometimes a bite, never a kill');
+      roll([0.1, 0.9, 0.5]);
+      const away = mk([{ id: 'h', templateId: 'lynx', home: 'm12', roomId: 'm20' }, { id: 'r', templateId: 'wildcat', home: 'm3', roomId: 'm20' }]);
+      assert.equal(await holdLand(away, away.creatures.get('h'), now, flee), false, 'off its own land it leaves others be');
+      roll([0.1, 0.9, 0.5]);
+      const big = mk([{ id: 'h', templateId: 'wildcat', home: 'm12' }, { id: 'r', templateId: 'lynx', home: 'm3', roomId: 'm12' }]);
+      assert.equal(await holdLand(big, big.creatures.get('h'), now, flee), false, 'a wildcat does not go for a lynx');
+      roll([0.1, 0.9, 0.5]);
+      const kin = mk([{ id: 'h', templateId: 'lynx', home: 'm12' }, { id: 'r', templateId: 'lynx', home: 'm3', roomId: 'm12' }]);
+      assert.equal(await holdLand(kin, kin.creatures.get('h'), now, flee), true, 'its own kind it runs off');
+    } finally { crypto.getRandomValues = real; }
   });
 
   await checkAsync('a hungry pack goes after one hind together, into its room, and stays with it (2026-11-07)', async () => {
@@ -2687,6 +2753,47 @@ try {
     assert.doesNotMatch(list('MOUNTAIN_ROAMERS'), /"rat"/, 'rats keep the Shieling');
     assert.ok(settlesOn('stone-adder', 'the-first-crag') && !settlesOn('stone-adder', 'the-deer-lawn-high'), 'rock, not grass');
     assert.ok(settlesOn('stone-adder', 'the-shiel-street'), 'and some may lie up in the Shieling');
+  });
+  // 2026-11-07: a piece in the lockbox could not be mended or taken up in hand
+  // without first fetching it to the pack.
+  await checkAsync('a piece in the lockbox can be wielded and mended from where it rests (2026-11-07)', async () => {
+    const mkWorld = () => {
+      const rows = new Map([['bx', { id: 'bx', item_id: 'maul', container: 'lockbox', condition: 60, acquired_at: 5 }], ['bt', { id: 'bt', item_id: 'tin', container: 'lockbox', condition: 100, acquired_at: 5 }]]);
+      const DB = { prepare: (q) => ({ bind: (...a) => ({
+        all: async () => ({ results: [...rows.values()].filter((r) => r.container === a[1]) }),
+        run: async () => {
+          if (/SET container = '', equipped = 0/.test(q)) { const r = rows.get(a[1]); if (!r || r.container !== a[3]) return { meta: { changes: 0 } }; r.container = ''; }
+          return { meta: { changes: 1 } };
+        },
+      }) }) };
+      const itemTemplates = new Map([['maul', { id: 'maul', name: 'a studded maul', slot: 'weapon', traits: '' }], ['tin', { id: 'tin', name: 'a tin of dry cigarettes', slot: '' }]]);
+      const sent = [];
+      const s = { pubkey: 'p', roomId: 'r', items: [] };
+      const z = { env: { DB }, world: { itemTemplates, entryRooms: new Set() }, foodCapped: () => false, torchCapped: () => false, dressingCapped: () => false, packRoom: () => true, packCap: () => 20,
+        equippedItem: () => null, inCombat: () => false, carriesLight: () => false, send: (_s, m) => sent.push(m), sendCtx: () => {},
+        findCarried: (ss, arg) => ss.items.find((c) => itemTemplates.get(c.itemId).name.includes(arg)) ?? null,
+        gearName: (_id, n) => n, displayName: (c) => itemTemplates.get(c.itemId).name };
+      return { rows, s, z, sent };
+    };
+    let w = mkWorld();
+    assert.equal(await benchEquip(w.z, w.s, 'bx'), undefined, 'the window takes it up');
+    assert.ok(w.s.items.find((c) => c.rowId === 'bx')?.equipped, 'out of the box and in hand');
+    assert.equal(w.rows.get('bx').container, '', 'and out of the box');
+    assert.match(await benchEquip(w.z, w.s, 'bt'), /can't wear or wield/, 'a tin is not wielded');
+    assert.equal(w.rows.get('bt').container, 'lockbox', 'and stays boxed');
+    w = mkWorld();
+    await cmdEquip(w.z, w.s, 'maul');
+    assert.ok(w.s.items.find((c) => c.rowId === 'bx')?.equipped, 'typed wield reaches the box too: ' + w.sent.join(' | '));
+    w = mkWorld(); w.z.packRoom = () => false;
+    assert.match(await benchEquip(w.z, w.s, 'bx'), /pack is full/, 'no room in the pack, it stays put');
+    assert.equal(w.rows.get('bx').container, 'lockbox');
+    w = mkWorld();
+    assert.equal((await boxedByName(w.z, w.s, 'maul'))?.rowId, 'bx', 'found by name in the box');
+    const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(gsrc, /const carried = z\.findCarried\(session, arg\) \?\? await boxedByName\(z, session, arg\);\n  if \(!carried\) return z\.send\(session, "You carry nothing like that\."\);\n  \/\/ The forge's voice/, 'typed repair at the bench reaches the box');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /if \(place === "lockbox" && it\.slot\) btn1\(it\.slot === "weapon" \? "wield" : "wear", "equip"\);/, 'the lockbox row has wield');
+    assert.match(pub, /if \(place === "lockbox" && benchAtGate && it\.fix && it\.cond !== null && it\.cond < 100\) btn1\("repair", "repair"\);/, 'and repair at a gate');
   });
   await checkAsync('the cold and the dead are a shelf in the menu their stow chip opens (2026-11-06)', async () => {
     const rows = new Map([['pk', { id: 'pk', item_id: 'haunch', container: '', condition: 100, acquired_at: 5 }], ['bx', { id: 'bx', item_id: 'haunch', container: 'lockbox', condition: 100, acquired_at: 5 }], ['ot', { id: 'ot', item_id: 'haunch', container: 'other', condition: 100, acquired_at: 5 }]]);
@@ -4644,9 +4751,19 @@ try {
   // 2026-11-05: bodies, chests and bags lie nearer than the standing line, but the
   // fog mix for that line was set on the whole row, so they read paler than the
   // clear ground around them.
-  check('what lies on the ground takes no fog mix, and the living still do', () => {
+  // 2026-11-07: taking the mix off bodies altogether left them sharp in the fog;
+  // a body takes its own mix, measured at the thinner fog where it lies.
+  check('what lies on the ground takes the fog where it lies, and the living still do', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    assert.match(pub, /#mobs \.mob\.dead \{ --mobfog: initial; \}/, 'bodies and things drop out of the mix');
+    assert.match(pub, /#mobs \.mob\.dead \{ --mobfog: var\(--deadfog, \); \}/, 'bodies take the body mix');
+    assert.match(pub, /<filter id="fogmixd"[^>]*><feColorMatrix id="fogmixdm"/, 'the body mix exists');
+    assert.match(pub, /fogAtLine\(fogMask, deadLineOf\(line\)\)/, 'the body mix is measured where the body lies');
+    assert.match(pub, /setProperty\("--deadfog", mxd \? "url\(#fogmixd\)" : ""\)/, 'the body mix is handed to the row');
+    const src = pub.match(/function deadLineOf\(line\) \{[\s\S]*?\n\}/)[0];
+    const deadLineOf = new Function('MAN_VH', src + '; return deadLineOf;')(42);
+    for (const line of [40, 50, 55, 60]) assert.ok(deadLineOf(line) > line, 'a body lies forward of the standing line at ' + line);
+    assert.ok(Math.abs(deadLineOf(55) - (55 + .9 * 16)) < 1e-9, 'as far forward as fitMobRow lays it');
+    assert.match(pub, /put\(item, best, forward \* \.9, true, i\)/, 'fitMobRow still lays bodies forward * .9');
     assert.doesNotMatch(pub, /mobsEl\.style\.filter = /, 'the mix is not set on the whole row');
     assert.match(pub, /mobsEl\.style\.setProperty\("--mobfog", mx \? "url\(#fogmix\)" : ""\)/, 'the living are mixed through the variable');
     const rules = pub.match(/#mobs\.t-[^{]*\.mob \{ filter:[^}]*\}/g);

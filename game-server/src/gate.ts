@@ -1790,7 +1790,8 @@ export async function cmdRepair(z: ZoneDO, session: Session, arg: string): Promi
   const bar = z.benchGuard(session, "bench work");
   if (bar) return z.send(session, bar);
   if (!arg) return z.send(session, "Repair what?");
-  const carried = z.findCarried(session, arg);
+  // The pack first, then the lockbox: repairCore mends a boxed piece where it rests.
+  const carried = z.findCarried(session, arg) ?? await boxedByName(z, session, arg);
   if (!carried) return z.send(session, "You carry nothing like that.");
   // The forge's voice when the iron actually took (rome, 2026-10-18: a mend
   // made no sound) - a refusal stays quiet.
@@ -1989,6 +1990,16 @@ export async function handleBench(z: ZoneDO, session: Session, frame: any): Prom
   // Manage what you're wearing/wielding, right from the bench (always safe here,
   // so none of combat's armor/opening rules apply).
 export async function benchEquip(z: ZoneDO, session: Session, row: string): Promise<string | undefined> {
+    // Out of the lockbox, it comes into the pack first and then into your hand.
+    if (!session.items.some((c) => c.rowId === row)) {
+      const boxed = (await loadContainer(z.env.DB, session.pubkey, "lockbox")).find((c) => c.rowId === row);
+      const bt = boxed ? z.world!.itemTemplates.get(boxed.itemId) : undefined;
+      if (bt && bt.slot === "") return `You can't wear or wield ${bt.name}.`;
+      if (boxed) {
+        const stop = await benchTake(z, session, row);
+        if (stop) return stop;
+      }
+    }
     const carried = session.items.find((c) => c.rowId === row);
     if (!carried) return "You aren't carrying that.";
     const tmpl = z.world!.itemTemplates.get(carried.itemId)!;
@@ -2615,6 +2626,16 @@ export async function counted(z: ZoneDO, session: Session, arg: string, run: (ar
     else { const a = [...h.args] as Parameters<ZoneDO["roomFeed"]>; a[1] = a[1] + tail; feed.apply(z, a); }
   }
 }
+// A piece in your own lockbox, by name: the lockbox rides with you, so what is in
+// it can be mended at the bench or taken up in hand without fetching it first.
+export async function boxedByName(z: ZoneDO, session: Session, arg: string): Promise<CarriedItem | undefined> {
+  const held = await loadContainer(z.env.DB, session.pubkey, "lockbox");
+  return held.find((c) => {
+    const t = z.world!.itemTemplates.get(c.itemId);
+    return t ? nameMatches(t.name, arg) : false;
+  });
+}
+
 export async function cmdRetrieve(z: ZoneDO, session: Session, arg: string, key: "lockbox" | "vault"): Promise<void> {
     const world = z.world!;
     const cfg = storeCfg(z, key);

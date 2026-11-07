@@ -22,6 +22,7 @@ A player who comes back finds the region changed, because of what other players 
 10. **Birds walk day to day and fly for food, across the whole game.** Hungry with nothing within 3 rooms, a bird flies to the nearest food in its own region within 25 rooms, under open sky, off the map while in the air. Each flies to what it eats: hunters to prey, scavengers to bodies, grazers to feeding ground. Nesting mothers and the ptarmigan stay down. A scavenger stays until fed, up to 30 minutes, then flies home. A hunter whose prey has left gives the room a minute, then flies to the next thing it eats, or home if there is none in reach or it is outside its hours. A bird never picks a full room: if its room fills in flight it turns for home, and if home is full it lands close by. It can't take off in a fight, while targeted, held, stunned, asleep or badly hurt, so flying is never an escape.
 11. **Nothing is untouchable except by choice.** Bigger birds have hunters too: on the mountain lynx take any bird, gluttons and lead wolves take ravens, choughs and bone-breakers, wildcats and hill wolves take choughs, and two hill wolves take a raven or bone-breaker. A hunter is given what it could realistically win. Anywhere in the game, a flying bird is half as easy to catch and never triggers the boom event.
 12. **Every bird is a small meal.** Mostly feather and hollow bone, so even a big one takes only 25 off a hunter's hunger, the same as eating its body. A hind or goat still fills one. This list (`SMALL_PREY`) covers the whole game, not just the mountain.
+13. **Hunters hold their land.** A hunter's land is its home and the 3 rooms round it. A new one does not settle on land held by another of its kind, or by a bigger hunter after the same food, while there is other ground; with none, it settles anyway. On its own land it runs off another of its kind, or a smaller hunter after its food: mostly a chase, sometimes a bite, never a kill. Run off twice, the intruder draws a new home. On the mountain: lynx, glutton, wildcat, hill fox, snow fox, ermine, eagle and eagle owl. Grazers share their ground as herds and scavengers gather at bodies, so neither holds land. Before building it, measure that each kind fits at its limit with homes 4 rooms apart; on the mountain each fits 5 to 10 times over.
 
 ## What never moves
 
@@ -40,6 +41,7 @@ Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a n
 | Wolf goes for a small hunter | 35% a turn, then 10 minutes' rest | `GROUND_CHASE_ODDS`, `RIVAL_REST_MS` |
 | Chase ends in a kill | 10% | `GROUND_KILL_ODDS` |
 | Run off this many times, loses home | 2 | `GROUND_DRIVEN_LEAVES` |
+| Hunters holding land / a run-off that bites | Home + 3 rooms / 1 in 4 | `LAND_HOLDERS`, `TERRITORY_RADIUS`, `LAND_BITE_ODDS` |
 | Pack goes after a hind or goat | 2 hungry, within 12 rooms of home | `PACK_QUARRY`, `PACK_HUNT_RANGE` |
 | Flying bird caught in a hunt | Half the usual chance | `BIRD_CATCH_MULT` |
 | Bird flight reach / speed | 25 rooms / 5 seconds a room, 15 minimum | `FLIGHT_RANGE`, `FLIGHT_MS_PER_ROOM`, `FLIGHT_MIN_MS` |
@@ -51,7 +53,7 @@ The numbers are first guesses tested in simulation. A new region can start from 
 
 ## Where it lives
 
-- `game-server/src/groups.ts`: choosing homes, groups, broken groups, hunger moves, packs holding ground
+- `game-server/src/groups.ts`: choosing homes, groups, broken groups, hunger moves, packs holding ground and hunting together, hunters holding land
 - `game-server/src/flight.ts`: birds flying out to feed, in every region
 - `game-server/src/beasts.ts`: the `beasts` command and its daily count
 - `game-server/src/mountain-ground.ts`: each room's kind of ground, and what each animal settles on

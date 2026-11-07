@@ -18,7 +18,7 @@ import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
   DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS,
-  PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS,
+  PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS,
 } from "./zone-data";
 
 export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number; moveAt?: number; kept?: boolean; quarry?: string; quarryAt?: number }
@@ -45,17 +45,48 @@ function foodRooms(z: ZoneDO, line: string): Map<string, number> {
   return food;
 }
 
+/** Two lines after the same food. */
+function sharesFood(a: string, b: string): boolean {
+  const A = PREYS_ON.get(a), B = PREYS_ON.get(b);
+  if (!A || !B) return false;
+  for (const p of A) if (B.has(p)) return true;
+  return false;
+}
+
+/** Does a holder of `owner`'s line keep one of `other`'s off its land: its own kind, or a smaller hunter after its food. */
+export function keepsOff(z: ZoneDO, owner: string, other: string): boolean {
+  if (owner === other) return true;
+  const size = (l: string) => z.world!.mobTemplates.get(l)?.max_hp ?? 0;
+  return sharesFood(owner, other) && size(owner) > size(other);
+}
+
 /** A home drawn at random across every fit room, each counting for more the more food is in reach of it. */
 export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string): string | undefined {
   const state = z.groups;
   const barred = new Set<string>();
+  // Land already held by its own kind or a bigger hunter after its food (LAND_HOLDERS):
+  // how many hold each room, its own kind counting three times over.
+  const heldBy = new Map<string, number>();
+  if (LAND_HOLDERS.has(line)) {
+    const held = new Map<string, number>();
+    for (const c of z.creatures.values()) {
+      const other = lineOf(z, c.templateId);
+      if (!c.home || held.has(c.home) || !(LAND_HOLDERS.has(other) || GROUND_HOLDERS.has(other))) continue;
+      if (z.regionOf(c.home) === "mountain" && keepsOff(z, other, line)) held.set(c.home, other === line ? 3 : 1);
+    }
+    for (const [h, w] of held) for (const r of z.nearby(h, TERRITORY_RADIUS).keys()) heldBy.set(r, (heldBy.get(r) ?? 0) + w);
+  }
   for (const [room, until] of Object.entries(state.gone)) {
     if (until <= now) { delete state.gone[room]; continue; }
     for (const r of z.nearby(room, TERRITORY_RADIUS).keys()) barred.add(r);
   }
   if (leaving) for (const r of z.nearby(leaving, TERRITORY_RADIUS).keys()) barred.add(r);
   const all = mountainHomes(z, line);
-  const open = all.filter((r) => !barred.has(r));
+  const unbarred = all.filter((r) => !barred.has(r));
+  // The least-held ground it can have: free land if there is any, and with none,
+  // where the fewest rivals hold it rather than anywhere at all.
+  const least = Math.min(...unbarred.map((r) => heldBy.get(r) ?? 0));
+  const open = unbarred.filter((r) => (heldBy.get(r) ?? 0) === least);
   const pool = open.length ? open : all;
   if (!pool.length) return undefined;
   const weight = new Map<string, number>(pool.map((r) => [r, 1]));
@@ -287,4 +318,52 @@ export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefi
     g.quarry = q.id;
   }
   return q.roomId;
+}
+
+/** A land holder's beat on an intruder in its room on its own land. True when it took its turn. */
+export async function holdLand(
+  z: ZoneDO, holder: Creature, now: number,
+  flee: (c: Creature) => Promise<unknown> = (c) => creatureMoves(z, c, now, "flee", false),
+): Promise<boolean> {
+  const line = lineOf(z, holder.templateId);
+  if (!LAND_HOLDERS.has(line) || !holder.home || holder.target || holder.asleep || holder.stunned || holder.holding || holder.heldBy || holder.hidden) return false;
+  if ((holder.rivalRestUntil ?? 0) > now) return false;
+  const roomId = holder.roomId;
+  if (!z.withinRadius(roomId, holder.home, TERRITORY_RADIUS)) return false;
+  const rival = z.creaturesInRoom(roomId).find((c) => c.id !== holder.id && c.home !== holder.home && LAND_HOLDERS.has(lineOf(z, c.templateId))
+    && keepsOff(z, line, lineOf(z, c.templateId)) && !c.target && !c.hidden && !c.heldBy && !c.holding);
+  if (!rival || !chance(GROUND_CHASE_ODDS)) return false;
+  const world = z.world!;
+  const ht = world.mobTemplates.get(holder.templateId)!, rt = world.mobTemplates.get(rival.templateId)!;
+  holder.rivalRestUntil = now + RIVAL_REST_MS;
+  rival.asleep = false;
+  rival.sleepUntil = undefined;
+  const bit = chance(LAND_BITE_ODDS);
+  if (bit) rival.hp = Math.max(1, rival.hp - Math.max(1, randInt(ht.dmg_min, ht.dmg_max) - rt.armor));
+  beasts.note(z, "chases", now);
+  z.roomFeed(roomId, bit
+    ? `${cap(ht.name)} goes for ${rt.name} and gets its teeth in before ${rt.name} tears loose and runs.`
+    : `${cap(ht.name)} goes for ${rt.name}. ${cap(rt.name)} does not wait for it, and runs.`, undefined, false);
+  z.roomSound(roomId, "A snarl {dir}, and something going away fast.", undefined, undefined, false, { mob: holder.templateId, act: "fight" });
+  if (bit) z.fxClash(roomId, holder.templateId, rival.templateId);
+  rival.avoids = [
+    ...(rival.avoids ?? []).filter((a) => a.until > now && a.roomId !== roomId),
+    { roomId, until: now + RIVAL_AVOID_MS },
+  ];
+  rival.huntAt = 0;
+  rival.huntFor = undefined;
+  // Only one LIVING on the land gives up its home; one passing through is just run off.
+  const livesHere = !!rival.home && z.withinRadius(rival.home, holder.home, TERRITORY_RADIUS);
+  if (livesHere && (rival.drivenOff = (rival.drivenOff ?? 0) + 1) >= GROUND_DRIVEN_LEAVES) {
+    rival.drivenOff = undefined;
+    const home = pickHome(z, lineOf(z, rival.templateId), now, holder.home);
+    if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; }
+  }
+  await flee(rival);
+  if (rival.roomId !== roomId) {
+    holder.curious = rival.roomId;
+    holder.nextWanderAt = now + randInt(4_000, 15_000);
+  }
+  z.refreshRoomCtx(roomId);
+  return true;
 }
