@@ -15640,6 +15640,16 @@ function paintMobs(ids, doing, dead) {
   list.sort(function (a, b) { return MOB_SPRITE[b.id] - MOB_SPRITE[a.id]; });
   var order = [];
   for (var j = 0; j < list.length; j++) (j % 2 ? order.push : order.unshift).call(order, list[j]);
+  // WHAT WAS UP STAYS UP THROUGH A REBUILD (rome, 2026-11-07). A body falling, a
+  // bag or a chest reflows the whole row, and the new sprites forgot a bird was
+  // fighting from the air, so it fought on from the floor. Kept by kind and its
+  // count among that kind, since the wire's slots shift when something dies.
+  var bySlot = function (l) { return l.slice().sort(function (p, q) { return p.slot - q.slot; }); };
+  var wasAir = {}, seenK = {}, oldA = bySlot(anims);
+  for (var a1 = 0; a1 < oldA.length; a1++) {
+    var ak = oldA[a1].id + "#" + (seenK[oldA[a1].id] = (seenK[oldA[a1].id] || 0) + 1);
+    if (oldA[a1].phase !== "death" && (oldA[a1].swoop || oldA[a1].state === "aloft")) wasAir[ak] = { state: oldA[a1].state, swoop: !!oldA[a1].swoop };
+  }
   anims.length = 0;
   // A body lies at the near edge of the row, out from under the living.
   for (var d1 = 0; d1 < bodies.length; d1++) {
@@ -15829,6 +15839,11 @@ function paintMobs(ids, doing, dead) {
                  sleep: sleep, strike: strike, strikes: strikes, blow: strike, eat: eat,
                  recoil: recoil, watch: watch, rate: rate, slot: slot, lift: lift, grazeAt: grazeAt,
                  next: Date.now() + 2000 + Math.random() * rate * 2 });
+  }
+  var seenN = {}, newA = bySlot(anims);
+  for (var a2 = 0; a2 < newA.length; a2++) {
+    var was = wasAir[newA[a2].id + "#" + (seenN[newA[a2].id] = (seenN[newA[a2].id] || 0) + 1)];
+    if (was) { newA[a2].state = was.state; newA[a2].swoop = was.swoop; }
   }
   applyState(doing);
   fitMobRow();
@@ -16034,10 +16049,14 @@ function applyState(doing) {
     var a = anims[i], st = (doing && doing[a.slot]) || "";
     if (a.phase === "death") continue;
     if (st === a.state) continue;
-    var wasUp = a.state === "aloft";
+    var wasUp = a.state === "aloft", wasSwoop = !!a.swoop;
     if (wasUp && (st === "hunt" || st === "fight") && SWOOPERS[a.id]) { a.swoop = true; a.swoopDrop = true; }
-    else if (st !== "aloft" && st !== "hunt" && st !== "fight") a.swoop = false; // knocked out of the air, or the fight is over
-    a.landing = wasUp && !a.swoop;     // out of the sky: it comes down to strike (poseAt)
+    // A SWOOPING BIRD THAT ONLY REELS STAYS UP (rome, 2026-11-07: they were coming
+    // down to fight from the floor). Overreaching or stunned is "reel" and it stays
+    // in the air as the words have it; only knocked out of the air ("downed") or
+    // the fight over brings it down.
+    else if (st !== "aloft" && st !== "hunt" && st !== "fight" && st !== "reel") a.swoop = false;
+    a.landing = (wasUp || wasSwoop) && !a.swoop;     // out of the sky: it comes down (poseAt)
     a.state = st;
     a.asleep = st === "rest";
     a.t = 0;
@@ -16275,7 +16294,7 @@ function poseAt(a, now) {
     x = -SWAY * Math.min(1, t / 1.2) * 1.5;
     if (f.up !== undefined) air = lift * Math.min(1, t / 1.2);
     s *= 1 - 0.08 * Math.min(1, t / 1.5);
-  } else if (a.state === "reel") {
+  } else if (a.state === "reel" || a.state === "downed") {
     // Rung, and not over it: the hit shudder, held rather than decaying out.
     name = a.recoil;
     x = Math.sin(t * 9) * 0.02;

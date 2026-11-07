@@ -12091,6 +12091,11 @@ export const SHIELING_HAMLET_ROOMS = [
   "the-drove-cut", "the-spring-green", "the-terrace-strips", "the-shiel-foot", "the-fold-pound", "the-in-field", "the-shiel-street", "the-forge-yard", "the-hill-smithy", "the-shiel-backs", "the-hill-cross", "the-herds-yard", "the-herds-house", "the-burnt-shiel", "the-chapel-shelf", "the-shiel-head", "the-high-croft", "the-high-house", "the-hill-chapel", "the-thorn-garth", "the-fleece-green", "the-lost-toft", "the-rowan-rows", "the-peat-hut", "the-hill-spring", "the-hill-graves", "the-scree-end", "the-cold-hearths", "the-thorn-nook",
 ];
 export const HAMLET_ROOMS = new Set<string>([...SALT_HAMLET_ROOMS, ...SHIELING_HAMLET_ROOMS]);
+// THE SHIELING GROWS FOOD LIKE ASSART END (rome, 2026-11-07: its rats were always
+// hungry). Assart End and the Salt Hamlet sit in bands that are forage ground
+// throughout (FORAGE_REGIONS); the Shieling's band is the mountain, so only its
+// five copied greens fed anything and none of its rats lived on them.
+for (const id of SHIELING_HAMLET_ROOMS) FORAGE_ROOMS.add(id);
 // AND EACH HAS ITS NAME ON THE MAP (rome, 2026-11-04). Caption only, and kept
 // out of detail.MAP_QUARTERS on purpose: a quarter there also decides the
 // mountain's creature shards, a room's sounds and where animals settle.

@@ -408,9 +408,18 @@ t("a bird with no takeoff drawn does not invent one", gp !== "takeoff", "pose=" 
   t("a bird landing starts high", hi.air > 0.5 * (lo.air + hi.air), "air=" + hi.air);
   t("...on its landing frame", inv["hill-eagle"][hi.k] === "landing", inv["hill-eagle"][hi.k]);
   t("...and comes down to its feet", lo.air < hi.air && lo.air < 0.05, "air=" + lo.air);
-  const down = up("eagle-owl"); ctx.applyState(["reel"]);
+  const down = up("eagle-owl"); ctx.applyState(["downed"]);
   t("knocked out of the air it comes down", !down.swoop && down.landing === true);
   t("and is on the floor after", at(down, "idle", 2).air === 0);
+  // ...BUT ONE THAT ONLY REELS STAYS UP (rome, 2026-11-07: they fought on from the floor).
+  const reels = up("eagle-owl"); ctx.applyState(["hunt"]); ctx.applyState(["reel"]);
+  t("a swooping bird that overreaches or is stunned stays in the air", reels.swoop === true && !reels.landing && at(reels, "idle", 2).air > 0, "air=" + at(reels, "idle", 2).air);
+  ctx.applyState(["hunt"]);
+  t("...and strikes from the air after it", at(reels, "attack", ctx.ATTACK_S / 2).air > 0);
+  const swDown = up("eagle-owl"); ctx.applyState(["hunt"]); ctx.applyState(["downed"]);
+  t("knocked out of the air mid-swoop it comes down", !swDown.swoop && swDown.landing === true && at(swDown, "idle", 2).air === 0);
+  const footReel = mk("eagle-owl"); ctx.set([footReel]); ctx.applyState(["hunt"]); ctx.applyState(["reel"]);
+  t("one on the floor that reels is still on the floor", !footReel.swoop && at(footReel, "idle", 2).air === 0);
   const over = up("eagle-owl"); ctx.applyState(["hunt"]); ctx.applyState([""]);
   t("when the fight is over it does not hang there", !over.swoop && at(over, "idle", 2).air === 0);
   const foot = up("scarp-raven"); ctx.applyState(["hunt"]);

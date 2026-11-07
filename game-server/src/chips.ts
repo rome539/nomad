@@ -234,6 +234,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         : creature.windedUntil && now < creature.windedUntil ? "flee"
         : creature.fled && creature.fledAt && now - creature.fledAt < FLEE_SHOWN_MS ? "flee"
         : FLIERS.has(creature.templateId) && ai.airborne(creature, now) ? "aloft"
+        // knocked out of the air (styles.thrownAt): on the ground, floundering, so
+        // the picture brings it down; a bird that only reels stays up (public.ts)
+        : FLIERS.has(creature.templateId) && creature.groundedUntil && now < creature.groundedUntil ? "downed"
         : creature.stunned || (creature.staggerUntil && now < creature.staggerUntil) || (creature.blownUntil && now < creature.blownUntil) ? "reel"
         : creature.target === session.pubkey ? "hunt"
         : creature.target ? "fight"

@@ -72,6 +72,7 @@ try {
         "export {loadLeaderboard} from './world';",
         "export {handleBench} from './gate';",
         "export {benchEquip, boxedByName} from './gate';",
+        "export {FORAGE_ROOMS, SHIELING_HAMLET_ROOMS} from './zone-data';",
         "export {cmdEquip} from './verbs';",
         "export {sendCtx} from './chips';",
         "export * as carving from './carving';",
@@ -98,7 +99,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
+  const { FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2753,6 +2754,22 @@ try {
     assert.doesNotMatch(list('MOUNTAIN_ROAMERS'), /"rat"/, 'rats keep the Shieling');
     assert.ok(settlesOn('stone-adder', 'the-first-crag') && !settlesOn('stone-adder', 'the-deer-lawn-high'), 'rock, not grass');
     assert.ok(settlesOn('stone-adder', 'the-shiel-street'), 'and some may lie up in the Shieling');
+  });
+  // 2026-11-07: the Shieling's rats were always hungry: only five of its rooms
+  // were forage ground and none of its rats lived on them.
+  check('every room of the Shieling hamlet is forage ground, like Assart End', () => {
+    for (const id of SHIELING_HAMLET_ROOMS) assert.ok(FORAGE_ROOMS.has(id), id + ' grows nothing');
+    for (const id of ['the-shiel-street', 'the-forge-yard', 'the-high-croft']) assert.ok(SHIELING_HAMLET_ROOMS.includes(id), id);
+  });
+  // 2026-11-07: a bird fighting from the air was put on the floor by a reel (an
+  // overreach or a stun) and by any rebuild of the creature row (a body falling).
+  check('a bird fighting from the air stays up through a reel and a row rebuild', () => {
+    const chipsSrc = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    assert.match(chipsSrc, /\? "aloft"\n[^\n]*\n[^\n]*\n\s*: FLIERS\.has\(creature\.templateId\) && creature\.groundedUntil && now < creature\.groundedUntil \? "downed"/, 'knocked out of the air is its own state, ahead of reel');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const body = pub.slice(pub.indexOf('function paintMobs('), pub.indexOf('function fitMobRow('));
+    assert.ok(body.indexOf('var wasAir = {}') > 0 && body.indexOf('var wasAir = {}') < body.indexOf('anims.length = 0'), 'the air is read before the row is torn up');
+    assert.match(body, /if \(was\) \{ newA\[a2\]\.state = was\.state; newA\[a2\]\.swoop = was\.swoop; \}\n  \}\n  applyState\(doing\);/, 'and handed to the new sprites before the state is applied');
   });
   // 2026-11-07: a piece in the lockbox could not be mended or taken up in hand
   // without first fetching it to the pack.
