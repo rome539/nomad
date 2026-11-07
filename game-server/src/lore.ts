@@ -759,7 +759,8 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
     // the journal too.
     z.send(session, `You watch ${tmpl.name} ${study.DOING[doing]} a while and set down what you see.${tail}`
       + "\n" + ai.creatureRead(z, visible!, session.pubkey)
-      + adds.map((b) => study.line(z, tmpl, b)).filter(Boolean).map((l) => "\n" + l).join(""), "study");
+      // What it eats is for the journal to tell, not the room's text (rome, 2026-11-06).
+      + adds.filter((b) => b !== "feeding").map((b) => study.line(z, tmpl, b)).filter(Boolean).map((l) => "\n" + l).join(""), "study");
     z.roomFeed(session.roomId, `${session.name} watches ${tmpl.name}, taking notes.`, session.pubkey, false);
   }
   z.sendCtx(session); // drop the now-redundant `study` chip without waiting for the next refresh

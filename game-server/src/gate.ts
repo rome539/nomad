@@ -2935,7 +2935,9 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
   return null;
 }
 
-export function describeGatehouse(z: ZoneDO, session: Session): string {
+// `arriving` is walking in (or coming back to it): the room and who is in it. The
+// fixtures and what is pinned or carved on them wait for a look (rome, 2026-11-06).
+export function describeGatehouse(z: ZoneDO, session: Session, arriving = false): string {
   const others = gatehouseFolk(z).filter((s) => s.pubkey !== session.pubkey);
   // Titled exactly as the status bar names it, so the client's knownRooms map
   // recognises it and paints it gold like any other room. It IS a room.
@@ -2951,14 +2953,14 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
   // The wall chart, plastered by the door: the players' own map, in whatever
   // state they've left it. The line grows with the wall.
   const marks = [...z.wallOf(session.pubkey)].filter((r) => z.world!.rooms.has(r)).length;
-  lines.push(marks === 0
+  if (!arriving) lines.push(marks === 0
     ? "By the door, a stretch of wall plastered smooth and scratched over with other people's chalk — none of it in a hand you can read. Your own corner is bare. ('carve' what you've walked)"
     : `By the door, the wall chart — and ${marks} halls of it are yours. ('study' it; 'carve' to add what you've walked)`);
-  lines.push("Beside the hatch hangs the keeper's slate, with the sky chalked on it. ('look slate')");
+  if (!arriving) lines.push("Beside the hatch hangs the keeper's slate, with the sky chalked on it. ('look slate')");
   // The board, beside the hatch. Only spoken of when it has something on it: an
   // empty board is furniture, and the room already has enough of that.
   const notices = boardLive(z).length;
-  if (notices > 0) {
+  if (notices > 0 && !arriving) {
     lines.push(notices === 1
       ? "One notice hangs on the board beside the hatch, pinned at a corner. ('board' to read it)"
       : `The board beside the hatch carries ${notices} notices, pinned over one another. ('board' to read them)`);
@@ -2971,7 +2973,7 @@ export function describeGatehouse(z: ZoneDO, session: Session): string {
     lines.push(`Chalked across the shut hatch: wanted tonight — ${want.name}, double in trade.`);
   }
   // Carvings set down by the fire stand here, as they would anywhere.
-  lines.push(...carving.roomLines(z, session));
+  if (!arriving) lines.push(...carving.roomLines(z, session));
   if (others.length === 0) {
     lines.push("You have it to yourself. The fire ticks.");
   } else {
@@ -3014,10 +3016,10 @@ export async function enterGatehouse(z: ZoneDO, session: Session): Promise<void>
   // Already behind the door — 'in' is idempotent, just re-show it. Re-assert
   // `away` here too, so if the flag had drifted false under inGatehouse this
   // heals it (outOfWorld already trusts inGatehouse; this re-syncs the rest).
-  if (z.outOfWorld(session)) { session.away = true; z.send(session, describeGatehouse(z, session)); return z.sendGateCtx(session); }
+  if (z.outOfWorld(session)) { session.away = true; z.send(session, describeGatehouse(z, session, true)); return z.sendGateCtx(session); }
   z.enterStep(session, "gatehouse");
   z.sendStatus(session); // the HUD title becomes "The Gatehouse" the moment you're inside
-  z.send(session, describeGatehouse(z, session));
+  z.send(session, describeGatehouse(z, session, true));
   gatehouseFeed(z, `${session.name} pushes in out of the cold.`, session.pubkey, "who");
   keeperNods(z, session);
   await z.sendGateCtx(session); // seed the smelt/cure chip availability on entry

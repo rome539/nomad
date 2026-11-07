@@ -2016,6 +2016,15 @@ try {
     assert.match(said.at(-1), /Its body gives [^.]*a handful of leather offcuts/, 'the leather a hill wolf is cut for');
     assert.doesNotMatch(said.at(-1), /nothing worth carrying/);
   });
+  await checkAsync('study does not print what an animal hunts; the journal still has it (2026-11-06)', async () => {
+    const { z, me, wolf, said } = studyWorld();
+    z.world.mobTemplates.set('rat', { id: 'rat', name: 'a scabby rat', level: 1 });
+    wolf.asleep = false; wolf.hunger = 0; wolf.eatingUntil = Date.now() + 90_000; wolf.eatingIn = wolf.roomId; wolf.eatingOn = 'kill';
+    await cmdStudy(z, me, 'wolf');
+    assert.match(said.at(-1), /You watch .* eating a while/, 'it was watched feeding');
+    assert.doesNotMatch(said.at(-1), /It hunts|its own kind about it|eats the dead/, 'and none of that is printed');
+    assert.match(study.line(z, z.world.mobTemplates.get(wolf.templateId), 'feeding'), /It hunts/, 'the journal page keeps it');
+  });
   await checkAsync('a full account wants every behaviour and the kills (2026-10-24)', async () => {
     const { z, me, wolf, said, db } = studyWorld();
     db.prepare("INSERT INTO journal_logs VALUES ('jrn-1', 'hill-wolf', 6, 1, 'about,feeding,hungry,dead', '')").run();
@@ -2652,6 +2661,21 @@ try {
     const got = [...pub.match(/var SWOOPERS = \{([^}]*)\}/)[1].matchAll(/"([a-z-]+)"/g)].map((m) => m[1]).sort();
     assert.deepEqual(got, want);
     assert.ok(!got.includes('scarp-raven') && !got.includes('gibbet-crow'), 'crows and ravens fight on foot, and the words say so');
+  });
+  check('walking into the gatehouse shows the room; its chart, slate, board and carvings wait for a look (2026-11-06)', () => {
+    const gsrc = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const body = gsrc.slice(gsrc.indexOf('export function describeGatehouse'), gsrc.indexOf('// In through the door. Idempotent'));
+    assert.match(body, /if \(!arriving\) lines\.push\(marks === 0/, 'the wall chart');
+    assert.match(body, /if \(!arriving\) lines\.push\("Beside the hatch hangs/, 'the slate');
+    assert.match(body, /if \(notices > 0 && !arriving\)/, 'the board');
+    assert.match(body, /if \(!arriving\) lines\.push\(\.\.\.carving\.roomLines/, 'the carvings');
+    const enter = gsrc.slice(gsrc.indexOf('export async function enterGatehouse'), gsrc.indexOf('export function gatehouseHeard'));
+    assert.equal((enter.match(/describeGatehouse\(z, session, true\)/g) ?? []).length, 2, 'both ways in arrive');
+    assert.doesNotMatch(enter, /describeGatehouse\(z, session\)/, 'neither reads the whole room');
+    assert.match(gsrc, /if \(!target\) return z\.send\(session, describeGatehouse\(z, session\)\);/, 'a bare look reads it all');
+    assert.match(gsrc, /is\("room", "here", "around", "gatehouse", "inside", "place"\)\) \{\s*return describeGatehouse\(z, session\);/, 'and so does look room');
+    assert.match(zsrc, /if \(!seamless\) this\.send\(session, gate\.describeGatehouse\(this, session, true\)\);/, 'coming back to it arrives');
   });
   check('the dancer leaps and comes down, and stands between leaps (2026-11-06)', () => {
     const src = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');

@@ -1391,7 +1391,7 @@ export class ZoneDO implements DurableObject {
     for (const s of this.sessions.values()) {
       const inside = this.inGatehouse.has(s.pubkey) && this.world!.entryRooms.has(s.roomId);
       this.sendStatus(s);
-      if (inside) this.send(s, gate.describeGatehouse(this, s));
+      if (inside) this.send(s, gate.describeGatehouse(this, s, true));
       else this.send(s, this.describeRoom(s, false));
       this.sendCtx(s);
     }
@@ -1714,7 +1714,7 @@ export class ZoneDO implements DurableObject {
       // a stale bench frame lingers over the gatehouse until the next click.
       try { session.ws.send(JSON.stringify({ v: 0, t: "bench", open: false })); } catch {}
       this.sendStatus(session);
-      if (!seamless) this.send(session, gate.describeGatehouse(this, session));
+      if (!seamless) this.send(session, gate.describeGatehouse(this, session, true));
       this.sendCtx(session);
       this.markSimDirty();
       await this.ensureAlarm();
