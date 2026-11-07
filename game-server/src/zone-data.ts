@@ -2926,12 +2926,15 @@ export const FEVER_MEND_MULT = 0.35;  // what rest, food and a bandage are all w
 // THE FEVER RAT (rome, 2026-11-01). Once the dens moved out onto open ground,
 // a fever kept to the old village bit nobody, so it now sits over the wood next
 // door as well; and it has something to fight. When it settles, the fever rat
-// comes up out of the fever graves and sits there, and the fever does not lift
+// comes up out of the fever graves and walks about them, and the fever does not lift
 // while it lives. Kill it and the wind comes round. Left alone long enough it
 // goes back down and the fever ends on its own. Its grave-cloth, worn over the
 // face, is the one thing that lets you mend under the fever.
 export const FEVER_BANDS = new Set(["den", "wood"]);  // the ground the fever sits over
 export const FEVER_RAT = "fever-rat";
+// A boss stands where it lives, except the fever rat, which walks about its
+// graves like any animal on its ground (TERRITORY_RADIUS) and keeps out of gates.
+export const bossStands = (tmpl: { id: string; is_boss: number }): boolean => !!tmpl.is_boss && tmpl.id !== FEVER_RAT;
 export const FEVER_RAT_HOME = "the-fever-graves";
 export const FEVER_RAT_HOLD_MS = 12 * 3_600_000;      // left alone this long, it goes back into the graves (rome, 2026-11-05: was 4 hours)
 // THE FEVER GOES FURTHER (rome, 2026-11-04): three graves now, the old

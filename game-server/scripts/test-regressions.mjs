@@ -75,7 +75,7 @@ try {
         "export * as carving from './carving';",
         "export * as feverrat from './feverrat';",
         "export {tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, coldBites, snowed, paleDrakeSnows} from './events';",
-        "export {FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT} from './zone-data';",
+        "export {FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, bossStands} from './zone-data';",
         "export * as pvp from './pvp';",
         "export {PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, GATEHOUSE_NOARG, MOUTHS, WITNESSED_LINES} from './zone-data';",
         "export {OUTDOOR_REGIONS, INDOOR_ROOMS} from './zone-data';",
@@ -96,7 +96,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
+  const { bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -3347,6 +3347,29 @@ try {
     const mig = readFileSync(new URL('../migrations/357_the_pit_hyenas_spread_out.sql', import.meta.url), 'utf8');
     assert.match(mig, /SET room_id = 'the-bone-fan'\s+WHERE id = 'hyena-1'/, 'hyena-1 moves out to the Bone Fan');
     assert.match(mig, /SET room_id = 'the-burning-ground' WHERE id = 'hyena-3'/, 'hyena-3 to the Burning Ground');
+  });
+
+  await checkAsync('the fever rat walks about its graves, no further than the ground round them and never into a gate (2026-11-06)', async () => {
+    const z = new ZoneDO({}, {});
+    const ex = (pairs) => pairs.map(([dir, to_room]) => ({ dir, to_room, key_item: null }));
+    const line = ['graves', 'r1', 'r2', 'r3', 'r4', 'r5'];
+    const exits = new Map(line.map((r, i) => [r, ex([...(i ? [['east', line[i - 1]]] : []), ...(i < line.length - 1 ? [['west', line[i + 1]]] : []), ...(r === 'r1' ? [['north', 'the-door']] : [])])]));
+    exits.set('the-door', ex([['south', 'r1']]));
+    z.world = { mobTemplates: new Map([[FEVER_RAT, { id: FEVER_RAT, name: 'the fever rat', max_hp: 85, is_boss: 1 }]]), mobSpawns: [], itemTemplates: new Map(),
+      rooms: new Map([...line, 'the-door'].map((r) => [r, { id: r, region: 'den' }])), exits, entryRooms: new Set(['the-door']), safeRooms: new Set() };
+    z.send = () => {}; z.roomFeed = () => {}; z.roomSound = () => {}; z.refreshRoomCtx = () => {}; z.noteCreaturesChanged = () => {};
+    const rat = { id: 'r', templateId: FEVER_RAT, roomId: 'graves', home: 'graves', hp: 85, target: null, grudges: [], hunger: 0, nextWanderAt: 0 };
+    z.creatures = new Map([['r', rat]]);
+    const seen = new Set();
+    for (let i = 0; i < 400; i++) { await creatureMoves(z, rat, Date.now(), 'wander', true); seen.add(rat.roomId); }
+    assert.ok(seen.size > 1, 'it leaves the room it came up in');
+    assert.ok(!seen.has('the-door'), 'it keeps out of a gate');
+    assert.ok(!seen.has('r4') && !seen.has('r5'), 'and stays within three rooms of its graves');
+    assert.equal(rat.home, 'graves', 'its graves stay its own, which the fever goes by');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.equal(zone.match(/nextWanderAt <= (?:t|now) && (?:\(!bossStands\(tmpl\) \|\| PATROLS\[tmpl\.id\]\)|!bossStands\(tmpl\))/g)?.length, 3, 'beside a player, far from one and through a sleeping world');
+    const standing = { id: 'three-hound', is_boss: 1 };
+    assert.equal(bossStands(standing), true, 'every other boss still stands where it lives');
   });
 
   await checkAsync('the surface warden crosses the sally port back to his round instead of circling the catacombs (2026-10-30)', async () => {

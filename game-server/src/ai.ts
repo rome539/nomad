@@ -65,7 +65,7 @@ import {
   PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, OWN_FORAGE_MEAL_LEFT,
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
-  RAT_KING, WHITE_ROE, FEVER_RAT, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
+  RAT_KING, WHITE_ROE, FEVER_RAT, bossStands, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
   EAT_SHOW_MS, EAT_SAY_MIN_MS, EAT_SAY_MAX_MS, EAT_WORDS,
   RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS,
 } from "./zone-data";
@@ -1297,7 +1297,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // Every gate is the dungeon's threshold — cold air and the way out. No
     // ordinary creature holds a doorway, so a respawn is never spawn-camped
     // where it appears. (The boss may go anywhere; it fears nothing.)
-    if (!tmpl.is_boss) {
+    if (!bossStands(tmpl)) {
       const inner = exits.filter((e) => !world.entryRooms.has(e.to_room));
       if (inner.length) exits = inner; // never strand a creature with no exits
     }
@@ -1370,7 +1370,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // carries a migrant from the mouth to its range. Fleeing ignores the edge
     // (survival first; the next calm step starts the walk back). Patrollers
     // are exempt — their route is their territory. Never strands.
-    if (mode === "wander" && !whiteroe.roams(creature) && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id] && creature.drift === undefined && !chaseTo) {
+    if (mode === "wander" && !whiteroe.roams(creature) && creature.home && !bossStands(tmpl) && !PATROLS[tmpl.id] && creature.drift === undefined && !chaseTo) {
       // A HUNGRY THING LEAVES. Where the territory pull is anchored: normally
       // the den, but a hunter whose own ground has nothing left to eat walks to
       // where the food is instead (huntGround). Everything below is unchanged —

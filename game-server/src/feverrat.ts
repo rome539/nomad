@@ -1,7 +1,7 @@
 // THE FEVER RAT (rome, 2026-11-01). The fever's own body. It has no spawn row:
 // it comes up out of the fever graves when the fever settles (events.ts,
-// tickFever), there is never more than one, and it does not wander (a boss
-// keeps its place). While it lives the fever does not lift, over the old
+// tickFever), there is never more than one, and it walks about the ground round
+// its graves (zone-data bossStands). While it lives the fever does not lift, over the old
 // village and the wood beside it; kill it and the wind comes round
 // (events.feverLifts, from the death hook in zone.ts). Left alone for
 // FEVER_RAT_HOLD_MS it goes back down into the graves and the fever ends.
@@ -55,7 +55,7 @@ export function goesBack(z: ZoneDO, graves = FEVER_RAT_HOME): boolean {
   if (!c || c.target) return false;
   z.creatures.delete(c.id);
   z.noteCreaturesChanged();
-  z.roomFeed(c.roomId, "The great rat turns, slow, and goes back down into the broken grave, and the earth falls in after it.");
+  z.roomFeed(c.roomId, "The great rat turns, slow, and goes back down into the ground, and the earth falls in after it.");
   z.refreshRoomCtx(c.roomId);
   return true;
 }
