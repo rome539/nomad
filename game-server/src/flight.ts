@@ -8,7 +8,7 @@
 // held, hurt or asleep does not go, so flying is never an escape.
 import type { ZoneDO } from "./zone";
 import type { Creature } from "./zone-types";
-import { forageGround, hungers } from "./ai";
+import { forageGround, hungers, edibleBody } from "./ai";
 import { MOUNTAIN_QUARTER_ROOMS } from "./detail";
 import { cap, isNight } from "./zone-util";
 import * as beasts from "./beasts";
@@ -24,7 +24,7 @@ function foodIn(z: ZoneDO, c: Creature, line: string, room: string): boolean {
   const eats = PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line);
   if (eats?.size) return z.creaturesInRoom(room).some((o) => eats.has(o.templateId) && !o.hidden);
   if (GRAZERS.has(c.templateId) || GRAZERS.has(line)) return forageGround(z, c.templateId, room);
-  return CARRION_ROOMS.has(room) || (z.traces.get(room) ?? []).some((t) => CORPSE_TRACES.has(t.kind));
+  return CARRION_ROOMS.has(room) || (z.traces.get(room) ?? []).some(edibleBody);
 }
 
 /** Open sky over it: a bird does not fly into a cave, a keep or a cellar. */

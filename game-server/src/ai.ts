@@ -10,7 +10,7 @@ import * as herds from "./herds";
 import * as grass from "./grass";
 import * as chase from "./chase";
 import { shelteredInDen, rattle, hearthWarm } from "./den";
-import type { Creature, Session } from "./zone-types";
+import type { Creature, Session, Trace } from "./zone-types";
 import type { MobTemplate, World } from "./world";
 import { hasTrait, BEAST_PATH_KEY } from "./world";
 import * as paths from "./paths";
@@ -1588,7 +1588,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     } else if (SCAVENGERS.has(tmpl.id)) {
       // Follows the scent of the dead: toward a room that holds corpse-litter.
       const scent = exits.find((e) =>
-        (z.traces.get(e.to_room) ?? []).some((tr) => CORPSE_TRACES.has(tr.kind)),
+        (z.traces.get(e.to_room) ?? []).some(edibleBody),
       );
       if (scent) exit = scent;
       creature.curious = null;
@@ -2154,7 +2154,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     const world = z.world!;
     const hungry = creature.hunger >= HUNGRY_AT;
     const traces = z.traces.get(creature.roomId);
-    const corpseHere = !!traces && traces.some((tr) => CORPSE_TRACES.has(tr.kind));
+    const corpseHere = !!traces && traces.some(edibleBody);
     const floor = z.ground.get(creature.roomId);
     const baitHere = !!floor && floor.some((id) => world.itemTemplates.get(id)?.lure);
     // A FED FOX MAY KILL FOR NOTHING (SURPLUS_KILLERS) - decided below, once
@@ -2716,7 +2716,7 @@ export function hyenaGuardsMeal(z: ZoneDO, creature: Creature): boolean {
     if (!creature.traits?.includes("jealous") && !AGGRO_SCAVENGERS.has(creature.templateId)) return false;
     if (scavengerBold(z, creature)) return true;
     const list = z.traces.get(creature.roomId);
-    return !!list && list.some((tr) => CORPSE_TRACES.has(tr.kind));
+    return !!list && list.some(edibleBody);
   }
 
   // Eat one corpse (blood/remains litter) in the room: heal, sate, and grow
@@ -2752,7 +2752,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     // The grave-hyena will not eat its own kind — it keens over them instead
     // (see mourns). It will still strip any other corpse to the bone.
     const spareKin = creature.templateId === "grave-hyena";
-    const idx = list.findIndex((tr) => CORPSE_TRACES.has(tr.kind) && !(spareKin && tr.label === tmpl.name));
+    const idx = list.findIndex((tr) => edibleBody(tr) && !(spareKin && tr.label === tmpl.name));
     if (idx === -1) return;
     const eaten = list[idx];
     // A SMALL THING DOES NOT EAT A BIG BODY WHOLE (rome, 2026-11-07: rats were
@@ -2763,14 +2763,15 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
       : eaten.label ? [...z.world!.mobTemplates.values()].find((t) => t.name === eaten.label) : undefined;
     const left = (eaten.meat ?? deadT?.max_hp ?? 0) - tmpl.max_hp;
     const gone = !deadT || tmpl.max_hp >= deadT.max_hp || left <= 0;
-    if (gone) {
-      list.splice(idx, 1);
-      if (list.length === 0) z.traces.delete(creature.roomId);
-    } else eaten.meat = left;
+    // THE BODY STAYS WHILE IT IS EATEN (rome, 2026-11-07): a meal takes its
+    // time now, so the last of a body is spoken for at the bite, nothing is
+    // left on it for another mouth, and it lies there until the last meal on
+    // it is done (digest takes it off the floor).
+    const taken = gone ? (eaten.meat ?? deadT?.max_hp ?? 0) : tmpl.max_hp;
+    eaten.meat = gone ? 0 : left;
     const fedFrom6 = creature.hunger;
     creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) ? MEAL_SMALL : MEAL_CORPSE));
     // A body it took whole, or the share of one it took, goes back if it is cut short.
-    const taken = gone ? (eaten.meat ?? deadT?.max_hp ?? 0) : tmpl.max_hp;
     ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken });
     // WHAT THE CORPSE IS WORTH TO THIS ONE. A bone-cracker gets through to the
     // marrow and takes double; a sour-gutted thing eats and is no better for it.
@@ -2800,7 +2801,6 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
       // ...and it is SEEN doing it. The line below has always said so; the
       // picture never did, because nothing on the wire carried the meal.
       z.fxFed(creature.roomId, creature.templateId);
-      if (gone) z.refreshRoomCtx(creature.roomId);   // ...and the body leaves the floor
       // The dire-hyena feeding on a fallen hyena — its own included — is a colder
       // thing than gnawing a rat. Name it when it happens.
       const hyenaKin = new Set([...SCAVENGERS].map((id) => z.world!.mobTemplates.get(id)?.name));
@@ -3574,7 +3574,7 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
         if (d < bestDist) { bestDist = d; best = roomId; }
       };
       for (const c of z.creatures.values()) if (prey!.has(c.templateId)) consider(c.roomId); // meat on the hoof
-      for (const [roomId, list] of z.traces) if (list.some((t) => CORPSE_TRACES.has(t.kind))) consider(roomId); // carrion
+      for (const [roomId, list] of z.traces) if (list.some(edibleBody)) consider(roomId); // carrion
       if (!best) for (const roomId of WARRENS_ROOMS) consider(roomId); // nothing yet — drift toward where rats run
     } else {
       // FULL: the old aimless drift — shift the ambush to the freshest-trafficked
@@ -4962,7 +4962,7 @@ export function eatingShown(z: ZoneDO, c: Creature, now = Date.now()): "" | "eat
   if (SCAVENGERS.has(c.templateId)) {
     const tmpl = z.world?.mobTemplates.get(c.templateId);
     const spareKin = c.templateId === "grave-hyena";
-    if ((z.traces.get(c.roomId) ?? []).some((tr) => CORPSE_TRACES.has(tr.kind) && !(spareKin && tr.label === tmpl?.name))) return "eat";
+    if ((z.traces.get(c.roomId) ?? []).some((tr) => edibleBody(tr) && !(spareKin && tr.label === tmpl?.name))) return "eat";
   }
   return "";
 }
@@ -5005,21 +5005,49 @@ export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "k
 export function digest(z: ZoneDO, c: Creature, now: number): void {
   const m = c.meal;
   if (!m) return;
-  if (now >= m.to) { c.meal = undefined; return; }
+  if (now >= m.to) { c.meal = undefined; clearEaten(z, m.body); return; }
   const cut = c.eatingIn !== c.roomId || c.eatingUntil === undefined || !!c.target || c.hp <= 0;
   if (!cut) return;
   c.meal = undefined;
   const left = Math.max(0, Math.min(1, (m.to - now) / Math.max(1, m.to - m.from)));
-  if (left <= 0) return;
-  c.hunger = Math.min(HUNGER_MAX, c.hunger + m.owed * left);
+  if (left > 0) c.hunger = Math.min(HUNGER_MAX, c.hunger + m.owed * left);
   // What it was eating stays where it lay, for the next mouth.
   const meat = m.body ? Math.round(m.body.meat * left) : 0;
   if (m.body && meat > 0) {
-    const list = z.traces.get(m.body.roomId) ?? [];
-    const lying = list.find((t) => t.kind === "remains" && (t.prey ?? t.label) === (m.body!.prey ?? m.body!.label));
+    const lying = bodyLying(z, m.body);
     if (lying) lying.meat = (lying.meat ?? 0) + meat;
     else z.addTrace(m.body.roomId, { kind: "remains", at: now, prey: m.body.prey, label: m.body.label, meat });
   }
+  clearEaten(z, m.body);
+}
+
+/** A body something can still eat from: one picked clean and only being finished is not. */
+export function edibleBody(t: Trace): boolean {
+  return CORPSE_TRACES.has(t.kind) && (t.meat === undefined || t.meat > 0);
+}
+
+type MealBody = NonNullable<NonNullable<Creature["meal"]>["body"]>;
+function sameBody(t: Trace, b: MealBody): boolean {
+  return CORPSE_TRACES.has(t.kind) && (t.prey ?? t.label) === (b.prey ?? b.label);
+}
+// The body a meal came off, the one being finished first.
+function bodyLying(z: ZoneDO, b: MealBody): Trace | undefined {
+  const list = z.traces.get(b.roomId) ?? [];
+  return list.find((t) => sameBody(t, b) && t.meat === 0) ?? list.find((t) => sameBody(t, b) && t.meat !== undefined);
+}
+// A body with nothing left on it leaves the floor once no one is still eating it.
+function clearEaten(z: ZoneDO, b: MealBody | undefined): void {
+  if (!b) return;
+  const list = z.traces.get(b.roomId);
+  const idx = list ? list.findIndex((t) => sameBody(t, b) && t.meat === 0) : -1;
+  if (!list || idx === -1) return;
+  for (const o of z.creatures.values()) {
+    const ob = o.meal?.body;
+    if (ob && ob.roomId === b.roomId && (ob.prey ?? ob.label) === (b.prey ?? b.label) && o.hp > 0) return;
+  }
+  list.splice(idx, 1);
+  if (list.length === 0) z.traces.delete(b.roomId);
+  z.refreshRoomCtx(b.roomId);
 }
 
 export function hungers(templateId: string): boolean {

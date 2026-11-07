@@ -4022,7 +4022,9 @@ export class ZoneDO implements DurableObject {
     // mail) under a guard stacks (0.5 × 0.5): the full turtle bleeds a quarter
     // as often. Mail turns edges too: that's what the rings are FOR.
     if (this.wearsTrait(victim, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
-      this.send(victim, `${cap(tmpl.name)} drags claws through the thick hide and finds less than it wanted — no wound opens.`, "block");
+      // Told as what the hit just did, not a new blow, and in what it hit with (rome, 2026-11-07: a raven "dragged claws").
+      const by = BEAKS.has(tmpl.id) ? "beak" : BITERS.has(tmpl.id) ? "teeth" : "blow";
+      this.send(victim, `Your thick hide turns the ${by} — no wound opens.`, "block");
       return;
     }
     if (this.wearsTrait(victim, "mailward") && !chance(WARDHIDE_WOUND_ODDS)) {

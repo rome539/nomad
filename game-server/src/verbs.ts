@@ -4022,7 +4022,20 @@ function bodyRead(z: ZoneDO, roomId: string, tr: Trace, id: string, name: string
       : `What is left of the ${it} lies broken on ${ground}. Nothing in it will get up again.`;
   }
   const lay = `A dead ${it} lies on ${ground}`;
-  if (tr.sick) return `${lay}. There is no mark on it: it lay down here and died.`;
-  if (tr.prey && !tr.id) return `${lay}, torn open where it fell, and eaten from.`;
-  return age < 10 * 60_000 ? `${lay}, still warm.` : age < 3_600_000 ? `${lay}, gone cold.` : `${lay}, stiff and a while dead.`;
+  const eaten = bodyEaten(z, tr, id);
+  if (tr.sick) return `${lay}. There is no mark on it: it lay down here and died.` + (eaten ? ` ${cap(eaten)}.` : "");
+  if (tr.prey && !tr.id) return `${lay}, torn open where it fell, and ${eaten || "eaten from"}.`;
+  const lies = age < 10 * 60_000 ? `${lay}, still warm` : age < 3_600_000 ? `${lay}, gone cold` : `${lay}, stiff and a while dead`;
+  return eaten ? `${lies}, and ${eaten}.` : `${lies}.`;
+}
+
+// How far the feeders have got into a body (rome, 2026-11-07): the look says
+// what is left on it, by what is left of the dead thing's size.
+export function bodyEaten(z: ZoneDO, tr: Trace, id: string): string {
+  if (tr.meat === undefined) return "";
+  const full = z.world!.mobTemplates.get(id)?.max_hp ?? 0;
+  if (tr.meat <= 0) return "picked down to the bone";
+  if (full <= 0 || tr.meat >= full) return "";
+  const left = tr.meat / full;
+  return left > 2 / 3 ? "something has been at it" : left > 1 / 3 ? "half eaten" : "eaten down to little but bone";
 }
