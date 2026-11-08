@@ -1065,7 +1065,7 @@ export const SMALL_PREY = new Set([
   "hill-eagle", "eagle-owl", "bone-breaker", "the-bone-dropper", "eyrie-holder",
   "carrion-vulture", "brooding-vulture", "great-vulture",
   "hedgehog", "ermine",                                           // the small biters
-  "gill-adder", "fen-viper", "stone-adder",                       // the snakes
+  "gill-adder", "fen-viper", "stone-adder", "the-gravid-adder",   // the snakes
   "wrack-crab",                                                   // the little crab
 ]);
 // (a kill zeroes it outright — see worryPrey/predation)
@@ -4953,24 +4953,24 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // NOTHING IS GIVEN THE HIND OR THE STAG. At 30 and 48hp they are out of reach
   // of everything on this tier, which is true of a grown red deer and is also
   // the tier telling you what it is: the animals that can take one live higher.
-  ["hill-fox", new Set(["rat", "mountain-hare", "ptarmigan"])],
-  ["wildcat", new Set(["rat", "mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan"])],
+  ["hill-fox", new Set(["rat", "mountain-hare", "ptarmigan", "gill-adder"])],
+  ["wildcat", new Set(["rat", "mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan", "gill-adder"])],
   // THE TOM (mig 247) hunts what the wildcat hunts. Variants do NOT inherit their
   // base's feeding sets — every one of them has to be listed by hand, and eight
   // of the mountain's nine were. This one was missed, so an 8% roll produced an
   // aggressive cat with no way to eat, pinned at the hunger cap for life.
   ["the-tom", new Set(["mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan"])],
-  ["hill-eagle", new Set(["mountain-hare", "ptarmigan", "feral-goat"])],
+  ["hill-eagle", new Set(["mountain-hare", "ptarmigan", "feral-goat", "stone-adder", "gill-adder"])],
   // TIER TWO (mig 229). The first predator on this mountain big enough for a
   // deer — and still not big enough for the stag, which at 48hp/4-8 outweighs a
   // lynx in every sense that matters. A lynx takes hinds and calves. The animal
   // that can have HIM lives higher than this, and that is the tier telling you
   // where you are rather than a gap in the table.
-  ["lynx", new Set(["scarp-raven", "mountain-chough", "hill-eagle", "eagle-owl", "bone-breaker", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
+  ["lynx", new Set(["scarp-raven", "mountain-chough", "hill-eagle", "eagle-owl", "bone-breaker", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan", "stone-adder", "the-gravid-adder"])],
   // The owl takes the stoat, which is the one honest way to put a predator on
   // top of another predator at this size: 40hp/5-8 against 18hp/3-5, at night,
   // silently, is not a fight the stoat is in.
-  ["eagle-owl", new Set(["rat", "mountain-hare", "snow-hare", "ptarmigan", "ermine"])],
+  ["eagle-owl", new Set(["rat", "mountain-hare", "snow-hare", "ptarmigan", "ermine", "stone-adder", "the-gravid-adder"])],
   // THE WOOD'S OWL (mig 321) eats the two small things it was brought in for: the
   // sloth that will not run and the hedgehog that will not open.
   ["tawny-owl", new Set(["rat", "wood-sloth", "hedgehog"])],
@@ -4989,7 +4989,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // The glutton kills small and EATS big — SCAVENGERS is where it actually
   // feeds, off whatever the wolves left. The stoat is on the list for the same
   // reason the owl has it: 50hp/6-9 against 18hp/3-5 is not a fight.
-  ["glutton", new Set(["scarp-raven", "mountain-chough", "bone-breaker", "ermine", "mountain-hare", "snow-hare", "ptarmigan"])],
+  ["glutton", new Set(["scarp-raven", "mountain-chough", "bone-breaker", "ermine", "mountain-hare", "snow-hare", "ptarmigan", "stone-adder", "the-gravid-adder"])],
   // TIER FOUR (mig 233). One row, because one of the tier's four new lines
   // hunts at all. 26hp/3-5 against a chough at 12/1-2 and a hare at 12/1-2 is
   // clean, and it is still not how the fox mostly eats — SCAVENGERS is.
@@ -5005,6 +5005,13 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // outstats a rat alone, the gill adder only just (14hp/1-4 against 11/2-3).
   ["the-gravid-adder", new Set(["mountain-chough", "ptarmigan", "ermine", "rat"])],
   ["gill-adder", new Set(["rat"])],
+  // THE SNAKES ARE HUNTED (rome, 2026-11-08: only the roaming coyote took one).
+  // Added to the rows of the eagle, the eagle owl, the lynx, the glutton, the
+  // hill fox, the wildcat and the marsh hound, each of which outstats the snake
+  // it takes; and the heron, which grazes the beck and now takes the gill adder
+  // too (16hp/1-3 against 14/1-4, the narrowest win on the table). A snake is a
+  // small meal (SMALL_PREY), whoever eats it.
+  ["grey-heron", new Set(["gill-adder"])],
   ["fen-viper", new Set(["rat"])],
   // THE CAVE LION HUNTS (2026-08-25). It had no row at all — the only apex
   // mammal on the hill that took nothing living, while its smaller neighbours
@@ -5161,7 +5168,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
   ["bittern", new Set(["ford-eel", "silver-eel"])],
   ["great-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],       // it has taken a rat off the parapet, and it did not need to land
-  ["marsh-hound", new Set(["rat", "oystercatcher", "bittern", "wrack-crab", "devil-crab"])],
+  ["marsh-hound", new Set(["rat", "oystercatcher", "bittern", "wrack-crab", "devil-crab", "fen-viper"])],
   // THE RARE BLOOD HUNTS WHAT ITS OWN LINE HUNTS (mig 212). Listed out rather
   // than resolved through variantBase, because that is how this table has
   // always worked — the roe and the white roe, the rat and the fleet rat are

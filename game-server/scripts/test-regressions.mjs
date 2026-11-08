@@ -2338,6 +2338,17 @@ try {
     const a = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
     assert.match(a, /\?\? \(creature\.hunger >= deadEatsAt\(tmpl\.id\) \? towardBody\(z, creature, tmpl, exits\) : undefined\);/, 'wired into the wander');
   });
+  // 2026-11-08: only the roaming coyote hunted snakes; eight hunters take them
+  // now, and a snake is a small meal.
+  check('the snakes are hunted, and a snake is a small meal', () => {
+    const takes = { 'hill-eagle': ['stone-adder', 'gill-adder'], 'eagle-owl': ['stone-adder', 'the-gravid-adder'], lynx: ['stone-adder', 'the-gravid-adder'],
+      glutton: ['stone-adder', 'the-gravid-adder'], 'hill-fox': ['gill-adder'], wildcat: ['gill-adder'], 'grey-heron': ['gill-adder'], 'marsh-hound': ['fen-viper'] };
+    for (const [hunter, snakes] of Object.entries(takes)) for (const sn of snakes) assert.ok(PREYS_ON.get(hunter)?.has(sn), hunter + ' takes ' + sn);
+    for (const sn of ['stone-adder', 'the-gravid-adder', 'gill-adder', 'fen-viper']) assert.ok(SMALL_PREY.has(sn), sn + ' is a small meal');
+    assert.ok(GRAZERS.has('grey-heron'), 'the heron still grazes');
+    const fl = readFileSync(new URL('../src/flight.ts', import.meta.url), 'utf8');
+    assert.match(fl, /if \(eats\?\.size && z\.creaturesInRoom\(room\)\.some\([^\n]+\)\) return true;\n(\s*\/\/.*\n)*\s+if \(GRAZERS\.has\(c\.templateId\) \|\| GRAZERS\.has\(line\)\) return forageGround/, 'a bird that hunts and grazes flies to either');
+  });
   function studyWorld() {
     const { db, D1 } = sqliteD1();
     db.exec("CREATE TABLE player_accounts(pubkey TEXT, template_id TEXT, at INTEGER, PRIMARY KEY(pubkey, template_id)); ALTER TABLE players ADD COLUMN accounts INTEGER NOT NULL DEFAULT 0; INSERT INTO players(pubkey, name) VALUES ('me', 'Rome')");

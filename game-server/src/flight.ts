@@ -22,8 +22,10 @@ const lineOf = (z: ZoneDO, id: string): string => FOOD_FLIERS.has(id) ? id : (z.
 /** Whether this room feeds this bird right now. */
 function foodIn(z: ZoneDO, c: Creature, line: string, room: string): boolean {
   const eats = PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line);
-  if (eats?.size) return z.creaturesInRoom(room).some((o) => eats.has(o.templateId) && !o.hidden);
+  if (eats?.size && z.creaturesInRoom(room).some((o) => eats.has(o.templateId) && !o.hidden)) return true;
+  // A bird that grazes and hunts both (the heron) flies to either (rome, 2026-11-08).
   if (GRAZERS.has(c.templateId) || GRAZERS.has(line)) return forageGround(z, c.templateId, room);
+  if (eats?.size) return false;
   return (z.traces.get(room) ?? []).some(edibleBody); // bodies, never the bone floors (rome, 2026-11-08)
 }
 
