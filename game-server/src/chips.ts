@@ -202,12 +202,13 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     }
     dead.push(tr.id);
   }
-  // A KILL BEING EATEN IS DRAWN UNDER ITS EATER (rome, 2026-11-08: an owl on its
-  // kill over bare ground). A hunter's kill leaves only blood and hair, no body,
-  // so while the meal lasts the picture lays what is being eaten; it goes when
-  // the meal ends (the beat refreshes the picture then).
+  // A BODY BEING EATEN IS DRAWN UNDER ITS EATER (rome, 2026-11-08: an owl on its
+  // kill over bare ground, then a dancer on a carcass the same). A hunter's kill
+  // leaves only blood and hair, no body, and a carcass eaten off that sign is the
+  // same, so while the meal lasts the picture lays what is being eaten, kill or
+  // carcass; it goes when the meal ends (the beat refreshes the picture then).
   for (const c of z.creaturesInRoom(session.roomId)) {
-    if (c.eatingOn !== "kill" || !c.eatingWhat || !ai.eatingNow(c) || dead.includes(c.eatingWhat)) continue;
+    if ((c.eatingOn !== "kill" && c.eatingOn !== "carrion") || !c.eatingWhat || !ai.eatingNow(c) || dead.includes(c.eatingWhat)) continue;
     dead.unshift(c.eatingWhat);
     if (dead.length > 3) dead.pop();
   }

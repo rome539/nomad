@@ -382,6 +382,11 @@ export async function cmdFill(z: ZoneDO, session: Session, arg = ""): Promise<vo
   if (lantern === lit) {
     session.litUntil! += LANTERN_FAT_MS;
     session.torchWarned = false;
+    // ...and the well is written down now (rome, 2026-11-08: filled, and five
+    // minutes later the flame and all the fat were gone). A burning well lived
+    // only in memory, so a restart or a dropped connection put the lantern back
+    // to what it held when it was lit, the new lump and all lost with it.
+    saveWell(z, session);
   } else {
     lantern.fuel = (lantern.fuel ?? 0) + LANTERN_FAT_MS;
     await setItemFuel(z.env.DB, lantern.rowId, lantern.fuel);

@@ -1907,6 +1907,7 @@ export class ZoneDO implements DurableObject {
     // hears it. Deliberate: a named logout broadcast tells the network exactly
     // when you stopped watching your own body. The room sees it; that's enough.
     this.actorFeed(session, session.roomId, `${session.name} fades from the world.`, "who");
+    light.saveWell(this, session); // a burning lantern keeps what it had not burned, as a shutter does
     const fadeAt = Math.min(Date.now(), session.linkdeadUntil ?? Date.now());
     const e = session.exhaustion ??= exhaustion.readExhaustion(undefined, fadeAt);
     if (e.mode === "combat") e.at = Math.min(e.at, fadeAt);

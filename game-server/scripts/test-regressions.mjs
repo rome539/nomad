@@ -2204,7 +2204,7 @@ try {
   // its kill over bare ground; the kill is drawn under it while the meal lasts.
   check('a kill being eaten is drawn under its eater, and every kill names what it was', () => {
     const ch = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
-    assert.match(ch, /if \(c\.eatingOn !== "kill" \|\| !c\.eatingWhat \|\| !ai\.eatingNow\(c\) \|\| dead\.includes\(c\.eatingWhat\)\) continue;\n\s+dead\.unshift\(c\.eatingWhat\);/, 'drawn while eaten');
+    assert.match(ch, /if \(\(c\.eatingOn !== "kill" && c\.eatingOn !== "carrion"\) \|\| !c\.eatingWhat \|\| !ai\.eatingNow\(c\) \|\| dead\.includes\(c\.eatingWhat\)\) continue;\n\s+dead\.unshift\(c\.eatingWhat\);/, 'drawn while eaten');
     const a = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
     assert.match(a, /fedFrom1 - creature\.hunger, undefined, kill\.prey\)/, 'the bear on the wolves kill');
     assert.match(a, /fedFrom4 - creature\.hunger, undefined, victim\.templateId\)/, 'a run-down kill');
@@ -2249,6 +2249,14 @@ try {
     const fn = v.slice(v.indexOf('export async function lookKeepingItem'), v.indexOf('return null;', v.indexOf('export async function lookKeepingItem')));
     assert.match(fn, /carried\.itemId === LANTERN_ITEM \? " " \+ light\.wellWords\(light\.wellOf\(session, carried\)\)/, 'in the pack');
     assert.match(fn, /it\.itemId === LANTERN_ITEM \? " " \+ light\.wellWords\(it\.fuel \?\? 0\)/, 'in the lockbox or vault');
+  });
+  // 2026-11-08: a lantern filled while lit lost the lump and its unburned fat
+  // when the connection or the server went: the burning well lived only in memory.
+  check('a burning lantern writes its well down when filled and when you leave', () => {
+    const l = readFileSync(new URL('../src/light.ts', import.meta.url), 'utf8');
+    assert.match(l, /session\.litUntil! \+= LANTERN_FAT_MS;\n\s+session\.torchWarned = false;\n(\s*\/\/.*\n)*\s+saveWell\(z, session\);/, 'filled while burning');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /fades from the world\.`, "who"\);\n\s+light\.saveWell\(this, session\);/, 'leaving the world');
   });
   function studyWorld() {
     const { db, D1 } = sqliteD1();
