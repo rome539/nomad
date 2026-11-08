@@ -2399,9 +2399,25 @@ try {
   // 2026-11-08: every herd of a line ended up in two or three homes at the foot.
   check('herds keep apart, and a herd near full takes no newcomer; packs as before', () => {
     const g = readFileSync(new URL('../src/groups.ts', import.meta.url), 'utf8');
-    assert.match(g, /const herd = MOUNTAIN_GROUPS\.has\(line\) && !PREYS_ON\.has\(line\);/, 'herds only');
+    assert.match(g, /const herd = MOUNTAIN_GROUPS\.has\(line\) && \(!PREYS_ON\.has\(line\) \|\| FLOCKS\.has\(line\)\);/, 'herds and flocks only');
     assert.match(g, /const spaced = all\.filter\(\(r\) => !barred\.has\(r\) && !apart\.has\(r\)\);\n\s+const unbarred = spaced\.length \? spaced : all\.filter/, '4 rooms from another herd of its line, while there is room');
-    assert.match(g, /const spare = PREYS_ON\.has\(line\) \? 0 : 1;/, 'a herd keeps one place spare, a pack none');
+    assert.match(g, /const spare = PREYS_ON\.has\(line\) && !FLOCKS\.has\(line\) \? 0 : 1;/, 'a herd keeps one place spare, a pack none');
+  });
+  // 2026-11-08: the birds bunched: chough flocks did not keep apart, and ravens,
+  // vultures and bone-breakers roosted on the same few rooms.
+  check('the birds spread out: flocks keep apart, roosting birds take the least crowded ground', () => {
+    const g = readFileSync(new URL('../src/groups.ts', import.meta.url), 'utf8');
+    assert.match(g, /const herd = MOUNTAIN_GROUPS\.has\(line\) && \(!PREYS_ON\.has\(line\) \|\| FLOCKS\.has\(line\)\);/, 'chough flocks keep apart');
+    assert.match(g, /\} else if \(SPREAD_ROOSTS\.has\(line\)\) \{/, 'roosting birds count their own kind round each room');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    for (const b of ['scarp-raven', 'carrion-vulture', 'bone-breaker']) assert.ok(zd.match(/export const SPREAD_ROOSTS = new Set<string>\(\[[^\]]*\]\)/)[0].includes(`"${b}"`), b);
+  });
+  // 2026-11-08: the Boulder Gate was a hideaway; it is ordinary mountain ground.
+  check('the Boulder Gate is no hideaway, in the room source and the database', () => {
+    const src = readFileSync(new URL('../regions/mountain-2.rooms', import.meta.url), 'utf8');
+    const block = src.slice(src.indexOf('## the-boulder-gate |'), src.indexOf('\n## ', src.indexOf('## the-boulder-gate |') + 5));
+    assert.ok(!/^!safe$/m.test(block), 'the source does not mark it safe');
+    assert.match(readFileSync(new URL('../migrations/376_the_boulder_gate_is_no_hideaway.sql', import.meta.url), 'utf8'), /UPDATE rooms SET is_safe = 0 WHERE id = 'the-boulder-gate';/);
   });
   function studyWorld() {
     const { db, D1 } = sqliteD1();

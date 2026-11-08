@@ -2419,6 +2419,12 @@ export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox
 // another of its kind, or a smaller hunter after the same food: mostly a chase,
 // sometimes a bite, never a kill. Run off GROUND_DRIVEN_LEAVES times, the
 // intruder draws a new home. The wolf packs keep their own rule (holdGround).
+// THE BIRDS SPREAD OUT TOO (rome, 2026-11-08). Choughs live in flocks and keep
+// apart as the herds do (groups.pickHome); ravens, vultures and bone-breakers hold
+// no land, but each draws its home on the ground least crowded with its own kind,
+// so they do not all roost on the same few rooms of the bone ground and the crags.
+export const FLOCKS = new Set<string>(["mountain-chough"]);
+export const SPREAD_ROOSTS = new Set<string>(["scarp-raven", "carrion-vulture", "bone-breaker"]);
 export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl"]);
 export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a bite in first
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of

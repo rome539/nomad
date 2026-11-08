@@ -18,7 +18,7 @@ import { ate, creatureMoves, hungers, mountainHomes, preyFalls } from "./ai";
 import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
   DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
-  PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES,
+  PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES, FLOCKS, SPREAD_ROOSTS,
   PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS,
 } from "./zone-data";
 
@@ -83,6 +83,12 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
       if (z.regionOf(c.home) === "mountain" && keepsOff(z, other, line)) held.set(c.home, other === line ? 3 : 1);
     }
     for (const [h, w] of held) for (const r of z.nearby(h, TERRITORY_RADIUS).keys()) heldBy.set(r, (heldBy.get(r) ?? 0) + w);
+  } else if (SPREAD_ROOSTS.has(line)) {
+    // Every home of its own kind crowds the ground round it, so the least crowded is drawn.
+    for (const c of z.creatures.values()) {
+      if (!c.home || lineOf(z, c.templateId) !== line || z.regionOf(c.home) !== "mountain") continue;
+      for (const r of z.nearby(c.home, TERRITORY_RADIUS).keys()) heldBy.set(r, (heldBy.get(r) ?? 0) + 1);
+    }
   }
   for (const [room, until] of Object.entries(state.gone)) {
     if (until <= now) { delete state.gone[room]; continue; }
@@ -95,7 +101,7 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
   // every other group of its line, as hunters keep their land, while there is
   // such ground; with none, anywhere it fits.
   const apart = new Set<string>();
-  const herd = MOUNTAIN_GROUPS.has(line) && !PREYS_ON.has(line); // grazing herds, not the packs
+  const herd = MOUNTAIN_GROUPS.has(line) && (!PREYS_ON.has(line) || FLOCKS.has(line)); // herds and flocks, not the packs
   if (herd) for (const g of Object.values(state.packs)) {
     if (g.line === line) for (const r of z.nearby(g.home, TERRITORY_RADIUS).keys()) apart.add(r);
   }
@@ -138,7 +144,7 @@ export function plan(z: ZoneDO, line: string, now: number): Plan | undefined {
     const counts = memberCounts(z);
     // A herd with one place left takes no more newcomers: the next starts a herd of
     // its own on fresh ground (rome, 2026-11-08). A pack still fills to its size.
-    const spare = PREYS_ON.has(line) ? 0 : 1;
+    const spare = PREYS_ON.has(line) && !FLOCKS.has(line) ? 0 : 1;
     const open = Object.entries(z.groups.packs).filter(([id, g]) => g.line === line && (counts.get(id) ?? 0) < g.size - spare);
     if (open.length) {
       const [id, g] = open[randInt(0, open.length - 1)];
