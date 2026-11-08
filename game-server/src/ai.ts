@@ -52,7 +52,7 @@ import {
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
-  RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, MOUNTAIN_ROAMERS, MOUNTAIN_GROUPS, FOOD_FLIERS, BIRD_CATCH_MULT, SETTLES_BY_GRAZING, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, NOISE_SHY, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, MOUNTAIN_ROAMERS, MOUNTAIN_GROUPS, FOOD_FLIERS, BIRD_CATCH_MULT, SETTLES_BY_GRAZING, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
@@ -496,6 +496,7 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
       // covers the wood's roe deer, which were "throwing themselves into the
       // fight" and then immediately fleeing it (2026-08-02).
       if (bolts(z, tmpl.id, creature.roomId)) continue;
+      if (NOISE_SHY.has(tmpl.id)) continue; // a stag or a goat does not join a fight it is not in (rome, 2026-11-08)
       // ...and in the QUIET a great deal more of them do: there is nothing else
       // to hear. The silence is not safety, it is a better microphone.
       if (!chance(NOISE_HEED_ODDS * (events.quieted(z, creature.roomId) ? QUIET_HEED_MULT : 1))) continue;
@@ -1426,6 +1427,9 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
       }
     }
+    // Every way it may take before its ground narrows them: the place-fear below
+    // falls back on these, so a feared room is never its only way home.
+    const unanchored = exits;
     // Territory: idle wandering keeps to the ground around the den. Beyond the
     // edge (fled, or freshly walked in from a dark mouth), every idle step is
     // a step home instead — this is what keeps the deep in the deep, and what
@@ -1555,8 +1559,15 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       if (!creature.avoids.length) creature.avoids = undefined;
       else {
         const feared = new Set(creature.avoids.map((a) => a.roomId));
-        const safe = exits.filter((e) => !feared.has(e.to_room) || e.to_room === creature.home);
-        if (safe.length) exits = safe;
+        // HOME IS NO REFUGE WHILE A FIGHT IS ON IN IT, and a feared room is
+        // never taken because it was the only way toward its ground (rome,
+        // 2026-11-08: a hind walked back into a fight again and again, because
+        // its daily round and its home both ran through that room). Fear is
+        // still never a cage: with every way feared, it goes where it must.
+        const ok = (e: { to_room: string }) => !feared.has(e.to_room) || (e.to_room === creature.home && !fightIn(z, e.to_room));
+        const safe = exits.filter(ok);
+        const anyWay = safe.length ? safe : unanchored.filter(ok);
+        if (anyWay.length) exits = anyWay;
       }
     }
     // Ash-marked: it was burned once — it will not cross a lit room (mob trait
@@ -2548,6 +2559,17 @@ export function crouchHolds(z: ZoneDO, creature: Creature): void {
 export function walksAnyway(creature: Creature): boolean {
   if (PATROLS[creature.templateId]) return true;                                  // its route is its ground
   return !!creature.home && creature.roomId !== creature.home;           // displaced: it goes back
+}
+
+/** A fight is going on in this room: a wanderer in it is fighting. */
+export function fightIn(z: ZoneDO, roomId: string): boolean {
+  for (const s of z.sessions.values()) if (s.roomId === roomId && z.inCombat(s)) return true;
+  return false;
+}
+
+/** Shy of a fight's noise: a runner, or prey that stands only when cornered (NOISE_SHY). */
+export function shiesNoise(templateId: string): boolean {
+  return RUNNERS.has(templateId) || NOISE_SHY.has(templateId);
 }
 
 export function bolts(z: ZoneDO, templateId: string, roomId: string): boolean {
@@ -4001,7 +4023,7 @@ export function spookFromNoise(z: ZoneDO, sourceRoomId: string, now: number): vo
     const world = z.world;
     if (!world) return;
     for (const c of z.creatures.values()) {
-      if (!(HOARDERS.has(c.templateId) || RUNNERS.has(c.templateId)) || c.target) continue;
+      if (!(HOARDERS.has(c.templateId) || shiesNoise(c.templateId)) || c.target) continue;
       const here = c.roomId === sourceRoomId;
       const adjacent = !here && (world.exits.get(c.roomId) ?? []).some(
         (e) => e.to_room === sourceRoomId && (!e.key_item || z.openDoors.has(`${c.roomId}:${e.dir}`)),

@@ -9560,7 +9560,7 @@ export class ZoneDO implements DurableObject {
       // A RUNNER is not one of the "good majority" whose ears prick up. Its whole
       // nature is bolting, and a deer that walks toward a fight is not a deer
       // (rome, 2026-08-02). spookFromNoise has already sent it the other way.
-      if (RUNNERS.has(c.templateId)) continue;
+      if (ai.shiesNoise(c.templateId)) continue; // ...nor the prey that stands only when cornered (NOISE_SHY)
       // Not every ear pricks up. A good majority come to look; the rest keep
       // to their own business — so a fight draws a crowd, not the whole zone.
       // A MARKED wanderer (the toll clerk's brand) is the exception: the road

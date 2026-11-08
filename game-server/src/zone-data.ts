@@ -2496,6 +2496,12 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // The WHITE ROE is deliberately NOT here (mig 141). Everything in the wood that
 // can bolt, bolts — so the rarest thing on the surface is the one that stands in
 // the open and looks back at you. Its whole effect is the omission.
+// SHY OF A FIGHT, THOUGH NOT RUNNERS (rome, 2026-11-08: the deer kept walking
+// back into a fight; check the others too). The stags and goats charge when
+// cornered, so they do not bolt at a footstep as RUNNERS do, but no deer or goat
+// walks toward a brawl or joins one: the noise sends them away, as it does a
+// runner. The hedgehog the same: it curls, it does not come to look.
+export const NOISE_SHY = new Set(["red-stag", "wood-stag", "feral-goat", "old-billy", "hedgehog"]);
 export const RUNNERS = new Set(["fleet-rat", "roe-deer",
   // THE MOUNTAIN, TIER FOUR (mig 233). It shouts and it goes; it does not fight
   // and it never joins one.
