@@ -15,9 +15,9 @@ const [,, scenario='new', hoursArg='72'] = process.argv;
 const HOURS=Number(hoursArg), root=new URL('..',import.meta.url).pathname;
 const req=createRequire(join(root,'package.json')); const {build}=req('esbuild'); const {DatabaseSync}=req('node:sqlite');
 const dir=await mkdtemp(join(tmpdir(),'nomad-sim-')); const out=join(dir,'b.mjs');
-await build({stdin:{contents:"export {ZoneDO} from './zone'; export * as zd from './zone-data'; export * as md from './mountain-ground'; export * as beasts from './beasts';",resolveDir:join(root,'src'),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:out,logLevel:'silent',external:['cloudflare:*'],
+await build({stdin:{contents:"export {ZoneDO} from './zone'; export * as zd from './zone-data'; export * as md from './mountain-ground'; export * as beasts from './beasts'; export * as groups from './groups'; export * as ai from './ai';",resolveDir:join(root,'src'),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:out,logLevel:'silent',external:['cloudflare:*'],
  plugins:[{name:'text',setup(b){b.onLoad({filter:/(?:nip46-bunker|(?:vault|nostr|qrcode)-bundle)\.js$/},async a=>({contents:await readFile(a.path,'utf8'),loader:'text'}));}}]});
-const {ZoneDO,zd,md,beasts}=await import(pathToFileURL(out));
+const {ZoneDO,zd,md,beasts,groups,ai}=await import(pathToFileURL(out));
 const RD=Date; let NOW=RD.UTC(2026,10,6,17);
 globalThis.Date=class extends RD{constructor(...a){a.length?super(...a):super(NOW);} static now(){return NOW;}};
 const log=console.log; console.log=()=>{}; console.warn=()=>{};
@@ -44,7 +44,7 @@ const W=z.world; const mt=(r)=>z.regionOf(r)==='mountain';
 const LINES=['rat','mountain-hare','ptarmigan','red-hind','feral-goat','mountain-chough','scarp-raven','bone-breaker','hill-fox','wildcat','ermine','snow-fox','eagle-owl','hill-eagle','lynx','glutton','hill-wolf'];
 const lineOf=(c)=>LINES.includes(c.templateId)?c.templateId:(z.variantBase.get(c.templateId)??c.templateId);
 const rows={}; for(const s of W.mobSpawns) if(mt(s.room_id)) rows[s.template_id]=(rows[s.template_id]??0)+1;
-const HAMLET=new Set(['the-shiel-foot','the-shiel-street','the-shiel-backs','the-burnt-shiel','the-shiel-head','the-herds-yard','the-hill-cross','the-forge-yard','the-high-croft','the-chapel-shelf','the-lost-toft','the-fold-pound','the-terrace-strips','the-in-field']);
+const HAMLET=new Set(zd.SHIELING_HAMLET_ROOMS); // the same rooms `beasts` counts
 const ev={flights:{},landings:0,chase:0,caught:0,stolen:0,errors:0,deaths:{},births:0};
 const of=z.roomFeed.bind(z); z.roomFeed=function(r,t,...a){ if(typeof t==='string'){
   if(/opens its wings and is gone/.test(t)){const m=t.match(/^An? (.*?) opens/);ev.flights[m?.[1]??'?']=(ev.flights[m?.[1]??'?']??0)+1;} else if(/comes down out of the sky/.test(t))ev.landings++;
@@ -53,15 +53,18 @@ const of=z.roomFeed.bind(z); z.roomFeed=function(r,t,...a){ if(typeof t==='strin
 const snap=(h)=>{const n={},hungry={},rooms=new Map();let aloft=0;const off=[];
  for(const c of z.creatures.values()){const home=c.home??c.roomId; if(!mt(home))continue; const l=lineOf(c); if(!LINES.includes(l))continue; n[l]=(n[l]??0)+1; if(c.hunger>=50)hungry[l]=(hungry[l]??0)+1; if(c.aloft!==undefined)aloft++; else if(zd.FOOD_FLIERS.has(l)) rooms.set(c.roomId,(rooms.get(c.roomId)??0)+1);
   if(scenario!=='old'&&md.settlesOn&&zd.MOUNTAIN_ROAMERS.has(l)&&!md.settlesOn(l,home))off.push(l);}
- const packs=Object.values(z.groups.packs).filter(g=>g.line==='hill-wolf');const size=new Map();let lone=0,hamlet=0,undec=0;
- for(const c of z.creatures.values()){if(lineOf(c)!=='hill-wolf')continue;if(c.group)size.set(c.group,(size.get(c.group)??0)+1);else if(c.lone)lone++;else undec++;if(HAMLET.has(c.home))hamlet++;}
+ const packs=Object.values(z.groups.packs).filter(g=>g.line==='hill-wolf');const size=new Map();let lone=0,hamlet=0,undec=0,standing=0;
+ for(const c of z.creatures.values()){if(lineOf(c)!=='hill-wolf')continue;if(c.group)size.set(c.group,(size.get(c.group)??0)+1);else if(c.lone)lone++;else undec++;if(HAMLET.has(c.home))hamlet++;if(HAMLET.has(c.roomId))standing++;}
+ // Where a wolf drawing a home now would go: the hamlet's share of draws, against its share of the ground.
+ let draws=0,inH=0;for(let k=0;k<400;k++){const r=groups.pickHome(z,'hill-wolf',NOW);if(r){draws++;if(HAMLET.has(r))inH++;}}
+ const homes=ai.mountainHomes(z,'hill-wolf');const hShare=homes.length?homes.filter(r=>HAMLET.has(r)).length/homes.length:NaN;
  const tot={},wh={};for(const c of z.creatures.values()){const l=lineOf(c);if(!['scarp-raven','feral-goat','rat'].includes(l))continue;tot[l]=(tot[l]??0)+1;const r=z.regionOf(c.home??c.roomId);(wh[l]??={})[r]=(wh[l][r]??0)+1;}
  const allRows={},rowsBy={};for(const s of W.mobSpawns){if(['scarp-raven','feral-goat','rat'].includes(s.template_id)){allRows[s.template_id]=(allRows[s.template_id]??0)+1;const r=z.regionOf(s.room_id);(rowsBy[s.template_id]??={})[r]=(rowsBy[s.template_id][r]??0)+1;}}
  for(const l of Object.keys(tot))log(`  COUNT ${l}: whole world ${tot[l]}/${allRows[l]}  living by region ${JSON.stringify(wh[l])}  rows by region ${JSON.stringify(rowsBy[l])}`);
  const topBird=[...rooms].sort((a,b)=>b[1]-a[1])[0];
  log(`\n[${scenario}] hour ${h}  errors=${ev.errors}  birds up now=${aloft}  busiest bird room=${topBird?topBird[0]+' ('+topBird[1]+')':'-'}  on wrong ground (old animals)=${off.length}`);
  log('  '+LINES.map(l=>`${l} ${n[l]??0}/${rows[l]??0}${hungry[l]?` (${hungry[l]} hungry)`:''}`).join(' | '));
- log(`  wolves: packs ${[...size.values()].join(',')||'-'}  lone ${lone}  unsorted ${undec}  living in hamlet ${hamlet}  | flights ${JSON.stringify(ev.flights)} | pack chases ${ev.chase} caught ${ev.caught} meals stolen ${ev.stolen}`);
+ log(`  wolves: packs ${[...size.values()].join(',')||'-'}  lone ${lone}  unsorted ${undec}  living in hamlet ${hamlet}  standing in hamlet ${standing}  new home draws in hamlet ${draws?Math.round(100*inH/draws):'-'}% (hamlet is ${Math.round(100*hShare)}% of wolf ground)  | flights ${JSON.stringify(ev.flights)} | pack chases ${ev.chase} caught ${ev.caught} meals stolen ${ev.stolen}`);
 };
 const STEP=zd.SLOW_ECOLOGY_MS; const steps=HOURS*3600_000/STEP; let tk=0, worst=0; const t0=RD.now();
 snap(0);

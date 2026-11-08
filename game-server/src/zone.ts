@@ -1110,7 +1110,7 @@ export class ZoneDO implements DurableObject {
         if (ai.hungers(c.templateId)) {
           c.hunger = Math.min(HUNGER_MAX, c.hunger + HUNGER_PER_MIN * (SLOW_EATERS[c.templateId] ?? 1) * mins);
           ai.digest(this, c, t);
-          if (c.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, c, true, t);
+          if (c.hunger >= ai.eatsAt(c.templateId)) ai.creatureEatsHere(this, c, true, t);
         } else c.hunger = 0; // clears whatever the old rules already banked, so a live drowner isn't stuck "restless" forever
         // Same "stays put" rule as the live tick: the drowned holds its water and
         // brooders keep their nest, so the offline sim can't drift them out of
@@ -1180,12 +1180,10 @@ export class ZoneDO implements DurableObject {
         const ms = ai.forgetMs(this, tmpl);
         c.grudges = c.grudges.filter((g) => now - g.at < ms);
       }
-      if (c.hunger >= HUNGRY_AT) {
-        if (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId)) {
-          ai.scavengerFeeds(this, c, true);
-        }
-        ai.creatureEatsHere(this, c, true, now);
+      if (c.hunger >= HUNGRY_AT && (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId))) {
+        ai.scavengerFeeds(this, c, true);
       }
+      if (c.hunger >= ai.eatsAt(c.templateId)) ai.creatureEatsHere(this, c, true, now);
       if (BROODERS.has(c.templateId)) ai.broodBirths(this, c, now);
       // The hoarder works the FAR world too, and mostly there: the scoop refuses
       // to run with a player in the room, so a thing that only collected inside
@@ -5956,7 +5954,7 @@ export class ZoneDO implements DurableObject {
         // The bone-country remembers its dead: a hollow thing, idle with a living
         // ear near, breathes a name off the room's bloodstain.
         if (HOLLOW.has(creature.templateId)) ai.deadRemembers(this, creature, now);
-        if (creature.hunger >= HUNGRY_AT) ai.creatureEatsHere(this, creature, false);
+        if (creature.hunger >= ai.eatsAt(creature.templateId)) ai.creatureEatsHere(this, creature, false);
         // The food web: a predator turns on weaker prey sharing its room. If it
         // strikes, that's its action this tick — it doesn't also wander.
         // A grip already taken outranks looking for a fresh one — it worries

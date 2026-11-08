@@ -1042,6 +1042,10 @@ export const LB_ACCOUNT_PTS = 10; // a full journal account, once per kind (rome
 //
 // A meal is now worth what it was. A nibble takes the edge off and the animal
 // is back at the ground within the hour; only a kill fills anything.
+// A GRAZER EATS AS IT GOES (rome, 2026-11-08): it does not wait to be hungry,
+// it crops whenever it is on grass and not full, so it shows hunger only when
+// the grass round it has run out. Everything else still eats at HUNGRY_AT.
+export const GRAZE_AT = 20;
 export const MEAL_GRAZE = 25;   // gnawed ground, carrion floor — the food web's floor, and it barely counts
 export const MEAL_ITEM = 50;    // a dropped meal off the stones
 export const MEAL_CORPSE = 75;  // a whole body, and it still isn't a kill
