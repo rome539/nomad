@@ -73,7 +73,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, DAY_SKY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_END_ODDS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -1336,6 +1336,20 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   // An open sky only - a sky asked by name (sun, moon, stars) was answered above.
   if (/^(the )?(sky|cloud|clouds|weather|lid|overcast)?$/i.test((arg ?? "").trim())) return SKY_HOURS[skyBand()]!;
   return null;
+}
+
+// THE PART OF THE DAY, said under a room's words as the night line is at night
+// (rome, 2026-11-08). The same grey the picture uses (zone artSkyFor): covered,
+// the after-rain cloud not yet cleared, rain next door, or weather overhead.
+// Nothing at night (the night line has it) or in the eclipse (its own sky).
+export function dayLine(z: ZoneDO, roomId: string, now = Date.now()): string {
+  if (isNight(now) || eclipsePhase(now) === "active") return "";
+  const grey = skyCovered(now) || raining(z, roomId) || foggy(z, roomId) || snowed(z, roomId)
+    || (wxPhase(z, "rain", roomId) === "aftermath" && !afterRainCleared(z, roomId)) || !!rainNearby(z, roomId);
+  if (isDawn(now)) return grey ? DAY_SKY.dawnGrey : DAY_SKY.dawn;
+  if (isDusk(now)) return grey ? DAY_SKY.duskGrey : DAY_SKY.dusk;
+  const part = Math.min(2, Math.max(0, skyBand(now) - 1));
+  return (grey ? DAY_SKY.grey : skyClear(now) ? DAY_SKY.clear : DAY_SKY.open)[part]!;
 }
 
 // Ambience while the sky is doing something (zone's ambientLine reads this

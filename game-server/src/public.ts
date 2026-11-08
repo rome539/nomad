@@ -15980,8 +15980,12 @@ function fitMobRow() {
     var slide = lo < floorL ? floorL - lo : hi > floorR ? floorR - hi : 0;
     if (slide) xs = xs.map(function (v) { return v + slide; });
     var placedRank = [];
+    // STAGGERED INSIDE A RANK TOO (rome, 2026-11-08: four in a straight line read
+    // as a lineup). With three or more side by side, every other one stands a
+    // little forward, so a group stands like a group.
+    var stag = items.length >= 3 ? forward * .22 : 0;
     items.forEach(function (item, k) {
-      put(item, xs[k], depth, false, 10 + r);
+      put(item, xs[k], depth + (k % 2 ? stag : 0), false, 10 + r * 2 + (k % 2 && stag ? 1 : 0));
       // Where it actually stands: nearly the whole drawn frame - a sword arm,
       // a tail, a lantern all read as the creature when a body lies under them.
       taken.push([xs[k] + slotW(item) * .12, xs[k] + slotW(item) * .88]);

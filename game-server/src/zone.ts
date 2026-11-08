@@ -84,6 +84,7 @@ import * as gate from "./gate";
 import * as ai from "./ai";
 import * as simstore from "./simstore";
 import * as light from "./light";
+import * as grass from "./grass";
 import * as lore from "./lore";
 import { soundscapeFor, soundKey } from "./sound";
 import * as chips from "./chips";
@@ -1180,7 +1181,7 @@ export class ZoneDO implements DurableObject {
         const ms = ai.forgetMs(this, tmpl);
         c.grudges = c.grudges.filter((g) => now - g.at < ms);
       }
-      if (c.hunger >= HUNGRY_AT && (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId))) {
+      if (c.hunger >= ai.deadEatsAt(c.templateId) && (SCAVENGERS.has(c.templateId) || VERMIN.has(c.templateId) || LURKERS.has(c.templateId))) {
         ai.scavengerFeeds(this, c, true);
       }
       if (c.hunger >= ai.eatsAt(c.templateId)) ai.creatureEatsHere(this, c, true, now);
@@ -8074,6 +8075,11 @@ export class ZoneDO implements DurableObject {
           ? "Night's fully down and the sky over you is open and black — past your light, so is everything else."
           : "Night's fully down and the sky over you is open and black — past the light you're standing in, so is everything else."));
     }
+    // ...AND EVERY OTHER PART OF THE DAY (rome, 2026-11-08), the same look.
+    if (!indoors && OUTDOOR_ROOMS.has(room.id) && !isNight()) {
+      const day = events.dayLine(this, room.id);
+      if (day) lines.push(LORE_LINE + day);
+    }
 
     const exits = world.exits.get(room.id) ?? [];
     // THE SECRET DOORS NAME THEMSELVES (2026-08-25). A door whose state the
@@ -8131,6 +8137,9 @@ export class ZoneDO implements DurableObject {
     }
 
     if (!indoors) lines.push(...this.traceLines(room.id, Date.now()));
+    // A grazing room eaten bare says so, as the grazing sign does (grass.ts).
+    const bare = indoors ? "" : grass.bareLine(this, room.id, Date.now());
+    if (bare) lines.push(bare);
     // Crows coming down over a death somewhere in sight (clues.ts).
     const crows = indoors ? "" : clues.crowsLine(this, room.id);
     if (crows) lines.push(crows);

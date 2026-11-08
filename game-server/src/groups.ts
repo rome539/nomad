@@ -39,7 +39,7 @@ function foodRooms(z: ZoneDO, line: string): Map<string, number> {
     }
     return food;
   }
-  for (const r of SCAVENGERS.has(line) ? CARRION_ROOMS : SURFACE_FORAGE) {
+  for (const r of SURFACE_FORAGE) { // the bone floors feed nobody now (rome, 2026-11-08)
     if (z.world!.rooms.has(r) && z.regionOf(r) === "mountain") food.set(r, 1);
   }
   return food;

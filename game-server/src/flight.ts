@@ -24,7 +24,7 @@ function foodIn(z: ZoneDO, c: Creature, line: string, room: string): boolean {
   const eats = PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line);
   if (eats?.size) return z.creaturesInRoom(room).some((o) => eats.has(o.templateId) && !o.hidden);
   if (GRAZERS.has(c.templateId) || GRAZERS.has(line)) return forageGround(z, c.templateId, room);
-  return CARRION_ROOMS.has(room) || (z.traces.get(room) ?? []).some(edibleBody);
+  return (z.traces.get(room) ?? []).some(edibleBody); // bodies, never the bone floors (rome, 2026-11-08)
 }
 
 /** Open sky over it: a bird does not fly into a cave, a keep or a cellar. */
@@ -61,9 +61,11 @@ function findFood(z: ZoneDO, c: Creature, line: string, nearToo = false): { room
 const eatsOnlyDead = (c: Creature, line: string): boolean =>
   !(PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line))?.size && !GRAZERS.has(c.templateId) && !GRAZERS.has(line);
 
-/** A hunting bird down at a meal with nothing left to hunt: given a minute on the ground, and not blown from a rush or on a chase. */
+/** A bird down at a meal with nothing left there for it: given a minute on the ground, and not blown from a rush or on a chase.
+ *  A hunter's prey walks off; a carrion bird's body is eaten by others before it lands, and it looks again just the same
+ *  (rome, 2026-11-08: a vulture starving at 99 sat out its stay twelve rooms from home with bodies a few rooms off). */
 function preyHasLeft(z: ZoneDO, c: Creature, line: string, now: number): boolean {
-  if (!(PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line))?.size) return false;
+  if (!(PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line))?.size && !eatsOnlyDead(c, line)) return false;
   if (now < c.awayUntil! - FLIGHT_STAY_MS + FLIGHT_LOOK_MS || (c.huntRestUntil ?? 0) > now || c.chase) return false;
   // It walks the ground round where it landed, so prey it can walk to has not left.
   for (const room of z.nearby(c.awayAt ?? c.roomId, TERRITORY_RADIUS).keys()) if (foodIn(z, c, line, room)) return false;

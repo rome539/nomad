@@ -249,7 +249,6 @@ export function keepsRound(z: ZoneDO, c: Creature): boolean {
 /** Whether this room is where this kind of animal feeds. */
 export function feedsAt(templateId: string, room: string): boolean {
   if (ROUND_BASKERS.has(templateId)) return WARM_GROUND.has(room);
-  if (SCAVENGERS.has(templateId) && !HUNTS_NOT_CARRION.has(templateId) && CARRION_ROOMS.has(room)) return true;
   return SURFACE_FORAGE.has(room);
 }
 

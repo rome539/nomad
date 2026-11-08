@@ -1,3 +1,4 @@
+import * as grass from "./grass";
 import * as beasts from "./beasts";
 import * as chronicle from "./chronicle";
 import { hpLabel } from "./util";
@@ -727,6 +728,18 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   if (!blind && FISHING_ROOMS.has(session.roomId)
       && /^(the )?(water|pool|reflection|surface)$/i.test(arg.trim())) {
     return z.send(session, reflection());
+  }
+
+  // THE GRASS (grass.ts): how much a grazing room has left on it, and the
+  // keeper's key the count.
+  if (!blind && grass.isGrassRoom(z, session.roomId) && /^(the )?(grass|grazing|turf|sward|pasture)$/i.test(arg.trim())) {
+    const now = Date.now();
+    // A room with its own close look at its grass keeps it, and the count follows.
+    const own = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
+    if (own) z.send(session, own, "lore");
+    z.send(session, grass.words(grass.left(z, session.roomId, now)));
+    if (session.pubkey === CENSUS_PUBKEY) z.send(session, grass.keeperLine(z, session.roomId, now), "dim");
+    return;
   }
 
   // The road's register. Reading is a LOOK (read/x/examine all land here), so

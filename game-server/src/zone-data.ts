@@ -4997,7 +4997,15 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // TIER FIVE (mig 235). One row again. The adder takes what crosses its rock
   // and nothing else — 22hp/4-7 against a 12hp bird is not a contest, and it is
   // the only way a thing that never moves gets to eat something that does.
-  ["stone-adder", new Set(["mountain-chough", "ptarmigan", "ermine"])],
+  ["stone-adder", new Set(["mountain-chough", "ptarmigan", "ermine", "rat"])],
+  // THE SNAKES TAKE RATS (rome, 2026-11-08): an adder lives on voles and mice,
+  // which here are rats, and no snake in the game ate one. The gill adder and the
+  // fen viper hunted nothing at all (they were filed as grazers), and the gravid
+  // adder, the stone adder's rare blood, had no way to eat whatsoever. Each
+  // outstats a rat alone, the gill adder only just (14hp/1-4 against 11/2-3).
+  ["the-gravid-adder", new Set(["mountain-chough", "ptarmigan", "ermine", "rat"])],
+  ["gill-adder", new Set(["rat"])],
+  ["fen-viper", new Set(["rat"])],
   // THE CAVE LION HUNTS (2026-08-25). It had no row at all — the only apex
   // mammal on the hill that took nothing living, while its smaller neighbours
   // the lynx, the hill-wolf and the glutton all did. It never starved, because
@@ -7845,7 +7853,9 @@ export const GRAZERS = new Set<string>([
   // is the one the ledger itself missed: THIEVES all graze (see the line above)
   // and it was simply never added. The oystercatcher, eel, adder, heron and
   // viper eat what the shore or the gravel puts down — the floor is their food.
-  "strand-thief", "the-wrecker", "oystercatcher", "ford-eel", "silver-eel", "gill-adder", "grey-heron", "fen-viper",
+  // The adder and the viper left this list (rome, 2026-11-08): they hunt rats now
+  // (PREYS_ON), as an adder lives on voles and mice, and never cropped the floor.
+  "strand-thief", "the-wrecker", "oystercatcher", "ford-eel", "silver-eel", "grey-heron",
   // AND THE CRABS, which that same pass missed (rome, 2026-08-13: they are all
   // going hungry). They were left on VERMIN alone, which is a real mouth but a
   // narrow one — it eats a corpse lying in the room it happens to be standing
@@ -9006,6 +9016,32 @@ export const SKY_COVERED = [
   "Dusk, under heavy grey cloud. The light goes from grey to dark behind it, and there is no sunset to be seen.",
   "Night, and heavy cloud has the whole of the sky. Not one star shows through it, and no moon.",
 ];
+// THE HOUR UNDER A ROOM'S WORDS, BY DAY (rome, 2026-11-08: the night had its line
+// and every other part of the day had none). One per part of the day, as the
+// picture draws it: an open sky, a clear one, or the heavy grey (covered, the
+// after-rain cloud, or weather overhead). Morning, midday, afternoon are bands
+// 1-3 of skyBand; dawn and dusk stand alone.
+export const DAY_SKY = {
+  dawn: "Dawn: the sky is going pale along its bottom edge, where a band of gold lies, and the clouds have caught it underneath.",
+  dawnGrey: "Dawn, under heavy grey cloud: the light is coming up grey, with no gold in it and no sun.",
+  open: [
+    "Morning: a blue sky, and white cloud drifting slowly across it.",
+    "The middle of the day: a wide blue sky with white cloud piled up in it, and the sun somewhere behind.",
+    "Afternoon: the sky is still blue, but the light has started to slant.",
+  ],
+  clear: [
+    "Morning, and not one cloud anywhere in the sky.",
+    "The middle of the day, and the sky clear from one edge to the other.",
+    "Afternoon, and still not a cloud in the sky, the light starting to slant.",
+  ],
+  grey: [
+    "Morning, under heavy grey cloud, with no sun to be seen.",
+    "The middle of the day, under heavy grey cloud, and no sun in it anywhere.",
+    "Afternoon, under heavy grey cloud, and the light already going dull.",
+  ],
+  dusk: "Dusk: the low sky is burning orange along its edge, and above it the blue is going to night.",
+  duskGrey: "Dusk, under heavy grey cloud: the light is going from grey to dark, with no sunset in it.",
+};
 export const SKY_NIGHT = "Night. The sky is dark blue going to black, full of stars, and grey cloud drifts slowly across them, covering some and letting others out.";
 // AND ON THE HILL IT IS A REAL SUN, which is the mountain's whole conceit and
 // the thing its own line already said better than anything else in the file:

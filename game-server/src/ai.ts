@@ -1646,7 +1646,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // Follows the scent of the dead: toward a room that holds corpse-litter.
       const scent = exits.find((e) =>
         (z.traces.get(e.to_room) ?? []).some(edibleBody),
-      );
+      ) ?? (creature.hunger >= deadEatsAt(tmpl.id) ? towardBody(z, creature, tmpl, exits) : undefined);
       if (scent) exit = scent;
       creature.curious = null;
     } else if (creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id)) {
@@ -1963,6 +1963,29 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
 
   // Hungry creature eats the most fragrant thing on the floor.
 /** The hunger at which this animal looks to eat what is underfoot: a grazer long before it is hungry. */
+// A BODY WITHIN ITS GROUND DRAWS IT (rome, 2026-11-08: the dead lay a few rooms
+// from hungry scavengers that only ever noticed the room next door). A scavenger
+// ready to eat walks toward the nearest body with meat on it within
+// TERRITORY_RADIUS rooms, of any age, one step a wander; the grave-hyena still
+// passes over its own kind.
+export function towardBody<E extends { to_room: string }>(z: ZoneDO, c: Creature, tmpl: MobTemplate, exits: E[]): E | undefined {
+  const spareKin = c.templateId === "grave-hyena";
+  for (const [room, d] of z.nearby(c.roomId, TERRITORY_RADIUS)) {
+    if (d < 2) continue;
+    if (!(z.traces.get(room) ?? []).some((t) => edibleBody(t) && !(spareKin && t.label === tmpl.name))) continue;
+    const step = exits.find((e) => z.roomDist(e.to_room, room) === d - 1);
+    if (step) return step;
+  }
+  return undefined;
+}
+
+/** When an animal eats the dead lying in its room: a scavenger eats as it goes,
+ *  at GRAZE_AT, as a grazer does (rome, 2026-11-08: bodies lay uneaten until
+ *  something was already starving); vermin and lurkers still wait to be hungry. */
+export function deadEatsAt(templateId: string): number {
+  return SCAVENGERS.has(templateId) ? GRAZE_AT : HUNGRY_AT;
+}
+
 export function eatsAt(templateId: string): number {
   return GRAZERS.has(templateId) ? GRAZE_AT : HUNGRY_AT;
 }
@@ -2003,27 +2026,15 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
     // call site is the rate limit: it grazes the beat it crosses hungry, resets,
     // and won't be back for it until the appetite returns.
     const grazer = GRAZERS.has(creature.templateId);
-    // ...AND A SCAVENGER ON CARRION GROUND (mig 232/233). Same floor, one set
-    // wider, and only on the three-and-now-more rooms that ARE carrion —
-    // never a warren, never a gate threshold, never open ground.
-    //
-    // WHY IT HAD TO EXIST BEFORE THE MOUNTAIN'S FOURTH TIER COULD SHIP: above
-    // the cloud line nothing grows, so the tier's whole thesis is that food is
-    // DELIVERED — the fan under the face collects everything that comes off the
-    // mountain, and what lives up there lives on it. Without this line that is
-    // only a description. A scavenger's sole feeding route is a corpse lying in
-    // its room, so thirty-odd of them on a tier with thirty prey would bank
-    // hunger to the cap and sit there advertising it, which is the same bug this
-    // world has now shipped three times (the crabs on the wrack, the west road's
-    // strays, the outworks' rats). The bone ground is the answer the fiction was
-    // already giving; this makes the code agree with it.
-    const carrionEater = SCAVENGERS.has(creature.templateId) && !HUNTS_NOT_CARRION.has(creature.templateId) && CARRION_ROOMS.has(creature.roomId);
+    // THE BONE FLOORS FED SCAVENGERS FOREVER, once (mig 232/233), and no longer
+    // (rome, 2026-11-08): the vultures and bone-breakers ate the fan and never
+    // left it for the real dead elsewhere. A scavenger lives on bodies now.
     // ...and on the mountain the grass is eaten down: a bare room feeds nothing (grass.ts).
     const grazeHere = grazer && forageGround(z, creature.templateId, creature.roomId) && grass.has(z, creature.templateId, creature.roomId, at);
     // WEATHER KEYS THE FORAGE: a hard cold freezes the ground (nothing to
     // graze), and the mud after a good rain brings up more than the ground
     // usually gives. Carrion is carrion whatever the sky does.
-    if ((grazeHere && !events.coldBites(z, creature.roomId)) || carrionEater) {
+    if (grazeHere && !events.coldBites(z, creature.roomId)) {
       // SCRAPS HAVE TO BE FOUND (FORAGE_FIND_MS). The odds grow with the time
       // spent looking since the last try, so a 2s beat and an hour of catch-up
       // ask the same question at their own scale. The first hungry beat only
@@ -2047,9 +2058,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
         : grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT)
         : FORAGE_HEAL));
       if (!silent) {
-        z.roomFeed(creature.roomId, carrionEater && !grazer
-          ? `${cap(tmpl.name)} works over something old among the stones, and finds enough.`
-          : THIEVES.has(creature.templateId)
+        z.roomFeed(creature.roomId, THIEVES.has(creature.templateId)
           ? `${cap(tmpl.name)} crouches in a corner, gnawing at something it has scavenged.`
           : `${cap(tmpl.name)} noses through the muck, gnawing at fungus and scraps.`, undefined, false);
         // AND THE PICTURE IS TOLD, which it was not until now. The line above
@@ -2807,7 +2816,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     // that is three corpses in a lifetime, not three per battlefield. After
     // that it eats like everything else in the world: when it is hungry.
     const gorging = SCAVENGERS.has(creature.templateId) && (creature.fed ?? 0) < SCAVENGER_BOLD_AT;
-    if (creature.hunger < HUNGRY_AT && !gorging) return;
+    if (creature.hunger < deadEatsAt(creature.templateId) && !gorging) return;
     const list = z.traces.get(creature.roomId);
     if (!list) return;
     const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
