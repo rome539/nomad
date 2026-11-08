@@ -2419,6 +2419,14 @@ try {
     assert.ok(!/^!safe$/m.test(block), 'the source does not mark it safe');
     assert.match(readFileSync(new URL('../migrations/376_the_boulder_gate_is_no_hideaway.sql', import.meta.url), 'utf8'), /UPDATE rooms SET is_safe = 0 WHERE id = 'the-boulder-gate';/);
   });
+  // 2026-11-08: a kill hung in the air a moment before its body dropped: the death
+  // frame played at the standing line, the body lay lower a beat later.
+  check('a creature dies onto the floor where its body will lie, no float', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /el\._bodyTop = rowH - item\.h \* item\.fit \+ forward \* \.9 \/ scale;/, 'each sprite knows where it would lie');
+    assert.match(pub, /put\(item, best, forward \* \.9, true, i\);/, 'the same line the body is laid on');
+    assert.match(pub, /a\.phase = "death"; a\.t = 0; a\.asleep = false;\n\s+if \(a\.el && a\.el\._bodyTop !== undefined\) a\.el\.style\.top = a\.el\._bodyTop \+ "px";/, 'and goes down there as it dies');
+  });
   function studyWorld() {
     const { db, D1 } = sqliteD1();
     db.exec("CREATE TABLE player_accounts(pubkey TEXT, template_id TEXT, at INTEGER, PRIMARY KEY(pubkey, template_id)); ALTER TABLE players ADD COLUMN accounts INTEGER NOT NULL DEFAULT 0; INSERT INTO players(pubkey, name) VALUES ('me', 'Rome')");
