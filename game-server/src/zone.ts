@@ -397,7 +397,10 @@ export class ZoneDO implements DurableObject {
   // of five where one was hit says "coyote" once and not five times (rome,
   // 2026-10-28: hitting one coyote made all of them recoil): the client
   // consumes each entry once, as it does deaths.
-  private combatFx = new Map<string, { swung: string[]; struck: string[]; seen: Set<string> }>();
+  // ...and WHICH ONE, by its id, beside it (sw/st): with two of a kind in the room the
+  // picture moved whichever came first in the row, the one standing aside included
+  // (rome, 2026-11-07). The client matches the id to the slot the ctx gave it.
+  private combatFx = new Map<string, { swung: string[]; struck: string[]; sw: string[]; st: string[]; seen: Set<string> }>();
   private blowsThisTick = new Map<string, number>(); // pubkey -> blows landed on them this tick (DOGPILE_CAP), across swings AND entry first-strikes
   public arrivals = new Map<string, number>();
   public conditions = new Map<string, conditions.Condition>(); // what is going on in each region (conditions.ts)
@@ -5493,7 +5496,7 @@ export class ZoneDO implements DurableObject {
     if (this.combatFx.size) {
       for (const [pubkey, e] of this.combatFx) {
         const s2 = [...this.sessions.values()].find((x) => x.pubkey === pubkey);
-        if (s2) try { s2.ws.send(JSON.stringify({ v: 0, t: "beat", swung: e.swung, struck: e.struck })); } catch {}
+        if (s2) try { s2.ws.send(JSON.stringify({ v: 0, t: "beat", swung: e.swung, struck: e.struck, sw: e.sw, st: e.st })); } catch {}
       }
       this.combatFx.clear();
     }
@@ -7085,11 +7088,12 @@ export class ZoneDO implements DurableObject {
   private noteFx(pubkey: string, kind: "swung" | "struck", creature: Creature): void {
     if (!seesArt(pubkey)) return;   // nobody without pictures needs this
     let e = this.combatFx.get(pubkey);
-    if (!e) { e = { swung: [], struck: [], seen: new Set() }; this.combatFx.set(pubkey, e); }
+    if (!e) { e = { swung: [], struck: [], sw: [], st: [], seen: new Set() }; this.combatFx.set(pubkey, e); }
     const key = kind + ":" + creature.id;   // once per creature a round, however often it landed
     if (e.seen.has(key)) return;
     e.seen.add(key);
     e[kind].push(creature.templateId);
+    (kind === "swung" ? e.sw : e.st).push(creature.id);
   }
 
   public markHurt(creature: Creature, tmpl: MobTemplate, pubkey: string): void {

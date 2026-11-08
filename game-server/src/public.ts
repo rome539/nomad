@@ -5863,6 +5863,7 @@ async function connect() {
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
       lastEyes = Array.isArray(f.eyes) ? f.eyes : null;
+      mobWho = Array.isArray(f.who) ? f.who : [];   // which creature stands in each slot (chips.ts)
       updateMobs(f.mobs, f.doing, f.dead, f.loose, f.chests);
       mobsCameIn(f.mobs, f.rid, f.doing);
       inGatehouseNow = !!f.gh; // in the tavern the input line is a mouth
@@ -5884,7 +5885,7 @@ async function connect() {
     } else if (f.t === "beat") {
       // A creature that swung shows its attack; one that was hit recoils. Both
       // are one-shot: they run once and drop back to whatever they were doing.
-      mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose, f.one);
+      mobBeat(f.swung, f.struck, f.died, f.fed, f.grazed, f.posed, f.pose, f.one, f.sw, f.st);
       mobCalls(f.died, (f.swung || []).concat(f.one || [])); // the round's voices, at the swings mobBeat just set
     } else if (f.t === "bolt") {
       lightningBolt(!!f.hit, false, f.d);
@@ -13115,6 +13116,7 @@ var scenePainted = "", sceneSeq = 0;
 // the code that uses it would read undefined.length on the first paint. paintMobs
 // survives the same order only because it checks mobsEl first.
 var anims = [], animTimer = null;
+var mobWho = [];   // the creature id in each slot of the last ctx, for blows sent by id
 var lastMobFrame = null; // retained in text view so switching does not wait for another status
 var stillness = false;
 try { stillness = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
@@ -16513,7 +16515,7 @@ var WATCH_POSES = ["alert", "watch", "alert-alarm", "listen", "stand-ground",
                    "recover", "idle"];
 // A body stays where it fell for a beat before the room repaints without it.
 var mobHold = 0, mobPending = null, mobPendingRest = null, mobPendingDead = null;
-function mobBeat(swung, struck, died, fed, grazed, posed, pose, one) {
+function mobBeat(swung, struck, died, fed, grazed, posed, pose, one, sw, st) {
   // Each entry reports ONE death, not every creature with that template.
   // Consume it once so killing one rat cannot make a whole group fall.
   var deaths = died ? died.slice() : [];
@@ -16523,6 +16525,24 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one) {
   // ...and ONE entry per creature that swung or was hit (zone.ts noteFx), so a
   // blow on one coyote moves that one and not the pack (rome, 2026-10-28).
   var swings = swung ? swung.slice() : [], hits = struck ? struck.slice() : [];
+  // ...AND THE ONE IT WAS, where the round says which (rome, 2026-11-07: with
+  // two of a kind, the one standing aside moved for the blow). Each id finds its
+  // slot from the last ctx and takes its kind's entry off the list, so the rest
+  // still fall to the old first-of-its-kind rule.
+  var pinSwing = [], pinHit = [];
+  var pin = function (ids, list, into) {
+    for (var w = 0; ids && w < ids.length; w++) {
+      var slot = mobWho.indexOf(ids[w]);
+      if (slot < 0) continue;
+      for (var j = 0; j < anims.length; j++) {
+        if (anims[j].slot !== slot || anims[j].phase === "death") continue;
+        var k = list.indexOf(anims[j].id);
+        if (k >= 0) { list.splice(k, 1); into.push(anims[j]); }
+        break;
+      }
+    }
+  };
+  pin(sw, swings, pinSwing); pin(st, hits, pinHit);
   for (var i = 0; i < anims.length; i++) {
     var a = anims[i];
     var deathAt = deaths.indexOf(a.id);
@@ -16539,8 +16559,8 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one) {
       a.phase = "attack"; a.t = 0;   // the opening blow, and back to what it was after
       a.blow = (a.strikes && a.strikes.length > 1) ? a.strikes[Math.floor(Math.random() * a.strikes.length)] : a.strike;
     }
-    else if (swings.indexOf(a.id) >= 0 && a.strike) {
-      swings.splice(swings.indexOf(a.id), 1);
+    else if ((pinSwing.indexOf(a) >= 0 || swings.indexOf(a.id) >= 0) && a.strike) {
+      if (pinSwing.indexOf(a) < 0) swings.splice(swings.indexOf(a.id), 1);
       // NOT ALL AT ONCE. The wire reports a whole round in one message, so
       // without this every creature in a dogpile swings on the same frame.
       a.phase = "attack"; a.t = -Math.random() * STAGGER_S;
@@ -16552,6 +16572,7 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one) {
         ? a.strikes[Math.floor(Math.random() * a.strikes.length)]
         : a.strike;
     }
+    else if (pinHit.indexOf(a) >= 0) { a.phase = "hit"; a.t = 0; }
     else if (hits.indexOf(a.id) >= 0) { hits.splice(hits.indexOf(a.id), 1); a.phase = "hit"; a.t = 0; }
     // WHICH EATING FRAME, decided by which signal arrived. A creature drawn with
     // only one uses it for both, which is what every grazer and every scavenger

@@ -2972,6 +2972,38 @@ try {
     }
     assert.match(readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8'), /var FX_V   = "(4[89]|[5-9]\d|\d{3,})";/, 'and browsers are told the index changed');
   });
+  // 2026-11-07: fighting one of two ravens, the one standing aside was drawn
+  // taking the blows: the round named the kind and the page moved the first of it.
+  check('a blow moves the creature it was, not the first of its kind in the row', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const at = pub.indexOf('function mobBeat(');
+    const src = pub.slice(at, pub.indexOf('\n}\n', at) + 2);
+    const run = new Function('anims', 'mobWho', 'STAGGER_S', 'DEATH_S', 'mobHold', src + '; return mobBeat;');
+    const mk = () => [{ id: 'scarp-raven', slot: 0, phase: 'idle', strike: 'peck', spec: { f: {} } }, { id: 'scarp-raven', slot: 1, phase: 'idle', strike: 'peck', spec: { f: {} } }];
+    let anims = mk();
+    run(anims, ['c-aside', 'c-fight'], 0.3, 1, 0)(['scarp-raven'], ['scarp-raven'], [], [], [], [], '', [], ['c-fight'], ['c-fight']);
+    assert.equal(anims[0].phase, 'idle', 'the raven standing aside does nothing');
+    assert.equal(anims[1].phase, 'attack', 'the one fighting swings');
+    anims = mk();
+    run(anims, ['c-aside', 'c-fight'], 0.3, 1, 0)([], ['scarp-raven'], [], [], [], [], '', [], [], ['c-fight']);
+    assert.deepEqual(anims.map((a) => a.phase), ['idle', 'hit'], 'and the one hit is the one that recoils');
+    anims = mk();
+    run(anims, [], 0.3, 1, 0)(['scarp-raven'], [], [], [], [], [], '', []);
+    assert.equal(anims.filter((a) => a.phase === 'attack').length, 1, 'with no ids it still moves just one, as before');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /\(kind === "swung" \? e\.sw : e\.st\)\.push\(creature\.id\);/, 'the round says which');
+    assert.match(zs, /swung: e\.swung, struck: e\.struck, sw: e\.sw, st: e\.st/, 'and sends it');
+    const cs = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    assert.match(cs, /seen\.push\(creature\.templateId\);   \/\/ a room paints four at most\n\s+who\.push\(creature\.id\);/, 'and the room says who stands in each slot');
+  });
+  // 2026-11-07: the study chip offered a bird that had flown off: it read every
+  // creature whose roomId was here, and one in the air keeps its roomId.
+  check('the study chip only offers what is in the room, not a bird in the air', () => {
+    const cs = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    assert.match(cs, /const firstMob = stale \? undefined : z\.creaturesInRoom\(session\.roomId\)\.find\(/, 'from the room index');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /if \(c\.aloft !== undefined\) continue;\n\s+const list = m\.get\(c\.roomId\)/, 'which leaves out anything in the air');
+  });
   // 2026-11-07: close looks and what a study finds wear the lore look, as the
   // last hand on found gear does; the study's own line and its count stay plain.
   check('close looks and study findings are told in the lore look', () => {

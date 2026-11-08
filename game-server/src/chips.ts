@@ -154,6 +154,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // the chips already obey — above all the lurker rule: a thing lying in wait
   // gets no chip and no sprite, and the room stays as quiet as its description.
   const seen: string[] = [];
+  const who: string[] = [];   // ...and which one each is, so a blow moves that one (zone.ts noteFx)
   // WHAT EACH OF THEM IS DOING. The picture used to be told one thing - whether
   // a creature was asleep - and animated everything else off a timer, so a wolf
   // that had decided to kill you looked exactly like a wolf drifting past. All
@@ -215,7 +216,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (z.mossUnseen(creature, session)) continue;
     const lurking = LURKERS.has(creature.templateId) && creature.hidden && !creature.joinedOpenly;
     if (lurking && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) {
-      if (seen.length < 4) { seen.push(creature.templateId); doing.push("lurk"); eyes.push(""); }
+      if (seen.length < 4) { seen.push(creature.templateId); who.push(creature.id); doing.push("lurk"); eyes.push(""); }
       continue;
     }
     creatureHere = true;
@@ -226,6 +227,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     suggest.push(`attack ${label}${n > 1 ? ` ${n}` : ""}`);
     if (seen.length < 4) {
       seen.push(creature.templateId);   // a room paints four at most
+      who.push(creature.id);
       // First true thing wins, worst first: a thing running is running whatever
       // else is true of it, and a thing that has YOU is the one you must read.
       const now = Date.now();
@@ -259,12 +261,12 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   for (const o of z.sessions.values()) {
     if (seen.length >= 4) break;
     if (o === session || o.roomId !== session.roomId || z.outOfWorld(o) || o.hp <= 0) continue;
-    seen.push("nomad");
+    seen.push("nomad"); who.push("");
     doing.push(folkState(z, o)); eyes.push("");
   }
   // ...and the one that walks on its own (wanderer.ts), last of all.
   if (seen.length < 4 && wanderer.isHere(z, session.roomId)) {
-    seen.push("nomad");
+    seen.push("nomad"); who.push("");
     doing.push(wanderer.folkState(z)); eyes.push("");
   }
   // A throwable in hand and something to throw it at: offer the opener.
@@ -346,8 +348,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // 2026-07-26, and by behaviour since 2026-10-24): the same behaviour twice
     // adds NOTHING. session.studied is the cache the sync builder can read;
     // unhydrated (undefined) falls through and offers it, as it always did.
-    const firstMob = stale ? undefined : [...z.creatures.values()].find(
-      (c) => c.roomId === session.roomId && !(LURKERS.has(c.templateId) && c.hidden && !c.target) && !z.mossUnseen(c, session)
+    // From the room's own index (rome, 2026-11-07: the chip offered a bird that
+    // had flown): one in the air is in no room, though its roomId still says this one.
+    const firstMob = stale ? undefined : z.creaturesInRoom(session.roomId).find(
+      (c) => !(LURKERS.has(c.templateId) && c.hidden && !c.target) && !z.mossUnseen(c, session)
         && !studiedIn(session, c.templateId, study.behaviourNow(z, c)),
     );
     if (firstMob) suggest.push(`study ${chipName(world.mobTemplates.get(firstMob.templateId)!.name)}`);
@@ -645,7 +649,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     }
   }
   try {
-    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, rid: session.roomId, mobs: seesArt(session.pubkey) ? seen : undefined, loose: loose || undefined, chests: chests.length ? chests : undefined,
+    session.ws.send(JSON.stringify({ v: 0, t: "ctx", suggest: unique, combat: fighting, door, home, build: BUILD_ID, rid: session.roomId, mobs: seesArt(session.pubkey) ? seen : undefined, who: seesArt(session.pubkey) && who.some(Boolean) ? who : undefined, loose: loose || undefined, chests: chests.length ? chests : undefined,
       dead: seesArt(session.pubkey) && dead.length ? dead : undefined, doing: seesArt(session.pubkey) && Object.keys(doing).length ? doing : undefined,
       eyes: seesArt(session.pubkey) && eyes.some(Boolean) ? eyes : undefined }));
   } catch {}
