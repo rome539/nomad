@@ -2421,11 +2421,13 @@ try {
   });
   // 2026-11-08: a kill hung in the air a moment before its body dropped: the death
   // frame played at the standing line, the body lay lower a beat later.
-  check('a creature dies onto the floor where its body will lie, no float', () => {
+  check('a creature dies onto the floor where its body will lie, no float and no sinking', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    assert.match(pub, /el\._bodyTop = rowH - item\.h \* item\.fit \+ forward \* \.9 \/ scale;/, 'each sprite knows where it would lie');
+    // feet on the line a body is laid on: the frame's own bottom edge, not a fitted top
+    assert.match(pub, /el\._bodyTop = rowH - item\.h \+ forward \* \.9 \/ scale;/, 'each sprite knows where it would lie');
     assert.match(pub, /put\(item, best, forward \* \.9, true, i\);/, 'the same line the body is laid on');
-    assert.match(pub, /a\.phase = "death"; a\.t = 0; a\.asleep = false;\n\s+if \(a\.el && a\.el\._bodyTop !== undefined\) a\.el\.style\.top = a\.el\._bodyTop \+ "px";/, 'and goes down there as it dies');
+    // and the standing lift comes off, or a small one sinks into the ground and pops up
+    assert.match(pub, /a\.phase = "death"; a\.t = 0; a\.asleep = false;\n(?:\s*\/\/.*\n)*\s+if \(a\.el && a\.el\._bodyTop !== undefined\) \{ a\.el\.style\.top = a\.el\._bodyTop \+ "px"; a\.lift = 0; \}/, 'and goes down there as it dies, lift off');
   });
   function studyWorld() {
     const { db, D1 } = sqliteD1();

@@ -15944,7 +15944,9 @@ function fitMobRow() {
     // WHERE IT WOULD LIE (rome, 2026-11-08: a kill hung in the air a moment, then
     // dropped). A death frame played where the creature stood, at the standing
     // line, and the body was laid lower a beat later; the frame now starts here.
-    el._bodyTop = rowH - item.h * item.fit + forward * .9 / scale;
+    // Its feet on the body's line: the bottom of its own frame, at the size it
+    // stands (a body is laid fitted, so the two share the bottom edge, not the top).
+    el._bodyTop = rowH - item.h + forward * .9 / scale;
     el.style.zIndex = String(z);
     // Only static corpses need this separate size adjustment; animation
     // transforms remain owned by stepAnims on every living creature.
@@ -16562,7 +16564,10 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one, sw, st) {
     if (deathAt >= 0 && a.spec.f.death !== undefined && a.phase !== "death") {
       deaths.splice(deathAt, 1);
       a.phase = "death"; a.t = 0; a.asleep = false;
-      if (a.el && a.el._bodyTop !== undefined) a.el.style.top = a.el._bodyTop + "px"; // down on the floor, where its body will lie
+      // Down on the floor, where its body will lie. The standing lift comes off with
+      // it: that lift sets a small creature's feet on the standing line, and kept
+      // on the floor line it sank the dying one into the ground (rome, 2026-11-08).
+      if (a.el && a.el._bodyTop !== undefined) { a.el.style.top = a.el._bodyTop + "px"; a.lift = 0; }
       mobHold = Date.now() + DEATH_S * 1000;
     } else if (a.phase === "death") continue;
     else if (ones.indexOf(a.id) >= 0 && a.strike) {
