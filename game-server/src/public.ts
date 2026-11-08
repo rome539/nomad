@@ -4948,7 +4948,9 @@ function print(text, cls, who, pk, voiced) {
     // A person spoke or moved while you're in a modal: float it over the top.
     if (c === "say" || c === "tell" || c === "who") modalChatPush(lines[i], c, who, pk);
     if (!voiced && soundOn && actx && cls !== "sys" && cls !== "echo") {
-      var s = sndFor(plain, c || "");
+      // A line marked for the lore look (the weather, the sky) keeps the sound it
+      // had before it wore the look, never the telling's scratch (rome, 2026-11-08).
+      var s = sndFor(plain, (loreLine ? cls || classify(plain) : c) || "");
       if (s) sounds.push(s);
     }
   }

@@ -3010,6 +3010,12 @@ try {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /var c = loreLine \? "lore" : cls \|\| classify\(plain\);/, 'the mark wins over the amb class');
   });
+  // 2026-11-08: the night line, marked for the lore look, played the telling's
+  // scratch on every room walked into; a marked line keeps its old sound.
+  check('a weather or sky line in the lore look makes no telling sound', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /var s = sndFor\(plain, \(loreLine \? cls \|\| classify\(plain\) : c\) \|\| ""\);/, 'sounded as it was before the look');
+  });
   // 2026-11-07: the Slabs' lantern flame was drawn beside the lantern: every
   // plate's marker sat about 13 pixels left of and above the flame, measured off
   // the plates (the night-torch one only 4).
