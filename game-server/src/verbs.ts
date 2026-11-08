@@ -970,7 +970,10 @@ export async function lookKeepingItem(z: ZoneDO, session: Session, arg: string):
   const carried = z.findCarried(session, arg);
   if (carried) {
     const t = world.itemTemplates.get(carried.itemId)!;
+    // The lantern's well, as the look out in the world says it (rome, 2026-11-08:
+    // looked at by the fire, it never said how much fat was left).
     return t.description + z.itemStat(t) + wearClause(z, z.isGear(carried.itemId) ? carried.condition : undefined)
+      + (carried.itemId === LANTERN_ITEM ? " " + light.wellWords(light.wellOf(session, carried)) : "")
       + (carried.serial !== null ? ` The dungeon's seal is on it. (mint #${carried.serial})` : "")
       + (carried.loreId ? await lore.gearLedger(z, carried.loreId) : "")
       + agedProse(carried.itemId, !!t.edible, carried.acquiredAt);
@@ -982,6 +985,7 @@ export async function lookKeepingItem(z: ZoneDO, session: Session, arg: string):
     const t = world.itemTemplates.get(it.itemId)!;
     const latch = key === "lockbox" ? "You work the lockbox's latch." : "You swing the vault's door open.";
     return `${latch} ${t.description}${z.itemStat(t)}${wearClause(z, z.isGear(it.itemId) ? it.condition : undefined)}`
+      + (it.itemId === LANTERN_ITEM ? " " + light.wellWords(it.fuel ?? 0) : "")
       + (it.serial !== null ? ` The dungeon's seal is on it. (mint #${it.serial})` : "")
       + (it.loreId ? await lore.gearLedger(z, it.loreId) : "")
       + agedProse(it.itemId, !!t.edible, it.acquiredAt)

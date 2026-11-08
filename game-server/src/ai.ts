@@ -564,7 +564,7 @@ export function keeperRead(z: ZoneDO, c: Creature, now = Date.now()): string {
   const base = z.variantBase.get(c.templateId);
   const row = world.mobSpawns.some((s) => s.id === c.id) ? `spawn row ${c.id}` : "came in later";
   return [
-    `  keeper: ${c.templateId} #${c.id} · hp ${c.hp}/${tmpl.max_hp} · hunger ${Math.round(c.hunger)} · ${c.asleep ? "asleep" : "awake"}`,
+    `  keeper: ${c.templateId} #${c.id} · hp ${Math.round(c.hp)}/${tmpl.max_hp} · hunger ${Math.round(c.hunger)} · ${c.asleep ? "asleep" : "awake"}`,
     `  doing: ${doing}`,
     `  home: ${home ? `${home}, ${far}` : "none"} · ${group}`,
     `  next move: ${wander} · flight: ${flight}`,

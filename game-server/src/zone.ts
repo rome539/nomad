@@ -3245,6 +3245,9 @@ export class ZoneDO implements DurableObject {
       this.cacheOpening.set(cache.id, Date.now());
       // Hammering iron is a dinner bell: everything in earshot hears it.
       this.roomSound(session.roomId, "Stone rings on iron {dir}, again and again.");
+      // ...and it wakes what sleeps in the room with you (rome, 2026-11-08: two
+      // hinds slept through a rock on a latch), as loud as a fight.
+      await ai.wakeListeners(this, session, session.roomId, WAKE_NOISE, "comes awake at the ringing iron and turns on you!", true);
       this.creatureNoise(session.roomId);
       const bent = this.cacheBent.get(cache.id) ?? 0;
       const opened = chance(Math.min(LATCH_GIVE_MAX, (hammer ? HAMMERSTONE_SMASH_ODDS : ROCK_SMASH_ODDS) + bent * LATCH_GIVE_STEP));

@@ -2224,6 +2224,7 @@ try {
     ate(c, now, 'kill', 0, undefined, 'mountain-hare');
     const r = keeperRead(z, c, now);
     assert.match(r, /keeper: eagle-owl #o1 · hp 22\/22 · hunger 3 · awake/, r);
+    c.hp = 20.9068; assert.match(keeperRead(z, c, now), /hp 21\/22/, 'health in whole points'); c.hp = 22;
     assert.match(r, /doing: eating mountain hare \(its kill\), \d+m \d+s left/, r);
     assert.match(r, /home: h, 3 rooms off · none/, r);
     assert.match(r, /next move: in 2m 0s · flight: none/, r);
@@ -2235,6 +2236,19 @@ try {
     assert.match(keeperRead(z, c, now), /doing: sleeping, wakes in 6m 0s/);
     const v = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
     assert.match(v, /if \(session\.pubkey === CENSUS_PUBKEY\) z\.send\(session, ai\.keeperRead\(z, creature\), "dim"\);/, 'only the keeper key');
+  });
+  // 2026-11-08: two hinds slept through a rock brought down on a latch beside
+  // them: the forcing drew the curious from next door but never woke the room.
+  check('forcing a latch wakes what sleeps in the room, as loud as a fight', () => {
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /this\.roomSound\(session\.roomId, "Stone rings on iron \{dir\}, again and again\."\);\n(\s*\/\/.*\n)*\s+await ai\.wakeListeners\(this, session, session\.roomId, WAKE_NOISE, [^\n]+, true\);/, 'the ringing wakes the room');
+  });
+  // 2026-11-08: a lantern looked at in the gatehouse never said its well.
+  check('a lantern looked at by the fire says how much fat is in its well', () => {
+    const v = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    const fn = v.slice(v.indexOf('export async function lookKeepingItem'), v.indexOf('return null;', v.indexOf('export async function lookKeepingItem')));
+    assert.match(fn, /carried\.itemId === LANTERN_ITEM \? " " \+ light\.wellWords\(light\.wellOf\(session, carried\)\)/, 'in the pack');
+    assert.match(fn, /it\.itemId === LANTERN_ITEM \? " " \+ light\.wellWords\(it\.fuel \?\? 0\)/, 'in the lockbox or vault');
   });
   function studyWorld() {
     const { db, D1 } = sqliteD1();
