@@ -52,7 +52,7 @@ import {
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
-  RUNNERS, NOISE_SHY, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, MOUNTAIN_ROAMERS, MOUNTAIN_GROUPS, FOOD_FLIERS, BIRD_CATCH_MULT, SETTLES_BY_GRAZING, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, MOUNTAIN_ROAMERS, MOUNTAIN_GROUPS, FOOD_FLIERS, BIRD_CATCH_MULT, SETTLES_BY_GRAZING, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
@@ -2350,6 +2350,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
 export function forageGround(z: ZoneDO, templateId: string, roomId: string): boolean {
   const own = OWN_FORAGE_ROOMS.get(templateId);
   if (own) return own.has(roomId);
+  if (BROWSERS.has(templateId) && CRAG_ROOMS.has(roomId)) return true; // a goat browses the crags
   return FORAGE_ROOMS.has(roomId) || z.world!.entryRooms.has(roomId);
 }
 
@@ -4068,21 +4069,24 @@ function stepsFromGates(world: NonNullable<ZoneDO["world"]>): Map<string, number
 export function mountainHomes(z: ZoneDO, templateId: string): string[] {
   const world = z.world!;
   const dist = stepsFromGates(world);
-  let near = Infinity, far = -1;
+  let near = Infinity;
   for (const s of world.mobSpawns) {
     if (s.template_id !== templateId || z.regionOf(s.room_id) !== "mountain") continue;
     const d = dist.get(s.room_id);
     if (d === undefined) continue;
     if (d < near) near = d;
-    if (d > far) far = d;
   }
   near = Math.min(near, MOUNTAIN_GROUPS.get(templateId)?.near ?? near);
   const barred = new Set([...(MOUNTAIN_QUARTER_ROOMS.summit ?? []), ...(MOUNTAIN_QUARTER_ROOMS.territory ?? [])]);
   return [...world.rooms.keys()].filter((r) => {
     const d = dist.get(r);
-    return d !== undefined && d >= near && d <= far && z.regionOf(r) === "mountain"
+    // NO CEILING (rome, 2026-11-08: every goat and hind lived low). A home was held
+    // between the nearest and the furthest of the line's spawn rows, so nothing
+    // ever lived higher than its highest row; now only the nearest bounds it, and
+    // the ground and the food decide the rest. A goat counts the crags it browses.
+    return d !== undefined && d >= near && z.regionOf(r) === "mountain"
       && !world.entryRooms.has(r) && !world.safeRooms.has(r) && !barred.has(r) && settlesOn(templateId, r)
-      && (!SETTLES_BY_GRAZING.has(templateId) || [...z.nearby(r, ROUND_RANGE).keys()].some((n) => SURFACE_FORAGE.has(n)));
+      && (!SETTLES_BY_GRAZING.has(templateId) || [...z.nearby(r, ROUND_RANGE).keys()].some((n) => SURFACE_FORAGE.has(n) || (BROWSERS.has(templateId) && CRAG_ROOMS.has(n))));
   });
 }
 

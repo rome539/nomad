@@ -15,9 +15,10 @@ const [,, scenario='new', hoursArg='72'] = process.argv;
 const HOURS=Number(hoursArg), root=new URL('..',import.meta.url).pathname;
 const req=createRequire(join(root,'package.json')); const {build}=req('esbuild'); const {DatabaseSync}=req('node:sqlite');
 const dir=await mkdtemp(join(tmpdir(),'nomad-sim-')); const out=join(dir,'b.mjs');
-await build({stdin:{contents:"export {ZoneDO} from './zone'; export * as zd from './zone-data'; export * as md from './mountain-ground'; export * as beasts from './beasts'; export * as groups from './groups'; export * as ai from './ai';",resolveDir:join(root,'src'),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:out,logLevel:'silent',external:['cloudflare:*'],
+await build({stdin:{contents:"export {MOUNTAIN_QUARTER_ROOMS} from './detail'; export {ZoneDO} from './zone'; export * as zd from './zone-data'; export * as md from './mountain-ground'; export * as beasts from './beasts'; export * as groups from './groups'; export * as ai from './ai';",resolveDir:join(root,'src'),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:out,logLevel:'silent',external:['cloudflare:*'],
  plugins:[{name:'text',setup(b){b.onLoad({filter:/(?:nip46-bunker|(?:vault|nostr|qrcode)-bundle)\.js$/},async a=>({contents:await readFile(a.path,'utf8'),loader:'text'}));}}]});
-const {ZoneDO,zd,md,beasts,groups,ai}=await import(pathToFileURL(out));
+const {ZoneDO,zd,md,beasts,groups,ai,MOUNTAIN_QUARTER_ROOMS:MQ}=await import(pathToFileURL(out));
+const QOF=new Map(); for(const q of ['foot','middle','cloud','high','territory','summit']) for(const r of MQ[q]??[]) if(!QOF.has(r)) QOF.set(r,q);
 const RD=Date; let NOW=RD.UTC(2026,10,6,17);
 globalThis.Date=class extends RD{constructor(...a){a.length?super(...a):super(NOW);} static now(){return NOW;}};
 const log=console.log; console.log=()=>{}; console.warn=()=>{};
@@ -62,6 +63,12 @@ const snap=(h)=>{const n={},hungry={},rooms=new Map();let aloft=0;const off=[];
  const allRows={},rowsBy={};for(const s of W.mobSpawns){if(['scarp-raven','feral-goat','rat'].includes(s.template_id)){allRows[s.template_id]=(allRows[s.template_id]??0)+1;const r=z.regionOf(s.room_id);(rowsBy[s.template_id]??={})[r]=(rowsBy[s.template_id][r]??0)+1;}}
  for(const l of Object.keys(tot))log(`  COUNT ${l}: whole world ${tot[l]}/${allRows[l]}  living by region ${JSON.stringify(wh[l])}  rows by region ${JSON.stringify(rowsBy[l])}`);
  const topBird=[...rooms].sort((a,b)=>b[1]-a[1])[0];
+ // WHERE THEY STAND, BY HEIGHT (2026-11-08): foot / middle / cloud / high / top.
+ const BY=['red-hind','red-stag','feral-goat','mountain-hare','ptarmigan','carrion-vulture','bone-breaker','lynx','hill-wolf'];const ht={};
+ for(const c of z.creatures.values()){if(c.aloft!==undefined)continue;const l=lineOf(c);if(!BY.includes(l))continue;const q=QOF.get(c.roomId);if(!q)continue;(ht[l]??={})[q]=(ht[l][q]??0)+1;}
+ log('  BY HEIGHT (foot/middle/cloud/high/top): '+BY.map(l=>`${l} ${['foot','middle','cloud','high','territory'].map(q=>ht[l]?.[q]??0).join('/')}`).join(' | '));
+ const hh={};for(const c of z.creatures.values()){const l=lineOf(c);if(!BY.includes(l))continue;const q=QOF.get(c.home??c.roomId);if(!q)continue;(hh[l]??={})[q]=(hh[l][q]??0)+1;}
+ log('  HOMES BY HEIGHT: '+BY.map(l=>`${l} ${['foot','middle','cloud','high','territory'].map(q=>hh[l]?.[q]??0).join('/')}`).join(' | '));
  log(`\n[${scenario}] hour ${h}  errors=${ev.errors}  birds up now=${aloft}  busiest bird room=${topBird?topBird[0]+' ('+topBird[1]+')':'-'}  on wrong ground (old animals)=${off.length}`);
  log('  '+LINES.map(l=>`${l} ${n[l]??0}/${rows[l]??0}${hungry[l]?` (${hungry[l]} hungry)`:''}`).join(' | '));
  log(`  wolves: packs ${[...size.values()].join(',')||'-'}  lone ${lone}  unsorted ${undec}  living in hamlet ${hamlet}  standing in hamlet ${standing}  new home draws in hamlet ${draws?Math.round(100*inH/draws):'-'}% (hamlet is ${Math.round(100*hShare)}% of wolf ground)  | flights ${JSON.stringify(ev.flights)} | pack chases ${ev.chase} caught ${ev.caught} meals stolen ${ev.stolen}`);

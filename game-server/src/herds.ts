@@ -37,7 +37,7 @@ import {
   HERD_PACE_SECS, HERD_BIRTH_PER_H, HERD_BIRTH_MIN, HERD_BIRTH_MAX, HERD_STRAY_FRAC,
   HERD_FLOOR_FRAC, HERD_FLOOR_PER_HUNTER_PER_H, HERD_NO_PREY_SHARE,
   ROOTED, NOCTURNAL, SURFACE_FORAGE, ROUND_REGIONS, ROUND_RANGE, HUNT_RECHECK_MS,
-  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS, HUNTS_NOT_CARRION, WARY_STAYS_IN,
+  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS, HUNTS_NOT_CARRION, WARY_STAYS_IN, BROWSERS, CRAG_ROOMS,
 } from "./zone-data";
 
 const AT = "_at"; // the clock, kept in the same saved map as what each herd is owed
@@ -249,6 +249,10 @@ export function keepsRound(z: ZoneDO, c: Creature): boolean {
 /** Whether this room is where this kind of animal feeds. */
 export function feedsAt(templateId: string, room: string): boolean {
   if (ROUND_BASKERS.has(templateId)) return WARM_GROUND.has(room);
+  // A scavenger's round keeps to its roost on the bone ground (rome, 2026-11-08),
+  // though the bones feed it nothing now: it eats bodies, and goes out to them.
+  if (SCAVENGERS.has(templateId) && !HUNTS_NOT_CARRION.has(templateId) && CARRION_ROOMS.has(room)) return true;
+  if (BROWSERS.has(templateId) && CRAG_ROOMS.has(room)) return true; // a goat browses the crags
   return SURFACE_FORAGE.has(room);
 }
 
@@ -333,7 +337,7 @@ export function roundExits<E extends { to_room: string }>(z: ZoneDO, c: Creature
 const SIGN_EVERY_MS = 30 * 60_000;
 export function leaveSign(z: ZoneDO, c: Creature, from: string, now: number): void {
   if (!keepsRound(z, c)) return;
-  const kind = feedsAt(c.templateId, from) ? "graze"
+  const kind = feedsAt(c.templateId, from) && !SCAVENGERS.has(c.templateId) ? "graze"
     : phaseFor(z, c, now) === "feed" ? "lie" : undefined;
   if (!kind) return;
   // ONE of each to a room, freshened in place: a herd that grazes a lawn all

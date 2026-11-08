@@ -13,11 +13,12 @@ import type { Creature } from "./zone-types";
 import { chance, randInt, uuid } from "./rng";
 import { cap } from "./zone-util";
 import * as beasts from "./beasts";
+import * as grass from "./grass";
 import { ate, creatureMoves, hungers, mountainHomes, preyFalls } from "./ai";
 import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
   DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
-  PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS,
+  PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES,
   PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS,
 } from "./zone-data";
 
@@ -30,7 +31,7 @@ function lineOf(z: ZoneDO, templateId: string): string {
 }
 
 /** Where this line's food is on the mountain, as room -> how much of it. */
-function foodRooms(z: ZoneDO, line: string): Map<string, number> {
+function foodRooms(z: ZoneDO, line: string, now: number): Map<string, number> {
   const food = new Map<string, number>();
   const eats = new Set<string>([...(PREYS_ON.get(line) ?? []), ...(PACK_PREY.get(line)?.keys() ?? [])]);
   if (eats.size) {
@@ -39,8 +40,15 @@ function foodRooms(z: ZoneDO, line: string): Map<string, number> {
     }
     return food;
   }
-  for (const r of SURFACE_FORAGE) { // the bone floors feed nobody now (rome, 2026-11-08)
-    if (z.world!.rooms.has(r) && z.regionOf(r) === "mountain") food.set(r, 1);
+  // A scavenger homes by its roost, the bone ground, though the bones feed it
+  // nothing now; a goat by the crags it browses as well as the grass (rome, 2026-11-08).
+  const ground = SCAVENGERS.has(line) ? CARRION_ROOMS : BROWSERS.has(line) ? new Set([...SURFACE_FORAGE, ...CRAG_ROOMS]) : SURFACE_FORAGE;
+  // BY THE GRASS LEFT, NOT THE ROOMS (rome, 2026-11-08: the herds all slid to the
+  // foot, which has most of the grazing rooms, eaten bare or not). A grazing room
+  // counts for the mouthfuls still on it, so ground the herds have eaten down
+  // stops pulling them and the uneaten grass higher up draws the next home.
+  for (const r of ground) {
+    if (z.world!.rooms.has(r) && z.regionOf(r) === "mountain") food.set(r, SCAVENGERS.has(line) ? 1 : grass.left(z, r, now) / GRASS_BITES);
   }
   return food;
 }
@@ -82,7 +90,17 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
   }
   if (leaving) for (const r of z.nearby(leaving, TERRITORY_RADIUS).keys()) barred.add(r);
   const all = mountainHomes(z, line);
-  const unbarred = all.filter((r) => !barred.has(r));
+  // HERDS KEEP APART (rome, 2026-11-08: every herd of a line ended up packed into
+  // two or three homes at the foot). A group's home is drawn at least 4 rooms from
+  // every other group of its line, as hunters keep their land, while there is
+  // such ground; with none, anywhere it fits.
+  const apart = new Set<string>();
+  const herd = MOUNTAIN_GROUPS.has(line) && !PREYS_ON.has(line); // grazing herds, not the packs
+  if (herd) for (const g of Object.values(state.packs)) {
+    if (g.line === line) for (const r of z.nearby(g.home, TERRITORY_RADIUS).keys()) apart.add(r);
+  }
+  const spaced = all.filter((r) => !barred.has(r) && !apart.has(r));
+  const unbarred = spaced.length ? spaced : all.filter((r) => !barred.has(r));
   // The least-held ground it can have: free land if there is any, and with none,
   // where the fewest rivals hold it rather than anywhere at all.
   const least = Math.min(...unbarred.map((r) => heldBy.get(r) ?? 0));
@@ -90,7 +108,7 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
   const pool = open.length ? open : all;
   if (!pool.length) return undefined;
   const weight = new Map<string, number>(pool.map((r) => [r, 1]));
-  for (const [room, n] of foodRooms(z, line)) {
+  for (const [room, n] of foodRooms(z, line, now)) {
     for (const r of z.nearby(room, TERRITORY_RADIUS).keys()) {
       const w = weight.get(r);
       if (w !== undefined) weight.set(r, w + n);
@@ -118,7 +136,10 @@ export function plan(z: ZoneDO, line: string, now: number): Plan | undefined {
   const cfg = MOUNTAIN_GROUPS.get(line);
   if (cfg && !chance(cfg.lone)) {
     const counts = memberCounts(z);
-    const open = Object.entries(z.groups.packs).filter(([id, g]) => g.line === line && (counts.get(id) ?? 0) < g.size);
+    // A herd with one place left takes no more newcomers: the next starts a herd of
+    // its own on fresh ground (rome, 2026-11-08). A pack still fills to its size.
+    const spare = PREYS_ON.has(line) ? 0 : 1;
+    const open = Object.entries(z.groups.packs).filter(([id, g]) => g.line === line && (counts.get(id) ?? 0) < g.size - spare);
     if (open.length) {
       const [id, g] = open[randInt(0, open.length - 1)];
       return { home: g.home, group: id };

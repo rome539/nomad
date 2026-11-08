@@ -19,10 +19,10 @@ export const MOUNTAIN_GROUND: Record<string, string[]> = {
     "the-terrace", "the-lower-band", "the-broken-terrace", "the-third-band", "the-heather-step",
     "the-shelf-head", "the-upper-heather", "the-long-shelf", "the-last-green", "the-drove-cut",
     "the-spring-green", "the-hanging-floor", "the-terrace-strips", "the-in-field", "the-moss-flush",
-    "the-north-bank", "the-south-bank", "the-scoop-of-grass", "the-thorn-garth", "the-fleece-green",
+    "the-south-bank", "the-scoop-of-grass", "the-thorn-garth", "the-fleece-green",
     "the-rowan-rows", "the-cloud-foot", "the-hill-graves", "the-cold-hearths", "the-thorn-nook",
     "the-first-rise", "the-turf-wall", "the-hearth-stone", "the-stell", "the-track-head",
-    "the-red-moss", "the-hill-spring", "the-shiel-foot"
+    "the-red-moss", "the-hill-spring", "the-shiel-foot", "the-crack-line"
   ],
   stone: [
     "the-clapper", "the-beck-narrows", "the-water-slide", "the-boulder-field", "the-gravel-race",
@@ -49,7 +49,8 @@ export const MOUNTAIN_GROUND: Record<string, string[]> = {
     "the-pavement", "the-cold-plain", "the-approach", "the-wind-cut", "the-last-ground",
     "the-cold-terrace", "the-lee-side", "the-first-rise", "the-wind-flat", "the-standing-cloud",
     "the-grey-nothing", "the-rising-ground", "the-cloud-base", "the-inversion", "the-brocken",
-    "the-glacier-toe"
+    "the-glacier-toe",
+    "the-north-bank"
   ],
   snow: [
     "the-snow-gully", "the-cold-hollow", "the-old-snow", "the-old-drift", "the-melt-runnel",
@@ -117,7 +118,10 @@ for (const kind in MOUNTAIN_GROUND) {
 }
 // The kinds of ground each animal will settle on. The draw stays random inside them.
 export const SETTLES_ON = new Map<string, string[]>([
-  ["red-hind", ["green"]],
+  // DEER SUMMER HIGH (rome, 2026-11-08: no deer or goat was ever seen high up).
+  // A hind may lie up on stone ground above the grass and walk down to feed; a
+  // goat browses the crags (zone-data BROWSERS), so it lives and eats up there.
+  ["red-hind", ["green", "stone"]],
   ["mountain-hare", ["green", "stone"]],
   ["feral-goat", ["crag", "green"]],
   ["ptarmigan", ["stone", "snow"]],

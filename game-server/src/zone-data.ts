@@ -9,6 +9,7 @@ import { pick } from "./rng";
 // two files is a lookup that will drift — but 170 rooms of new prose would push
 // this file past 3,700 lines, and rome's standing rule is that the spine stays
 // lean. So the tables live here and the wood's contribution lives there.
+import { MOUNTAIN_GROUND } from "./mountain-ground";
 import { WOOD_ROOM_AMBIENCE, WOOD_DARK, EAST_ROOM_AMBIENCE, CROSSING_ROOM_AMBIENCE, OUT_ROOM_AMBIENCE } from "./detail";
 
 
@@ -7677,7 +7678,13 @@ export const FORAGE_REGIONS = new Set<string>(["road", "wood", "den", "crossing"
 // to what each band actually is, none of them a hideaway. They are kept in their
 // own Set because WARRENS_ROOMS and CARRION_ROOMS are load-bearing elsewhere
 // (rat migration, the events, the lore's quarter names) and must not be widened.
+// ...AND EVERY MOUNTAIN ROOM WHOSE WORDS SAY IT GROWS SOMETHING (rome, 2026-11-08:
+// thirty-seven green rooms, the alder, the nettles, the corrie lip, the heather
+// step, the south bank, fed nothing, so the grazers all lived where the short
+// curated list put them). The green ground (mountain-ground.ts) is read from each
+// room's own text, so it is the grazing too.
 export const SURFACE_FORAGE = new Set([
+  ...MOUNTAIN_GROUND.green,
   // THE CROSSING. A shore feeds constantly and feeds everything: weed on every
   // tide, shellfish beds, and the saltings behind them.
   "the-weed-flat", "the-weed-raft", "the-wrack-bank", "the-wrack-line",
@@ -7847,7 +7854,13 @@ export const GRASS_REGROW_MS = 20 * 60_000;
 // eats comes to lie in the heat.
 export const ROUND_BASKERS = new Set<string>(["stone-adder", "the-gravid-adder"]);
 export const WARM_GROUND = new Set<string>(["the-ramp-head", "the-warm-gutter", "the-lower-warm", "the-lower-flags"]);
-export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...CARRION_ROOMS, ...SURFACE_FORAGE]);
+// The mountain's bone ground feeds no grazer (rome, 2026-11-08): it is bones.
+export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...[...CARRION_ROOMS].filter((r) => !MOUNTAIN_GROUND.bones.includes(r)), ...SURFACE_FORAGE]);
+// GOATS BROWSE THE CRAGS (rome, 2026-11-08): lichen, moss and whatever roots in a
+// ledge, as a feral goat lives, so a goat feeds on crag ground as well as grass
+// and lives up the mountain where the crags are (ai.forageGround, herds, groups).
+export const BROWSERS = new Set<string>(["feral-goat", "old-billy"]);
+export const CRAG_ROOMS = new Set<string>(MOUNTAIN_GROUND.crag);
 // WHO EATS THE GROUND. Was the bare union VERMIN + THIEVES, written inline at
 // two call sites — which quietly left the boar out, and a boar is a rooting
 // animal before it is anything else. Named here so the next grazer is one line
