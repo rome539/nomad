@@ -6,6 +6,7 @@ export type Verb =
   | "invite"
   | "look"
   | "board"
+  | "slate"
   | "post"
   | "tear"
   | "go"
@@ -221,6 +222,7 @@ export const VERB_ALIASES: Record<string, Verb> = {
   // "board up the door" stays a sentence; post/tear take arguments and must
   // always command.
   board: "board", noticeboard: "board", notices: "board",
+  slate: "slate", // the keeper's chalked sky, in the gatehouse
   post: "post", pin: "post", notice: "post",
   tear: "tear", rip: "tear", unpin: "tear",
   claim: "claim", seal: "claim", extract: "claim", sign: "claim",
@@ -477,6 +479,7 @@ export const HELP_TEXT = [
   "  forge, repair      make gear, and mend it",
   "  dice               a game on the gatehouse bench",
   "  board, post, tear  the notice board inside",
+  "  slate              the keeper's weather slate, inside",
   "  tell <name> <words>  a private word, in the gatehouse",
   "",
   "FOOD AND FIRE",

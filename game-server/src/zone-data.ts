@@ -11998,6 +11998,8 @@ export const GATEHOUSE_NOARG = new Set([
   // sentence spoken at the fire, not a read. `post` and `tear` are NOT here:
   // they carry their words, and an explicit command must run.
   "board",
+  // `slate` reads the weather off the keeper's slate, bare only, as board does (2026-11-07).
+  "slate",
   // THE GESTURES THAT TAKE NOTHING (rome, 2026-08-30). Bare, they command by the
   // fire; with a single word after them they were a sentence and get said out
   // loud. This is the whole of "you have to type the word and only the word" —

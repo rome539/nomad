@@ -2822,6 +2822,8 @@ function hourWord(now = Date.now()): string {
   const f = halfFrac(now);
   return f < 1 / 3 ? "evening" : f < 2 / 3 ? "the dead of night" : "the small hours";
 }
+// What the slate is, for `look slate`; what is on it is `slate` (slateText).
+const SLATE_LOOK = "A slate on a nail beside the hatch, in a frame of split ash gone dark where hands have taken it down and hung it up again. The face is grey with chalk wiped and written over so often the old words still show through, and the keeper keeps the sky on it, ground by ground, in a square hand. ('slate' to read it)";
 export function slateText(z: ZoneDO): string {
   const words = skyWords(z);
   const grounds = [...new Set([...events.weatherGrounds(z).bands, "deep"])]
@@ -2968,7 +2970,7 @@ function gatehouseFixture(z: ZoneDO, session: Session, target: string): string |
       + (want ? ` Chalked across the boards, in a hand that presses hard: WANTED TONIGHT — ${want.name}, double in trade.` : "")
       + " ('barter' opens it)";
   }
-  if (is("slate", "weather slate", "keepers slate", "keeper's slate", "sky", "weather")) return slateText(z);
+  if (is("slate", "weather slate", "keepers slate", "keeper's slate", "sky", "weather")) return SLATE_LOOK;
   if (is("board", "notices", "notice", "cork", "notice board", "posts")) {
     const live = boardLive(z);
     return live.length === 0
@@ -3037,7 +3039,7 @@ function gatehouseParts(z: ZoneDO, session: Session, arriving: boolean): { head:
   if (!arriving) fixtures.push(marks === 0
     ? "By the door, a stretch of wall plastered smooth and scratched over with other people's chalk — none of it in a hand you can read. Your own corner is bare. ('carve' what you've walked)"
     : `By the door, the wall chart — and ${marks} halls of it are yours. ('study' it; 'carve' to add what you've walked)`);
-  if (!arriving) fixtures.push("Beside the hatch hangs the keeper's slate, with the sky chalked on it. ('look slate')");
+  if (!arriving) fixtures.push("Beside the hatch hangs the keeper's slate, with the sky chalked on it. ('slate' to read it)");
   // The board, beside the hatch. Only spoken of when it has something on it: an
   // empty board is furniture, and the room already has enough of that.
   const notices = boardLive(z).length;
@@ -3235,6 +3237,10 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // command has to run, not be eaten as chat); bare `board` is IN it, so "board
   // up that door" is a sentence and not a read.
   if (v === "board") return boardRead(z, session);
+  // THE SLATE IS READ BY ITS OWN WORD (rome, 2026-11-07): `slate` gives the sky
+  // chalked on it, plain; `look slate` tells you what the slate is, as `look
+  // chart` does the chart and `chart` shows the map.
+  if (v === "slate") return z.send(session, slateText(z), "study");
   if (v === "post") return boardPost(z, session, cmd.arg);
   if (v === "tear") return boardTear(z, session, cmd.arg);
   // THE FIRE'S REST: 'rest' in here is its own kind — a deliberate doze by the

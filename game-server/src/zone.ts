@@ -2459,6 +2459,10 @@ export class ZoneDO implements DurableObject {
       // The board hangs in the gatehouse and nowhere else. Out here these three
       // point at the door rather than failing silently — a player who learned
       // 'post' inside will try it outside exactly once.
+      case "slate":
+        return this.send(session, this.world!.entryRooms.has(session.roomId)
+          ? "The slate is inside, by the keeper's hatch. ('in' through the door.)"
+          : "The slate hangs in the gatehouse, at any gate.");
       case "board": case "post": case "tear":
         return this.send(session, this.world!.entryRooms.has(session.roomId)
           ? "The board is inside, by the keeper's hatch. ('in' through the door.)"

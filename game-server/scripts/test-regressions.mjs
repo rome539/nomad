@@ -3004,6 +3004,18 @@ try {
     const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
     assert.match(zs, /if \(c\.aloft !== undefined\) continue;\n\s+const list = m\.get\(c\.roomId\)/, 'which leaves out anything in the air');
   });
+  // 2026-11-07: `look slate` read out the weather where every other look in the
+  // gatehouse tells you what the thing is. Now `look slate` says what the slate
+  // is, in the lore look, and `slate` reads the sky off it, plain.
+  check('look slate says what the slate is; slate reads the weather', () => {
+    const g = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(g, /if \(is\("slate", "weather slate", "keepers slate", "keeper's slate", "sky", "weather"\)\) return SLATE_LOOK;/, 'look slate is the slate');
+    assert.match(g, /if \(v === "slate"\) return z\.send\(session, slateText\(z\), "study"\);/, 'slate is the sky on it, plain');
+    assert.match(g, /fixtures\.push\("Beside the hatch hangs the keeper's slate, with the sky chalked on it\. \('slate' to read it\)"\)/, 'the room points at the word');
+    assert.deepEqual(gatehouseHeard('slate'), { cmd: { verb: 'slate', arg: '' } }, 'slate commands by the fire');
+    assert.deepEqual(gatehouseHeard('slate it'), { say: 'slate it' }, 'and with words after it is said');
+    assert.match(readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8'), /inside\.push\("slate"\);/, 'and the chip reads it');
+  });
   // 2026-11-07: close looks and what a study finds wear the lore look, as the
   // last hand on found gear does; the study's own line and its count stay plain.
   check('close looks and study findings are told in the lore look', () => {

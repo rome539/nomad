@@ -6073,7 +6073,7 @@ var GATEHOUSE_CMDS = {
   dice: 1, roll: 1, stand: 1,
   // The board. post/tear carry words so they must always read as commands;
   // board is bare-only and is listed in the no-arg table below as well.
-  board: 1, noticeboard: 1, notices: 1,
+  board: 1, noticeboard: 1, notices: 1, slate: 1,
   post: 1, pin: 1, notice: 1, tear: 1, rip: 1, unpin: 1,
   // carve was missing from this list entirely, so the gatehouse's own wall-chart
   // verb read as speech here and its echo was swallowed. The server has always
@@ -6100,7 +6100,7 @@ var GATEHOUSE_NOARG_CMDS = {
   barter: 1, trade: 1, shop: 1, browse: 1, fence: 1,
   map: 1, study: 1, carve: 1, sheet: 1, // not journal: it takes a creature
   rest: 1, sleep: 1, sit: 1, camp: 1, smoke: 1, puff: 1,
-  board: 1, noticeboard: 1, notices: 1,
+  board: 1, noticeboard: 1, notices: 1, slate: 1,
   // The bones, matching the server's GATEHOUSE_NOARG (2026-08-20): bare they
   // command, "stand up"/"roll with it" stay sentences at the fire. 'dice' is
   // deliberately NOT here — it carries a stake or a name.
