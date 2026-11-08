@@ -4954,19 +4954,22 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // of everything on this tier, which is true of a grown red deer and is also
   // the tier telling you what it is: the animals that can take one live higher.
   ["hill-fox", new Set(["rat", "mountain-hare", "ptarmigan", "gill-adder"])],
-  ["wildcat", new Set(["rat", "mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan", "gill-adder"])],
+  ["wildcat", new Set(["rat", "mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan", "gill-adder", "ermine"])],
   // THE TOM (mig 247) hunts what the wildcat hunts. Variants do NOT inherit their
   // base's feeding sets — every one of them has to be listed by hand, and eight
   // of the mountain's nine were. This one was missed, so an 8% roll produced an
   // aggressive cat with no way to eat, pinned at the hunger cap for life.
-  ["the-tom", new Set(["mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan"])],
+  ["the-tom", new Set(["rat", "mountain-chough", "scarp-raven", "mountain-hare", "ptarmigan", "gill-adder", "ermine"])],
   ["hill-eagle", new Set(["mountain-hare", "ptarmigan", "feral-goat", "stone-adder", "gill-adder"])],
   // TIER TWO (mig 229). The first predator on this mountain big enough for a
   // deer — and still not big enough for the stag, which at 48hp/4-8 outweighs a
   // lynx in every sense that matters. A lynx takes hinds and calves. The animal
   // that can have HIM lives higher than this, and that is the tier telling you
   // where you are rather than a gap in the table.
-  ["lynx", new Set(["scarp-raven", "mountain-chough", "hill-eagle", "eagle-owl", "bone-breaker", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan", "stone-adder", "the-gravid-adder"])],
+  // THE CATS HUNT WHAT CATS HUNT (rome, 2026-11-08): the wildcat, the tom and the
+  // lynx take the ermine, which only the cave lion did; the tom, the wildcat's
+  // rare blood, hunts all the wildcat does; the lynx takes both foxes, as lynx do.
+  ["lynx", new Set(["scarp-raven", "mountain-chough", "hill-eagle", "eagle-owl", "bone-breaker", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan", "stone-adder", "the-gravid-adder", "ermine", "hill-fox", "snow-fox"])],
   // The owl takes the stoat, which is the one honest way to put a predator on
   // top of another predator at this size: 40hp/5-8 against 18hp/3-5, at night,
   // silently, is not a fight the stoat is in.

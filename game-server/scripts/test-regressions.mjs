@@ -2349,6 +2349,12 @@ try {
     const fl = readFileSync(new URL('../src/flight.ts', import.meta.url), 'utf8');
     assert.match(fl, /if \(eats\?\.size && z\.creaturesInRoom\(room\)\.some\([^\n]+\)\) return true;\n(\s*\/\/.*\n)*\s+if \(GRAZERS\.has\(c\.templateId\) \|\| GRAZERS\.has\(line\)\) return forageGround/, 'a bird that hunts and grazes flies to either');
   });
+  // 2026-11-08: no small cat took the ermine, and the tom hunted less than a plain wildcat.
+  check('the cats hunt the right animals', () => {
+    for (const cat of ['wildcat', 'the-tom', 'lynx']) assert.ok(PREYS_ON.get(cat).has('ermine'), cat + ' takes the ermine');
+    for (const p of PREYS_ON.get('wildcat')) assert.ok(PREYS_ON.get('the-tom').has(p), 'the tom takes ' + p + ' as the wildcat does');
+    for (const fox of ['hill-fox', 'snow-fox']) assert.ok(PREYS_ON.get('lynx').has(fox), 'the lynx takes the ' + fox);
+  });
   function studyWorld() {
     const { db, D1 } = sqliteD1();
     db.exec("CREATE TABLE player_accounts(pubkey TEXT, template_id TEXT, at INTEGER, PRIMARY KEY(pubkey, template_id)); ALTER TABLE players ADD COLUMN accounts INTEGER NOT NULL DEFAULT 0; INSERT INTO players(pubkey, name) VALUES ('me', 'Rome')");
@@ -5293,7 +5299,11 @@ try {
     assert.equal(eatingShown(z, { ...v, eatingUntil: now - 1 }, now), '', 'the meal over and nothing to eat, it is not eating');
     assert.equal(eatingShown(z, { ...v, eatingIn: 'elsewhere' }, now), '', 'it walked off its meal');
     z.traces.set('r', [{ kind: 'remains', label: 'a rat' }]);
-    assert.equal(eatingShown(z, { ...v, eatingUntil: 0 }, now), 'eat', 'a scavenger over remains reads as tearing into them, so it shows it');
+    // 2026-11-08: a fed hill wolf beside a body read as lapping it and was drawn
+    // feeding; standing by the dead is not eating them, in words or picture.
+    assert.equal(eatingShown(z, { ...v, eatingUntil: 0 }, now), '', 'a scavenger beside remains with no meal on is drawn standing');
+    const a = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.ok(!/lapping the bloodied stone clean|hunched low over a corpse/.test(a), 'and the words do not say it is eating either');
   });
 
   // 2026-11-05: bodies, chests and bags lie nearer than the standing line, but the

@@ -826,13 +826,9 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     // legibility law covers peace too: a scavenger tearing a body, a hyena
     // making for water, a nose down after a scent it caught all read in the look
     // instead of the beast standing there like it's waiting for you.
-    if (SCAVENGERS.has(creature.templateId)) {
-      const list = z.traces.get(creature.roomId) ?? [];
-      const spareKin = creature.templateId === "grave-hyena"; // won't eat its own dead — it keens
-      const edible = list.filter((tr) => CORPSE_TRACES.has(tr.kind) && !(spareKin && tr.label === tmpl.name));
-      if (edible.some((tr) => tr.kind === "remains")) return "hunched low over a corpse, tearing into it";
-      if (edible.length) return "lapping the bloodied stone clean";
-    }
+    // A SCAVENGER BESIDE A BODY IS NOT EATING IT (rome, 2026-11-08: a fed hill
+    // wolf read as lapping at the blood and was drawn feeding). It
+    // reads as eating only while a meal is on (eatingNow, above), as anything does.
     // THIRST, IN THE RIGHT BODY (rome, 2026-08-22, on a carrion vulture with a
     // lolling tongue). This line was written for the deep's hyenas and then
     // handed to every DRINKER in the world — so the mountain's vultures, ravens,
@@ -5033,11 +5029,8 @@ export function eatingNow(c: Creature, now = Date.now()): boolean {
 // question creatureTell asks, for the sprite. "" = not eating.
 export function eatingShown(z: ZoneDO, c: Creature, now = Date.now()): "" | "eat" | "graze" {
   if (eatingNow(c, now)) return c.eatingOn === "graze" ? "graze" : "eat";
-  if (SCAVENGERS.has(c.templateId)) {
-    const tmpl = z.world?.mobTemplates.get(c.templateId);
-    const spareKin = c.templateId === "grave-hyena";
-    if ((z.traces.get(c.roomId) ?? []).some((tr) => edibleBody(tr) && !(spareKin && tr.label === tmpl?.name))) return "eat";
-  }
+  // Only a meal that is on: a scavenger standing by a body it is not eating is
+  // drawn standing (rome, 2026-11-08), as the words say.
   return "";
 }
 
