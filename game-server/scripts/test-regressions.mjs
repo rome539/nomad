@@ -2949,6 +2949,29 @@ try {
     assert.ok(!g.includes('Not from in here — the dungeon is on the other side of that door.'), 'nothing is turned away at the door');
     assert.match(g, /if \(GATEHOUSE_BARRED\.has\(v\)\) return gatehouseSay\(z, session, text\);/, 'a get that is not your carving is said');
   });
+  // 2026-11-07: the weather and the sky after a room's words wear the lore look.
+  check('a room look draws its weather and sky lines in the lore look', () => {
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /if \(sky\) lines\.push\(LORE_LINE \+ sky\.trim\(\)\);/, 'the weather');
+    assert.match(zs, /lines\.push\(LORE_LINE \+ \(isFullMoon\(\)/, 'and the night sky');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /var loreLine = lines\[i\]\.charAt\(0\) === "\\u0003";\n\s+if \(loreLine\) lines\[i\] = lines\[i\]\.slice\(1\);/, 'the page takes the mark off');
+    assert.match(pub, /var c = loreLine \? "lore" : cls \|\| classify\(plain\);/, 'and draws it as a telling');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const LORE_LINE = "\\u0003";/, 'one mark, the same on both sides');
+  });
+  // 2026-11-07: the Slabs' lantern flame was drawn beside the lantern: every
+  // plate's marker sat about 13 pixels left of and above the flame, measured off
+  // the plates (the night-torch one only 4).
+  check('the Slabs lantern flame sits on the lantern', () => {
+    const fx = JSON.parse(readFileSync(new URL('./plate-fx-torches.json', import.meta.url), 'utf8'));
+    const flame = { day: [0.7028, 0.3787], fog: [0.7037, 0.3776], night: [0.7047, 0.3778], 'night-torch': [0.7041, 0.3767], rain: [0.6927, 0.3701], snow: [0.7031, 0.3783] };
+    for (const [k, [x, y]] of Object.entries(flame)) {
+      const m = fx['gate-the-slabs-' + k]?.[0];
+      assert.ok(m && Math.abs(m[0] - x) < 0.003 && Math.abs(m[1] - y) < 0.003, k + ' at ' + JSON.stringify(m));
+    }
+    assert.match(readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8'), /var FX_V   = "(4[89]|[5-9]\d|\d{3,})";/, 'and browsers are told the index changed');
+  });
   // 2026-11-07: close looks and what a study finds wear the lore look, as the
   // last hand on found gear does; the study's own line and its count stay plain.
   check('close looks and study findings are told in the lore look', () => {

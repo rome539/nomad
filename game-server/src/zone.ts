@@ -132,7 +132,7 @@ import { FORGE_STOCK,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
-  ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS, PICKED_CLEAN_MS,
+  ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS, PICKED_CLEAN_MS, LORE_LINE,
   HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
@@ -8034,15 +8034,18 @@ export class ZoneDO implements DurableObject {
     // The sky's phase, spoken where the sky can reach you: coming rain, rain,
     // or the mud it left. Legibility rule — you always know what weather
     // you're standing in.
+    // THE WEATHER AND THE SKY WEAR THE LORE LOOK (rome, 2026-11-07), as the last
+    // hand on storied gear does: LORE_LINE at the head of a line tells the page
+    // to draw it so, and the page takes the mark off.
     const sky = indoors ? "" : events.skyClause(this, room.id);
-    if (sky) lines.push(sky.trim());
+    if (sky) lines.push(LORE_LINE + sky.trim());
     // The night-clock itself gets a line too, same legibility rule as
     // weather — this only runs past the pitch-dark return above, so it's
     // either a torch holding the dark at bay or a full moon lighting the
     // grounds outright; either way, say which (rome, 2026-07-22).
     // skyClause already describes a blood moon; do not repeat it here.
     if (!indoors && OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
-      lines.push(isFullMoon()
+      lines.push(LORE_LINE + (isFullMoon()
         ? "A full moon rides high and white — the grounds lie almost as bright as day."
         // Whose light it is matters here: this line runs for anyone the room is
         // lit FOR, and telling a man he can see past "your light" when the
@@ -8056,7 +8059,7 @@ export class ZoneDO implements DurableObject {
         // is in the sentence that only ever fires in one of them.
         : this.carriesLight(session)
           ? "Night's fully down and the sky over you is open and black — past your light, so is everything else."
-          : "Night's fully down and the sky over you is open and black — past the light you're standing in, so is everything else.");
+          : "Night's fully down and the sky over you is open and black — past the light you're standing in, so is everything else."));
     }
 
     const exits = world.exits.get(room.id) ?? [];

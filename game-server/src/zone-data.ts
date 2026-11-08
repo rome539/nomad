@@ -1667,6 +1667,8 @@ export const SOFT_GROUND = new Set<string>([
   "the-mud-shore", "the-drained-creek", "the-mud-causey", "the-creek-mouth", "the-gull-flats",
 ]);
 export const TRACE_CAP = 12; // per room; oldest non-carving, non-body forgotten first
+// At the head of a line in a room look: the page draws that line in the lore look and drops the mark (public.ts print).
+export const LORE_LINE = "\u0003";
 export const PICKED_CLEAN_MS = 60_000; // a body picked clean leaves this long after its last meal is due to end, if nothing cleared it sooner
 export const CARVE_CAP = 5; // wall space is finite
 export const CARVE_MAX_LEN = 40;

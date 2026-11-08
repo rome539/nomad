@@ -4920,11 +4920,15 @@ function print(text, cls, who, pk, voiced) {
   var stick = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
   for (var i = 0; i < lines.length; i++) {
     var div = document.createElement("div");
+    // A LINE MARKED FOR THE LORE LOOK (the room's weather and sky, LORE_LINE in
+    // zone-data): the mark comes off and the line is drawn as a telling.
+    var loreLine = lines[i].charAt(0) === "\u0003";
+    if (loreLine) lines[i] = lines[i].slice(1);
     // classify and the sound picker read the PLAIN line: a rarity marker is
     // painting, not content, and a control character in the middle of a phrase
     // must never change which class or which sound a line gets.
     var plain = lines[i].indexOf("\u0001") === -1 ? lines[i] : stripRarity(lines[i]);
-    var c = cls || classify(plain);
+    var c = loreLine ? "lore" : cls || classify(plain);
     if (c) div.className = c;
     if (roomBlock && i > 0) {
       var k = /^Exits: |^There is no way out\\./.test(plain) ? "exits"
@@ -10438,7 +10442,7 @@ var BG_V   = "64";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "27";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "47";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "48";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
