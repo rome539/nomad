@@ -202,6 +202,15 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     }
     dead.push(tr.id);
   }
+  // A KILL BEING EATEN IS DRAWN UNDER ITS EATER (rome, 2026-11-08: an owl on its
+  // kill over bare ground). A hunter's kill leaves only blood and hair, no body,
+  // so while the meal lasts the picture lays what is being eaten; it goes when
+  // the meal ends (the beat refreshes the picture then).
+  for (const c of z.creaturesInRoom(session.roomId)) {
+    if (c.eatingOn !== "kill" || !c.eatingWhat || !ai.eatingNow(c) || dead.includes(c.eatingWhat)) continue;
+    dead.unshift(c.eatingWhat);
+    if (dead.length > 3) dead.pop();
+  }
   for (const creature of z.creaturesInRoom(session.roomId)) {
     // Torchlight reveals a waiting lurker — so it also gets its attack chip.
     // GLINTING gear does the same by daylight (2026-08-20): the polish leaves

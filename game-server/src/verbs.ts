@@ -746,7 +746,9 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   if (creature) {
     // The close read lives in ai.ts, because `study` prints it too and the two
     // must never drift apart.
-    return z.send(session, ai.creatureRead(z, creature, session.pubkey));
+    z.send(session, ai.creatureRead(z, creature, session.pubkey));
+    if (session.pubkey === CENSUS_PUBKEY) z.send(session, ai.keeperRead(z, creature), "dim");
+    return;
   }
   // THE DEAD ON THE FLOOR (rome, 2026-10-31). The picture draws the bodies and
   // study reads them, but look walked straight past them to a trophy in the

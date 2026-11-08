@@ -138,7 +138,7 @@ export async function arrivalHabits(z: ZoneDO, creature: Creature, tmpl: MobTemp
       for (const w of wolves) await creatureMoves(z, w, now, "flee", silent);
       const fedFrom1 = creature.hunger;
       creature.hunger = 0;
-      ate(creature, now, undefined, fedFrom1 - creature.hunger);
+      ate(creature, now, undefined, fedFrom1 - creature.hunger, undefined, kill.prey);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + 8);
       if (!silent) { z.fxFed(here, tmpl.id); z.refreshRoomCtx(here); }
     }
@@ -520,6 +520,58 @@ export function joinSameRoomFight(z: ZoneDO, roomId: string): void {
 // It lives here rather than in verbs.ts so the two callers cannot drift: a
 // creature's live state is read in ONE place, and every clause that ever gets
 // added to a close read reaches the journal too, for free.
+// THE KEEPER'S READ (rome, 2026-11-08): his key, looking at an animal, gets
+// what the sim holds on it under the look - for him, never for players.
+export function keeperRead(z: ZoneDO, c: Creature, now = Date.now()): string {
+  const world = z.world!;
+  const tmpl = world.mobTemplates.get(c.templateId)!;
+  const name = (id?: string) => (id ? world.mobTemplates.get(id)?.name ?? id : "something").replace(/^(an?|the) /i, "");
+  const span = (ms: number): string => {
+    const s = Math.max(0, Math.round(ms / 1000));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    return m < 60 ? `${m}m ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}m`;
+  };
+  const who = (pk: string) => [...z.sessions.values()].find((x) => x.pubkey === pk)?.name ?? pk.slice(0, 8);
+  let doing: string;
+  if (c.aloft !== undefined) doing = `in the air, comes down ${c.flightTo ? `at ${c.flightTo} ` : ""}in ${span(c.aloft - now)}`;
+  else if (c.asleep) doing = `sleeping, wakes in ${span((c.sleepUntil ?? now) - now)}`;
+  else if (c.target) doing = `fighting ${who(c.target)}`;
+  else if (c.holding) doing = `has ${name(z.creatures.get(c.holding)?.templateId)} by the throat`;
+  else if (eatingNow(c, now)) {
+    const left = span((c.eatingUntil ?? now) - now);
+    doing = c.eatingOn === "graze" ? `grazing, ${left} left`
+      : c.eatingOn === "scraps" ? `eating scraps, ${left} left`
+      : `eating ${c.eatingWhat ? name(c.eatingWhat) : "something"} (${c.eatingOn === "carrion" ? "a carcass" : "its kill"}), ${left} left`;
+  } else if (c.fledAt && now - c.fledAt < 60_000) doing = "fleeing";
+  else if (c.stalks) doing = `stalking ${who(c.stalks)}`;
+  else if (c.chase) doing = `chasing ${c.chase.mob ? name(z.creatures.get(c.chase.mob)?.templateId) : c.chase.pubkey ? who(c.chase.pubkey) : "something"}`;
+  else if (c.wateringTo) doing = `going for water at ${c.wateringTo}`;
+  else if (c.huntFor) doing = `walking to ${c.huntFor} to hunt, nothing to eat here`;
+  else if (c.forageFor) doing = `walking to its feeding ground at ${c.forageFor}`;
+  else if (c.roundFor) doing = `out on its feeding ground at ${c.roundFor}`;
+  else if (c.curious && c.curious !== c.roomId) doing = `following a sound toward ${c.curious}`;
+  else if (c.walkingTo) doing = `walking to ${c.walkingTo}`;
+  else if (c.drift) doing = `wandering loose, ${c.drift} rooms out from ${c.driftFrom ?? "?"}`;
+  else doing = "standing (nothing on)";
+  const pack = c.group ? z.groups.packs[c.group] : undefined;
+  const home = pack?.home ?? c.home;
+  const far = home ? (home === c.roomId ? "here" : `${z.roomDist(c.roomId, home)} rooms off`) : "";
+  const kin = c.group ? [...z.creatures.values()].filter((o) => o.group === c.group).length : 0;
+  const group = c.group ? `group of ${kin}` : c.lone ? "alone" : "none";
+  const wander = c.nextWanderAt > now ? `in ${span(c.nextWanderAt - now)}` : "now";
+  const flight = c.flightTo ? `to ${c.flightTo}` : "none";
+  const base = z.variantBase.get(c.templateId);
+  const row = world.mobSpawns.some((s) => s.id === c.id) ? `spawn row ${c.id}` : "came in later";
+  return [
+    `  keeper: ${c.templateId} #${c.id} · hp ${c.hp}/${tmpl.max_hp} · hunger ${Math.round(c.hunger)} · ${c.asleep ? "asleep" : "awake"}`,
+    `  doing: ${doing}`,
+    `  home: ${home ? `${home}, ${far}` : "none"} · ${group}`,
+    `  next move: ${wander} · flight: ${flight}`,
+    `  born: ${row}, bloodline ${base ? `variant of ${base}` : "plain"} · traits: ${c.traits?.length ? c.traits.join(", ") : "none"}`,
+  ].join("\n");
+}
+
 export function creatureRead(z: ZoneDO, creature: Creature, viewer: string): string {
   const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
   // The fog takes the close read the same way it takes it off a wanderer: you
@@ -754,14 +806,19 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     // in the body it has, and that is what a study catches as "feeding".
     // WHAT IT IS EATING (rome, 2026-10-28: "head down, eating" never said what).
     // The kind of meal, in the body it has - never what the kill was.
+    // ...AND NOW WHAT THE KILL WAS (rome, 2026-11-08: an owl on its kill and
+    // the look never said what it was eating), when the meal is a body.
     if (eatingNow(creature)) {
       const on = creature.eatingOn ?? "kill";
-      if (COILS.has(creature.templateId)) return on === "kill" ? "working its kill slowly down its throat" : "working a meal slowly down its throat";
-      if (BEAKS.has(creature.templateId)) return on === "kill" ? "standing on its kill, tearing at it with its bill"
-        : on === "carrion" ? "head down in a carcass, tearing at it with its bill"
+      const what = creature.eatingWhat ? z.world!.mobTemplates.get(creature.eatingWhat)?.name : undefined;
+      const kill = what ? `${what}, its kill,` : "its kill,";
+      const carcass = what ? `the carcass of ${what}` : "a carcass";
+      if (COILS.has(creature.templateId)) return on === "kill" ? `working ${what ?? "its kill"} slowly down its throat` : "working a meal slowly down its throat";
+      if (BEAKS.has(creature.templateId)) return on === "kill" ? `standing on ${kill} tearing at it with its bill`
+        : on === "carrion" ? `head down in ${carcass}, tearing at it with its bill`
         : "pecking at something on the ground and swallowing it";
-      return on === "kill" ? "head down over its kill, eating"
-        : on === "carrion" ? "head down in a carcass, tearing at what is left"
+      return on === "kill" ? `head down over ${kill} eating`
+        : on === "carrion" ? `head down in ${carcass}, tearing at what is left`
         : on === "graze" ? "head down, grazing"
         : "nosing through scraps on the ground and eating them";
     }
@@ -2249,7 +2306,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       preyFalls(z, victim, vt, creature.templateId);
       const fedFrom4 = creature.hunger;
       creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
-      ate(creature, undefined, undefined, fedFrom4 - creature.hunger);
+      ate(creature, undefined, undefined, fedFrom4 - creature.hunger, undefined, victim.templateId);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
       z.roomFeed(creature.roomId, `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`, undefined, false);
@@ -2325,7 +2382,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     preyFalls(z, victim, vt, creature.templateId);
     const fedFrom5 = creature.hunger;
     creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
-    ate(creature, undefined, undefined, fedFrom5 - creature.hunger);
+    ate(creature, undefined, undefined, fedFrom5 - creature.hunger, undefined, victim.templateId);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
     z.roomFeed(creature.roomId, `${cap(tmpl.name)} finishes it, and stands over what is left.`, undefined, false);
@@ -2777,7 +2834,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const fedFrom6 = creature.hunger;
     creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) ? MEAL_SMALL : MEAL_CORPSE));
     // A body it took whole, or the share of one it took, goes back if it is cut short.
-    ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken, key: bodyKey(eaten), id: eaten.id });
+    ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken, key: bodyKey(eaten), id: eaten.id }, eaten.prey ?? eaten.id);
     // A body picked clean goes once the last meal on it is done, even if the
     // one eating it is killed or wanders off before digest can see it finish.
     if (eaten.meat === 0 && creature.meal) eaten.eatenTill = Math.max(eaten.eatenTill ?? 0, creature.meal.to);
@@ -4999,7 +5056,8 @@ export function mealWords(z: ZoneDO, c: Creature, name: string, was: string, sho
 // for another; but stopped part way (walked off, fought, driven off) it gets
 // back the part it never ate, and what it was eating goes back on the floor.
 export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "kill", drop = 0,
-  body?: { roomId: string; prey?: string; label?: string; meat: number; key?: string; id?: string }): void {
+  body?: { roomId: string; prey?: string; label?: string; meat: number; key?: string; id?: string }, what?: string): void {
+  c.eatingWhat = what;
   const dur = drop > 0 ? Math.min(EAT_SHOW_MS, Math.max(MEAL_MIN_MS, EAT_SHOW_MS * drop / MEAL_CORPSE)) : EAT_SHOW_MS;
   c.eatingOn = on;
   c.eatingUntil = now + dur;

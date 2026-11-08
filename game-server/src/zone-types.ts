@@ -182,6 +182,7 @@ export interface Creature {
   murmuredAt?: number; // HOLLOW: last time it breathed a name into the dark (the cooldown anchor)
   gorged?: boolean; // this sleep began on a corpse it had just eaten — the only state that earns the bones line
   eatingOn?: "kill" | "carrion" | "scraps" | "graze"; // what the meal is, for the look
+  eatingWhat?: string; // the template it is eating, when it is a body: named in the look, drawn under it (rome, 2026-11-08)
   eatingIn?: string;   // the room the meal is in: walk off it and the meal is over (rome, 2026-10-28)
   eatingSeen?: string;  // what the sprite was last told about eating, so a meal starting or ending redraws the room (ai.eatingShown; ephemeral)
   eatSayAt?: number;    // when the room next reads a line of this meal (ai.mealWords; never worth a save)

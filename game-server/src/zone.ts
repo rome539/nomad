@@ -6362,7 +6362,10 @@ export class ZoneDO implements DurableObject {
       return from[randInt(0, from.length - 1)];
     };
     // A sky doing something outranks the standing pools (rain drums, mud pulls).
-    const sky = events.eventAmbient(this, roomId);
+    // The weather's passing line wears the lore look too (rome, 2026-11-08), as
+    // the weather line in the room's words does: marked here, drawn by the page.
+    const said = events.eventAmbient(this, roomId);
+    const sky = said ? LORE_LINE + said : null;
     if (sky) return sky === avoid ? null : sky; // weather repeating itself just holds its tongue a beat
     // ...and then whatever the ground is going through (conditions.ts).
     const going = conditions.ambient(this, roomId);
