@@ -15947,6 +15947,10 @@ function fitMobRow() {
     // Its feet on the body's line: the bottom of its own frame, at the size it
     // stands (a body is laid fitted, so the two share the bottom edge, not the top).
     el._bodyTop = rowH - item.h + forward * .9 / scale;
+    // ...and one already dying STAYS down there through any re-lay of the row. The
+    // buttons change the moment a fight ends, the picture is fitted again, and this
+    // put it back up at the standing line until its body was laid (rome, 2026-11-08).
+    if (el._dying) el.style.top = el._bodyTop + "px";
     el.style.zIndex = String(z);
     // Only static corpses need this separate size adjustment; animation
     // transforms remain owned by stepAnims on every living creature.
@@ -16568,6 +16572,7 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one, sw, st) {
       // it: that lift sets a small creature's feet on the standing line, and kept
       // on the floor line it sank the dying one into the ground (rome, 2026-11-08).
       if (a.el && a.el._bodyTop !== undefined) { a.el.style.top = a.el._bodyTop + "px"; a.lift = 0; }
+      if (a.el) a.el._dying = true;   // fitMobRow keeps it on the floor from here
       // ...and its death frame is put up in the same instant. Left to the next
       // step, the standing frame showed for a frame or two moved down to the floor
       // line with its standing lift still on, sunk into the ground, and then the
