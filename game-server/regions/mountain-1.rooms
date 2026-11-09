@@ -170,7 +170,7 @@ A hearth without a house: one broad flat stone with a ring of smaller ones round
 > west   the-nettle-ground
 
 ## the-last-pasture | The Last Pasture
-Grass — real grass, green and thick and worth something — in a long sloping field with the wall below it and the hill above. This is the top of the good ground and everybody who ever came up here knew it. Above this the grass gets thinner every fifty feet and stops being a crop and starts being whatever will hold on.
+Grass — real grass, green and thick and worth something — in a long sloping field with the wall below it and the hill above. This is the top of the good ground and everybody who ever came up here knew it. Above this the grass gets thinner every fifty feet and stops being a crop and starts being whatever will hold on. Along the foot of the wall, where the grazing never reached, crowberry has come in low and black with fruit.
 > north  the-milking-fold
 > south  the-stell
 > east   the-bracken-slope
@@ -190,7 +190,7 @@ A circular dry-stone shelter built in a ring so that beasts inside it could alwa
 > west   the-rush-hollow
 
 ## the-bracken-slope | The Bracken Slope
-Bracken to the chest, unbroken across the whole face of the slope, hiding the ground and every hole and stone in it completely. It comes in where grazing stops and it does not go out again. Walking through it you cannot see your own feet, and you can hear things moving that you will not see at all.
+Bracken to the chest, unbroken across the whole face of the slope, hiding the ground and every hole and stone in it completely. It comes in where grazing stops and it does not go out again. Walking through it you cannot see your own feet, and you can hear things moving that you will not see at all. At its edges, where light gets in under the fronds, crowberry creeps over the ground, black with fruit.
 > north  the-cotton-grass
 > south  the-boulder-field
 > west   the-last-pasture
@@ -202,7 +202,7 @@ Bog cotton, thousands of it, each on its own thin stalk, all leaning together an
 > east   the-drowned-fence
 
 ## the-peat-hags | The Peat Hags
-The peat has torn open into a maze of steep black-sided channels, six feet deep, with flat-topped islands of heather standing between them. You go down into one and along it and up out of it, or you go round, and either way you cannot see over the tops while you are in there. Old wood sticks out of the cut faces — whole trunks, black and sound, from a forest that stood here before any of this was peat.
+The peat has torn open into a maze of steep black-sided channels, six feet deep, with flat-topped islands of heather and black-fruited crowberry standing between them. You go down into one and along it and up out of it, or you go round, and either way you cannot see over the tops while you are in there. Old wood sticks out of the cut faces — whole trunks, black and sound, from a forest that stood here before any of this was peat.
 > north  the-hanging-turf
 > south  the-cotton-grass
 > east   the-peat-pool
@@ -414,7 +414,7 @@ Where a gully in the crag comes down and delivers, onto a heap of its own leavin
 # ---- THE NORTH SHOULDER: the goat ground -----------------------------------
 
 ## the-goat-track | The Goat Track
-A path a hand's breadth wide traversing the slope on the level, worn into the turf by something going single file to the same place every day. It contours instead of climbing, which is how you know nothing with two legs made it. Follow it and it will take you somewhere worth going, by their reckoning.
+A path a hand's breadth wide traversing the slope on the level, worn into the turf by something going single file to the same place every day. It contours instead of climbing, which is how you know nothing with two legs made it. Follow it and it will take you somewhere worth going, by their reckoning. Crowberry grows thick along both its edges, low and creeping, the black berries mostly left alone.
 > south  the-hearth-stone
 > east   the-hanging-turf
 

@@ -2421,6 +2421,25 @@ try {
   });
   // 2026-11-08: a kill hung in the air a moment before its body dropped: the death
   // frame played at the standing line, the body lay lower a beat later.
+  check('every room the crowberries lie in says crowberry grows there', () => {
+    const dir = new URL('../migrations/', import.meta.url);
+    const rooms = readdirSync(new URL('../regions/', import.meta.url)).filter((f) => f.endsWith('.rooms'))
+      .map((f) => readFileSync(new URL('../regions/' + f, import.meta.url), 'utf8')).join('\n');
+    const where = new Set();
+    for (const f of readdirSync(dir).filter((f) => f.endsWith('.sql'))) {
+      const sql = readFileSync(new URL(f, dir), 'utf8');
+      for (const m of sql.matchAll(/\('the-[a-z-]+', 'crowberries', 1\)|VALUES \('crowberries', '([a-z-]+)', 1\)/g)) if (m[1]) where.add(m[1]);
+      for (const m of sql.matchAll(/\('(the-[a-z-]+)',\s*'crowberries',\s*1\)/g)) where.add(m[1]);
+    }
+    assert.ok(where.size >= 8, 'eight crowberry rooms, found ' + where.size);
+    for (const r of where) {
+      const at = rooms.indexOf('## ' + r + ' ');
+      assert.ok(at >= 0, r + ' is in the room source');
+      const body = rooms.slice(at, rooms.indexOf('\n## ', at + 3) >>> 0);
+      assert.ok(/crowberr/i.test(body), r + ' names the crowberry');
+      assert.ok(!/bilberr/i.test(body), r + ' names no other berry');
+    }
+  });
   check('the hill wolf faces you when hit, not its idle profile', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /var HIT_AS = \{ "hill-wolf": "alert" \};/, 'the wolf is hit in its front-facing frame');
