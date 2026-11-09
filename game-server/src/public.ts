@@ -15663,13 +15663,22 @@ function paintMobs(ids, doing, dead) {
   // and the living one seemed to drop dead too (rome, 2026-10-16). A body
   // already lying keeps its place; a fresh one lies as near where it fell as
   // the living leave room for (fitMobRow).
+  // IT LIES WHERE IT STOOD (rome, 2026-11-08): a kill goes down on the spot it
+  // was standing on and its body stays there, and only when more come into the
+  // room is it moved down to the front with the other dead.
   var fell = {};
   for (var c0 = mobsEl.firstChild; c0; c0 = c0.nextSibling)
     if (c0.className === "mob dead" && c0.dataset && c0.dataset.id)
-      (fell[c0.dataset.id] = fell[c0.dataset.id] || []).push(parseFloat(c0.style.left) + c0.offsetWidth / 2);
-  for (var a0 = 0; a0 < anims.length; a0++)
+      (fell[c0.dataset.id] = fell[c0.dataset.id] || []).push({ x: parseFloat(c0.style.left) + c0.offsetWidth / 2,
+        stood: c0.dataset.stood === "1", depth: Number(c0.dataset.depth) || 0 });
+  for (var a0 = 0; a0 < anims.length; a0++) {
     if (anims[a0].phase === "death")
-      (fell[anims[a0].id] = fell[anims[a0].id] || []).push(parseFloat(anims[a0].el.style.left) + anims[a0].el.offsetWidth / 2);
+      (fell[anims[a0].id] = fell[anims[a0].id] || []).push({ x: parseFloat(anims[a0].el.style.left) + anims[a0].el.offsetWidth / 2,
+        stood: true, depth: anims[a0].el._depth || 0 });
+  }
+  // how many stood in the row last painted: a body stays where it fell until more come
+  var moreCame = list.length > (mobsEl._livingN || 0);
+  mobsEl._livingN = list.length;
   while (mobsEl.firstChild) mobsEl.removeChild(mobsEl.firstChild);
   // Biggest toward the centre, so a hare is never lost behind a hind.
   list.sort(function (a, b) { return MOB_SPRITE[b.id] - MOB_SPRITE[a.id]; });
@@ -15699,7 +15708,10 @@ function paintMobs(ids, doing, dead) {
     bel.dataset.w = (bvh * bspec.aspect).toFixed(2);   // fitMobRow reads this, not the style
     bel.dataset.id = bid;
     var at = fell[bid] && fell[bid].shift();
-    if (at === at && at !== undefined) bel.dataset.fell = String(at);   // not NaN: it was laid out
+    if (at && at.x === at.x) {   // not NaN: it was laid out
+      bel.dataset.fell = String(at.x);
+      if (at.stood && !moreCame) { bel.dataset.stood = "1"; bel.dataset.depth = String(at.depth); }
+    }
     bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + MOB_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
@@ -15848,6 +15860,7 @@ function paintMobs(ids, doing, dead) {
     strike = strikes[0] || "";
     for (var z4 = 0; z4 < HIT_POSES.length; z4++)
       if (spec.f[HIT_POSES[z4]] !== undefined) { recoil = HIT_POSES[z4]; break; }
+    if (recoil === "idle" && typeof HIT_AS !== "undefined" && HIT_AS[id] && spec.f[HIT_AS[id]] !== undefined) recoil = HIT_AS[id];
     // The pose it fixes you with, and how restless it is. A thing with a gait
     // shifts often; a thing drawn sitting on a nest hardly ever does.
     var watch = "idle";
@@ -15941,16 +15954,7 @@ function fitMobRow() {
     el.style.position = "absolute";
     el.style.left = (x + item.w * item.fit * .06) + "px";
     el.style.top = ((rowH - item.h) / 2 + depth / scale) + "px";
-    // WHERE IT WOULD LIE (rome, 2026-11-08: a kill hung in the air a moment, then
-    // dropped). A death frame played where the creature stood, at the standing
-    // line, and the body was laid lower a beat later; the frame now starts here.
-    // Its feet on the body's line: the bottom of its own frame, at the size it
-    // stands (a body is laid fitted, so the two share the bottom edge, not the top).
-    el._bodyTop = rowH - item.h + forward * .9 / scale;
-    // ...and one already dying STAYS down there through any re-lay of the row. The
-    // buttons change the moment a fight ends, the picture is fitted again, and this
-    // put it back up at the standing line until its body was laid (rome, 2026-11-08).
-    if (el._dying) el.style.top = el._bodyTop + "px";
+    el._depth = depth;   // how far forward it stands: its body lies on the same spot
     el.style.zIndex = String(z);
     // Only static corpses need this separate size adjustment; animation
     // transforms remain owned by stepAnims on every living creature.
@@ -16026,7 +16030,9 @@ function fitMobRow() {
       if (cost < bestCost) { bestCost = cost; best = x0; }
     }
     if (best === null) best = centre - w / 2;
-    put(item, best, forward * .9, true, i);
+    var stood = item.el.dataset && item.el.dataset.stood === "1" && fellAt === fellAt;
+    if (stood) best = Math.max(deadL, Math.min(deadR - w, fellAt - w / 2));
+    put(item, best, stood ? Number(item.el.dataset.depth) || 0 : forward * .9, true, i);
     laid.push([best + (w - lie) / 2, best + (w + lie) / 2]);
   });
 }
@@ -16500,6 +16506,10 @@ var SLEEP_POSES = ["rest", "bask", "hold-warm-ground", "hold-ground", "feed"];
 var NO_FEED_SLEEP = {};
 var STRIKE_POSES = ["attack", "bite", "sweep", "breath"];
 var HIT_POSES = ["hit"];
+// DRAWN WITH NO HIT FRAME, A BLOW SHOWS THIS ONE instead of the idle profile
+// (rome, 2026-11-08: the hill wolf turned to its idle side-on frame every time it
+// was hit; in a fight it keeps facing you).
+var HIT_AS = { "hill-wolf": "alert" };
 // WHAT EATING LOOKS LIKE. Separate from CALM_POSES on purpose: this one answers
 // an EVENT — the world says this animal just ate — so nothing shadows it. A
 // grazer that also sleeps still shows the sleep as its idle alternate and the
@@ -16568,20 +16578,14 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one, sw, st) {
     if (deathAt >= 0 && a.spec.f.death !== undefined && a.phase !== "death") {
       deaths.splice(deathAt, 1);
       a.phase = "death"; a.t = 0; a.asleep = false;
-      // Down on the floor, where its body will lie. The standing lift comes off with
-      // it: that lift sets a small creature's feet on the standing line, and kept
-      // on the floor line it sank the dying one into the ground (rome, 2026-11-08).
-      if (a.el && a.el._bodyTop !== undefined) { a.el.style.top = a.el._bodyTop + "px"; a.lift = 0; }
-      if (a.el) a.el._dying = true;   // fitMobRow keeps it on the floor from here
-      // ...and its death frame is put up in the same instant. Left to the next
-      // step, the standing frame showed for a frame or two moved down to the floor
-      // line with its standing lift still on, sunk into the ground, and then the
-      // death frame popped up out of it (rome, 2026-11-08: the body went up, then down).
+      // It goes down right where it stands (rome, 2026-11-08), its death frame
+      // up in the same instant, on its own feet line, and its body is laid on
+      // that same spot (paintMobs, fitMobRow).
       if (a.el) {
         var fdrop = typeof FRAME_DROP !== "undefined" && FRAME_DROP[a.id] && FRAME_DROP[a.id].death || 0;
         a.el.style.backgroundPositionX = (a.spec.f.death * 100 / (a.spec.n - 1)) + "%";
         if (a.el.dataset) a.el.dataset.death = "1";
-        a.el.style.transform = "translate(0%," + (fdrop * 100).toFixed(1) + "%) rotate(0deg) scale(1)";
+        a.el.style.transform = "translate(0%," + ((fdrop - (a.lift || 0)) * 100).toFixed(1) + "%) rotate(0deg) scale(1)";
       }
       mobHold = Date.now() + DEATH_S * 1000;
     } else if (a.phase === "death") continue;

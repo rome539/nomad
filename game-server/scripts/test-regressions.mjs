@@ -2421,22 +2421,28 @@ try {
   });
   // 2026-11-08: a kill hung in the air a moment before its body dropped: the death
   // frame played at the standing line, the body lay lower a beat later.
-  check('a creature dies onto the floor where its body will lie, no float and no sinking', () => {
+  check('the hill wolf faces you when hit, not its idle profile', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    // a re-lay of the row (the buttons change as a fight ends) keeps a dying one down
-    assert.match(pub, /if \(el\._dying\) el\.style\.top = el\._bodyTop \+ "px";/, 'a re-lay keeps it on the floor');
-    assert.ok(pub.includes('if (a.el) a.el._dying = true;'), 'marked dying as it dies');
-    // the death frame goes up in the same instant, and nothing resizes it after
+    assert.match(pub, /var HIT_AS = \{ "hill-wolf": "alert" \};/, 'the wolf is hit in its front-facing frame');
+    assert.ok(pub.includes('if (recoil === "idle" && typeof HIT_AS !== "undefined" && HIT_AS[id] && spec.f[HIT_AS[id]] !== undefined) recoil = HIT_AS[id];'), 'and the paint uses it');
+  });
+  check('a kill goes down where it stands, and its body stays there until more come in', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const beat = pub.slice(pub.indexOf('a.phase = "death"; a.t = 0; a.asleep = false;'), pub.indexOf('mobHold = Date.now() + DEATH_S * 1000;'));
+    // no move at death: its death frame at once, on its own standing feet line
+    assert.ok(!/style\.top/.test(beat), 'a dying creature is not moved');
     assert.ok(beat.includes('a.el.style.backgroundPositionX = (a.spec.f.death * 100 / (a.spec.n - 1)) + "%";'), 'death frame shown at once');
-    assert.ok(beat.includes('rotate(0deg) scale(1)'), 'standing transform cleared at once');
+    assert.ok(beat.includes('((fdrop - (a.lift || 0)) * 100)'), 'its standing lift kept');
     const pose = pub.slice(pub.indexOf('  if (a.phase === "death") {\n'), pub.indexOf('} else if (a.phase === "attack") {'));
     assert.ok(pose.includes('name = "death";') && !/s \*=/.test(pose), 'a dying body is not resized');
-    // feet on the line a body is laid on: the frame's own bottom edge, not a fitted top
-    assert.match(pub, /el\._bodyTop = rowH - item\.h \+ forward \* \.9 \/ scale;/, 'each sprite knows where it would lie');
-    assert.match(pub, /put\(item, best, forward \* \.9, true, i\);/, 'the same line the body is laid on');
-    // and the standing lift comes off, or a small one sinks into the ground and pops up
-    assert.match(pub, /a\.phase = "death"; a\.t = 0; a\.asleep = false;\n(?:\s*\/\/.*\n)*\s+if \(a\.el && a\.el\._bodyTop !== undefined\) \{ a\.el\.style\.top = a\.el\._bodyTop \+ "px"; a\.lift = 0; \}/, 'and goes down there as it dies, lift off');
+    // its body is laid on the spot it stood on, at the depth it stood at...
+    assert.match(pub, /el\._depth = depth;/, 'each sprite remembers how far forward it stands');
+    assert.match(pub, /stood: true, depth: anims\[a0\]\.el\._depth \|\| 0/, 'a dying one carries its spot into the repaint');
+    assert.match(pub, /put\(item, best, stood \? Number\(item\.el\.dataset\.depth\) \|\| 0 : forward \* \.9, true, i\);/, 'laid where it stood');
+    assert.ok(pub.includes('if (stood) best = Math.max(deadL, Math.min(deadR - w, fellAt - w / 2));'), 'on the very spot, not the nearest clear one');
+    // ...until more come into the room
+    assert.match(pub, /var moreCame = list\.length > \(mobsEl\._livingN \|\| 0\);/, 'more coming in is noticed');
+    assert.match(pub, /if \(at\.stood && !moreCame\)/, 'and then it goes down to the front');
   });
   function studyWorld() {
     const { db, D1 } = sqliteD1();
@@ -5404,7 +5410,7 @@ try {
     const deadLineOf = new Function('MAN_VH', src + '; return deadLineOf;')(42);
     for (const line of [40, 50, 55, 60]) assert.ok(deadLineOf(line) > line, 'a body lies forward of the standing line at ' + line);
     assert.ok(Math.abs(deadLineOf(55) - (55 + .9 * 16)) < 1e-9, 'as far forward as fitMobRow lays it');
-    assert.match(pub, /put\(item, best, forward \* \.9, true, i\)/, 'fitMobRow still lays bodies forward * .9');
+    assert.match(pub, /put\(item, best, stood \? Number\(item\.el\.dataset\.depth\) \|\| 0 : forward \* \.9, true, i\)/, 'fitMobRow still lays bodies forward * .9');
     assert.doesNotMatch(pub, /mobsEl\.style\.filter = /, 'the mix is not set on the whole row');
     assert.match(pub, /mobsEl\.style\.setProperty\("--mobfog", mx \? "url\(#fogmix\)" : ""\)/, 'the living are mixed through the variable');
     const rules = pub.match(/#mobs\.t-[^{]*\.mob \{ filter:[^}]*\}/g);
