@@ -1066,6 +1066,9 @@ export const SMALL_PREY = new Set([
   "hill-eagle", "eagle-owl", "bone-breaker", "the-bone-dropper", "eyrie-holder",
   "carrion-vulture", "brooding-vulture", "great-vulture",
   "hedgehog", "ermine",                                           // the small biters
+  // the foxes and the wildcat, and their rare blood (rome, 2026-11-09): no
+  // bigger than a raven or an adder, so a mouthful, not a hind's worth.
+  "hill-fox", "the-raiding-fox", "snow-fox", "the-blue-fox", "wildcat", "the-tom",
   "gill-adder", "fen-viper", "stone-adder", "the-gravid-adder",   // the snakes
   "wrack-crab",                                                   // the little crab
 ]);

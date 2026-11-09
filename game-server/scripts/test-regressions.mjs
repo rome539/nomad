@@ -3617,6 +3617,10 @@ try {
     }
     assert.ok(!SMALL_PREY.has('red-hind') && !SMALL_PREY.has('feral-goat'), 'a hind or a goat still fills one');
   });
+  check('a fox or a wildcat is a small meal, and so is its rare blood (2026-11-09)', () => {
+    for (const b of ['hill-fox', 'the-raiding-fox', 'snow-fox', 'the-blue-fox', 'wildcat', 'the-tom']) assert.ok(SMALL_PREY.has(b), b + ' is a small meal');
+    for (const b of ['feral-goat', 'a-fold-dog', 'red-hind', 'hill-wolf', 'lynx']) assert.ok(!SMALL_PREY.has(b), b + ' still fills one');
+  });
   check('three deer are not a boom (2026-10-25)', () => {
     const { z } = condWorld('roe-deer', 3);
     for (let h = 0; h <= 60; h++) { conditions.tick(z, h * H, true); assert.equal(conditions.of(z, 'mountain'), undefined, 'hour ' + h); }
