@@ -2423,6 +2423,12 @@ try {
   // frame played at the standing line, the body lay lower a beat later.
   check('a creature dies onto the floor where its body will lie, no float and no sinking', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    // the death frame goes up in the same instant, and nothing resizes it after
+    const beat = pub.slice(pub.indexOf('a.phase = "death"; a.t = 0; a.asleep = false;'), pub.indexOf('mobHold = Date.now() + DEATH_S * 1000;'));
+    assert.ok(beat.includes('a.el.style.backgroundPositionX = (a.spec.f.death * 100 / (a.spec.n - 1)) + "%";'), 'death frame shown at once');
+    assert.ok(beat.includes('rotate(0deg) scale(1)'), 'standing transform cleared at once');
+    const pose = pub.slice(pub.indexOf('  if (a.phase === "death") {\n'), pub.indexOf('} else if (a.phase === "attack") {'));
+    assert.ok(pose.includes('name = "death";') && !/s \*=/.test(pose), 'a dying body is not resized');
     // feet on the line a body is laid on: the frame's own bottom edge, not a fitted top
     assert.match(pub, /el\._bodyTop = rowH - item\.h \+ forward \* \.9 \/ scale;/, 'each sprite knows where it would lie');
     assert.match(pub, /put\(item, best, forward \* \.9, true, i\);/, 'the same line the body is laid on');

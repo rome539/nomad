@@ -16199,10 +16199,10 @@ function poseAt(a, now) {
     return list[(k + list.length) % list.length];
   };
   if (a.phase === "death") {
-    // It drops, and then it is a thing on the ground. The only motion is the
-    // settle in the first quarter second; after that nothing about it moves.
+    // It is down, a thing on the ground, and nothing about it moves. It once
+    // started a size larger and settled, and that lifted the body off the floor
+    // and set it back (rome, 2026-11-08).
     name = "death";
-    s *= 1 + (1 - Math.min(t / 0.25, 1)) * 0.05;
   } else if (a.phase === "attack") {
     if (t < 0) {
       name = a.watch;                                   // its turn has not come yet
@@ -16568,6 +16568,16 @@ function mobBeat(swung, struck, died, fed, grazed, posed, pose, one, sw, st) {
       // it: that lift sets a small creature's feet on the standing line, and kept
       // on the floor line it sank the dying one into the ground (rome, 2026-11-08).
       if (a.el && a.el._bodyTop !== undefined) { a.el.style.top = a.el._bodyTop + "px"; a.lift = 0; }
+      // ...and its death frame is put up in the same instant. Left to the next
+      // step, the standing frame showed for a frame or two moved down to the floor
+      // line with its standing lift still on, sunk into the ground, and then the
+      // death frame popped up out of it (rome, 2026-11-08: the body went up, then down).
+      if (a.el) {
+        var fdrop = typeof FRAME_DROP !== "undefined" && FRAME_DROP[a.id] && FRAME_DROP[a.id].death || 0;
+        a.el.style.backgroundPositionX = (a.spec.f.death * 100 / (a.spec.n - 1)) + "%";
+        if (a.el.dataset) a.el.dataset.death = "1";
+        a.el.style.transform = "translate(0%," + (fdrop * 100).toFixed(1) + "%) rotate(0deg) scale(1)";
+      }
       mobHold = Date.now() + DEATH_S * 1000;
     } else if (a.phase === "death") continue;
     else if (ones.indexOf(a.id) >= 0 && a.strike) {
