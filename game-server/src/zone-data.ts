@@ -1073,6 +1073,17 @@ export const SMALL_PREY = new Set([
   "wrack-crab",                                                   // the little crab
 ]);
 // (a kill zeroes it outright — see worryPrey/predation)
+// A SMALL MEAL FILLS A SMALL HUNTER (rome, 2026-11-09). A hare took the same
+// edge off an ermine as off a wolf, so the ermine needed four to fill up. To an
+// animal itself small, a small kill is the whole meal, as a hind is to a wolf, and
+// a small body lying is a body's worth. The eagle and the eagle owl stay out of it
+// for now, sized between a fox and a wolf (rome is not sure about them).
+export const SMALL_EATERS = new Set([
+  "ermine",
+  "hill-fox", "the-raiding-fox", "snow-fox", "the-blue-fox", "wildcat", "the-tom",
+  "gill-adder", "fen-viper", "stone-adder", "the-gravid-adder",
+  "scarp-raven", "the-old-raven", "mountain-chough",
+]);
 
 // SCRAPS HAVE TO BE FOUND (rome, 2026-10-11: you should be able to meet a hungry
 // animal, at least among the floor-eaters like rats). The floor - gnawed ground,

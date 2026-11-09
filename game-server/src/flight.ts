@@ -8,7 +8,7 @@
 // held, hurt or asleep does not go, so flying is never an escape.
 import type { ZoneDO } from "./zone";
 import type { Creature } from "./zone-types";
-import { forageGround, hungers, edibleBody } from "./ai";
+import { forageGround, hungers, edibleBody, eatingNow } from "./ai";
 import { MOUNTAIN_QUARTER_ROOMS } from "./detail";
 import { cap, isNight } from "./zone-util";
 import * as beasts from "./beasts";
@@ -150,10 +150,26 @@ export function tick(z: ZoneDO, now: number): void {
     const line = lineOf(z, c.templateId);
     if (!FOOD_FLIERS.has(line)) continue;
     if (c.aloft !== undefined) {
+      if (c.flightTo && c.flightTo !== (c.home ?? c.roomId) && eatsOnlyDead(c, line) && !foodIn(z, c, line, c.flightTo)) {
+        // THE BODY WAS EATEN WHILE IT FLEW (rome, 2026-11-09: one dead vulture
+        // brought birds down one after another onto bare bone). It turns for the
+        // next body in reach, or for home, rather than coming down on nothing.
+        const food = findFood(z, c, line, true);
+        const to = food?.room ?? c.home ?? c.roomId;
+        const dist = food?.dist ?? z.nearby(c.flightTo, FLIGHT_RANGE).get(to) ?? FLIGHT_RANGE;
+        c.flightTo = to;
+        c.aloft = now + Math.max(FLIGHT_MIN_MS, dist * FLIGHT_MS_PER_ROOM);
+        z.noteCreaturesChanged();
+        continue;
+      }
       if (c.flightTo && now >= c.aloft) land(z, c, now);
       continue;
     }
     if (!canGo(z, c)) continue;
+    // IT FINISHES ITS MEAL FIRST (rome, 2026-11-09: the scavengers kept flying off
+    // the body). The bite takes its hunger under HUNGRY_AT at once, so a bird down
+    // at a body went home on the next check with the meal hardly begun.
+    if (eatingNow(c, now)) continue;
     const hungry = hungers(c.templateId) && c.hunger >= HUNGRY_AT;
     if (c.awayUntil !== undefined) {
       if (!hungry || now >= c.awayUntil) {

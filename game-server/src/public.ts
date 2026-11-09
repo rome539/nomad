@@ -10808,7 +10808,10 @@ var ROOM_PLATE = {
   "the-salt-chapel":      "day night night-torch",
   "the-hill-chapel":      "day night night-torch",
   "the-turf-hut":         "day night night-torch",
-  "the-peat-hut":         "day night night-torch",
+  // THE PEAT HUT IS DARK AT NOON (rome, 2026-11-09: the words said pitch dark
+  // and the picture showed it in daylight). It has no window, so it has no day:
+  // the dark picture without a light, the lit one with.
+  "the-peat-hut":         "night night-torch",
   // ---- THE FORTRESS, 108 ROOMS ON 31 PLATES (2026-09-23). The Door is the
   // oldest region in the game and the last with no picture of itself. Its four
   // doors already had gate plates; everything behind them was painted as a kind

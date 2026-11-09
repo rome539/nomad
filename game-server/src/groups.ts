@@ -85,9 +85,12 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
     }
     for (const [h, w] of held) for (const r of z.nearby(h, TERRITORY_RADIUS).keys()) heldBy.set(r, (heldBy.get(r) ?? 0) + w);
   } else if (SPREAD_ROOSTS.has(line)) {
-    // Every home of its own kind crowds the ground round it, so the least crowded is drawn.
+    // Every home of a big carrion bird crowds the ground round it, so the least crowded
+    // is drawn. ALL OF THEM TOGETHER (rome, 2026-11-09: a vulture, two bone-breakers and
+    // the bone-dropper in one room): a vulture counts the bone-breakers' and the ravens'
+    // homes as well as its own kind's, and so do they.
     for (const c of z.creatures.values()) {
-      if (!c.home || lineOf(z, c.templateId) !== line || z.regionOf(c.home) !== "mountain") continue;
+      if (!c.home || !SPREAD_ROOSTS.has(lineOf(z, c.templateId)) || z.regionOf(c.home) !== "mountain") continue;
       for (const r of z.nearby(c.home, TERRITORY_RADIUS).keys()) heldBy.set(r, (heldBy.get(r) ?? 0) + 1);
     }
   }

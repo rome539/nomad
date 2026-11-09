@@ -40,7 +40,7 @@ import {
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES, PRESENCE_ODDS, PRESENCE_ROOM_MS, PRESENCE_LINES, PRESENCE_OWN, FOLK, CUTTHROATS,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
-  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, MEAL_SMALL, SMALL_PREY, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
+  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, MEAL_SMALL, SMALL_PREY, SMALL_EATERS, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS, THIRST_LATE_MS,
@@ -2321,7 +2321,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt, creature.templateId);
       const fedFrom4 = creature.hunger;
-      creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
+      creature.hunger = SMALL_PREY.has(victim.templateId) && !SMALL_EATERS.has(creature.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
       ate(creature, undefined, undefined, fedFrom4 - creature.hunger, undefined, victim.templateId);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
@@ -2398,7 +2398,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     releaseHold(z, creature);
     preyFalls(z, victim, vt, creature.templateId);
     const fedFrom5 = creature.hunger;
-    creature.hunger = SMALL_PREY.has(victim.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
+    creature.hunger = SMALL_PREY.has(victim.templateId) && !SMALL_EATERS.has(creature.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
     ate(creature, undefined, undefined, fedFrom5 - creature.hunger, undefined, victim.templateId);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
@@ -2860,7 +2860,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const taken = gone ? (eaten.meat ?? deadT?.max_hp ?? 0) : tmpl.max_hp;
     eaten.meat = gone ? 0 : left;
     const fedFrom6 = creature.hunger;
-    creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) ? MEAL_SMALL : MEAL_CORPSE));
+    creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) && !SMALL_EATERS.has(creature.templateId) ? MEAL_SMALL : MEAL_CORPSE));
     // A body it took whole, or the share of one it took, goes back if it is cut short.
     ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken, key: bodyKey(eaten), id: eaten.id }, eaten.prey ?? eaten.id);
     // A body picked clean goes once the last meal on it is done, even if the
@@ -4077,7 +4077,10 @@ export function mountainHomes(z: ZoneDO, templateId: string): string[] {
     if (d < near) near = d;
   }
   near = Math.min(near, MOUNTAIN_GROUPS.get(templateId)?.near ?? near);
-  const barred = new Set([...(MOUNTAIN_QUARTER_ROOMS.summit ?? []), ...(MOUNTAIN_QUARTER_ROOMS.territory ?? [])]);
+  // THE TERRITORY IS OPEN (rome, 2026-11-09: everything gathered on the high bone
+  // ground and the top stood empty). Tier five took no homes, so the crag and bone
+  // animals were squeezed onto the five bone rooms below it; only the summit is shut.
+  const barred = new Set(MOUNTAIN_QUARTER_ROOMS.summit ?? []);
   return [...world.rooms.keys()].filter((r) => {
     const d = dist.get(r);
     // NO CEILING (rome, 2026-11-08: every goat and hind lived low). A home was held
