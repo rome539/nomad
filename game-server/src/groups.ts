@@ -14,12 +14,13 @@ import { chance, randInt, uuid } from "./rng";
 import { cap } from "./zone-util";
 import * as beasts from "./beasts";
 import * as grass from "./grass";
-import { ate, creatureMoves, hungers, mountainHomes, preyFalls } from "./ai";
+import { ate, creatureMoves, deadEatsAt, eatingNow, edibleBody, hungers, mountainHomes, preyFalls } from "./ai";
 import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
   DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES, FLOCKS, SPREAD_ROOSTS,
   PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS,
+  BODY_HOLDERS, MOBBERS, MOB_AT, BODY_CHASE_ODDS, MOB_ODDS, BODY_AVOID_MS, BODY_REST_MS,
 } from "./zone-data";
 
 export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number; moveAt?: number; kept?: boolean; quarry?: string; quarryAt?: number }
@@ -314,6 +315,79 @@ export async function holdGround(
     wolf.curious = rival.roomId;
     wolf.nextWanderAt = now + randInt(4_000, 15_000);
   }
+  z.refreshRoomCtx(roomId);
+  return true;
+}
+
+// Off a room for a while, the way a rival is kept off it (holdGround).
+function keepOff(c: Creature, roomId: string, now: number): void {
+  c.avoids = [...(c.avoids ?? []).filter((a) => a.until > now && a.roomId !== roomId), { roomId, until: now + BODY_AVOID_MS }];
+  c.huntAt = 0;
+  c.huntFor = undefined;
+}
+function ravensIn(z: ZoneDO, roomId: string, eagle: string): number {
+  let n = 0;
+  for (const c of z.creaturesInRoom(roomId)) if (MOBBERS.get(c.templateId) === eagle && !c.heldBy && !c.holding) n++;
+  return n;
+}
+
+/** A bigger animal at a body runs a smaller scavenger off it (BODY_HOLDERS). True when it took the turn. */
+export async function holdBody(
+  z: ZoneDO, holder: Creature, now: number,
+  flee: (c: Creature) => Promise<unknown> = (c) => creatureMoves(z, c, now, "flee", false),
+): Promise<boolean> {
+  const driven = BODY_HOLDERS.get(holder.templateId);
+  if (!driven || holder.target || holder.asleep || holder.stunned || holder.holding || holder.heldBy) return false;
+  if ((holder.rivalRestUntil ?? 0) > now) return false;
+  const roomId = holder.roomId;
+  // At its meal, or a scavenger hungry enough for the body lying here.
+  const atMeal = eatingNow(holder, now) && (holder.eatingOn === "kill" || holder.eatingOn === "carrion");
+  const wants = atMeal || (SCAVENGERS.has(holder.templateId) && (holder.hunger ?? 0) >= deadEatsAt(holder.templateId)
+    && (z.traces.get(roomId) ?? []).some(edibleBody));
+  if (!wants) return false;
+  // Several ravens are not run off: they push the eagle out instead (mobEagle).
+  if ([...MOBBERS.values()].includes(holder.templateId) && ravensIn(z, roomId, holder.templateId) >= MOB_AT) return false;
+  const rival = z.creaturesInRoom(roomId).find((c) => c.id !== holder.id && driven.has(c.templateId)
+    && !c.target && !c.hidden && !c.heldBy && !c.holding);
+  if (!rival || !chance(BODY_CHASE_ODDS)) return false;
+  const world = z.world!;
+  const ht = world.mobTemplates.get(holder.templateId)!, rt = world.mobTemplates.get(rival.templateId)!;
+  holder.rivalRestUntil = now + BODY_REST_MS;
+  rival.asleep = false;
+  rival.sleepUntil = undefined;
+  const wasEating = eatingNow(rival, now);
+  keepOff(rival, roomId, now);
+  beasts.note(z, wasEating ? "stolen" : "chases", now);
+  z.roomFeed(roomId, wasEating
+    ? `${cap(ht.name)} comes at ${rt.name} over the body. ${cap(rt.name)} gives it up and goes.`
+    : `${cap(ht.name)} goes for ${rt.name}, and ${rt.name} gets out of its way.`, undefined, false);
+  z.roomSound(roomId, "A snarl and a beat of wings {dir}, and something going away.", undefined, undefined, false, { mob: holder.templateId, act: "fight" });
+  await flee(rival);   // its meal, cut short, goes back on the body (digest)
+  z.refreshRoomCtx(roomId);
+  return true;
+}
+
+/** Ravens together push an eagle out of the room (MOBBERS). True when it took the turn. */
+export async function mobEagle(
+  z: ZoneDO, raven: Creature, now: number,
+  flee: (c: Creature) => Promise<unknown> = (c) => creatureMoves(z, c, now, "flee", false),
+): Promise<boolean> {
+  const eagleId = MOBBERS.get(raven.templateId);
+  if (!eagleId || raven.target || raven.asleep || raven.stunned || raven.holding || raven.heldBy) return false;
+  if ((raven.rivalRestUntil ?? 0) > now) return false;
+  const roomId = raven.roomId;
+  const eagle = z.creaturesInRoom(roomId).find((c) => c.templateId === eagleId && !c.target && !c.heldBy && !c.holding);
+  if (!eagle || ravensIn(z, roomId, eagleId) < MOB_AT || !chance(MOB_ODDS)) return false;
+  const world = z.world!;
+  const et = world.mobTemplates.get(eagle.templateId)!;
+  for (const c of z.creaturesInRoom(roomId)) if (MOBBERS.get(c.templateId) === eagleId) c.rivalRestUntil = now + BODY_REST_MS;
+  eagle.asleep = false;
+  eagle.sleepUntil = undefined;
+  keepOff(eagle, roomId, now);
+  beasts.note(z, "chases", now);
+  z.roomFeed(roomId, `The ravens go up at ${et.name} together, calling, diving at it two and three at a time, and ${et.name} gives the place up to them.`, undefined, false);
+  z.roomSound(roomId, "Ravens calling {dir}, a lot of them at once, angry.", undefined, undefined, false, { mob: raven.templateId, act: "fight" });
+  await flee(eagle);
   z.refreshRoomCtx(roomId);
   return true;
 }

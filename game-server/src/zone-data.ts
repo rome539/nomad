@@ -2435,6 +2435,25 @@ export const PACK_HUNT_RANGE = 12;
 export const GROUND_CHASE_ODDS = 0.35;
 export const GROUND_KILL_ODDS = 0.1;
 export const GROUND_DRIVEN_LEAVES = 2;
+// AT A BODY THE BIGGER ONE EATS (rome, 2026-11-08). A wolf at a carcass runs the
+// scavenger birds off it, an eagle at its kill runs a raven off, and the
+// bone-breaker takes a carcass from the smaller scavengers; the one run off keeps
+// away from that room for BODY_AVOID_MS and then comes back to what is left. A
+// meal it was at is cut short and the uneaten part goes back on the body (digest).
+export const BODY_HOLDERS = new Map<string, Set<string>>([
+  ["hill-wolf",    new Set(["carrion-vulture", "scarp-raven", "bone-breaker"])],
+  ["lead-wolf",    new Set(["carrion-vulture", "scarp-raven", "bone-breaker"])],
+  ["hill-eagle",   new Set(["scarp-raven"])],
+  ["bone-breaker", new Set(["carrion-vulture", "scarp-raven"])],   // 44 hp over 40 and 20
+]);
+// ...UNLESS THE RAVENS ARE SEVERAL. Two or more ravens in a room go up at an
+// eagle together and push it out, kill or no kill; one raven alone is run off.
+export const MOBBERS = new Map<string, string>([["scarp-raven", "hill-eagle"]]);
+export const MOB_AT = 2;
+export const BODY_CHASE_ODDS = 0.5;       // a beat's chance the holder makes its move
+export const MOB_ODDS = 0.3;              // a beat's chance the ravens go up at the eagle
+export const BODY_AVOID_MS = 5 * 60_000;  // how long the one run off keeps away
+export const BODY_REST_MS = 2 * 60_000;   // before the same animal does it again
 // BIRDS FLY OUT TO FEED, the whole world over (rome, 2026-11-06). They live on foot
 // like anything else; when hungry with nothing near, one takes off and is off the
 // map until it lands by the nearest food in its own region within FLIGHT_RANGE

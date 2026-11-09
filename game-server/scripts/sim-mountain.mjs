@@ -42,14 +42,16 @@ if(scenario==='old'){ // what shipped before all of this
 }
 await z.init('door');
 const W=z.world; const mt=(r)=>z.regionOf(r)==='mountain';
-const LINES=['rat','mountain-hare','ptarmigan','red-hind','feral-goat','mountain-chough','scarp-raven','bone-breaker','hill-fox','wildcat','ermine','snow-fox','eagle-owl','hill-eagle','lynx','glutton','hill-wolf'];
+const LINES=['rat','mountain-hare','ptarmigan','red-hind','feral-goat','mountain-chough','scarp-raven','carrion-vulture','bone-breaker','hill-fox','wildcat','ermine','snow-fox','eagle-owl','hill-eagle','lynx','glutton','hill-wolf'];
 const lineOf=(c)=>LINES.includes(c.templateId)?c.templateId:(z.variantBase.get(c.templateId)??c.templateId);
 const rows={}; for(const s of W.mobSpawns) if(mt(s.room_id)) rows[s.template_id]=(rows[s.template_id]??0)+1;
 const HAMLET=new Set(zd.SHIELING_HAMLET_ROOMS); // the same rooms `beasts` counts
-const ev={flights:{},landings:0,chase:0,caught:0,stolen:0,errors:0,deaths:{},births:0};
+const ev={flights:{},landings:0,chase:0,caught:0,stolen:0,errors:0,deaths:{},births:0,offBody:{},mobbed:0};
 const of=z.roomFeed.bind(z); z.roomFeed=function(r,t,...a){ if(typeof t==='string'){
   if(/opens its wings and is gone/.test(t)){const m=t.match(/^An? (.*?) opens/);ev.flights[m?.[1]??'?']=(ev.flights[m?.[1]??'?']??0)+1;} else if(/comes down out of the sky/.test(t))ev.landings++;
-  else if(/catches .* before it can turn/.test(t))ev.caught++; else if(/over its kill/.test(t))ev.stolen++; else if(/does not wait for it, and runs/.test(t))ev.chase++; }
+  else if(/catches .* before it can turn/.test(t))ev.caught++; else if(/over its kill/.test(t))ev.stolen++; else if(/does not wait for it, and runs/.test(t))ev.chase++;
+  else if(/over the body\.|gets out of its way\./.test(t)){const m=t.match(/^An? (.*?) (?:comes at|goes for) an? (.*?)(?: over|, and)/);const k=m?m[1]+'>'+m[2]:'?';ev.offBody[k]=(ev.offBody[k]??0)+1;}
+  else if(/The ravens go up at/.test(t))ev.mobbed++; }
  return of(r,t,...a); };
 const snap=(h)=>{const n={},hungry={},rooms=new Map();let aloft=0;const off=[];
  for(const c of z.creatures.values()){const home=c.home??c.roomId; if(!mt(home))continue; const l=lineOf(c); if(!LINES.includes(l))continue; n[l]=(n[l]??0)+1; if(c.hunger>=50)hungry[l]=(hungry[l]??0)+1; if(c.aloft!==undefined)aloft++; else if(zd.FOOD_FLIERS.has(l)) rooms.set(c.roomId,(rooms.get(c.roomId)??0)+1);
@@ -71,7 +73,7 @@ const snap=(h)=>{const n={},hungry={},rooms=new Map();let aloft=0;const off=[];
  log('  HOMES BY HEIGHT: '+BY.map(l=>`${l} ${['foot','middle','cloud','high','territory'].map(q=>hh[l]?.[q]??0).join('/')}`).join(' | '));
  log(`\n[${scenario}] hour ${h}  errors=${ev.errors}  birds up now=${aloft}  busiest bird room=${topBird?topBird[0]+' ('+topBird[1]+')':'-'}  on wrong ground (old animals)=${off.length}`);
  log('  '+LINES.map(l=>`${l} ${n[l]??0}/${rows[l]??0}${hungry[l]?` (${hungry[l]} hungry)`:''}`).join(' | '));
- log(`  wolves: packs ${[...size.values()].join(',')||'-'}  lone ${lone}  unsorted ${undec}  living in hamlet ${hamlet}  standing in hamlet ${standing}  new home draws in hamlet ${draws?Math.round(100*inH/draws):'-'}% (hamlet is ${Math.round(100*hShare)}% of wolf ground)  | flights ${JSON.stringify(ev.flights)} | pack chases ${ev.chase} caught ${ev.caught} meals stolen ${ev.stolen}`);
+ log(`  wolves: packs ${[...size.values()].join(',')||'-'}  lone ${lone}  unsorted ${undec}  living in hamlet ${hamlet}  standing in hamlet ${standing}  new home draws in hamlet ${draws?Math.round(100*inH/draws):'-'}% (hamlet is ${Math.round(100*hShare)}% of wolf ground)  | flights ${JSON.stringify(ev.flights)} | pack chases ${ev.chase} caught ${ev.caught} meals stolen ${ev.stolen} | off a body ${JSON.stringify(ev.offBody)} eagles mobbed ${ev.mobbed}`);
 };
 const STEP=zd.SLOW_ECOLOGY_MS; const steps=HOURS*3600_000/STEP; let tk=0, worst=0; const t0=RD.now();
 snap(0);
