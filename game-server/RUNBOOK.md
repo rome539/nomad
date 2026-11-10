@@ -67,3 +67,65 @@ that makes root signatures final. Response: publicly announce the new
 root from every channel you control (the old epoch key, the repo, the
 site), and clients pin the new root. This is why the root never touches
 a computer that syncs.
+
+## The database went wrong: getting it back
+
+Two stores, two different answers.
+
+- **Player data** (characters, items, mints, dens, journals) is the D1 database
+  `nomad`. Cloudflare keeps every moment of its last 30 days and can put the
+  whole database back to any of them. This is the one that matters.
+- **The living world** (creatures, what lies on the ground, weather) is inside
+  the world object. It is not restored; it is re-seeded from the spawn tables
+  (`POST /admin/reseed`), and no character is touched by that.
+
+### Applying migrations
+
+    node scripts/migrate.mjs --remote --status    # what would run
+    node scripts/migrate.mjs --remote             # run it
+
+It applies what has not run yet, in order, and writes each file down in the
+database's `schema_migrations` table as it lands. It stops on a skipped file,
+on two files sharing a number, and at the first file that fails. Before it
+changes production it prints a **restore point** (a bookmark and the time).
+Keep that line until the ship is confirmed good.
+
+The first time only, production has no record yet:
+
+    node scripts/migrate.mjs --remote --baseline <last migration already applied>
+
+### A bad migration, or bad data
+
+1. **Stop the bleeding first.** If the new code is what is writing bad rows,
+   roll the Worker back (`npx wrangler rollback`) before touching the database,
+   or the restored database is damaged again at once.
+2. **Find the moment.** Use the restore point the migration tool printed, or
+   ask for the bookmark of a time just before the damage:
+   `npx wrangler d1 time-travel info nomad --timestamp=2026-11-10T14:30:00Z`
+3. **Restore.** `npx wrangler d1 time-travel restore nomad --bookmark=<bookmark>`
+   (or `--timestamp=`). It prints the bookmark it replaced; keep it, because
+   restoring to that one undoes the restore.
+4. **Restart the world** so it reads the restored rows: `npm run deploy`.
+   Players reconnect on their own.
+5. **Take the restored migrations back off the record** if the restore went
+   behind them. The record is a table in the same database, so it went back
+   too: `node scripts/migrate.mjs --remote --status` shows the truth.
+6. Tell people what they lost. A restore takes EVERYTHING back to that moment:
+   every item found, sealed or traded since is gone, for every player. Restore
+   to the latest moment that is clean, not a round hour.
+
+A restore cannot reach past 30 days, and it is all or nothing: there is no
+restoring one table or one player. For one player's rows, restore nothing;
+read the old values out of an export (below) and write them back by hand.
+
+### A copy that Cloudflare does not hold
+
+Time travel lives in the same account as the database. For a copy that
+survives losing the account:
+
+    npx wrangler d1 export nomad --remote --output="$HOME/nomad-backups/nomad-$(date +%F).sql"
+
+Keep it OUT of this repository and out of any synced folder: it holds every
+player's public key, name and inventory. The database may pause for the few
+seconds the export takes.
+

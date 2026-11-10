@@ -44,7 +44,7 @@ print(json.dumps(out))
  for(const [key,name] of [[pk,'AuditOne'],[pk2,'AuditTwo']])await db.prepare('INSERT INTO players(pubkey,name,named,room_id,hp,max_hp,created_at,last_seen) VALUES (?,?,1,?,100,100,?,?)').bind(key,name,'gate',Math.floor(Date.now()/1000),Math.floor(Date.now()/1000)).run();
  const login=async key=>{
    const {challenge}=await (await request('/auth/challenge',{method:'POST'})).json();
-   const event=finalizeEvent({kind:27235,created_at:Math.floor(Date.now()/1000),tags:[],content:challenge},key);
+   const event=finalizeEvent({kind:27235,created_at:Math.floor(Date.now()/1000),tags:[['u','http://localhost/auth/verify']],content:challenge},key);
    const body=JSON.stringify({event});
    const results=await Promise.all([request('/auth/verify',{method:'POST',body}),request('/auth/verify',{method:'POST',body})]);
    assert.deepEqual(results.map(r=>r.status).sort(),[200,401]);return (await results.find(r=>r.status===200).json()).token;

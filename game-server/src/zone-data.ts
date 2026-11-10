@@ -53,6 +53,12 @@ export const IDLE_TIMEOUT_MS = 30 * 60_000;
 // not a revert. In-memory-only heals — chiefly rest — would otherwise vanish on
 // the next cold start and snap a rested player back to stale HP.
 export const FLUSH_INTERVAL_MS = 10_000;
+// ...but only a player whose saved state has MOVED is written (2026-11-10). The
+// flush used to rewrite every connected player's row every time, changed or
+// not, and that was three of every four rows the database wrote in a day; a
+// hundred players standing still would have been 860,000 writes a day. An
+// unchanged player is still written this often, so "last seen" stays honest.
+export const PLAYER_SAVE_MAX_MS = 10 * 60_000;
 // The world ticks every TICK_MS, but blows land on a slower heartbeat so a
 // fight is readable: you get this long between exchanges to read the room and
 // decide — change stance, choke down food, or run — before steel meets steel

@@ -92,6 +92,12 @@ try {
         "export {loadContainer, setRottedAway} from './world';",
         "export {SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC} from './zone-data';",
         "export * as roomSound from './sound';",
+        "export {cleanCommand, dialId} from './security';",
+        "export {saveMark} from './zone-util';",
+        "export {leaderboardRank} from './world';",
+        "export {PLAYER_SAVE_MAX_MS} from './zone-data';",
+        "export {handleVerify, handleChallenge} from './auth';",
+        "export {finalizeEvent as signNostr, generateSecretKey as newNostrKey} from 'nostr-tools';",
       ].join('\n'),
       resolveDir: root, loader: 'ts',
     },
@@ -6209,6 +6215,198 @@ try {
     assert.ok(!/preyFalls\(z, victim, vt\);/.test(ai), 'every hunter kill is told who did it');
     assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /beasts\.noteKill\(this, creature, "wanderers"\)/);
     assert.match(readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8'), /v === "beasts"/, 'it reads by the fire too');
+  });
+
+  // ---------------------------------------------------------------- the 2026-11-10 audit
+  console.log('the audit of 2026-11-10');
+  {
+    const sec = await import(pathToFileURL(output));
+    await checkAsync('a login signature made for another site is refused (2026-11-10: the challenge did not say where it would be spent)', async () => {
+      const spent = new Set();
+      const env = { JWT_SECRET: 'regress-' + crypto.randomUUID(), DB: { prepare(sql) { return { bind(...a) { return { async run() {
+        if (!sql.startsWith('INSERT')) return { meta: { changes: 0 } };
+        const fresh = !spent.has(a[0]); spent.add(a[0]); return { meta: { changes: fresh ? 1 : 0 } };
+      } }; } }; } } };
+      const sk = sec.newNostrKey();
+      const tryLogin = async (tags, at = 'https://nomadmud.com') => {
+        const { challenge } = await (await sec.handleChallenge(env)).json();
+        const event = sec.signNostr({ kind: 27235, created_at: Math.floor(Date.now() / 1000), tags, content: challenge }, sk);
+        const res = await sec.handleVerify(new Request(at + '/auth/verify', { method: 'POST', body: JSON.stringify({ event }) }), env);
+        return [res.status, (await res.json()).error];
+      };
+      assert.deepEqual(await tryLogin([]), [401, 'wrong_site'], 'no site named');
+      assert.deepEqual(await tryLogin([['u', 'https://evil.example/auth/verify']]), [401, 'wrong_site'], 'another site named');
+      assert.deepEqual(await tryLogin([['u', 'https://evil.example/auth/verify'], ['u', 'https://nomadmud.com/auth/verify']]), [401, 'wrong_site'], 'two sites named');
+      assert.deepEqual(await tryLogin([['u', 'https://nomadmud.com/auth/verify']], 'https://www.nomadmud.com'), [401, 'wrong_site'], 'the site is the one asked, not a fixed one');
+      assert.equal((await tryLogin([['u', 'https://nomadmud.com/auth/verify'], ['method', 'POST']]))[0], 200, 'this site named');
+      assert.equal((await tryLogin([['u', 'http://localhost:8787/auth/verify']], 'http://localhost:8787'))[0], 200, 'and a local server is its own site');
+      const page = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+      assert.match(page, /kind: 27235,[^\n]*\["u", location\.origin \+ "\/auth\/verify"\]/, 'the page names its own site in what it signs');
+    });
+    const { ZoneDO: Z } = sec;
+    const mkSession = (tokens) => {
+      const att = { pubkey: 'p', pid: 'page', att: 1 };
+      return { pubkey: 'p', name: 'Tester', tokens, tokensAt: Date.now(), items: [], roomId: 'r',
+        ws: { deserializeAttachment: () => att, serializeAttachment(a) { Object.assign(att, a); this.wrote = (this.wrote ?? 0) + 1; }, send() {} } };
+    };
+    const mkZone = () => { const z = Object.create(Z.prototype); z.sent = []; z.send = (s, text) => { z.sent.push(text); }; z.env = {}; return z; };
+    await checkAsync('typed words carry no control marks (2026-11-10: a typed rarity marker painted a spoken line as loot)', async () => {
+      assert.equal(sec.cleanCommand('say \u0001epic\u0002a sword\u0002 ‮flip⁦ \u009bx'), 'say epica sword flip x');
+      assert.equal(sec.cleanCommand("say café 日本\tok\nthen \u{1F525}"), "say café 日本\tok\nthen \u{1F525}", 'ordinary letters, tab, newline and emoji stay');
+      const z = mkZone(), s = mkSession(6);
+      await z.onMessage(s, JSON.stringify({ t: 'cmd', text: 'alias kr = say \u0001epic\u0002hi‮' }));
+      assert.equal(s.aliases.get('kr'), 'say epichi', 'cleaned on the way in, before anything reads the line');
+    });
+    await checkAsync('the arena switch pays a token like any frame (2026-11-10: it was answered above the limit, free)', async () => {
+      const z = mkZone(), dry = mkSession(0);
+      let admitted = 0;
+      await z.onMessage(dry, JSON.stringify({ t: 'arena', on: false }), () => admitted++);
+      assert.equal(dry.arenaOff, undefined, 'out of tokens: nothing changes');
+      assert.equal(dry.ws.wrote, undefined, 'and nothing is written to the socket');
+      assert.equal(z.sent.length, 0, 'said quietly, like the other panel frames');
+      const s = mkSession(6);
+      await z.onMessage(s, JSON.stringify({ t: 'arena', on: false }), () => admitted++);
+      assert.equal(s.arenaOff, true, 'with a token it works as before');
+      assert.ok(s.tokens < 6, 'and the token is spent');
+      assert.equal(s.ws.deserializeAttachment().pid, 'page', 'the dial id stays on the socket');
+      assert.equal(admitted, 0, 'it is not a command: no world-wide save follows it');
+    });
+    check('an over-long page id is dropped, not stored on the socket (2026-11-10: it overran the socket note after the old socket was closed)', () => {
+      assert.deepEqual(sec.dialId('lx3k9abcd1234', '3'), { pid: 'lx3k9abcd1234', att: 3 });
+      assert.deepEqual(sec.dialId('x'.repeat(65), '3'), { pid: null, att: 3 });
+      assert.deepEqual(sec.dialId('x'.repeat(4000), '1e400'), { pid: null, att: null });
+      assert.deepEqual(sec.dialId(null, null), { pid: null, att: null }, 'an older page sends neither');
+      assert.deepEqual(sec.dialId('p', '-1'), { pid: 'p', att: null });
+      assert.deepEqual(sec.dialId('p', '0'), { pid: 'p', att: 0 });
+      const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+      assert.match(zs, /const \{ pid, att \} = dialId\(qs\.get\("pid"\), qs\.get\("att"\)\);/, 'the socket door uses it');
+    });
+  }
+
+  // ---------------------------------------------------------------- the database is not written for nothing
+  console.log('player saves');
+  await checkAsync('a player who has not changed is not written to the database again (2026-11-10: every connected player was rewritten every ten seconds, three of every four rows the database wrote)', async () => {
+    const m = await import(pathToFileURL(output));
+    const writes = [];
+    let fail = false, journals = 0;
+    const z = Object.create(m.ZoneDO.prototype);
+    Object.assign(z, {
+      sessions: new Map(), savedMark: new Map(), dirtySaves: new Set(), bodyJournal: new Map(),
+      state: { storage: { async put() {}, async delete() {} } },
+      env: { DB: { prepare: (sql) => ({ bind: (...a) => ({ async run() { if (fail) throw new Error('busy'); writes.push(a); return { meta: { changes: 1 } }; } }) }) } },
+      checkpointBody: async () => { journals++; },
+    });
+    const s = { pubkey: 'p', roomId: 'the-green', hp: 80, exhaustion: { units: 0, at: 1, mode: 'passive' } };
+    z.sessions.set('p', s);
+    const quiet = console.error; console.error = () => {};
+    try {
+      const t = Date.now();
+      await z.flushPlayer(s, t);
+      assert.equal(writes.length, 1, 'the first flush writes the row');
+      await z.flushPlayer(s, t + 10_000);
+      s.exhaustion.at = 999; // the tiredness clock moves every beat and is not a change
+      await z.flushPlayer(s, t + 20_000);
+      assert.equal(writes.length, 1, 'standing still writes nothing more');
+      assert.equal(journals, 3, 'and the body journal is still kept every time');
+      s.hp = 81; await z.flushPlayer(s, t + 30_000);
+      assert.equal(writes.length, 2, 'health moved');
+      s.roomId = 'the-road'; await z.flushPlayer(s, t + 40_000);
+      assert.equal(writes.length, 3, 'the room moved');
+      s.exhaustion.units = 40; await z.flushPlayer(s, t + 50_000);
+      assert.equal(writes.length, 4, 'tiredness moved');
+      await z.flushPlayer(s, t + 60_000);
+      assert.equal(writes.length, 4);
+      await z.flushPlayer(s, Date.now() + m.PLAYER_SAVE_MAX_MS + 1);
+      assert.equal(writes.length, 5, 'an unchanged player is still written once the long clock runs out');
+      // a save the database refused is not remembered as done
+      s.hp = 50; fail = true;
+      await z.flushPlayer(s, Date.now());
+      assert.ok(z.dirtySaves.has('p'), 'the failed save is queued');
+      fail = false;
+      await z.flushPlayer(s, Date.now());
+      assert.equal(writes.length, 6, 'and the next flush writes it');
+      assert.equal(writes.at(-1)[1], 50);
+      // leaving forgets the mark, so the next arrival is written fresh
+      await z.trySavePlayer('p', s.roomId, s.hp, s);
+      assert.equal(z.savedMark.has('p'), false);
+    } finally { console.error = quiet; }
+    assert.notEqual(m.saveMark('r', 1, { units: 0, mode: 'rest' }), m.saveMark('r', 1, { units: 0, mode: 'passive' }), 'the way of resting counts');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /FLUSH_INTERVAL_MS\) \{\n\s*this\.lastFlushAt = now;\n\s*await Promise\.all\(\[\.\.\.this\.sessions\.values\(\)\]\.map\(\(s\) => this\.flushPlayer\(s, now\)\)\);/, 'the beat uses it');
+  });
+
+  await checkAsync('the trophy board reads each player\'s items once and says the same as before (2026-11-10: it added every player up twice, 18,000 rows a board)', async () => {
+    const m = await import(pathToFileURL(output));
+    const { db, D1 } = sqliteD1();
+    db.exec(`DROP TABLE players; CREATE TABLE players(pubkey TEXT PRIMARY KEY, name TEXT, lb_published_at INTEGER);
+      CREATE TABLE item_templates(id TEXT PRIMARY KEY, barter REAL);`);
+    // 150 trophies, past the 100-value ceiling that once killed this board
+    const trophyIds = Array.from({ length: 150 }, (_, i) => 'trophy-' + i);
+    const barter = new Map(trophyIds.map((id, i) => [id, i % 7 === 0 ? 0.3 : 1 + (i % 9) * 1.25]));
+    barter.set('hardtack', 5); // worth something, but not a trophy
+    for (const [id, b] of barter) db.prepare('INSERT INTO item_templates VALUES (?, ?)').run(id, b);
+    let seed = 7; const rnd = (n) => (seed = (seed * 31 + 17) % 9973) % n; // small enough to stay exact
+    const players = [], items = [];
+    for (let i = 0; i < 40; i++) players.push({ pubkey: 'pk' + i, name: 'P' + i, pub: i % 5 === 0 ? null : 1000 - (i % 4) }); // some never entered, some tied on the day
+    players.push({ pubkey: 'crumbs', name: 'Crumbs', pub: 1 }); // only a 0.3 trophy: rounds to nothing
+    items.push({ pubkey: 'crumbs', item_id: 'trophy-0', container: '' });
+    // two with the same hoard: the one who entered first stands higher
+    players.push({ pubkey: 'tie-late', name: 'Late', pub: 5 }, { pubkey: 'tie-early', name: 'Early', pub: 3 });
+    for (const pk of ['tie-late', 'tie-early']) for (let n = 0; n < 40; n++) items.push({ pubkey: pk, item_id: 'trophy-8', container: 'vault' });
+    for (const pl of players.slice(0, 40)) for (let n = rnd(14); n > 0; n--) {
+      items.push({ pubkey: pl.pubkey, item_id: rnd(4) === 0 ? 'hardtack' : trophyIds[rnd(150)], container: [null, '', 'lockbox', 'vault', 'den:the-green'][rnd(5)] });
+    }
+    for (const pl of players) db.prepare('INSERT INTO players VALUES (?, ?, ?)').run(pl.pubkey, pl.name, pl.pub);
+    items.forEach((it, i) => db.prepare('INSERT INTO player_items(id, item_id, pubkey, container) VALUES (?, ?, ?, ?)').run('row' + i, it.item_id, it.pubkey, it.container));
+    // the board worked out by hand, from the rule and not from any SQL
+    const want = players.filter((pl) => pl.pub !== null).map((pl) => ({ ...pl, score: Math.round(items
+      .filter((it) => it.pubkey === pl.pubkey && [null, '', 'lockbox', 'vault'].includes(it.container) && it.item_id.startsWith('trophy-'))
+      .reduce((n, it) => n + barter.get(it.item_id), 0)) }))
+      .filter((pl) => pl.score > 0).sort((a, b) => b.score - a.score || a.pub - b.pub);
+    assert.ok(want.length > 10, 'the made-up world has a real board');
+    assert.deepEqual(want.slice(0, 2).map((e) => e.pubkey), ['tie-early', 'tie-late'], 'and the tie leads it');
+    const seen = [];
+    const watched = { prepare(q) { seen.push(q); return D1.prepare(q); } };
+    const opts = { bossPts: 100, pvpPts: 25, accountPts: 10, chartPts: 50, trophyIds };
+    const top = await m.loadLeaderboard(watched, 'trophies', 100, opts);
+    const key = (e) => e.score + ':' + e.pubkey;
+    // ties on score and day have no further order, so compare each score's set
+    assert.deepEqual(top.map((e) => e.score), want.map((e) => e.score), 'same scores in the same order');
+    assert.deepEqual(top.map(key).sort(), want.map(key).sort(), 'same players');
+    assert.deepEqual(top.slice(0, 2).map((e) => e.pubkey), ['tie-early', 'tie-late'], 'a tie goes to whoever entered first');
+    assert.ok(!top.some((e) => e.pubkey === 'crumbs'), 'a hoard that rounds to nothing is not on the board');
+    assert.deepEqual((await m.loadLeaderboard(watched, 'trophies', 3, opts)).map((e) => e.score), want.slice(0, 3).map((e) => e.score));
+    assert.ok(!seen.some((q) => /SUM\(it\.barter\)[\s\S]*SUM\(it\.barter\)/.test(q)), 'no board query adds the hoard up twice');
+    for (const pl of [want[0], want[5], want.at(-1)]) {
+      const r = await m.leaderboardRank(watched, pl.pubkey, 'trophies', opts);
+      assert.deepEqual(r, { rank: want.filter((o) => o.score > pl.score).length + 1, score: pl.score }, 'a rank is how many are ahead, plus one');
+    }
+    assert.equal(await m.leaderboardRank(watched, 'pk0', 'trophies', opts), null, 'never entered: no rank');
+    assert.equal(await m.leaderboardRank(watched, 'crumbs', 'trophies', opts), null);
+    assert.ok(!seen.some((q) => /COUNT\(\*\) AS n FROM players p[\s\S]*SUM\(it\.barter\)/.test(q)), 'the count of who is ahead does not run the sum per player');
+    assert.deepEqual(await m.loadLeaderboard(watched, 'trophies', 10, { ...opts, trophyIds: [] }), [], 'no world loaded: an empty board, not an error');
+  });
+
+  await checkAsync('migrations are written down as they run, and a skipped or doubled one stops the work (2026-11-10: nothing recorded which had been applied)', async () => {
+    const mig = await import(new URL('./migrate.mjs', import.meta.url));
+    const files = ['001_a.sql', '002_b.sql', '003_c.sql', '004_d.sql', 'README.md'];
+    assert.deepEqual(mig.plan(files, ['001_a.sql', '002_b.sql']), { pending: ['003_c.sql', '004_d.sql'], last: '002_b.sql' });
+    assert.deepEqual(mig.plan(files, []), { pending: files.slice(0, 4), last: null });
+    assert.deepEqual(mig.plan(files, files.slice(0, 4)), { pending: [], last: '004_d.sql' });
+    assert.match(mig.plan(files, null).stop, /no migration record yet/, 'no record: it never guesses');
+    assert.match(mig.plan(files, ['001_a.sql', '003_c.sql']).stop, /Skipped: 002_b\.sql/, 'a skipped file stops everything after it');
+    assert.match(mig.plan([...files, '004_e.sql'], ['001_a.sql']).stop, /share a number: 004_d\.sql and 004_e\.sql/, 'two sessions taking the same number');
+    assert.match(mig.plan(files, ['001_a.sql', '009_z.sql']).stop, /not in this folder: 009_z\.sql/);
+    assert.match(mig.plan([...files, 'fix.sql'], []).stop, /not named like a migration/);
+    assert.deepEqual(mig.baselineNames(files, 3), ['001_a.sql', '002_b.sql', '003_c.sql']);
+    const one = mig.withRecord('003_c.sql', 'UPDATE t SET a = 1; -- trailing note');
+    assert.match(one, /-- trailing note\n;\nINSERT INTO schema_migrations \(name, applied_at\) VALUES \('003_c\.sql', unixepoch\(\)\);\n$/, 'the record rides in the same file, clear of a last-line comment');
+    assert.throws(() => mig.withRecord("x'); DROP TABLE players;--.sql", ''), /not a migration name/);
+    // and the real folder is in a state it can work from
+    const real = readdirSync(new URL('../migrations/', import.meta.url));
+    const p = mig.plan(real, []);
+    assert.equal(p.stop, undefined, 'every real migration is named right and no two share a number');
+    assert.equal(p.pending.length, real.filter((f) => f.endsWith('.sql')).length);
   });
 
   console.log(`\n${passed} regression checks pass`);

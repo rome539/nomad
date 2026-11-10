@@ -674,13 +674,39 @@ function trophySumSelect(trophyIds: string[]): string {
               AND pi.item_id IN (${marks}))`;
 }
 
+// THE TROPHY BOARD IN ONE PASS (2026-11-10). The sum above is right for one
+// wanderer, but the board used it twice per player (once to show the score,
+// once to keep the zeros off), so every board read every entered player's
+// items twice over: 18,000 rows a time, and two in every five rows the database
+// read in a day. This is the same board as rows: each entered player's trophies
+// are read once and added up, and only those worth something come back. The
+// same containers, the same ids, the same rounding.
+function trophyBoardRows(trophyIds: string[]): string {
+  return `SELECT p.pubkey AS pubkey, p.name AS name, ROUND(SUM(it.barter)) AS score
+            FROM players p
+            JOIN player_items pi ON pi.pubkey = p.pubkey
+            JOIN item_templates it ON it.id = pi.item_id
+           WHERE p.lb_published_at IS NOT NULL
+             AND IFNULL(pi.container,'') IN ('', 'lockbox', 'vault')
+             AND pi.item_id IN (${idList(trophyIds)})
+           GROUP BY p.pubkey
+          HAVING score > 0`;
+}
+
 export async function loadLeaderboard(
   db: D1Database,
   board: "legend" | "trophies",
   limit: number,
   opts: { bossPts: number; pvpPts: number; accountPts: number; chartPts: number; trophyIds: string[] },
 ): Promise<LbEntry[]> {
-  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts, opts.accountPts, opts.chartPts);
+  if (board === "trophies") {
+    const res = await db
+      .prepare(`${trophyBoardRows(opts.trophyIds)} ORDER BY score DESC, p.lb_published_at ASC LIMIT ?`)
+      .bind(limit)
+      .all<LbEntry>();
+    return res.results ?? [];
+  }
+  const expr = legendExpr(opts.bossPts, opts.pvpPts, opts.accountPts, opts.chartPts);
   // The expression appears TWICE (select list and filter). It used to bind its
   // id list on both, which is what broke the board — the ids are inlined now
   // (trophySumSelect), so this binds exactly one parameter, always.
@@ -707,8 +733,12 @@ export async function leaderboardRank(
     .bind(pubkey)
     .first<{ score: number; pub: number | null }>();
   if (!me || me.pub === null || me.score <= 0) return null;
+  // Who is ahead: the trophy board counts off its one-pass rows, not the sum
+  // run again for every player.
   const ahead = await db
-    .prepare(`SELECT COUNT(*) AS n FROM players p WHERE p.lb_published_at IS NOT NULL AND ${expr} > ?`)
+    .prepare(board === "trophies"
+      ? `SELECT COUNT(*) AS n FROM (${trophyBoardRows(opts.trophyIds)}) WHERE score > ?`
+      : `SELECT COUNT(*) AS n FROM players p WHERE p.lb_published_at IS NOT NULL AND ${expr} > ?`)
     .bind(me.score)
     .first<{ n: number }>();
   return { rank: (ahead?.n ?? 0) + 1, score: me.score };

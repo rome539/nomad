@@ -19,7 +19,7 @@ console.log(`# pubkey ${getPublicKey(sk)}`);
 
 const ch = await (await fetch(`${BASE}/auth/challenge`, { method: "POST" })).json();
 const ev = finalizeEvent(
-  { kind: 27235, created_at: Math.floor(Date.now() / 1000), tags: [], content: ch.challenge },
+  { kind: 27235, created_at: Math.floor(Date.now() / 1000), tags: [["u", new URL(BASE).origin + "/auth/verify"], ["method", "POST"]], content: ch.challenge },
   sk,
 );
 const { token } = await (

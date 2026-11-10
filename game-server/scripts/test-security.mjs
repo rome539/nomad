@@ -21,7 +21,7 @@ try {
  const spent=new Set();
  const env={AUTH_RATE_LIMITER:{limit:async()=>({success:true})},JWT_SECRET:'audit-only-random-secret-'+crypto.randomUUID(),DB:{prepare(sql){return {bind(...args){return {async run(){if(sql.startsWith('INSERT')){const fresh=!spent.has(args[0]);spent.add(args[0]);return {meta:{changes:fresh?1:0}};}return {meta:{changes:0}};}};}};}}};
  const challenge=async()=> (await (await api.handleChallenge(env)).json()).challenge;
- const makeEvent=async(extra={})=>api.finalizeEvent({kind:27235,created_at:Math.floor(Date.now()/1000),tags:[],content:await challenge(),...extra},sk);
+ const makeEvent=async(extra={})=>api.finalizeEvent({kind:27235,created_at:Math.floor(Date.now()/1000),tags:[['u','https://audit.invalid/auth/verify']],content:await challenge(),...extra},sk);
  const verify=ev=>api.handleVerify(new Request('https://audit.invalid/auth/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event:ev})}),env);
  let ev=await makeEvent();let res=await verify(ev);assert.equal(res.status,200);
  const session=(await res.json()).token;assert.equal((await api.verifyJwt(session,env.JWT_SECRET)).sub,pk);

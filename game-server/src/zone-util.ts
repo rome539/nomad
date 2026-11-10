@@ -452,3 +452,11 @@ export function morphOf(creatureId: string, templateId: string, table: Record<st
   for (let i = 0; i < creatureId.length; i++) { h ^= creatureId.charCodeAt(i); h = Math.imul(h, 16777619); }
   return list[Math.abs(h) % list.length];
 }
+
+// WHAT THE DATABASE HOLDS OF A PLAYER, as one string: the room, the health and
+// the tiredness that savePlayer writes. Two marks the same means a save would
+// write nothing new. The tiredness clock (`at`) is left out on purpose: it
+// moves every beat while nothing about the player does.
+export function saveMark(roomId: string, hp: number, e?: { units: number; mode: string; walkingUntil?: number }): string {
+  return roomId + "|" + hp + "|" + (e ? e.units + "|" + e.mode + "|" + (e.walkingUntil ?? "") : "");
+}

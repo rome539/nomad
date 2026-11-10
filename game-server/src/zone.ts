@@ -76,7 +76,7 @@ import {
 import * as invites from "./invites";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed, skyCovered } from "./zone-util";
+import { saveMark, cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed, skyCovered } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -129,7 +129,7 @@ import { FORGE_STOCK,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
   GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY,
-  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, WIND_HEED_MULT, WIND_CHILL_REST_SKIP, FEVER_MEND_MULT, MOB_BLOODTHIRSTY_FLEE_MULT, MOB_BUTTERFINGERS_MULT, MOB_WEAKGRIP_MULT, MOB_SKITTISH_FLEE_MULT, MOB_MARKED_FLEE_MULT, MOB_KEEPS_DROP_MULT, MOB_SHADOW_DMG_MULT, MOB_PATIENT_MULT, MOB_UNDERTOW_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, SIM_STEP_MS, CATCHUP_CAP_MS, CATCHUP_MAX_STEPS,
+  MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, WIND_HEED_MULT, WIND_CHILL_REST_SKIP, FEVER_MEND_MULT, MOB_BLOODTHIRSTY_FLEE_MULT, MOB_BUTTERFINGERS_MULT, MOB_WEAKGRIP_MULT, MOB_SKITTISH_FLEE_MULT, MOB_MARKED_FLEE_MULT, MOB_KEEPS_DROP_MULT, MOB_SHADOW_DMG_MULT, MOB_PATIENT_MULT, MOB_UNDERTOW_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, PLAYER_SAVE_MAX_MS, SIM_STEP_MS, CATCHUP_CAP_MS, CATCHUP_MAX_STEPS,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
@@ -170,7 +170,7 @@ import { FORGE_STOCK,
 } from "./zone-data";
 
 import { PrivateMessages } from "./private-messages";
-import { EventQueue, MAX_FRAME_BYTES, MAX_COMMAND_CHARS, MAX_BATCH_ROWS, SECRET_INPUT } from "./security";
+import { EventQueue, MAX_FRAME_BYTES, MAX_COMMAND_CHARS, MAX_BATCH_ROWS, SECRET_INPUT, cleanCommand, dialId } from "./security";
 
 // One line of something heard next door, as the wire carries it. The noise's
 // own kind and maker ride along when the line has them, with the way it came.
@@ -1486,9 +1486,10 @@ export class ZoneDO implements DurableObject {
     // window's own abandoned handshake. Absent on an older cached client, in
     // which case the guard simply doesn't fire and displacement behaves as it
     // always did.
-    const pid = qs.get("pid");
-    const attRaw = Number(qs.get("att"));
-    const att = Number.isFinite(attRaw) ? attRaw : null;
+    // (Bounded, security.ts dialId: an over-long pid used to be stored on the
+    // socket, where it overran the attachment limit and threw after the
+    // wanderer's old socket had already been closed.)
+    const { pid, att } = dialId(qs.get("pid"), qs.get("att"));
 
     // A ZOMBIE HANDSHAKE MUST NOT EVICT THE LIVE WIRE (2026-08-28). The client
     // gives up on a handshake that stalls past CONNECT_STALL_MS, nulls its
@@ -1758,6 +1759,9 @@ export class ZoneDO implements DurableObject {
   // room of his last good flush). The tick drains this, so a failure can never
   // outlive the beat that caused it.
   private dirtySaves = new Set<string>();
+  // What each player's database row was last written as, and when (saveMark):
+  // the slow flush skips a row that would be written the same again.
+  private savedMark = new Map<string, { mark: string; at: number }>();
   private bodiesLoaded = false;
   private bodyJournal = new Map<string, ReturnType<ZoneDO["bodySnapshot"]>>();
 
@@ -1829,7 +1833,8 @@ export class ZoneDO implements DurableObject {
         if (leaving) {
           await this.state.storage.delete("body:" + pubkey);
           this.bodyJournal.delete(pubkey);
-        }
+          this.savedMark.delete(pubkey);
+        } else this.savedMark.set(pubkey, { mark: saveMark(roomId, hp, s?.exhaustion), at: Date.now() });
         this.dirtySaves.delete(pubkey);
         return;
       } catch (e) {
@@ -1839,6 +1844,19 @@ export class ZoneDO implements DurableObject {
         }
       }
     }
+  }
+
+  // The slow flush, for one player. The body journal is kept every time, as it
+  // always was; the database row is written only when the room, health or
+  // tiredness differs from what it already holds, or it has not been written
+  // for PLAYER_SAVE_MAX_MS (2026-11-10: the unchanged rewrites were most of the
+  // database's writes). A save that failed is retried by drainDirtySaves.
+  private async flushPlayer(s: Session, now: number): Promise<void> {
+    const last = this.savedMark.get(s.pubkey);
+    if (last && now - last.at < PLAYER_SAVE_MAX_MS && last.mark === saveMark(s.roomId, s.hp, s.exhaustion)) {
+      return this.checkpointBody(s);
+    }
+    await this.trySavePlayer(s.pubkey, s.roomId, s.hp);
   }
 
   // Retry whatever didn't land, from the session's CURRENT state — never a
@@ -2215,6 +2233,7 @@ export class ZoneDO implements DurableObject {
     }
     if (!frame || typeof frame !== "object" || Array.isArray(frame)) return;
     if (frame.t === "cmd" && (typeof frame.text !== "string" || frame.text.length > MAX_COMMAND_CHARS)) return;
+    if (frame.t === "cmd") frame.text = cleanCommand(frame.text); // nothing typed carries control marks (security.ts)
     if (frame.t === "cmd" && (SECRET_INPUT.test(frame.text) || /^\s*login(?:\s|$)/i.test(frame.text))) {
       this.send(session, "Login and private keys must stay in your browser. Refresh before signing in.");
       return;
@@ -2230,18 +2249,8 @@ export class ZoneDO implements DurableObject {
     const isBounty = frame?.t === "bounty";
     const isSwap = frame?.t === "swap";
     const isJournal = frame?.t === "journal"; // the journal chip: the book opens as its modal
-    // THE ARENA SWITCH (rome, 2026-10-31): a player may take themselves out of
-    // the spectator feed. On by default; the setting rides the socket so a
-    // hibernation wake keeps it.
-    if (frame?.t === "arena") {
-      session.arenaOff = frame.on === false;
-      try {
-        const a = this.wsAttachment(session.ws);
-        session.ws.serializeAttachment({ ...(a ?? {}), pubkey: session.pubkey, arenaOff: session.arenaOff });
-      } catch {}
-      return;
-    }
-    if (!isTell && !isBench && !isTrade && !isForge && !isBounty && !isSwap && !isJournal && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
+    const isArena = frame?.t === "arena"; // the arena switch, answered below once it has paid its token
+    if (!isArena && !isTell && !isBench && !isTrade && !isForge && !isBounty && !isSwap && !isJournal && (frame?.t !== "cmd" || typeof frame.text !== "string")) return;
 
     // Token bucket per pubkey — castr's daily-cast pattern, compressed.
     const now = Date.now();
@@ -2252,10 +2261,23 @@ export class ZoneDO implements DurableObject {
     session.tokensAt = now;
     const cost = isBench && Array.isArray(frame.rows) ? Math.max(1, Math.ceil(frame.rows.length / 4)) : 1;
     if (session.tokens < cost) {
-      if (!isBench && !isTrade && !isForge && !isBounty && !isSwap) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
+      if (!isArena && !isBench && !isTrade && !isForge && !isBounty && !isSwap) this.send(session, "You're moving faster than the dungeon can watch. Slow down.");
       return;
     }
     session.tokens -= cost;
+    // THE ARENA SWITCH (rome, 2026-10-31): a player may take themselves out of
+    // the spectator feed. On by default; the setting rides the socket so a
+    // hibernation wake keeps it. It pays a token like any frame (it used to be
+    // answered above the bucket, free), but it is not a command: it wakes
+    // nothing and saves nobody.
+    if (isArena) {
+      session.arenaOff = frame.on === false;
+      try {
+        const a = this.wsAttachment(session.ws);
+        session.ws.serializeAttachment({ ...(a ?? {}), pubkey: session.pubkey, arenaOff: session.arenaOff });
+      } catch {}
+      return;
+    }
     onAdmitted?.();
     // Presence: any real frame re-stamps the player and heats the world. The
     // stamp rides the socket too, so a hibernation rebuild keeps it.
@@ -6210,7 +6232,7 @@ export class ZoneDO implements DurableObject {
     // the slowest, not the sum.
     if (now - this.lastFlushAt >= FLUSH_INTERVAL_MS) {
       this.lastFlushAt = now;
-      await Promise.all([...this.sessions.values()].map((s) => this.trySavePlayer(s.pubkey, s.roomId, s.hp)));
+      await Promise.all([...this.sessions.values()].map((s) => this.flushPlayer(s, now)));
     }
     // Every beat, not just every flush: a lost save must not survive long
     // enough for a hibernation wake to rebuild the player from the stale row.

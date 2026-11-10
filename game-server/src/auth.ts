@@ -83,6 +83,17 @@ export async function handleVerify(req: Request, env: Env): Promise<Response> {
     return json({ error: "wrong_kind" }, 401);
   }
 
+  // THE SIGNATURE NAMES THIS SITE (2026-11-10 audit). The challenge alone did
+  // not say where it would be spent, so another site could fetch one here, have
+  // a visitor's signer approve it as that site's own login, and send it on. The
+  // event must carry exactly one `u` tag, and it must be this server's own
+  // verify address, so what the signer shows is where the login is going.
+  const here = new URL(req.url).origin + "/auth/verify";
+  const urls = event.tags.filter((t: unknown) => Array.isArray(t) && t[0] === "u");
+  if (urls.length !== 1 || urls[0][1] !== here) {
+    return json({ error: "wrong_site" }, 401);
+  }
+
   const chal = await verifyJwt(event.content, env.JWT_SECRET);
   if (!chal || chal.purpose !== "challenge") {
     return json({ error: "invalid_challenge" }, 401);

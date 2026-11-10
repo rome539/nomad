@@ -5021,7 +5021,7 @@ async function login() {
   var epoch = identityEpoch;
   var ch = await fetchJson("/auth/challenge", { method: "POST" }, 8000);
   if (epoch !== identityEpoch) throw new Error("identity changed");
-  var evt = { kind: 27235, created_at: Math.floor(Date.now()/1000), tags: [], content: ch.challenge };
+  var evt = { kind: 27235, created_at: Math.floor(Date.now()/1000), tags: [["u", location.origin + "/auth/verify"], ["method", "POST"]], content: ch.challenge };
   var ev;
   if (method === "bunker") ev = await (await ensureBunkerClient()).signEvent(evt);
   else if (method === "ext" && window.nostr) ev = await window.nostr.signEvent(evt);
