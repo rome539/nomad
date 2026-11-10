@@ -5873,6 +5873,9 @@ export class ZoneDO implements DurableObject {
       const eatingSeen = ai.eatingShown(this, creature, now);
       const eatingWas = creature.eatingSeen ?? "";
       if (eatingSeen !== (creature.eatingSeen ?? "")) { creature.eatingSeen = eatingSeen; this.refreshRoomCtx(creature.roomId); }
+      // ...and so does any pose that runs out on a clock (chips.timedPose).
+      const poseSeen = chips.timedPose(creature, now);
+      if (poseSeen !== (creature.poseSeen ?? "")) { creature.poseSeen = poseSeen || undefined; this.refreshRoomCtx(creature.roomId); }
       ai.mealWords(this, creature, tmpl.name, eatingWas, eatingSeen, now);
       if (!creature.target) {
         // Asleep: dead to the world — no feeding, no hunting, no wandering.

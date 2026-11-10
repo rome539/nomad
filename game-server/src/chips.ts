@@ -3,7 +3,7 @@
 // tappable). Out of the spine; zone.ts keeps one-line delegates so the many
 // call sites (every command, every tick, gate.ts, ai.ts) stay unchanged.
 import type { ZoneDO } from "./zone";
-import type { Session } from "./zone-types";
+import type { Session, Creature } from "./zone-types";
 import * as campfire from "./campfire";
 import * as events from "./events";
 import * as pvp from "./pvp";
@@ -243,7 +243,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       const now = Date.now();
       // caught by the light before it could spring: pressed into its crevice, plain to see
       const state = lurking && !creature.target ? "lurk-lit"
-        : creature.windedUntil && now < creature.windedUntil ? "flee"
+        // BLOWN IS STANDING, NOT GOING (rome, 2026-11-09: a raven out of breath
+        // was drawn flying off for a minute while the words had it pulled up
+        // short). At bay it is the hurt pose: low, sagging, sides going.
+        : creature.windedUntil && now < creature.windedUntil ? "hurt"
         : creature.fled && creature.fledAt && now - creature.fledAt < FLEE_SHOWN_MS ? "flee"
         : FLIERS.has(creature.templateId) && ai.airborne(creature, now) ? "aloft"
         // knocked out of the air (styles.thrownAt): on the ground, floundering, so
@@ -677,6 +680,19 @@ export function refreshRoomCtx(z: ZoneDO, roomId: string): void {
 // remember the chips, sweep: anyone whose combat state no longer matches
 // what their chips were drawn for gets a fresh set. Runs after every
 // command and every tick — the chip lock holds in ALL rooms.
+// THE POSES THAT RUN OUT BY THEMSELVES (rome, 2026-11-09: the blown raven
+// stayed drawn in the air until an old raven walked in and the room was sent
+// again). Blown, the flee just run, the stagger and the bird knocked down all
+// end on a clock with no event to carry the news; the tick compares this each
+// beat and redraws the room when it changes, as it does for a meal.
+export function timedPose(creature: Creature, now: number): string {
+  if (creature.windedUntil && now < creature.windedUntil) return "blown";
+  if (creature.fled && creature.fledAt && now - creature.fledAt < FLEE_SHOWN_MS) return "fled";
+  if (FLIERS.has(creature.templateId) && creature.groundedUntil && now < creature.groundedUntil) return "downed";
+  if ((creature.staggerUntil && now < creature.staggerUntil) || (creature.blownUntil && now < creature.blownUntil)) return "reel";
+  return "";
+}
+
 export function syncCombatCtx(z: ZoneDO): void {
   // The WHOLE room, not just the one whose fight began or ended: everyone else
   // there is watching that nomad pick up a fighting stance or put it down.
