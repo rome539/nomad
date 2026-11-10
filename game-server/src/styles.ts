@@ -184,9 +184,12 @@ export function beforeAttack(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
       z.send(victim, kind === "mobber" ? `${cap(tmpl.name)} wheels off on the wind, out of reach, and swings round for another pass.`
         : kind === "ground" ? `${cap(tmpl.name)} flaps up out of reach, scolding.`
         : `${cap(tmpl.name)} climbs out of reach and circles overhead.`);
-      z.refreshRoomCtx(creature.roomId); // up overhead in the picture
     }
+    // UP BEFORE THE PICTURE IS SENT (2026-11-10: an eagle owl "climbs out of reach
+    // and circles overhead" and was drawn standing on the ground, because the
+    // room was redrawn a line before the bird was marked as up).
     creature.airborneUntil = now + COMBAT_ROUND_MS + 1000;
+    if (!up) z.refreshRoomCtx(creature.roomId); // up overhead in the picture
     return true;
   }
   return false;

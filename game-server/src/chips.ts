@@ -688,6 +688,10 @@ export function refreshRoomCtx(z: ZoneDO, roomId: string): void {
 export function timedPose(creature: Creature, now: number): string {
   if (creature.windedUntil && now < creature.windedUntil) return "blown";
   if (creature.fled && creature.fledAt && now - creature.fledAt < FLEE_SHOWN_MS) return "fled";
+  // ...and a bird up in a fight (2026-11-10): its time in the air runs out on a
+  // clock too, when the fight ends under it, so the tick brings it down in the
+  // picture. Same place in the order as sendCtx gives it.
+  if (FLIERS.has(creature.templateId) && ai.airborne(creature, now)) return "aloft";
   if (FLIERS.has(creature.templateId) && creature.groundedUntil && now < creature.groundedUntil) return "downed";
   if ((creature.staggerUntil && now < creature.staggerUntil) || (creature.blownUntil && now < creature.blownUntil)) return "reel";
   return "";
