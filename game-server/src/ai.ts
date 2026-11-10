@@ -7,6 +7,7 @@ import * as exhaustion from "./exhaustion";
 import type { ZoneDO } from "./zone";
 import * as den from "./den";
 import * as herds from "./herds";
+import * as conditions from "./conditions";
 import * as grass from "./grass";
 import * as chase from "./chase";
 import { shelteredInDen, rattle, hearthWarm } from "./den";
@@ -2768,6 +2769,12 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
     if (!mother.nextBirthAt) { mother.nextBirthAt = now + BROOD_INTERVAL_MS; return; }
     if (now < mother.nextBirthAt) return;
     mother.nextBirthAt = now + BROOD_INTERVAL_MS;
+    // A SICK NEST DOES NOT BREED (rome, 2026-11-09: Assart End's murrain stood
+    // 97 hours). The murrain stops the herd's births, but a mother replaced
+    // every pup it killed within 90 seconds, so the sick herd never fell to
+    // where the murrain ends. Her clock keeps running; she breeds again when
+    // the ground is well.
+    if (conditions.sickIn(z, "rat", z.regionOf(mother.home ?? mother.roomId))) return;
     const ratTmpl = z.world!.mobTemplates.get("rat");
     if (!ratTmpl) return;
     let count = 0;
