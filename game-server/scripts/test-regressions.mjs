@@ -6400,7 +6400,15 @@ try {
     assert.match(mig.plan([...files, 'fix.sql'], []).stop, /not named like a migration/);
     assert.deepEqual(mig.baselineNames(files, 3), ['001_a.sql', '002_b.sql', '003_c.sql']);
     const one = mig.withRecord('003_c.sql', 'UPDATE t SET a = 1; -- trailing note');
-    assert.match(one, /-- trailing note\n;\nINSERT INTO schema_migrations \(name, applied_at\) VALUES \('003_c\.sql', unixepoch\(\)\);\n$/, 'the record rides in the same file, clear of a last-line comment');
+    assert.match(one, /-- trailing note\nINSERT INTO schema_migrations \(name, applied_at\) VALUES \('003_c\.sql', unixepoch\(\)\);\n$/, 'the record rides in the same file, clear of a last-line comment');
+    // 380's first run on production (2026-11-10): a file already closed with `;`
+    // was given a second one, and production refuses an empty statement. However
+    // the file ends, what is sent holds its statements and the record, none empty.
+    const endings = { closed: 'UPDATE t SET a = 1;\n', 'closed, then a note': 'UPDATE t SET a = 1;\n-- done\n', open: 'UPDATE t SET a = 1', 'open, then a note': 'UPDATE t SET a = 1 -- done' };
+    for (const [how, sql] of Object.entries(endings)) {
+      const parts = mig.withRecord('003_c.sql', sql).replace(/--[^\n]*/g, '').split(';').map((s) => s.trim());
+      assert.deepEqual(parts.map((s) => s.split(' ')[0]), ['UPDATE', 'INSERT', ''], 'a file left ' + how + ': two statements, no empty one');
+    }
     assert.throws(() => mig.withRecord("x'); DROP TABLE players;--.sql", ''), /not a migration name/);
     // and the real folder is in a state it can work from
     const real = readdirSync(new URL('../migrations/', import.meta.url));

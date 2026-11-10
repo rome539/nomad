@@ -57,7 +57,12 @@ export function baselineNames(files, upTo) {
 /** One migration and its record, as the single file handed to the database. */
 export function withRecord(name, sql) {
   if (!MIGRATION_NAME.test(name)) throw new Error('not a migration name: ' + name);
-  return sql.replace(/\s*$/, '') + `\n;\nINSERT INTO schema_migrations (name, applied_at) VALUES ('${name}', unixepoch());\n`;
+  // Production refuses an empty statement ("SQL code did not contain a
+  // statement"), so the closing `;` is added only where the file left its last
+  // statement open; trailing notes are looked past to find out.
+  const body = sql.replace(/\s*$/, '');
+  const closed = body.replace(/(\s|--[^\n]*(\n|$))*$/, '').endsWith(';');
+  return body + `\n${closed ? '' : ';\n'}INSERT INTO schema_migrations (name, applied_at) VALUES ('${name}', unixepoch());\n`;
 }
 
 function main() {
