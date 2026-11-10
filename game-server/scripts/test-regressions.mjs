@@ -28,7 +28,7 @@ try {
         "export {eatingShown, mealWords} from './ai';",
         "export {parse} from './parser';",
         "export * as den from './den';",
-        "export {cmdMap, copyCounts, worldGrid} from './lore';",
+        "export {cmdMap, copyCounts, worldGrid, inkRooms} from './lore';",
         "export {cmdGo} from './verbs';",
         "export {handleGatehouse} from './gate';",
         "export {receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, glutMult, tickGlut, offerCore, cmdOffer} from './gate';",
@@ -101,7 +101,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths } = await import(pathToFileURL(output));
+  const { holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2709,10 +2709,41 @@ try {
   });
   await checkAsync('the legend board counts a full account at 10 (2026-10-24)', async () => {
     const { db, D1 } = sqliteD1();
-    db.exec("DROP TABLE players; CREATE TABLE players(pubkey TEXT PRIMARY KEY, name TEXT, kills INTEGER DEFAULT 0, boss_kills INTEGER DEFAULT 0, pvp_kills INTEGER DEFAULT 0, accounts INTEGER DEFAULT 0, lb_published_at INTEGER)");
-    db.exec("INSERT INTO players VALUES ('a', 'A', 5, 0, 0, 3, 1), ('b', 'B', 30, 0, 0, 0, 1)");
-    const top = await loadLeaderboard(D1, 'legend', 10, { bossPts: 100, pvpPts: 25, accountPts: 10, trophyIds: [] });
+    db.exec("DROP TABLE players; CREATE TABLE players(pubkey TEXT PRIMARY KEY, name TEXT, kills INTEGER DEFAULT 0, boss_kills INTEGER DEFAULT 0, pvp_kills INTEGER DEFAULT 0, accounts INTEGER DEFAULT 0, charted INTEGER DEFAULT 0, lb_published_at INTEGER)");
+    db.exec("INSERT INTO players VALUES ('a', 'A', 5, 0, 0, 3, 0, 1), ('b', 'B', 30, 0, 0, 0, 0, 1)");
+    const top = await loadLeaderboard(D1, 'legend', 10, { bossPts: 100, pvpPts: 25, accountPts: 10, chartPts: 50, trophyIds: [] });
     assert.deepEqual(top.map((e) => [e.name, e.score]), [['A', 35], ['B', 30]]);
+  });
+  await checkAsync('a map walked to every room is 50 on the legend board, once (2026-11-09)', async () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const LB_CHART_PTS = 50;/);
+    const { db, D1 } = sqliteD1();
+    db.exec("DROP TABLE players; CREATE TABLE players(pubkey TEXT PRIMARY KEY, name TEXT, kills INTEGER DEFAULT 0, boss_kills INTEGER DEFAULT 0, pvp_kills INTEGER DEFAULT 0, accounts INTEGER DEFAULT 0, charted INTEGER DEFAULT 0, lb_published_at INTEGER)");
+    db.exec("CREATE TABLE map_ink(map_id TEXT, room_id TEXT, PRIMARY KEY(map_id, room_id))");
+    db.exec("INSERT INTO players VALUES ('a', 'A', 5, 0, 0, 0, 0, 1), ('b', 'B', 30, 0, 0, 0, 0, 1)");
+    db.exec("INSERT INTO map_ink VALUES ('map-a', 'r1'), ('map-a', 'r2'), ('map-b', 'r1'), ('map-b', 'r2'), ('map-b', 'r3')");
+    const z = new ZoneDO({}, {});
+    z.env = { DB: D1 };
+    z.world = { rooms: new Map([['r1', {}], ['r2', {}], ['r3', {}]]) };
+    const said = []; z.send = (_s, t) => said.push(t);
+    // A walks the last room with a surveyor's map: credited.
+    const a = { pubkey: 'a', roomId: 'r3', items: [{ itemId: 'surveyor-map', rowId: 'x', journalId: 'map-a' }] };
+    await inkRooms(z, a);
+    assert.equal(a.charted, 1, 'the step that inks the last room credits it');
+    assert.match(said.at(-1), /last room goes down/);
+    await inkRooms(z, a); a.roomId = 'r1'; await inkRooms(z, a);
+    assert.equal(db.prepare("SELECT charted FROM players WHERE pubkey='a'").get().charted, 1, 'once');
+    // B picks up a map already whole: nothing new is inked, nothing is credited.
+    const b = { pubkey: 'b', roomId: 'r2', items: [{ itemId: 'surveyor-map', rowId: 'y', journalId: 'map-b' }] };
+    await inkRooms(z, b);
+    assert.ok(!b.charted, 'a full map picked up was somebody else\'s walking');
+    // A crude map walked whole does not count.
+    db.exec("INSERT INTO map_ink VALUES ('map-c', 'r1'), ('map-c', 'r2')");
+    const c = { pubkey: 'b', roomId: 'r3', items: [{ itemId: 'crude-map', rowId: 'z', journalId: 'map-c' }] };
+    await inkRooms(z, c);
+    assert.ok(!c.charted, 'only a surveyor\'s copy');
+    const top = await loadLeaderboard(D1, 'legend', 10, { bossPts: 100, pvpPts: 25, accountPts: 10, chartPts: 50, trophyIds: [] });
+    assert.deepEqual(top.map((e) => [e.name, e.score]), [['A', 55], ['B', 30]]);
   });
 
   // ---------------------------------------------------------------- the bench

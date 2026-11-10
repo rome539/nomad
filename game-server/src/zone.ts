@@ -155,7 +155,7 @@ import { FORGE_STOCK,
   GATEHOUSE_AMBIENT_COOLDOWN_MS, GATEHOUSE_AMBIENT_ODDS, GATEHOUSE_AMBIENT_CEILING_MS, KEEPER_DELAY_MIN_MS, KEEPER_DELAY_MAX_MS,
   DEEP_HEART, DEEP_DOOR_KEY, SURFACE_INTERVAL_MS, HEART_ROT_SEC, ALTAR_ROOMS,
   SIM_RADIUS, SLOW_ECOLOGY_MS, ESCAPE_TMPL,
-  LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS,
+  LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS, LB_CHART_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
   STARVING_AT, WHITE_ROE, FEVER_RAT, bossStands, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
@@ -1990,6 +1990,7 @@ export class ZoneDO implements DurableObject {
       deaths: row.deaths ?? 0,
       bossKills: row.boss_kills ?? 0,
       accounts: row.accounts ?? 0,
+      charted: row.charted ?? 0,
       pvpKills: row.pvp_kills ?? 0,
       pvpAt: row.pvp_at ?? 0,
       tokens: RATE_CAPACITY,
@@ -3801,10 +3802,10 @@ export class ZoneDO implements DurableObject {
   // What the boards need to compute a score in SQL: the two weights, and the
   // set of item ids that count as trophies. One place, so the in-game board,
   // `publish score` and the door outside all reckon the same way.
-  public lbOpts(): { bossPts: number; pvpPts: number; accountPts: number; trophyIds: string[] } {
+  public lbOpts(): { bossPts: number; pvpPts: number; accountPts: number; chartPts: number; trophyIds: string[] } {
     const ids: string[] = [];
     if (this.world) for (const id of this.world.itemTemplates.keys()) if (this.isTrophy(id)) ids.push(id);
-    return { bossPts: LB_BOSS_PTS, pvpPts: LB_PVP_PTS, accountPts: LB_ACCOUNT_PTS, trophyIds: ids };
+    return { bossPts: LB_BOSS_PTS, pvpPts: LB_PVP_PTS, accountPts: LB_ACCOUNT_PTS, chartPts: LB_CHART_PTS, trophyIds: ids };
   }
 
   public isTrophy(itemId: string): boolean {
@@ -4207,7 +4208,7 @@ export class ZoneDO implements DurableObject {
     const lockbox = await loadContainer(this.env.DB, session.pubkey, "lockbox");
     const vault = await loadContainer(this.env.DB, session.pubkey, "vault");
     const trophies = Math.round(trophyValue(session.items) + trophyValue(lockbox) + trophyValue(vault));
-    const legend = session.bossKills * LB_BOSS_PTS + session.pvpKills * LB_PVP_PTS + session.kills + (session.accounts ?? 0) * LB_ACCOUNT_PTS;
+    const legend = session.bossKills * LB_BOSS_PTS + session.pvpKills * LB_PVP_PTS + session.kills + (session.accounts ?? 0) * LB_ACCOUNT_PTS + (session.charted ?? 0) * LB_CHART_PTS;
     if (trophies <= 0 && legend <= 0) {
       return this.send(session, "You've nothing to put on the boards yet — no trophies, no kills to your name. Go earn a place.");
     }
@@ -4219,7 +4220,7 @@ export class ZoneDO implements DurableObject {
       this.state.waitUntil(publishScore(this.env, ev));
     };
     emit("trophies", trophies, `${session.name} — ${trophies} in trophies, all told.`);
-    emit("legend", legend, `${session.name}: ${session.bossKills} bosses down, ${session.pvpKills} felled in blood, ${session.kills} slain in all${session.accounts ? `, ${session.accounts} creature${session.accounts === 1 ? "" : "s"} known cold` : ""}.`);
+    emit("legend", legend, `${session.name}: ${session.bossKills} bosses down, ${session.pvpKills} felled in blood, ${session.kills} slain in all${session.accounts ? `, ${session.accounts} creature${session.accounts === 1 ? "" : "s"} known cold` : ""}${session.charted ? ", the whole land walked and charted" : ""}.`);
     this.send(session, `The dungeon speaks your standing to the boards: ${trophies} in trophies, a legend of ${legend}. (the leaderboard hears you)`);
   }
 

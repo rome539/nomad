@@ -333,6 +333,7 @@ export interface PlayerRow {
   deaths: number;
   boss_kills: number;
   accounts?: number; // full journal accounts this wanderer finished, one per kind (mig 339; the legend board counts them)
+  charted?: number; // 1 once this wanderer walked a surveyor's map to every room (mig 379; the legend board counts it)
   pvp_kills: number; // self-publishable only; the world's narration never names killers
   stance: string; // "reckless" | "steady" | "guarded" — persisted play-style
   exhaustion?: string;
@@ -623,8 +624,8 @@ export interface LbEntry {
 // LEGEND, LIVE: boss kills and blood are columns on the row, so the whole board
 // is one cheap query and can never be stale. Weights are passed in rather than
 // imported — world.ts is the data layer and does not read tuning.
-function legendExpr(bossPts: number, pvpPts: number, accountPts: number): string {
-  return `(boss_kills * ${bossPts} + pvp_kills * ${pvpPts} + kills + accounts * ${accountPts})`;
+function legendExpr(bossPts: number, pvpPts: number, accountPts: number, chartPts: number): string {
+  return `(boss_kills * ${bossPts} + pvp_kills * ${pvpPts} + kills + accounts * ${accountPts} + charted * ${chartPts})`;
 }
 
 // TROPHIES, LIVE: the barter value of every trophy a wanderer holds, anywhere
@@ -677,9 +678,9 @@ export async function loadLeaderboard(
   db: D1Database,
   board: "legend" | "trophies",
   limit: number,
-  opts: { bossPts: number; pvpPts: number; accountPts: number; trophyIds: string[] },
+  opts: { bossPts: number; pvpPts: number; accountPts: number; chartPts: number; trophyIds: string[] },
 ): Promise<LbEntry[]> {
-  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts, opts.accountPts);
+  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts, opts.accountPts, opts.chartPts);
   // The expression appears TWICE (select list and filter). It used to bind its
   // id list on both, which is what broke the board — the ids are inlined now
   // (trophySumSelect), so this binds exactly one parameter, always.
@@ -697,9 +698,9 @@ export async function leaderboardRank(
   db: D1Database,
   pubkey: string,
   board: "legend" | "trophies",
-  opts: { bossPts: number; pvpPts: number; accountPts: number; trophyIds: string[] },
+  opts: { bossPts: number; pvpPts: number; accountPts: number; chartPts: number; trophyIds: string[] },
 ): Promise<{ rank: number; score: number } | null> {
-  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts, opts.accountPts);
+  const expr = board === "trophies" ? trophySumSelect(opts.trophyIds) : legendExpr(opts.bossPts, opts.pvpPts, opts.accountPts, opts.chartPts);
   // Same fix as the board above: the ids are inlined, so each of these binds one.
   const me = await db
     .prepare(`SELECT ${expr} AS score, p.lb_published_at AS pub FROM players p WHERE p.pubkey = ?`)
@@ -812,6 +813,12 @@ export async function mapInkLoad(db: D1Database, mapId: string): Promise<string[
     .bind(mapId)
     .all<{ room_id: string }>();
   return (res.results ?? []).map((r) => r.room_id);
+}
+
+// The map walked whole: on the legend board once, and only the first time.
+export async function creditChart(db: D1Database, pubkey: string): Promise<boolean> {
+  const r = await db.prepare("UPDATE players SET charted = 1 WHERE pubkey = ? AND charted = 0").bind(pubkey).run();
+  return !!r.meta?.changes;
 }
 
 export async function mapInkAdd(db: D1Database, mapId: string, roomId: string): Promise<void> {

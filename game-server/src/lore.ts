@@ -8,7 +8,7 @@ import type { ZoneDO } from "./zone";
 import type { Region, World, Exit } from "./world";
 import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
-import { journalLoad, journalStudy, creditAccount, journalTraitsLoad, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
+import { journalLoad, journalStudy, creditAccount, creditChart, journalTraitsLoad, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
 import { hashSeed, mulberry32, nameMatches } from "./zone-util";
 import { pick, chance } from "./rng";
 import { uuid } from "./rng";
@@ -108,8 +108,23 @@ export async function inkRooms(z: ZoneDO, session: Session): Promise<void> {
     if (!ink.has(session.roomId)) {
       ink.add(session.roomId);
       await mapInkAdd(z.env.DB, carried.journalId, session.roomId);
+      // THE LAST ROOM GOES DOWN (rome, 2026-11-09: a walked map scores). Only a
+      // surveyor's copy, and only the step that finishes it: a map picked up
+      // already whole was somebody else's walking.
+      if (carried.itemId === DETAILED_MAP && !session.charted && chartWhole(z.world!, ink)
+          && await creditChart(z.env.DB, session.pubkey)) {
+        session.charted = 1;
+        z.send(session, "The last room goes down on the paper. There is nothing left on it to walk.", "study");
+      }
     }
   }
+}
+
+/** Every room in the world is on this ink. */
+export function chartWhole(world: { rooms: Map<string, unknown> }, ink: Set<string>): boolean {
+  if (ink.size < world.rooms.size) return false;
+  for (const id of world.rooms.keys()) if (!ink.has(id)) return false;
+  return true;
 }
 
 // HOW FULL EACH COPY IS, NEXT TO ITS NAME (rome, 2026-10-26: so a player with

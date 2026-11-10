@@ -1024,6 +1024,7 @@ export const LB_GENRES = ["mud", "extraction", "roguelike", "pvp", "dungeon-craw
 export const LB_BOSS_PTS = 100;
 export const LB_PVP_PTS = 25;
 export const LB_ACCOUNT_PTS = 10; // a full journal account, once per kind (rome, 2026-10-24)
+export const LB_CHART_PTS = 50;   // a surveyor's map walked to every room, once per wanderer (rome, 2026-11-09: more than an account)
 // WHAT A MEAL IS WORTH (rome, 2026-09-04: almost every mob is fed too often —
 // he could not remember the last hungry one he met).
 //

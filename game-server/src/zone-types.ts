@@ -95,6 +95,7 @@ export interface Session {
   deaths: number;
   bossKills: number;
   accounts?: number; // full journal accounts finished (the legend board's fourth column)
+  charted?: number;  // 1 once a surveyor's map they carried was walked to every room (the legend board's fifth)
   pvpKills: number;
   tokens: number;
   tokensAt: number; // ms of last refill
