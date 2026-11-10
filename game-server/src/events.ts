@@ -842,6 +842,20 @@ export function breachPairOf(z: ZoneDO): { a: string; aDir: string; b: string; b
 
 // The event clause for a room description — legibility first: standing in it,
 // you always know what the world is doing around you.
+// The weather's own standing lines, named so the room can tell them from news.
+const RAIN_ON_LINE = " Rain hammers the open ground.";
+const FOG_ON_LINE = " Fog stands thick on the open ground. Everything past arm's reach is a rumor.";
+const CLOUD_DOWN_LINE = " The cloud lies down over the mountain, and the hill stops being a place you can see.";
+// ONE LINE FOR THE WEATHER IN THE AIR (2026-11-10: "The mountain is under snow"
+// and then "Dusk, and snow coming down", two lines saying the one thing). While
+// the hour line carries the snow, rain or fog (weatherSky), the clause that only
+// says the same weather is not printed as well; any other news still is.
+export function saysWeather(clause: string, wx: "snow" | "rain" | "fog" | ""): boolean {
+  if (wx === "snow") return SNOW_LINES.includes(clause);
+  if (wx === "rain") return clause === RAIN_ON_LINE;
+  if (wx === "fog") return clause === FOG_ON_LINE || clause === CLOUD_DOWN_LINE;
+  return false;
+}
 export function skyClause(z: ZoneDO, roomId: string): string {
   if (roomId === boilRoom(z)) return " The floor is a river of rats, pouring through.";
   if (SPATE_ROOMS.has(roomId)) {
@@ -1044,7 +1058,7 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     }
     switch (phaseOf(z, "clouddown")) {
       case "telegraph": return " The cloud begins to come down the hill — the line of it walking the slope toward you, slow and grey.";
-      case "active": return " The cloud lies down over the mountain, and the hill stops being a place you can see.";
+      case "active": return CLOUD_DOWN_LINE;
       case "aftermath": return " The cloud lifts back up the hill, and the mountain comes back room by room.";
       default: break;
     }
@@ -1077,12 +1091,12 @@ export function skyClause(z: ZoneDO, roomId: string): string {
   if (nearRain) return ` The sky is low and grey toward ${groundName(nearRain)}, and it is raining there.`;
   switch (wxPhase(z, "rain", roomId)) {
     case "telegraph": return " The light has gone iron-grey, and the air smells of coming rain.";
-    case "active": return " Rain hammers the open ground.";
+    case "active": return RAIN_ON_LINE;
     case "aftermath": return " The ground is churned to mud, still dripping.";
   }
   switch (wxPhase(z, "fog", roomId)) {
     case "telegraph": return " A milky haze is creeping up from the low ground.";
-    case "active": return " Fog stands thick on the open ground. Everything past arm's reach is a rumor.";
+    case "active": return FOG_ON_LINE;
     case "aftermath": return " The fog is thinning to rags.";
   }
   switch (wxPhase(z, "cold", roomId)) {

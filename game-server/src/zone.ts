@@ -8085,7 +8085,10 @@ export class ZoneDO implements DurableObject {
     // hand on storied gear does: LORE_LINE at the head of a line tells the page
     // to draw it so, and the page takes the mark off.
     const sky = indoors ? "" : events.skyClause(this, room.id);
-    if (sky) lines.push(LORE_LINE + sky.trim());
+    // ...said once: the hour line below carries the weather in the air, so the
+    // clause that says only that weather again is left out (events.saysWeather).
+    const hourSaysWx = !indoors && OUTDOOR_ROOMS.has(room.id) && (isNight() || eclipsePhase() !== "active") ? events.weatherSky(this, room.id) : "";
+    if (sky && !events.saysWeather(sky, hourSaysWx)) lines.push(LORE_LINE + sky.trim());
     // The night-clock itself gets a line too, same legibility rule as
     // weather — this only runs past the pitch-dark return above, so it's
     // either a torch holding the dark at bay or a full moon lighting the
