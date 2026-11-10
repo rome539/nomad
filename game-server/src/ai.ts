@@ -3078,6 +3078,11 @@ export function drakeRoused(z: ZoneDO, creature: Creature, now: number): boolean
 
 export function fallAsleep(z: ZoneDO, creature: Creature, now: number, gorged = false): void {
     if (SUMMIT_BOSSES.has(creature.templateId) && drakeRoused(z, creature, now)) return; // the fight is not over (DRAKE_ROUSED_MS)
+    // NOTHING SLEEPS WITH ITS TEETH IN SOMETHING (rome, 2026-11-09: a hill wolf
+    // lay asleep in the picture while the words had it killing a hind, and the
+    // hind stood held under it going nowhere). A kill in progress is finished
+    // or lost before the killer lies down.
+    if (creature.holding) return;
     creature.asleep = true;
     // Default false, so every route that is NOT the gorge clears a stale flag
     // on its way in — the bones line can never outlive the meal.

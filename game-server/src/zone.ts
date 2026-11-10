@@ -5969,7 +5969,12 @@ export class ZoneDO implements DurableObject {
           || await groups.holdBody(this, creature, now) || await groups.mobEagle(this, creature, now) // the bigger one at a body; ravens push an eagle out
           || await groups.holdLand(this, creature, now) // a hunter runs rivals off its land
           || await ai.wolfTests(this, creature, now); // a fed wolf testing a lone wanderer holds its ground
-        if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)
+        // A HELD ANIMAL IS NOT A RUNNER GETTING ITS BREATH (rome, 2026-11-09):
+        // pinned in a grip it read "ready to run and not running". Its line is
+        // the grip's, and the bolt branch leaves it alone.
+        if (!hunted && creature.heldBy) {
+          // held: worryPrey, on the holder's turn, decides how this ends
+        } else if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)
             && !ai.allCrouched(this, creature.roomId)) {
           // Never settles while there's someone to run from — it keeps moving,
           // room to room, and you only land a blow the tick you have it cornered.

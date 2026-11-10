@@ -1307,6 +1307,24 @@ try {
     await creatureMoves(z, goat, Date.now(), 'wander', true);
     assert.equal(goat.roomId, 'b', 'let go, it walks like anything else');
   });
+  check('a hunter with its teeth in something does not fall asleep (2026-11-09, the sleeping wolf over the hind)', () => {
+    const z = new ZoneDO({}, {});
+    z.world = { mobTemplates: new Map([['hill-wolf', { id: 'hill-wolf', name: 'a hill wolf', max_hp: 40, is_boss: 0 }]]), mobSpawns: [], itemTemplates: new Map(), rooms: new Map(), exits: new Map(), entryRooms: new Set(), safeRooms: new Set() };
+    const now = Date.now();
+    const wolf = { id: 'w', templateId: 'hill-wolf', roomId: 'a', hp: 40, target: null, grudges: [], hunger: 50, nextWanderAt: 0, holding: 'h' };
+    fallAsleep(z, wolf, now);
+    assert.ok(!wolf.asleep, 'holding a hind, it stays awake');
+    fallAsleep(z, wolf, now, true);
+    assert.ok(!wolf.asleep, 'the gorge nap does not take it either');
+    wolf.holding = undefined; fallAsleep(z, wolf, now);
+    assert.ok(wolf.asleep, 'let go, it may sleep');
+  });
+  check('a held animal skips the runner branch: no "ready to run and not running" over a grip (2026-11-09)', () => {
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    const i = zs.indexOf('if (!hunted && creature.heldBy) {');
+    const j = zs.indexOf('} else if (!hunted && RUNNERS.has(creature.templateId) && ai.playerPresent(this, creature.roomId)');
+    assert.ok(i > 0 && j > i && j - i < 200, 'the held guard comes first, ahead of the bolt branch');
+  });
   check('the mountain has twelve hill wolves, the four new rows carrying ids and standing on wolf ground (2026-11-06)', () => {
     const mig = readFileSync(new URL('../migrations/375_more_wolves_on_the_hill.sql', import.meta.url), 'utf8');
     const rows = [...mig.matchAll(/VALUES \('(spawn-hill-wolf@([a-z-]+))', 'hill-wolf', '([a-z-]+)'\)/g)];
