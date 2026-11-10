@@ -239,6 +239,7 @@ export interface Creature {
   moveAt?: number;    // a lone mountain animal: when it gives up this home (groups.ts)
   kept?: boolean;     // ...it has had its one extra game day for being well fed
   leanSince?: number; // a lone mountain animal: hungry since this moment (groups.ts)
+  leanMovedAt?: number; // ...and when hunger last moved it, so it gives new ground a game day
   roundFor?: string;  // the feeding ground a herd animal is out on this hour (herds.roundGround)
   roundAt?: number;   // when that answer is worth asking again
   huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)

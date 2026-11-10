@@ -115,34 +115,18 @@ const isWalkShard = (k: string) => k.startsWith(B_WALK_PREFIX);
 const isCreatureShard = (k: string) => k.startsWith(B_CREATURES_PREFIX);
 // A row this store owns and must never sweep as a stray. b:walked is not one
 // any more: it is the pre-split shape, swept at the crossover.
-const isOurs = (k: string) => k === B_GROUND || k === B_META || isWalkShard(k) || isCreatureShard(k)
-  || (ROLLBACK_SHADOW && k === B_CREATURES); // the shadow is ours while it stands, and must never be swept
+const isOurs = (k: string) => k === B_GROUND || k === B_META || isWalkShard(k) || isCreatureShard(k);
 // Where a creature with no shard goes. Only reachable if a caller passes no
 // sharder at all (tests, or a future caller that does not care) — the world
 // then behaves exactly as it did before the split, in one blob.
 const SHARD_FALLBACK = "world";
-// THE ROLLBACK SHADOW, and why this is not optional.
-//
-// Tested, not assumed: deploy the split, let it convert, then redeploy the
-// PREVIOUS build against the converted storage and the old code finds b:ground
-// and b:meta, decides the world is fine, reads b:creatures — which the
-// crossover deleted — and hydrates ZERO creatures. Worse, `placedSpawns` in
-// meta still lists every seeded mob, so the seeder will not put them back, and
-// worse again, the old code's first save sweeps the shards as strays. One
-// rollback and the world is permanently empty short of a reseed, which is the
-// one thing that must never be needed while people are playing.
-//
-// So the split keeps the OLD key alive as a shadow, refreshed on the full
-// flush only. That costs one extra write every FULL_FLUSH_MS — the flush was
-// already rewriting every shard at that moment anyway, so it is the same bytes
-// one more time, and nothing at all in steady state. A rollback then comes back
-// to a world at most one flush stale (positions and wounds), which is a blip
-// instead of an extinction.
-//
-// REMOVE THIS in a later ship, once the split has run long enough that rolling
-// back past it is not a thing anyone would do. Until then it is the difference
-// between a reversible deploy and a one-way door.
-const ROLLBACK_SHADOW = true;
+// THE ROLLBACK SHADOW IS GONE (2026-11-10). From the creature split (July)
+// until now the whole population was also written under the old single key on
+// every full flush, about 292KB every twenty minutes, so that a build from
+// before the split could be redeployed and still find its creatures. Nobody
+// rolls back that far any more. The old key is now a stray like any other: the
+// first save after a load sweeps it. A build from before the split, redeployed
+// against this storage, would wake to no creatures: that is a re-seed.
 
 // Every field of SimState that isn't creatures or per-room floor state must
 // be listed here — the meta blob holds exactly these. COMPLETENESS IS
@@ -361,9 +345,9 @@ function unshardBlobs(rows: Map<string, string>): SimState {
   // over yet. Reading both is what makes the crossover a non-event: a world
   // mid-migration (which cannot exist — one transaction — but be thorough)
   // still hydrates whole.
-  // SHARDS WIN. The pre-split b:creatures survives as a rollback shadow, so
-  // both shapes are on disk at once and reading both would hydrate every
-  // creature TWICE. The shards are the live copy; the single blob is only ever
+  // SHARDS WIN. A world can still hold the pre-split b:creatures beside its
+  // shards (the old rollback copy, until the first save sweeps it), and reading
+  // both would hydrate every creature TWICE. The shards are the live copy; the single blob is only ever
   // read by a world that has not crossed over yet.
   const creatures = state.creatures as Creature[];
   let sharded = false;
@@ -531,11 +515,6 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   // creature crossing a border correctly dirties BOTH shards, because both
   // buckets come out different.
   const shards = shardCreatures(state.creatures, shardOf);
-  // The shadow: the whole population under the old key, on full-flush beats
-  // only. Never cached for dirt (it is not a source of truth and must not
-  // suppress anything) — it is written when the flush says so and otherwise
-  // costs nothing.
-  if (ROLLBACK_SHADOW && fullFlush) puts.push([B_CREATURES, creaturesBlob(state.creatures)]);
   for (const [shard, list] of shards) {
     const key = B_CREATURES_PREFIX + shard;
     const stable = stableCreatures(list);

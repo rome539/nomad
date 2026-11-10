@@ -217,7 +217,7 @@ A slope of fine scree lying at exactly the angle it can hold, which catches what
 > west   the-fan-head
 
 ## the-boulder-nose | The Boulder Nose
-A nose of solid rock standing out of the scree, the only thing on this fan that did not arrive by falling. It splits what comes down into two streams, and everything on one side of it goes west and everything on the other goes east, and the sorting the whole fan does starts here.
+A nose of solid rock standing out of the scree, the only thing on this fan that did not arrive by falling. It splits what comes down into two streams, and everything on one side of it goes west and everything on the other goes east, and the sorting the whole fan does starts here. In its lee, where nothing coming down can reach, a mat of moss and creeping willow has grown the shape of the rock's shadow, and it has been eaten back to the stems.
 > south  the-splinter-field
 > east   the-grey-run
 > west   the-catch-slope
@@ -230,7 +230,7 @@ Rock broken into blades and splinters rather than pebbles — frost does this, o
 > west   the-bone-ground
 
 ## the-lower-fan | The Lower Fan
-Where the fan flattens out and stops sorting, and everything that got this far lies mixed together: chips, splinters, one antler, half a jaw. Water runs under it rather than over it and you can hear that, faintly, through the stones.
+Where the fan flattens out and stops sorting, and everything that got this far lies mixed together: chips, splinters, one antler, half a jaw. Water runs under it rather than over it and you can hear that, faintly, through the stones. Where the sound is loudest the stones are green underneath and moss has come up between them, low and wet, cropped wherever a mouth can reach it.
 > north  the-splinter-field
 > east   the-scoured-flat
 > west   the-fall-fan
@@ -328,13 +328,13 @@ A long slope of small red stones with nothing whatever growing on it, running do
 > west   the-last-fan
 
 ## the-stained-run | The Stained Run
-Where water has run down the red rock for long enough to stain a stripe darker than the ground either side, twenty feet wide and running the whole length of the slope. It is dry now. It is dry for eleven months and it moves the entire hillside in the twelfth.
+Where water has run down the red rock for long enough to stain a stripe darker than the ground either side, twenty feet wide and running the whole length of the slope. It is dry now. It is dry for eleven months and it moves the entire hillside in the twelfth. Down the middle of the stripe, where the last of the wet stays longest, a dark moss holds on in a crust, and after the water it comes up green for a month. It is cropped the whole length.
 > north  the-iron-band
 > east   the-red-gully
 > west   the-rust-slope
 
 ## the-red-gully | The Red Gully
-A gully cut deep into the red, walls above head height, floor of loose stone, and everything that comes off this side of the mountain funnels into it. Down here you can see nothing but the two walls and the strip of sky. Something has been sleeping against the west wall, in the dry, and the shape of it is still in the grit.
+A gully cut deep into the red, walls above head height, floor of loose stone, and everything that comes off this side of the mountain funnels into it. Down here you can see nothing but the two walls and the strip of sky. Something has been sleeping against the west wall, in the dry, and the shape of it is still in the grit. On the east wall, in the one place the afternoon sun gets to, a seep comes out of the rock and there is moss under it all the way to the floor, bitten off as high as a hind can lift her head.
 > north  the-ochre-shelf
 > east   the-gully-top
 > west   the-stained-run
@@ -347,7 +347,7 @@ The gully's head narrows to a slot you could touch both sides of, and above it t
 # ---- D. THE KNIFE RIDGE: a line, with the ground gone on both sides ---------
 
 ## the-crest-step | The Crest Step
-The permanent ice ends and rock begins, and the rock is a step up onto the crest of a ridge that runs away east as far as you can see it. Both sides fall away immediately. From this step on there is no such thing as walking round anything.
+The permanent ice ends and rock begins, and the rock is a step up onto the crest of a ridge that runs away east as far as you can see it. Both sides fall away immediately. From this step on there is no such thing as walking round anything. The step itself has only lately come out from under the ice, and moss has taken every crack in it, a dark wet mat a finger deep. Something has been cropping it.
 > north  the-first-notch
 > east   the-knife
 > down   the-cold-crest
@@ -363,7 +363,7 @@ The ridge narrows to the width of a plank of stone with air on both sides and a 
 > west   the-crest-step
 
 ## the-north-drop | The North Drop
-A step off the north side of the ridge onto a ledge the size of a table, which is the only place on this whole crest a person can sit down. It ends in nothing. Birds have been using it: the rock is white with them, and there are pellets, and the pellets are full of small bones.
+A step off the north side of the ridge onto a ledge the size of a table, which is the only place on this whole crest a person can sit down. It ends in nothing. Birds have been using it: the rock is white with them, and there are pellets, and the pellets are full of small bones. What they leave feeds the ledge: along the foot of the wall a moss has come up thick as turf, greener than anything has a right to be up here, and bitten short along its outer edge.
 > south  the-knife
 
 ## the-second-notch | The Second Notch
@@ -373,7 +373,7 @@ Another dip in the crest, deeper than the first, with old snow lying in the bott
 > west   the-knife
 
 ## the-gendarme | The Gendarme
-A tower of rock standing on the ridge like a post, twice your height, that everything has to go round. There is a worn line round its base on the south side where everything has gone round it, and the wear is deep enough to be a path in its own right. Nothing has ever gone round it on the north.
+A tower of rock standing on the ridge like a post, twice your height, that everything has to go round. There is a worn line round its base on the south side where everything has gone round it, and the wear is deep enough to be a path in its own right. Nothing has ever gone round it on the north. On that south side, in the sun and out of the wind, the foot of the tower is green with moss packed into the wear in cushions, and they are grazed level with the rock.
 > south  the-second-notch
 
 ## the-ridge-walk | The Ridge Walk
@@ -393,11 +393,11 @@ The last dip, and the widest, filled to the brim with hard old snow so that the 
 > west   the-ridge-walk
 
 ## the-lean | The Lean
-A slab the size of a barn door that came off the ridge and did not fall — it leaned against what it came off and stopped, leaving a triangular gap underneath, dry and dark and out of the wind. There are old droppings in the back of it, dried to nothing, and a smell that has almost gone.
+A slab the size of a barn door that came off the ridge and did not fall — it leaned against what it came off and stopped, leaving a triangular gap underneath, dry and dark and out of the wind. There are old droppings in the back of it, dried to nothing, and a smell that has almost gone. At the mouth of the gap, where the drip off the slab lands, a fringe of moss and small tough leaves has come up in what the droppings left, and it is nibbled short.
 > south  the-third-notch
 
 ## the-ridge-end | The Ridge End
-The crest broadens, loses its edge, and dies into a shoulder of broken rock. After a mile of having nothing on either side of you, ground that goes on in more than one direction is briefly disorienting, and you will stand here longer than you need to.
+The crest broadens, loses its edge, and dies into a shoulder of broken rock. After a mile of having nothing on either side of you, ground that goes on in more than one direction is briefly disorienting, and you will stand here longer than you need to. In among the broken blocks, out of the wind, moss has got a hold in tight cushions the size of a fist, and most of them are bitten flat.
 > north  the-last-tooth
 > south  the-ridge-drop
 > west   the-third-notch
@@ -432,7 +432,7 @@ The edge of a crack across the whole glacier, wide enough to swallow a cart, wit
 > west   the-blue-shadow
 
 ## the-glacier-bend | The Glacier Bend
-The ice turns a corner round a buttress of rock, and turning has torn it: the whole flank is a fan of cracks, none of them wide, all of them deep. Walking it is a matter of stepping over things you cannot see the end of, one after another, for longer than is comfortable.
+The ice turns a corner round a buttress of rock, and turning has torn it: the whole flank is a fan of cracks, none of them wide, all of them deep. Walking it is a matter of stepping over things you cannot see the end of, one after another, for longer than is comfortable. The buttress itself stands clear of the ice and takes the sun, and its ledges are furred with moss and grey lichen as far up as you can see, the lowest of them stripped.
 > north  the-crevasse-lip
 > east   the-melt-lip
 
@@ -492,12 +492,12 @@ A round shaft in the ice, six feet across and perfectly circular, with a stream 
 > west   the-melt-lip
 
 ## the-melt-run | The Melt Run
-A channel of grey stone under the lip of the ice, running with meltwater in the afternoon and dry by dark, floored in silt so fine it takes a print like wax. The prints in it now are from this morning. There are three sets and they are all going the same way.
+A channel of grey stone under the lip of the ice, running with meltwater in the afternoon and dry by dark, floored in silt so fine it takes a print like wax. The prints in it now are from this morning. There are three sets and they are all going the same way. Along both edges of the channel, where the silt stays wet through the night, a line of moss has taken, with a creeping willow no taller than your thumb threaded through it, nibbled back to the wood.
 > north  the-melt-lip
 > east   the-glacier-toe
 
 ## the-glacier-toe | The Glacier Toe
-The end of the ice, filthy with the rock it has carried, giving back the things it took in at the top — stones, gravel, a scatter of bone, all of it in the same condition it went in and none of it from any animal that has been up here in living memory. This is the only place the ice and the red ground touch.
+The end of the ice, filthy with the rock it has carried, giving back the things it took in at the top — stones, gravel, a scatter of bone, all of it in the same condition it went in and none of it from any animal that has been up here in living memory. This is the only place the ice and the red ground touch. Where the meltwater spreads over the gravel the ice has put down, a thin moss has started, bright against the dirt, and it is grazed to the stones.
 > south  the-burnt-ground
 > west   the-melt-run
 
@@ -517,14 +517,14 @@ Stone pavement blown so clean that a stone the size of a fist looks like it was 
 > west   the-drift-hollow
 
 ## the-pavement | The Pavement
-Frost has broken the rock into slabs with straight cracks between them, laid out in a pattern that looks made from a distance and looks like nothing at all from on top of it. Water gets in the cracks, freezes, and takes the rock apart another notch, every night of every year, forever.
+Frost has broken the rock into slabs with straight cracks between them, laid out in a pattern that looks made from a distance and looks like nothing at all from on top of it. Water gets in the cracks, freezes, and takes the rock apart another notch, every night of every year, forever. Down in the cracks, a hand's depth out of the wind, it is another country: moss and small ferny leaves, green in every slot, bitten off wherever they reach the top.
 > north  the-swept-ground
 > south  the-cold-terrace
 > east   the-approach
 > west   the-glacier-head
 
 ## the-cold-terrace | The Cold Terrace
-A terrace under the swept ground, lower and out of the main of the wind, where the loose stuff the pavement sheds collects in a strip along the back wall. It is the last ground on this tier with any shelter in it at all, and it is where anything that intends to be up here for a night is going to be.
+A terrace under the swept ground, lower and out of the main of the wind, where the loose stuff the pavement sheds collects in a strip along the back wall. It is the last ground on this tier with any shelter in it at all, and it is where anything that intends to be up here for a night is going to be. In that strip the grit has made something like soil, and moss and a creeping willow have taken the length of the wall, grazed to the roots.
 > north  the-pavement
 > east   the-shelf-under
 > west   the-moulin
@@ -549,7 +549,7 @@ The ground begins to rise again after a mile of not rising, and rises evenly, an
 > west   the-pavement
 
 ## the-shelf-under | The Shelf Under
-A shelf under the approach, wide and level, that ought to be a nesting ledge — it faces the sun, it is out of the wind, it has a wall at its back. It has been used as one. The old nests are still on it, three of them, packed with sticks carried up from four tiers down, and every one of them is empty and has been for years.
+A shelf under the approach, wide and level, that ought to be a nesting ledge — it faces the sun, it is out of the wind, it has a wall at its back. It has been used as one. The old nests are still on it, three of them, packed with sticks carried up from four tiers down, and every one of them is empty and has been for years. What the nests left has rotted down into the cracks of the shelf, and moss has come up out of it thick and green along the foot of the wall, cropped close.
 > north  the-approach
 > east   the-under-shelf
 > west   the-cold-terrace

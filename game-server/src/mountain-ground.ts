@@ -22,7 +22,12 @@ export const MOUNTAIN_GROUND: Record<string, string[]> = {
     "the-south-bank", "the-scoop-of-grass", "the-thorn-garth", "the-fleece-green",
     "the-rowan-rows", "the-cloud-foot", "the-hill-graves", "the-cold-hearths", "the-thorn-nook",
     "the-first-rise", "the-turf-wall", "the-hearth-stone", "the-stell", "the-track-head",
-    "the-red-moss", "the-hill-spring", "the-shiel-foot", "the-crack-line"
+    "the-red-moss", "the-hill-spring", "the-shiel-foot", "the-crack-line",
+    // SOMETHING GROWS UP HIGH (rome, 2026-11-10, mig 381): moss written into fifteen
+    // rooms of the fourth tier, so grazers can live and feed high.
+    "the-crest-step", "the-north-drop", "the-ridge-end", "the-glacier-toe", "the-melt-run",
+    "the-boulder-nose", "the-lower-fan", "the-stained-run", "the-red-gully", "the-gendarme",
+    "the-lean", "the-glacier-bend", "the-pavement", "the-cold-terrace", "the-shelf-under"
   ],
   stone: [
     "the-clapper", "the-beck-narrows", "the-water-slide", "the-boulder-field", "the-gravel-race",

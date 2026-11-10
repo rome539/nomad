@@ -4614,6 +4614,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The wind through the notch has polished both its walls and piled grit and ice against the lee side. Looking down the north face, there is nothing to rest the eye on: no ledge, no snow, no bird, just wet black rock going down into the grey.",
   },
   "the-crest-step": {
+    "moss|cracks|mat":
+      "The moss is black-green and soaked and comes away from the crack in a single piece, with grit in its roots and nothing under it but rock. Along the top it is clipped level, as neat as shears would leave it, and there are a few small dry droppings on the step beside it.",
     "step|rock|crest|ridge|ice":
       "The rock of the step is sound and grey and gritty, and the ice ends against it in a thin dirty edge. On top, the crest runs off narrow and level. On the step itself the rock has a polished patch where everything puts a foot to go up.",
   },
@@ -4658,6 +4660,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The snow is so hard a heel only scratches it. Its surface is carved by the wind into long ridges with sharp edges, all running the same way. At the east edge the cornice curls out over nothing, and its overhang is thin enough to see light through.",
   },
   "the-north-drop": {
+    "moss|green|wall|turf":
+      "The moss runs the length of the wall's foot, fed by what washes down off the white rock, and it is deep enough to push a finger into to the knuckle. The outer edge is bitten down to a stubble. The inner edge, hard against the wall where nothing can get its head in, is untouched.",
     "ledge|rock|pellets|bones|birds":
       "The pellets are grey and furred, and when one breaks open there are skulls in it no bigger than a fingernail, and tiny leg bones, and fur. The rock is whitened in long streaks down the face below. The ledge's edge is worn smooth by claws.",
   },
@@ -4690,6 +4694,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "Pick up a handful of the grit and among the chips there are tiny bones: a bird's leg, a vertebra, the jaw of a vole. The grit is soft and sorted fine and takes a print, and the prints across it are small ones, hopping.",
   },
   "the-gendarme": {
+    "moss|cushions|foot|south":
+      "The cushions sit in the worn groove as if they had been set there, each one warm on its sunward side. Their tops are bitten flat and level with the stone. On the north side of the tower there is not one.",
     "gendarme|tower|rock|line|path":
       "The worn line round the base on the south side is a polished groove in the rock, and above it, at shoulder height, the tower is rubbed smooth and dark. On the north side the rock is lichened and clean. Nothing has touched it.",
   },
@@ -4706,6 +4712,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "Each bowl is a foot across and lined with dirty grit that collected in its bottom. The ridges between are sharp ice, and they break with a crack under a boot. In the bottom of one bowl a beetle lies dead, frozen in.",
   },
   "the-boulder-nose": {
+    "moss|willow|lee|mat|shadow":
+      "The mat stops in a clean line where the rock's shelter stops, and outside the line there is only scree. The willow in it is all stem, flat to the ground, and each stem ends in a bitten stub. Small feathered feet have printed the grit along its edge.",
     "nose|rock|scree|fan":
       "The nose is solid rock, rooted in the mountain, and its upslope face is battered and chipped white by everything that came down against it. The scree on either side of it parts in two clean streams. Behind it, out of the fall, there is a little sheltered hollow with droppings in it.",
   },
@@ -4714,6 +4722,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The splinters are sharp enough to cut a hand, and lie edge-up in every direction. At the crossing place the splinters have been trodden flat and snapped short into a rough path, and the path is stained dark in places where feet bled.",
   },
   "the-lower-fan": {
+    "moss|green|undersides":
+      "Lift a stone and its underside is slick and green, and the moss between the stones is cold enough to numb a finger. It grows only along the line where the water is nearest. Along that line it is cropped, and the stones are scuffed where something has stood to do it.",
     "fan|chips|splinters|antler|jaw|stones|water":
       "The antler is a stag's, shed, gnawed at its tines. The half jaw has its teeth, worn flat, a grazer's. Put an ear to the stones and the water under them is loud, running fast somewhere just below your feet.",
   },
@@ -4730,10 +4740,14 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The walls of the runnel are glassy and the floor is a thin sheet of ice over grit. Prints go down the bottom of it, softened and refrozen, and in one place the wall is clawed where something climbed out.",
   },
   "the-glacier-bend": {
+    "moss|lichen|ledges|ledge":
+      "The lichen is grey and stands up off the rock in small stiff branches, and it crumbles when dry and gives when wet. The moss under it is the green of deep water. Every ledge that can be reached from the ice is bare, and scratched with claw.",
     "ice|cracks|buttress|glacier|flank":
       "The cracks are a hand wide and as deep as the light goes, and they fan out from the buttress like the spokes of a wheel. The ice between them is grey with grit. On the buttress's face, at the height the ice once reached, there is a line of scratches.",
   },
   "the-melt-run": {
+    "moss|willow|edges|edge":
+      "The willow lies flat along the silt, a thing of brown stems and leaves the size of a fingernail, and every shoot that stood up from it has been bitten off. The moss either side is wet and cold. There are small round droppings in it, a lot of them, some of them from today.",
     "channel|run|silt|prints|stone|ice":
       "The three sets are a fox's narrow line, a hare's paired bounds, and a third set, pads with claws, bigger than either, that steps over the fox's prints. All three go down. The silt holds them so cleanly you can see the hairs between the toes.",
   },
@@ -4750,6 +4764,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The top of the pinnacle is a flat place no bigger than a table, scattered with droppings and feathers. The rock is worn smooth on its western edge, where something sits to look out. From here the swept ground above is a pale band with not a single dark speck on it.",
   },
   "the-lean": {
+    "moss|fringe|leaves|mouth|drip":
+      "The fringe grows in a curve exactly under the edge of the slab, where the drip falls, and nowhere else. The leaves in it are thick and dark and no bigger than a lentil. It is bitten short, and there are fresh droppings beside it that are nothing like the old ones in the back.",
     "slab|lean|gap|droppings":
       "The droppings in the back are dry and crumble to dust and are full of fine hair. The underside of the slab is scratched in long lines at the height of a sitting back. The smell is old, nearly gone, and still enough to make the hair on your arms stand up.",
   },
@@ -4794,6 +4810,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "Kneel at the line and the grey stones and the red ones lie side by side, a grey and a red touching, with no mixing. The red ones are coated with a fine rust that comes off on your fingers. Nothing grows on either side.",
   },
   "the-ridge-end": {
+    "moss|cushions|blocks":
+      "Each cushion sits in the lee of a block, domed, tight as a fist and hard to the touch, and the windward side of every one is dead and brown. The tops are bitten flat. Between two of them there is a pinch of white feather, and a scrape where something has sat.",
     "ridge|crest|shoulder|rock":
       "The broken rock of the shoulder is scattered with droppings, and some of them are a raven's, full of grit. The crest behind is scoured clean. Here at its end the first loose stones are lying about again, as if the wind had given up sweeping.",
   },
@@ -4810,6 +4828,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "Where the slot is open you can see the snow bridge from the side, a crust a foot thick with nothing under it at all. Further along a hole has broken through the bridge, round, and around its edge the snow is clawed.",
   },
   "the-glacier-toe": {
+    "moss|meltwater|water|green":
+      "The moss is a skin no thicker than a coin over wet gravel, bright green where the water runs and yellow where it has moved off. It tears at a touch. Whatever grazes it takes it down to the stones in patches the size of a hand, and the patches are fresh.",
     "toe|ice|stones|gravel|bone":
       "The bones lying at the ice's foot are big, and old, stained brown, and one is part of a skull with a horn core the width of your arm. The ice above them is dirty and dripping and still holding more, black shapes deep in the grey.",
   },
@@ -4854,6 +4874,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "Along the join the ice is thrown up in broken slabs and the rock above is scarred and polished. Strewn along the line are things that fell from above: stones, grit, a long bone, a raven's skull, a tangle of dry heather from somewhere far below.",
   },
   "the-cold-terrace": {
+    "moss|willow|soil|grit":
+      "The soil is a hand deep at the wall and nothing at all a pace out from it. The willow runs through the moss like thread through cloth, and what leaves it has are bitten in half. There are sleeping-scrapes in the strip, and the moss in them is pressed flat.",
     "terrace|wall|strip|stone":
       "The loose stuff along the back wall is grit, splinters, and a few bones, and in two places it is scraped into hollows with shed hair in them. The wall above them is smudged dark at the height of a curled back. Nothing else on this tier has been slept in.",
   },
@@ -4870,6 +4892,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The chips are black and heavy, and their broken faces are bright and grey like new metal. A lump of it pulls at a needle held near. The seam rings when struck, and the ringing carries a long way and comes back off the rock above.",
   },
   "the-stained-run": {
+    "moss|crust|middle":
+      "The crust is black and brittle on top and breaks to show green underneath, alive a finger's width down. It runs in a line you could follow with your eyes shut, by the feel of it underfoot. The edges are nibbled ragged the whole way.",
     "run|stripe|rock|stain":
       "The stain is darker red and smooth, the rock polished by water running over it. At its foot there is a fan of stones carried down in the last flood, sorted, the big ones at the top. Bones are mixed in with them, washed down from above.",
   },
@@ -4886,10 +4910,14 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The fist-sized stone sitting alone on the pavement has a little tail of grit in its lee, the only grit for a long way. Pick it up and there is a pale ring under it where it has sat. The pavement is polished in long streaks, all pointing the same way, toward the top.",
   },
   "the-pavement": {
+    "moss|leaves|slot|slots|ferny|green":
+      "Kneel and look along a crack and it is green to the bottom, wet, and several degrees warmer than the slab you are kneeling on. The leaves are cut like a fern's and no longer than a finger joint. Where they come up level with the top they are bitten off flat, every one.",
     "pavement|slabs|cracks|rock":
       "Kneel at a crack and there is ice in the bottom of it, clear and hard, even at noon. Some of the slabs are lifted at one edge by the ice, a finger's width. In the deepest crack there is a wing, small, a bird's, dry as paper.",
   },
   "the-shelf-under": {
+    "moss|cracks|green":
+      "The moss is rooted in a black crumb that was once sticks and bone and worse, and it smells of earth, which nothing else up here does. Along the wall it is thick as a fleece. Out toward the edge it is cropped down to a green stain on the rock.",
     "shelf|nests|sticks|ledge|wall":
       "The nests are huge, each as wide as a cart wheel, built of sticks thick as an arm that grew far below. In the middle of each nest there is a cup of fur and feathers, flattened and dry. The rock below the shelf is whitened with old droppings, and nothing is fresh.",
   },
@@ -4906,6 +4934,8 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
       "The prints are two kinds: one is a big cat's, round and heavy, the other is longer and narrower with the claws set further forward. Neither steps on the other. The yellow powder clings to your boots and comes off in little puffs with each step.",
   },
   "the-red-gully": {
+    "moss|seep|east":
+      "The seep is a wet line no wider than a hand, and the moss under it is the only thing in the gully that is not red. Above the height of a deer's head it hangs thick and untouched. Below that it is bitten to the rock, and the grit under it is trodden hard.",
     "gully|walls|stone|grit|wall":
       "The shape in the grit against the west wall is long, longer than you are, and the grit is pressed so hard it has a sheen. The wall above is rubbed smooth. A heap of bones lies a little way down the gully, and they have been cracked open.",
   },

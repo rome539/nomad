@@ -19,11 +19,11 @@ import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
   DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES, FLOCKS, SPREAD_ROOSTS,
-  PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS,
+  PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS, FOOD_PULL, LEAN_AGAIN_MS,
   BODY_HOLDERS, MOBBERS, MOB_AT, BODY_CHASE_ODDS, MOB_ODDS, BODY_AVOID_MS, BODY_REST_MS,
 } from "./zone-data";
 
-export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number; moveAt?: number; kept?: boolean; quarry?: string; quarryAt?: number }
+export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number; leanMovedAt?: number; moveAt?: number; kept?: boolean; quarry?: string; quarryAt?: number }
 export interface GroupsState { at: number; flownAt?: number; packs: Record<string, Group>; gone: Record<string, number>; tally?: beasts.Tally; lastTally?: beasts.Tally }
 export interface Plan { home: string; group?: string; lone?: boolean }
 
@@ -117,13 +117,18 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
   const open = unbarred.filter((r) => (heldBy.get(r) ?? 0) === least);
   const pool = open.length ? open : all;
   if (!pool.length) return undefined;
-  const weight = new Map<string, number>(pool.map((r) => [r, 1]));
+  // FOOD TIPS THE ODDS, IT DOES NOT DECIDE THEM (rome, 2026-11-10: about two packs
+  // in every three settled in the Shieling, and the grazers all lived at the
+  // foot). A room counted one more for every prey animal or grazing room in reach,
+  // so the hamlet's dozen rats in a few rooms pulled a wolf many times harder
+  // than open ground, and the foot's thick grass did the same to a hind. Now a
+  // room with food in reach counts for FOOD_PULL more at the most, however much
+  // food it is; grass half eaten still pulls by what is left of it.
+  const reach = new Map<string, number>();
   for (const [room, n] of foodRooms(z, line, now)) {
-    for (const r of z.nearby(room, TERRITORY_RADIUS).keys()) {
-      const w = weight.get(r);
-      if (w !== undefined) weight.set(r, w + n);
-    }
+    for (const r of z.nearby(room, TERRITORY_RADIUS).keys()) reach.set(r, (reach.get(r) ?? 0) + n);
   }
+  const weight = new Map<string, number>(pool.map((r) => [r, 1 + Math.min(FOOD_PULL, reach.get(r) ?? 0)]));
   // A line that must have food close draws only from the rooms that have it, if any do.
   const fed = SETTLES_BY_PREY.has(line) ? [...weight].filter(([, w]) => w > 1) : [];
   const draw = fed.length ? fed : [...weight];
@@ -193,7 +198,7 @@ export function tick(z: ZoneDO, now: number): void {
       if (!undecided && !c.target) undecided = c;
     } else {
       const move = (home: string): void => { c.home = home; c.moveAt = undefined; c.kept = undefined; };
-      moveIfLean(z, [c], line, now, c.leanSince, (t) => { c.leanSince = t; }, move);
+      moveIfLean(z, [c], line, now, c, move);
       moveIfDue(z, [c], line, now, c, move);
     }
   }
@@ -214,7 +219,7 @@ export function tick(z: ZoneDO, now: number): void {
         g.kept = undefined;
         for (const c of list) c.home = home;
       };
-      moveIfLean(z, list, g.line, now, g.leanSince, (t) => { g.leanSince = t; }, move);
+      moveIfLean(z, list, g.line, now, g, move);
       moveIfDue(z, list, g.line, now, g, move);
     }
   }
@@ -249,16 +254,24 @@ function moveIfDue(
 }
 
 function moveIfLean(
-  z: ZoneDO, animals: Creature[], line: string, now: number, since: number | undefined,
-  setSince: (t: number | undefined) => void, move: (home: string) => void,
+  z: ZoneDO, animals: Creature[], line: string, now: number,
+  clock: { leanSince?: number; leanMovedAt?: number }, move: (home: string) => void,
 ): void {
   const hungry = animals.filter((c) => hungers(c.templateId) && c.hunger >= HUNGRY_AT).length;
-  if (hungry * 2 <= animals.length) { if (since !== undefined) setSince(undefined); return; }
-  if (since === undefined) { setSince(now); return; }
-  if (now - since < GROUP_LEAN_MS) return;
-  setSince(undefined);
+  if (hungry * 2 <= animals.length) { clock.leanSince = undefined; return; }
+  if (clock.leanSince === undefined) { clock.leanSince = now; return; }
+  if (now - clock.leanSince < GROUP_LEAN_MS) return;
+  // HUNGER MOVES IT ONCE, THEN IT GIVES THE NEW GROUND A DAY (rome, 2026-11-10:
+  // most of the mountain is hungry most of the time, so a hungry loner drew a
+  // new home every two hours, about 640 homes given up a day, and no home lasted
+  // its 2-5 game days). Still hungry, it goes again a game day after the last.
+  if (clock.leanMovedAt !== undefined && now - clock.leanMovedAt < LEAN_AGAIN_MS) return;
   const home = pickHome(z, line, now, animals[0].home ?? animals[0].roomId);
-  if (home) move(home);
+  if (!home) return;
+  clock.leanSince = undefined;
+  clock.leanMovedAt = now;
+  move(home);
+  beasts.note(z, "moved", now); // a home left through hunger is a home given up, as one that ran out its time is
 }
 
 /** A wolf's beat on a smaller hunter sharing its room. True when it took the wolf's turn. */
@@ -310,7 +323,7 @@ export async function holdGround(
   if (onGround && (rival.drivenOff = (rival.drivenOff ?? 0) + 1) >= GROUND_DRIVEN_LEAVES) {
     rival.drivenOff = undefined;
     const home = pickHome(z, lineOf(z, rival.templateId), now, group!.home);
-    if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; }
+    if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; beasts.note(z, "moved", now); }
   }
   await flee(rival);
   // The chase: a stolen meal holds it here; otherwise it runs after, a beat behind.
@@ -330,7 +343,7 @@ function keepOff(c: Creature, roomId: string, now: number): void {
 }
 function ravensIn(z: ZoneDO, roomId: string, eagle: string): number {
   let n = 0;
-  for (const c of z.creaturesInRoom(roomId)) if (MOBBERS.get(c.templateId) === eagle && !c.heldBy && !c.holding) n++;
+  for (const c of z.creaturesInRoom(roomId)) if (MOBBERS.get(lineOf(z, c.templateId)) === eagle && !c.heldBy && !c.holding) n++;
   return n;
 }
 
@@ -339,7 +352,12 @@ export async function holdBody(
   z: ZoneDO, holder: Creature, now: number,
   flee: (c: Creature) => Promise<unknown> = (c) => creatureMoves(z, c, now, "flee", false),
 ): Promise<boolean> {
-  const driven = BODY_HOLDERS.get(holder.templateId);
+  // RARE BLOOD IS ITS LINE AT A BODY (2026-11-10): the old raven and the great
+  // vulture were never run off, the bone-dropper never took a body, and an old
+  // raven did not count as a raven against the eagle, because these matched on
+  // the animal's own name. A line with its own row (the lead wolf) keeps it.
+  const holderLine = lineOf(z, holder.templateId);
+  const driven = BODY_HOLDERS.get(holder.templateId) ?? BODY_HOLDERS.get(holderLine);
   if (!driven || holder.target || holder.asleep || holder.stunned || holder.holding || holder.heldBy) return false;
   if ((holder.rivalRestUntil ?? 0) > now) return false;
   const roomId = holder.roomId;
@@ -349,8 +367,8 @@ export async function holdBody(
     && (z.traces.get(roomId) ?? []).some(edibleBody));
   if (!wants) return false;
   // Several ravens are not run off: they push the eagle out instead (mobEagle).
-  if ([...MOBBERS.values()].includes(holder.templateId) && ravensIn(z, roomId, holder.templateId) >= MOB_AT) return false;
-  const rival = z.creaturesInRoom(roomId).find((c) => c.id !== holder.id && driven.has(c.templateId)
+  if ([...MOBBERS.values()].includes(holderLine) && ravensIn(z, roomId, holderLine) >= MOB_AT) return false;
+  const rival = z.creaturesInRoom(roomId).find((c) => c.id !== holder.id && (driven.has(c.templateId) || driven.has(lineOf(z, c.templateId)))
     && !c.target && !c.hidden && !c.heldBy && !c.holding);
   if (!rival || !chance(BODY_CHASE_ODDS)) return false;
   const world = z.world!;
@@ -375,15 +393,15 @@ export async function mobEagle(
   z: ZoneDO, raven: Creature, now: number,
   flee: (c: Creature) => Promise<unknown> = (c) => creatureMoves(z, c, now, "flee", false),
 ): Promise<boolean> {
-  const eagleId = MOBBERS.get(raven.templateId);
+  const eagleId = MOBBERS.get(lineOf(z, raven.templateId));
   if (!eagleId || raven.target || raven.asleep || raven.stunned || raven.holding || raven.heldBy) return false;
   if ((raven.rivalRestUntil ?? 0) > now) return false;
   const roomId = raven.roomId;
-  const eagle = z.creaturesInRoom(roomId).find((c) => c.templateId === eagleId && !c.target && !c.heldBy && !c.holding);
+  const eagle = z.creaturesInRoom(roomId).find((c) => lineOf(z, c.templateId) === eagleId && !c.target && !c.heldBy && !c.holding);
   if (!eagle || ravensIn(z, roomId, eagleId) < MOB_AT || !chance(MOB_ODDS)) return false;
   const world = z.world!;
   const et = world.mobTemplates.get(eagle.templateId)!;
-  for (const c of z.creaturesInRoom(roomId)) if (MOBBERS.get(c.templateId) === eagleId) c.rivalRestUntil = now + BODY_REST_MS;
+  for (const c of z.creaturesInRoom(roomId)) if (MOBBERS.get(lineOf(z, c.templateId)) === eagleId) c.rivalRestUntil = now + BODY_REST_MS;
   eagle.asleep = false;
   eagle.sleepUntil = undefined;
   keepOff(eagle, roomId, now);
@@ -462,7 +480,7 @@ export async function holdLand(
   if (livesHere && (rival.drivenOff = (rival.drivenOff ?? 0) + 1) >= GROUND_DRIVEN_LEAVES) {
     rival.drivenOff = undefined;
     const home = pickHome(z, lineOf(z, rival.templateId), now, holder.home);
-    if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; }
+    if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; beasts.note(z, "moved", now); }
   }
   await flee(rival);
   if (rival.roomId !== roomId) {

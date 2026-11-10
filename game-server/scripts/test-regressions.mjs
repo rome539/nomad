@@ -1246,6 +1246,7 @@ try {
       roll([0.1, 0.9, 0.5]); cat.roomId = 'm12'; lynx.rivalRestUntil = undefined;
       await holdLand(z, lynx, now, flee);
       assert.ok(!land.has(cat.home), 'run off twice, it settles somewhere off the lynx\'s land');
+      assert.equal(z.groups.tally.moved, 1, 'and that is a home given up in the count (2026-11-10)');
       roll([0.1, 0.9, 0.5]);
       const by = mk([{ id: 'h', templateId: 'lynx', home: 'm12' }, { id: 'r', templateId: 'wildcat', home: 'm3', roomId: 'm12', drivenOff: 1 }]);
       assert.equal(await holdLand(by, by.creatures.get('h'), now, flee), true, 'one passing through is run off too');
@@ -2454,6 +2455,20 @@ try {
     assert.ok(!forageGround(z, 'red-hind', 'the-shelf-walk'), 'a hind does not');
     assert.ok(settlesOn('red-hind', 'the-north-scree'), 'a hind may lie up on stone');
     assert.ok(herds.feedsAt('feral-goat', 'the-shelf-walk'), 'and a goat\'s round takes it up to them');
+  });
+  // 2026-11-10: the fourth tier had no grazing of its own beyond mig 340's three rooms, so grazers lived low.
+  check('something grows up high: fifteen rooms of the fourth tier say so and feed a grazer (mig 381)', () => {
+    const z = { world: { entryRooms: new Set() } };
+    const src = readFileSync(new URL('../regions/mountain-4.rooms', import.meta.url), 'utf8');
+    const sql = readFileSync(new URL('../migrations/381_something_grows_up_high.sql', import.meta.url), 'utf8');
+    for (const r of ['the-crest-step', 'the-north-drop', 'the-ridge-end', 'the-glacier-toe', 'the-melt-run', 'the-boulder-nose', 'the-lower-fan', 'the-stained-run', 'the-red-gully', 'the-gendarme',
+      'the-lean', 'the-glacier-bend', 'the-pavement', 'the-cold-terrace', 'the-shelf-under']) {
+      assert.ok(forageGround(z, 'red-hind', r) && herds.feedsAt('ptarmigan', r), r + ' feeds the grazers');
+      assert.ok(settlesOn('red-hind', r) && settlesOn('mountain-hare', r), r + ' is ground a hind or a hare may live on');
+      const prose = src.slice(src.indexOf('## ' + r + ' |')).split('\n')[1];
+      assert.match(prose, /\bmoss\b/, r + ' says in its own words that something grows there');
+      assert.ok(sql.includes(prose.replaceAll("'", "''")), r + ': the migration carries the same words as the source');
+    }
   });
   // 2026-11-08: no goat or hind ever homed above its highest spawn row.
   check('a mountain home has no ceiling, and a goat counts its crags when it settles', () => {
@@ -3712,6 +3727,28 @@ try {
     bird.flightTo = 'far'; saveSim(storage, state, cache);
     assert.equal(mobRows().length, 1, 'a flight is saved');
     assert.equal(JSON.parse(rows.get(mobRows()[0])).find((c) => c.id === 'b').flightRestUntil, 12345, 'and carries the wait with it');
+  });
+  check('the old whole-population copy is swept and never written again (2026-11-10: 292KB every twenty minutes for a rollback nobody would make)', () => {
+    const rows = new Map(), written = [];
+    const storage = { sql: { exec(q, ...v) {
+      if (/^SELECT k, v FROM sim_kv/.test(q)) return [...rows].map(([k, val]) => ({ k, v: val }));
+      if (/^INSERT INTO sim_kv/.test(q)) { rows.set(v[0], v[1]); written.push(v[0]); return []; }
+      if (/^DELETE FROM sim_kv/.test(q)) { rows.delete(v[0]); return []; }
+      return [];
+    } }, transactionSync(fn) { fn(); } };
+    // a world as production holds it: the shard, and the old copy beside it
+    const gull = { id: 'b', templateId: 'great-gull', roomId: 'r', home: 'r', hp: 10 };
+    rows.set('b:meta', JSON.stringify({}));
+    rows.set('b:creatures:world', JSON.stringify([gull]));
+    rows.set('b:creatures', JSON.stringify([gull]));
+    const cache = newCache(); const state = loadSim(storage, cache);
+    assert.equal(state.creatures.length, 1, 'the gull wakes once, not once for each copy');
+    saveSim(storage, state, cache);
+    assert.ok(!rows.has('b:creatures'), 'the first save sweeps the old copy');
+    assert.ok(rows.has('b:creatures:world'), 'and leaves the live one');
+    written.length = 0; cache.lastFullFlushAt = 0; saveSim(storage, state, cache);
+    assert.ok(written.includes('b:creatures:world'), 'a full flush did run');
+    assert.ok(!written.includes('b:creatures'), 'and did not write the old copy back');
   });
   check('flying birds never boom, and are harder to catch (2026-11-06)', () => {
     for (const bird of ['scarp-raven', 'bone-breaker', 'mountain-chough']) {
@@ -5636,7 +5673,9 @@ try {
     for (let i = 0; i < 12; i++) z2.creatures.set(`r${i}`, { id: `r${i}`, templateId: 'rat', roomId: 'm11', hunger: 0 });
     const tally = new Map();
     for (let i = 0; i < 3000; i++) { const r = groupPickHome(z2, 'hill-wolf', now); tally.set(r, (tally.get(r) ?? 0) + 1); }
-    assert.ok(tally.get('m11') > 5 * tally.get('m20'), 'the rats\' room is likelier than a room with no food');
+    assert.ok(tally.get('m11') > 1.5 * tally.get('m20'), 'the rats\' room is likelier than a room with no food');
+    // 2026-11-10: every rat counted, so a dozen in one place pulled a wolf thirteen times as hard as bare ground and the packs lived in the hamlet
+    assert.ok(tally.get('m11') < 2.6 * tally.get('m20'), `but a dozen rats only double it, got ${tally.get('m11') / tally.get('m20')}`);
     assert.equal(tally.size, 15, 'and every fit room still gets chosen');
 
     // A wiped group leaves one loner, and the next one settles elsewhere.
@@ -5667,6 +5706,15 @@ try {
     assert.notEqual(moved, 'm15', 'it picked new ground');
     assert.ok(Math.abs(Number(moved.slice(1)) - 15) > 3, 'and not next door');
     assert.ok(hungry.every((c) => c.home === moved), 'all of it together');
+    assert.equal(z4.groups.tally?.moved, 1, 'and beasts counts it as a home given up (2026-11-10: only homes that ran out their time were counted)');
+    // 2026-11-10: still hungry, it drew a new home every two hours for ever; now it gives the new ground a game day
+    const T0 = now + 2 * HOUR + 1000;
+    groupTick(z4, T0 + 60_000);
+    groupTick(z4, T0 + 3 * HOUR);
+    assert.equal(hungry[0].home, moved, 'two more hungry hours do not move it again');
+    groupTick(z4, T0 + 4 * HOUR + 60_000);
+    assert.notEqual(hungry[0].home, moved, 'a game day after the last move, still hungry, it goes again');
+    assert.equal(z4.groups.tally.moved, 2);
     const z5 = mk();
     z5.groups.packs.q = { line: 'hill-wolf', home: 'm15', size: 4, peak: 3 };
     const fed = ['x', 'y', 'w'].map((id) => wolf(z5, id, { group: 'q', home: 'm15', hunger: 10 }));
@@ -5722,6 +5770,9 @@ try {
     }
     assert.equal(PACK_PREY.get('hill-wolf').get('scarp-raven'), 2, 'two wolves take a raven');
     assert.equal(PACK_PREY.get('hill-wolf').get('bone-breaker'), 2, 'two wolves take a bone-breaker');
+    // 2026-11-10: nothing but the cave lion took a carrion vulture, so none ever died
+    for (const h of ['lynx', 'lead-wolf', 'glutton']) assert.ok(PREYS_ON.get(h).has('carrion-vulture'), `${h} hunts the carrion vulture, as it does the bone-breaker`);
+    assert.equal(PACK_PREY.get('hill-wolf').get('carrion-vulture'), 2, 'and two wolves take one');
     assert.ok(settlesOn('lynx', 'the-deer-lawn-high'), 'a lynx may settle on green ground, near the hinds');
   });
 
@@ -5777,6 +5828,49 @@ try {
       assert.ok(two.creatures.get('r2').rivalRestUntil > now, 'and the whole gang takes a breath');
       assert.equal(await mobEagle(two, two.creatures.get('r2'), now, flee), false, 'not again at once');
     } finally { crypto.getRandomValues = real; }
+  });
+
+  await checkAsync('rare blood is its line at a body: the old raven, the great vulture and the bone-dropper (2026-11-10)', async () => {
+    const rooms = new Map(['b', 'away'].map((id) => [id, { id, region: 'mountain' }]));
+    const tmpl = (id, name, hp) => [id, { id, name, max_hp: hp, dmg_min: 1, dmg_max: 2, armor: 0 }];
+    const world = { rooms, exits: new Map([['b', []], ['away', []]]), mobTemplates: new Map([tmpl('hill-wolf', 'a hill wolf', 36),
+      tmpl('carrion-vulture', 'a carrion vulture', 40), tmpl('great-vulture', 'a great vulture', 48), tmpl('scarp-raven', 'a scarp raven', 20), tmpl('the-old-raven', 'the old raven', 26),
+      tmpl('hill-eagle', 'a hill eagle', 34), tmpl('bone-breaker', 'a bone-breaker', 44), tmpl('the-bone-dropper', 'the bone-dropper', 52)]) };
+    const variantBase = new Map([['great-vulture', 'carrion-vulture'], ['the-old-raven', 'scarp-raven'], ['the-bone-dropper', 'bone-breaker'], ['lead-wolf', 'hill-wolf']]);
+    const now = 2_000_000_000;
+    const flee = async (c) => { c.roomId = 'away'; };
+    const scene = (list, traces = [{ kind: 'remains', label: 'a red hind', at: now - 1000, meat: 30 }]) => {
+      const z = { world, variantBase, creatures: new Map(), traces: new Map([['b', traces]]), groups: { at: 0, packs: {}, gone: {} },
+        creaturesInRoom: (r) => [...z.creatures.values()].filter((c) => c.roomId === r && c.aloft === undefined),
+        roomFeed() {}, roomSound() {}, refreshRoomCtx() {} };
+      for (const [id, t, extra] of list) z.creatures.set(id, { id, templateId: t, roomId: 'b', hunger: 50, hp: 30, nextWanderAt: 0, ...extra });
+      return z;
+    };
+    const eating = { eatingUntil: now + 60_000, eatingIn: 'b', eatingOn: 'carrion' };
+    const kill = { eatingUntil: now + 60_000, eatingIn: 'b', eatingOn: 'kill' };
+    const real = crypto.getRandomValues;
+    crypto.getRandomValues = (a) => { a.fill(Math.floor(0.1 * 2 ** (a.BYTES_PER_ELEMENT * 8))); return a; };
+    try {
+      const gv = scene([['w', 'hill-wolf', {}], ['v', 'great-vulture', eating]]);
+      assert.equal(await holdBody(gv, gv.creatures.get('w'), now, flee), true, 'a wolf runs the great vulture off a body');
+      assert.equal(gv.creatures.get('v').roomId, 'away');
+      const old = scene([['w', 'hill-wolf', {}], ['r', 'the-old-raven', eating]]);
+      assert.equal(await holdBody(old, old.creatures.get('w'), now, flee), true, 'and the old raven');
+      const drop = scene([['d', 'the-bone-dropper', {}], ['v', 'carrion-vulture', eating]]);
+      assert.equal(await holdBody(drop, drop.creatures.get('d'), now, flee), true, 'the bone-dropper takes a body from a vulture');
+      const not = scene([['v', 'great-vulture', {}], ['d', 'the-bone-dropper', eating]]);
+      assert.equal(await holdBody(not, not.creatures.get('v'), now, flee), false, 'no vulture takes one from the bone-dropper');
+      // the old raven is a raven against the eagle: one of each is two ravens
+      const two = scene([['e', 'hill-eagle', kill], ['r1', 'scarp-raven', {}], ['r2', 'the-old-raven', {}]], []);
+      assert.equal(await holdBody(two, two.creatures.get('e'), now, flee), false, 'the eagle does not run off a raven and the old raven together');
+      assert.equal(await mobEagle(two, two.creatures.get('r2'), now, flee), true, 'and the old raven goes up at the eagle with the other');
+      assert.equal(two.creatures.get('e').roomId, 'away');
+      assert.ok(two.creatures.get('r1').rivalRestUntil > now && two.creatures.get('r2').rivalRestUntil > now, 'both take a breath after');
+    } finally { crypto.getRandomValues = real; }
+  });
+  check('the dancer is a small meal and fills on one, as the ermine (2026-11-10)', () => {
+    assert.ok(SMALL_PREY.has('the-dancer'), 'killed, it takes the edge off a wolf and no more');
+    assert.ok(SMALL_EATERS.has('the-dancer'), 'and a small body fills it');
   });
 
   await checkAsync('a wolf pack runs small hunters off its ground, sometimes kills, and takes their kills', async () => {
@@ -5835,6 +5929,7 @@ try {
       const twice = scene({}, { drivenOff: 1 });
       await holdGround(twice, twice.wolf, now, flee);
       assert.notEqual(twice.fox.home, 'm7', 'run off again, it draws a new home');
+      assert.equal(twice.groups.tally.moved, 1, 'counted as a home given up (2026-11-10)');
       assert.ok(!nearby('m6', 3).has(twice.fox.home), 'off the pack\'s ground');
 
       const kill = { kind: 'blood', prey: 'mountain-hare', at: now - 1000 };

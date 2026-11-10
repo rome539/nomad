@@ -1072,7 +1072,7 @@ export const SMALL_PREY = new Set([
   "scarp-raven", "the-old-raven", "grey-heron", "bittern", "tawny-owl", "great-gull", "black-backed-gull",
   "hill-eagle", "eagle-owl", "bone-breaker", "the-bone-dropper", "eyrie-holder",
   "carrion-vulture", "brooding-vulture", "great-vulture",
-  "hedgehog", "ermine",                                           // the small biters
+  "hedgehog", "ermine", "the-dancer",                             // the small biters, and the ermine's rare blood (2026-11-10: left out, so one filled a wolf like a hind)
   // the foxes and the wildcat, and their rare blood (rome, 2026-11-09): no
   // bigger than a raven or an adder, so a mouthful, not a hind's worth.
   "hill-fox", "the-raiding-fox", "snow-fox", "the-blue-fox", "wildcat", "the-tom",
@@ -1086,7 +1086,7 @@ export const SMALL_PREY = new Set([
 // a small body lying is a body's worth. The eagle and the eagle owl stay out of it
 // for now, sized between a fox and a wolf (rome is not sure about them).
 export const SMALL_EATERS = new Set([
-  "ermine",
+  "ermine", "the-dancer",
   "hill-fox", "the-raiding-fox", "snow-fox", "the-blue-fox", "wildcat", "the-tom",
   "gill-adder", "fen-viper", "stone-adder", "the-gravid-adder",
   "scarp-raven", "the-old-raven", "mountain-chough",
@@ -2505,6 +2505,8 @@ export const HOME_FED_EXTRA_DAYS = 1;
 export const GROUP_SWEEP_MS = 60_000;         // how often the groups are looked over
 export const GROUP_LEAN_MS = 2 * 3_600_000;   // hungry this long, and it gives up the ground
 export const GROUP_GONE_MS = 6 * 3_600_000;   // nothing new settles on ground where a group was broken
+export const LEAN_AGAIN_MS = 4 * 3_600_000;   // after hunger moved it, a game day (DAY_CYCLE_MS) before hunger moves it again
+export const FOOD_PULL = 1;                   // food in reach of a room counts this much more at the most: it doubles the room, however much food (groups.pickHome)
 
 // WAKING (rome, 2026-11-02). A fresh wanderer, and the dead, wake at a GATE
 // (any one of the world's gates, each one slot) or anywhere out on the ROAD
@@ -5022,7 +5024,12 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // THE CATS HUNT WHAT CATS HUNT (rome, 2026-11-08): the wildcat, the tom and the
   // lynx take the ermine, which only the cave lion did; the tom, the wildcat's
   // rare blood, hunts all the wildcat does; the lynx takes both foxes, as lynx do.
-  ["lynx", new Set(["scarp-raven", "mountain-chough", "hill-eagle", "eagle-owl", "bone-breaker", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan", "stone-adder", "the-gravid-adder", "ermine", "hill-fox", "snow-fox"])],
+  // THE VULTURE HAS HUNTERS (rome, 2026-11-10): the carrion vulture was the one
+  // big bird nothing but the cave lion took, so every one of them stayed alive.
+  // It goes to whatever already takes the bone-breaker, the bigger bird (44 hp
+  // to its 40): the lynx, the lead wolf, the glutton, and two hill wolves
+  // together (PACK_PREY). The great vulture and the brooding hen are not given.
+  ["lynx", new Set(["scarp-raven", "mountain-chough", "hill-eagle", "eagle-owl", "bone-breaker", "carrion-vulture", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan", "stone-adder", "the-gravid-adder", "ermine", "hill-fox", "snow-fox"])],
   // The owl takes the stoat, which is the one honest way to put a predator on
   // top of another predator at this size: 40hp/5-8 against 18hp/3-5, at night,
   // silently, is not a fight the stoat is in.
@@ -5041,11 +5048,11 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // 54hp/6-9 against 48hp/4-8 is a thin edge and that is the correct width of
   // it: he wins, and not easily, and he is rare blood off a refill rather than a
   // population.
-  ["lead-wolf", new Set(["rat", "scarp-raven", "mountain-chough", "bone-breaker", "red-stag", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
+  ["lead-wolf", new Set(["rat", "scarp-raven", "mountain-chough", "bone-breaker", "carrion-vulture", "red-stag", "red-hind", "feral-goat", "mountain-hare", "snow-hare", "ptarmigan"])],
   // The glutton kills small and EATS big — SCAVENGERS is where it actually
   // feeds, off whatever the wolves left. The stoat is on the list for the same
   // reason the owl has it: 50hp/6-9 against 18hp/3-5 is not a fight.
-  ["glutton", new Set(["scarp-raven", "mountain-chough", "bone-breaker", "ermine", "mountain-hare", "snow-hare", "ptarmigan", "stone-adder", "the-gravid-adder"])],
+  ["glutton", new Set(["scarp-raven", "mountain-chough", "bone-breaker", "carrion-vulture", "ermine", "mountain-hare", "snow-hare", "ptarmigan", "stone-adder", "the-gravid-adder"])],
   // TIER FOUR (mig 233). One row, because one of the tier's four new lines
   // hunts at all. 26hp/3-5 against a chough at 12/1-2 and a hare at 12/1-2 is
   // clean, and it is still not how the fox mostly eats — SCAVENGERS is.
@@ -5274,7 +5281,7 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   // and THREE take the stag that nothing below could touch. Read down the
   // numbers and the tier's difficulty curve is written in them — it is not that
   // the wolves are strong, it is that there are enough of them.
-  ["hill-wolf", new Map([["red-hind", 2], ["red-stag", 3], ["scarp-raven", 2], ["bone-breaker", 2]])],
+  ["hill-wolf", new Map([["red-hind", 2], ["red-stag", 3], ["scarp-raven", 2], ["bone-breaker", 2], ["carrion-vulture", 2]])],
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —
@@ -7830,8 +7837,9 @@ export const SURFACE_FORAGE = new Set([
   "the-samphire-flats", "the-samphire-flat", "the-samphire-island",
   "the-saltmarsh-pools", "the-sea-lavender", "the-redshank-ground", "the-gull-flats", "the-mud-shore",
   "the-high-water-mark", "the-storm-line", "the-dune-slack", "the-grey-dunes", "the-old-sea-bank", "the-drove-road",
-  // The high mountain's one green thing: "dwarf plants growing along the back
-  // of it in a strip". Everything else up there is snow, ice and swept stone.
+  // The top's one green thing: "dwarf plants growing along the back of it in a
+  // strip". The tier below it has the three of mig 340 and the fifteen mossed
+  // rooms of mig 381 (in MOUNTAIN_GROUND.green); the rest is snow, ice and swept stone.
   "the-south-shelf",
   // ...and the three the high grazers were given (mig 340, regions/the-high-feeding.rooms):
   // the melt's moss off the snowfield, the red moss where the stained run comes
