@@ -36,6 +36,8 @@ import * as carving from "./carving";
 import * as campfire from "./campfire";
 import { isWet, soak } from "./cough";
 import * as detail from "./detail";
+import { bodiesIn } from "./chips";
+import * as cough from "./cough";
 import * as study from "./study";
 import * as wanderer from "./wanderer";
 import * as styles from "./styles";
@@ -766,11 +768,14 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
   // THE DEAD ON THE FLOOR (rome, 2026-10-31). The picture draws the bodies and
   // study reads them, but look walked straight past them to a trophy in the
   // pack. A body answers to its name after the living and before anything
-  // carried: the one at your feet is the one you mean. The room text still
-  // never names a death; looking at the body is how you learn whose it was.
+  // carried: the one at your feet is the one you mean. The room text
+  // names each body the picture lays (chips.bodiesIn, 2026-11-10); looking at
+  // one is how you learn how it died.
   const body = blind || events.tideFlooded(z, session.roomId) ? null
     : study.findCorpse(z, session.roomId, askDead.dead ? askDead.rest : arg);
-  if (body) return z.send(session, bodyRead(z, session.roomId, body.tr, body.tmpl.id, body.tmpl.name), "lore");
+  // ...and only a body the room shows: one it no longer draws or names is not
+  // lying there to be looked at.
+  if (body && bodiesIn(z, session.roomId).includes(body.tmpl.id)) return z.send(session, bodyRead(z, session.roomId, body.tr, body.tmpl.id, body.tmpl.name), "lore");
   // A chest is a FIXTURE of the room, and 'look' could never see one (rome,
   // 2026-07-26) — every cache carries real description prose in D1 that nothing
   // ever showed. Resolved room-scoped by name, exactly as 'unlock' does, and
@@ -1538,6 +1543,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = fals
   // prints — the name line paints gold even the very first time you see it.
   z.sendStatus(session);
   z.send(session, z.enterDescribe(session));
+  cough.noteCold(z, session); // walked into the cold, or out of it
   // A man at his fire notices you come in. Mostly he doesn't (BURNER_NOD_ODDS)
   // — a gesture every time you walk through would be a machine, not a man.
   if (z.roomHasFirekeeper(session.roomId) && chance(BURNER_NOD_ODDS)) {

@@ -60,6 +60,51 @@ export function noteEmote(s: Session, verb: string): void {
   if (k) s.emote = { k, at: Date.now() };
 }
 
+// WHAT IS LYING ON THE GROUND HERE: the bodies the picture draws, and the room
+// text names, the same list for both (text-and-picture, 2026-11-10).
+export function bodiesIn(z: ZoneDO, roomId: string): string[] {
+  const world = z.world!;
+  // AND WHAT IS LYING ON THE GROUND. A body is not a two-second flourish: the
+  // blood stays six hours and a scavenger comes to eat it, so the picture keeps
+  // it until the world lets go of it. Three at most — a battlefield should read
+  // as a battlefield, not fill the row. THE NEWEST THREE (rome, 2026-10-24: a
+  // fourth kill lay there undrawn while the study chip named it), so the body
+  // you just made is always one you can see.
+  const dead: string[] = [];
+  // THE ONES THAT COME BACK ARE NOT NORMAL BODIES (rome, 2026-09-29). The hound
+  // and every boss are one of a kind, each in its own room, and when one is put
+  // down it is back in that room before long - so every kill left another body
+  // on the same spot, and the living one stood on a heap of itself. Their body
+  // lies there only while the room is empty of them, and only one of it.
+  const holds = (id: string) => SENTINELS.has(id) || !!world.mobTemplates.get(id)?.is_boss;
+  const posted = z.creaturesInRoom(roomId).some((c) => holds(c.templateId));
+  let heldBody = false;
+  for (const tr of [...(z.traces.get(roomId) ?? [])].reverse()) {
+    // A KILL ONE ANIMAL MADE OF ANOTHER IS A BODY TOO (2026-11-10: a gill adder
+    // was killed off a scabby rat it was swallowing, the rat went from the
+    // picture, and 'look rat' still found it lying there). It was drawn only
+    // while something ate it; it lies there as long as look can find it.
+    const id = tr.id ?? (CORPSE_TRACES.has(tr.kind) ? study.corpseKind(z, tr) : null);
+    if (dead.length >= 3 || !id || !CORPSE_TRACES.has(tr.kind)) continue;
+    if (holds(id)) {
+      if (posted || heldBody) continue;
+      heldBody = true;
+    }
+    dead.push(id);
+  }
+  // A BODY BEING EATEN IS DRAWN UNDER ITS EATER (rome, 2026-11-08: an owl on its
+  // kill over bare ground, then a dancer on a carcass the same). A hunter's kill
+  // leaves only blood and hair, no body, and a carcass eaten off that sign is the
+  // same, so while the meal lasts the picture lays what is being eaten, kill or
+  // carcass; it goes when the meal ends (the beat refreshes the picture then).
+  for (const c of z.creaturesInRoom(roomId)) {
+    if ((c.eatingOn !== "kill" && c.eatingOn !== "carrion") || !c.eatingWhat || !ai.eatingNow(c) || dead.includes(c.eatingWhat)) continue;
+    dead.unshift(c.eatingWhat);
+    if (dead.length > 3) dead.pop();
+  }
+  return dead;
+}
+
 export function sendCtx(z: ZoneDO, session: Session): void {
   const world = z.world;
   if (!world) return;
@@ -179,39 +224,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // 2026-10-31: a grudge shows in what it does, not in its eyes.)
   const eyes: string[] = [];
   const exhale = events.exhaling(z, session.roomId);
-  // AND WHAT IS LYING ON THE GROUND. A body is not a two-second flourish: the
-  // blood stays six hours and a scavenger comes to eat it, so the picture keeps
-  // it until the world lets go of it. Three at most — a battlefield should read
-  // as a battlefield, not fill the row. THE NEWEST THREE (rome, 2026-10-24: a
-  // fourth kill lay there undrawn while the study chip named it), so the body
-  // you just made is always one you can see.
-  const dead: string[] = [];
-  // THE ONES THAT COME BACK ARE NOT NORMAL BODIES (rome, 2026-09-29). The hound
-  // and every boss are one of a kind, each in its own room, and when one is put
-  // down it is back in that room before long - so every kill left another body
-  // on the same spot, and the living one stood on a heap of itself. Their body
-  // lies there only while the room is empty of them, and only one of it.
+  // AND WHAT IS LYING ON THE GROUND (bodiesIn, below: the room text names the same).
+  const dead = bodiesIn(z, session.roomId);
   const holds = (id: string) => SENTINELS.has(id) || !!world.mobTemplates.get(id)?.is_boss;
   const posted = z.creaturesInRoom(session.roomId).some((c) => holds(c.templateId));
-  let heldBody = false;
-  for (const tr of [...(z.traces.get(session.roomId) ?? [])].reverse()) {
-    if (dead.length >= 3 || !tr.id || !CORPSE_TRACES.has(tr.kind)) continue;
-    if (holds(tr.id)) {
-      if (posted || heldBody) continue;
-      heldBody = true;
-    }
-    dead.push(tr.id);
-  }
-  // A BODY BEING EATEN IS DRAWN UNDER ITS EATER (rome, 2026-11-08: an owl on its
-  // kill over bare ground, then a dancer on a carcass the same). A hunter's kill
-  // leaves only blood and hair, no body, and a carcass eaten off that sign is the
-  // same, so while the meal lasts the picture lays what is being eaten, kill or
-  // carcass; it goes when the meal ends (the beat refreshes the picture then).
-  for (const c of z.creaturesInRoom(session.roomId)) {
-    if ((c.eatingOn !== "kill" && c.eatingOn !== "carrion") || !c.eatingWhat || !ai.eatingNow(c) || dead.includes(c.eatingWhat)) continue;
-    dead.unshift(c.eatingWhat);
-    if (dead.length > 3) dead.pop();
-  }
   for (const creature of z.creaturesInRoom(session.roomId)) {
     // Torchlight reveals a waiting lurker — so it also gets its attack chip.
     // GLINTING gear does the same by daylight (2026-08-20): the polish leaves
@@ -246,9 +262,11 @@ export function sendCtx(z: ZoneDO, session: Session): void {
         // BLOWN IS STANDING, NOT GOING (rome, 2026-11-09: a raven out of breath
         // was drawn flying off for a minute while the words had it pulled up
         // short). At bay it is the hurt pose: low, sagging, sides going.
+        // A BIRD UP IS DRAWN UP (2026-11-10): an out-of-breath raven that flapped
+        // up out of reach was drawn sagging on the ground. The words put it in the air.
+        : FLIERS.has(creature.templateId) && ai.airborne(creature, now) ? "aloft"
         : creature.windedUntil && now < creature.windedUntil ? "hurt"
         : creature.fled && creature.fledAt && now - creature.fledAt < FLEE_SHOWN_MS ? "flee"
-        : FLIERS.has(creature.templateId) && ai.airborne(creature, now) ? "aloft"
         // knocked out of the air (styles.thrownAt): on the ground, floundering, so
         // the picture brings it down; a bird that only reels stays up (public.ts)
         : FLIERS.has(creature.templateId) && creature.groundedUntil && now < creature.groundedUntil ? "downed"
@@ -686,12 +704,11 @@ export function refreshRoomCtx(z: ZoneDO, roomId: string): void {
 // end on a clock with no event to carry the news; the tick compares this each
 // beat and redraws the room when it changes, as it does for a meal.
 export function timedPose(creature: Creature, now: number): string {
+  // A bird up in a fight (2026-11-10): its time in the air runs out on a clock
+  // too, so the tick brings it down in the picture. First, as sendCtx has it.
+  if (FLIERS.has(creature.templateId) && ai.airborne(creature, now)) return "aloft";
   if (creature.windedUntil && now < creature.windedUntil) return "blown";
   if (creature.fled && creature.fledAt && now - creature.fledAt < FLEE_SHOWN_MS) return "fled";
-  // ...and a bird up in a fight (2026-11-10): its time in the air runs out on a
-  // clock too, when the fight ends under it, so the tick brings it down in the
-  // picture. Same place in the order as sendCtx gives it.
-  if (FLIERS.has(creature.templateId) && ai.airborne(creature, now)) return "aloft";
   if (FLIERS.has(creature.templateId) && creature.groundedUntil && now < creature.groundedUntil) return "downed";
   if ((creature.staggerUntil && now < creature.staggerUntil) || (creature.blownUntil && now < creature.blownUntil)) return "reel";
   return "";

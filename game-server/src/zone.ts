@@ -134,7 +134,7 @@ import { FORGE_STOCK,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS, PICKED_CLEAN_MS, LORE_LINE,
-  HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
+  WEATHER_NIGHT, HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
   RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_OPEN_BLOOD, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES, PRIZE_EMPTY_ODDS, PRIZE_EMPTY_LINES,
@@ -4893,6 +4893,7 @@ export class ZoneDO implements DurableObject {
         continue;
       }
       const tmpl = world.mobTemplates.get(creature.templateId)!;
+      styles.keepAloft(this, creature, tmpl, now); // a bird up stays up until a line brings it down
       // Rung senseless by a blunt blow: it loses this whole action, then clears.
       if (creature.stunned) {
         creature.stunned = false;
@@ -8090,7 +8091,11 @@ export class ZoneDO implements DurableObject {
     // either a torch holding the dark at bay or a full moon lighting the
     // grounds outright; either way, say which (rome, 2026-07-22).
     // skyClause already describes a blood moon; do not repeat it here.
-    if (!indoors && OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
+    // ...BUT WEATHER IN THE AIR IS WHAT THE NIGHT IS (2026-11-10): snow, fog or
+    // rain in the picture, and the words said an open black sky or the moon.
+    const nightWx = !indoors && OUTDOOR_ROOMS.has(room.id) && isNight() ? events.weatherSky(this, room.id) : "";
+    if (nightWx) lines.push(LORE_LINE + WEATHER_NIGHT[nightWx]);
+    else if (!indoors && OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
       lines.push(LORE_LINE + (isFullMoon()
         ? "A full moon rides high and white — the grounds lie almost as bright as day."
         // Whose light it is matters here: this line runs for anyone the room is
@@ -8320,6 +8325,13 @@ export class ZoneDO implements DurableObject {
       const fogged = events.foggy(this, room.id);
       const redEyes = isBloodMoon() && HOLLOW.has(creature.templateId) ? BLOOD_MOON_EYES_ROOM : "";
       lines.push(`${cap(t.name)} is here${fogged ? "" : this.bearsClause(creature)}${tell ? `, ${tell}` : ""}${fogged ? "" : redEyes}.${!fogged && creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
+    }
+    // THE DEAD ON THE GROUND, named (2026-11-10: a look said only that something
+    // was killed here, while 'look rat' found the rat). The same bodies the
+    // picture lays (chips.bodiesIn); look at one to read how it died.
+    for (const id of chips.bodiesIn(this, room.id)) {
+      const it = id === "nomad" ? "wanderer" : (world.mobTemplates.get(id)?.name ?? "").replace(/^(an?|the) /i, "");
+      if (it) lines.push(HOLLOW.has(id) ? `What is left of the ${it} lies here.` : `A dead ${it} lies here.`);
     }
     // Blood on a stranger's hands is a CLOSE read: the fog swallows it and the
     // rain runs it off them. The room glance only carries the mark in weather
@@ -9177,6 +9189,7 @@ export class ZoneDO implements DurableObject {
     // and then said nothing. Chilled is the worse and says the wet with it.
     if (session.chilled) fx.push("chilled");
     else if (cough.isWet(session)) fx.push("wet");
+    if (!session.chilled && cough.cold(this, session)) fx.push("cold"); // cold ground, out of the warmth (2026-11-10)
     if (session.resting) fx.push("resting");
     if (session.pose) fx.push(session.pose === "point" ? "pointing" : session.pose);
     // A flame in the shield hand is a real debuff and it was the only invisible

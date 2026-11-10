@@ -55,7 +55,7 @@ try {
         "export { gatehouseHeard } from './gate';",
         "export * as follow from './follow';",
         "export { cmdEmote, emoteLine } from './verbs';",
-        "export {nextBellAt, dayLine} from './events';", "export * as grassPatch from './grass';",
+        "export {nextBellAt, dayLine, weatherSky} from './events';", "export * as grassPatch from './grass';",
         "export {milestoneRead} from './lore';",
         "export {ROOM_FEATURES} from './detail';",
         "export {starvingHunts, huntsAt, woundedPreyHunts} from './ai';",
@@ -76,8 +76,8 @@ try {
         "export {digest} from './ai';",
         "export {FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, BEAKS, BITERS, GATEHOUSE_BARRED} from './zone-data';",
         "export {cmdEquip} from './verbs';",
-        "export {sendCtx, timedPose} from './chips';",
-        "export {beforeAttack as styleBeforeAttack} from './styles';",
+        "export {sendCtx, timedPose, bodiesIn} from './chips';",
+        "export {beforeAttack as styleBeforeAttack, keepAloft as styleKeepAloft} from './styles';",
         "export * as carving from './carving';",
         "export * as feverrat from './feverrat';",
         "export {tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, coldBites, snowed, paleDrakeSnows} from './events';",
@@ -108,7 +108,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { styleBeforeAttack, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
+  const { weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1851,6 +1851,23 @@ try {
     const minutes = (n) => { for (let i = 0; i < n; i++) { coughing.resetForTest(z); coughing.tick(z, Date.now()); } };
     return { z, me, noise, said, minutes };
   }
+  check('the cold is told when it comes on you and when it lets go, and the bar holds it (2026-11-10)', () => {
+    const { me, said, minutes } = coughWorld();
+    coughing.weather.raining = () => false; coughing.weather.inWater = () => false;
+    coughing.weather.coldBites = () => true;
+    minutes(3);
+    assert.equal(said.filter((t) => t === 'The cold gets into you.').length, 1, 'told once, not every minute: ' + said);
+    coughing.weather.coldBites = () => false;
+    minutes(2);
+    assert.equal(said.filter((t) => t === 'You are out of the cold.').length, 1, 'and told when it lets go');
+    assert.equal(me.coldNoted, false);
+    const vs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(vs, /z\.send\(session, z\.enterDescribe\(session\)\);\n\s+cough\.noteCold\(z, session\);/, 'walking into it says so at once, under the room');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.ok(zs.includes('if (!session.chilled && cough.cold(this, session)) fx.push("cold");'), 'the bar shows it');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.ok(/cold:\s+\{ label: "cold"/.test(pub), 'and the page has a tag for it');
+  });
   check('the drowned leave you coughing up water for a while, and it is noise (2026-10-24)', () => {
     const { me, noise, minutes } = coughWorld();
     coughing.weather.coldBites = () => false; coughing.weather.raining = () => false;
@@ -1954,6 +1971,7 @@ try {
     let t = Date.now(), sent = 0;
     const minutes = (n) => { for (let i = 0; i < n; i++) { t += 60_000; coughing.resetForTest(z); coughing.tick(z, t); } };
     me.maxHp = 100; me.hp = 100; z.sendStatus = () => { sent++; };
+    me.coldNoted = true; // already told it is cold here: this counts the wet and the chill alone
     coughing.weather.coldBites = () => true; coughing.weather.windy = () => false; coughing.weather.inWater = () => false;
     coughing.weather.raining = () => true; minutes(1);
     assert.equal(sent, 1, 'soaked: the bar is told');
@@ -2347,6 +2365,28 @@ try {
     for (const part of ['Dawn', 'Morning', 'The middle of the day', 'Afternoon', 'Dusk']) assert.ok(seen.has(part), part + ' never said: ' + [...seen]);
     const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
     assert.match(zs, /const day = events\.dayLine\(this, room\.id\);\n\s+if \(day\) lines\.push\(LORE_LINE \+ day\);/, 'in the room, in the lore look');
+  });
+  // 2026-11-10: on the mountain under snow, the room's snow line was followed by
+  // an hour line of grey cloud only, while the picture had snow falling.
+  check('while it snows the hour line says the snow is coming down, and rain, fog and the night the same', () => {
+    const z = new ZoneDO({}, {});
+    z.world = { rooms: new Map([['r', { id: 'r', region: 'mountain' }]]), exits: new Map(), mobTemplates: new Map(), entryRooms: new Set() };
+    z.snowUntil = Date.now() + 10 * DAY_CYCLE_MS * 8;
+    const start = Date.UTC(2026, 10, 8);
+    let said = 0;
+    for (let t = start; t < start + 2 * DAY_CYCLE_MS * 4; t += 5 * 60_000) {
+      const line = dayLine(z, 'r', t);
+      if (!line) continue;
+      said++;
+      assert.match(line, /snow coming down/, line);
+    }
+    assert.ok(said > 0, 'the day was said at all');
+    assert.equal(weatherSky(z, 'r'), 'snow');
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    assert.match(ev, /return snowed\(z, roomId\) \? "snow" : foggy\(z, roomId\) \? "fog" : raining\(z, roomId\) \? "rain" : "";/, 'the picture\'s order: snow, fog, rain');
+    assert.match(ev, /const wx = weatherSky\(z, roomId\);[\s\S]{0,120}if \(wx\) return WEATHER_DAY\[wx\]/, 'by day');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /if \(nightWx\) lines\.push\(LORE_LINE \+ WEATHER_NIGHT\[nightWx\]\);\n\s+else if/, 'and by night, in place of the open sky');
   });
   // 2026-11-08: there was no way to tell whether grazers had eaten a room down.
   check('the grass can be looked at: how much is left, a bare room says so, and the keeper gets the count', () => {
@@ -2842,7 +2882,7 @@ try {
   check('the Forgotten King sits and rises in his chair at the live king size, then stands on the floor below (2026-10-24)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /"sunken-throne": 61,/);
-    assert.match(pub, /var FRAME_DROP = \{ "forgotten-king": \{ death: 0\.03 \} \};/, 'his death a little lower');
+    assert.match(pub, /var FRAME_DROP = \{ "forgotten-king": \{ death: 0\.03 \},/, 'his death a little lower');
     assert.match(pub, /"sunken-throne": \{ up: 0\.305, s: 1\.09 \}/);
     assert.match(pub, /p\.k === a\.spec\.f\["keep-the-seat"\] \|\| p\.k === a\.spec\.f\["stand-from-the-throne"\]/);
     const strips = readFileSync(new URL('./build-mob-strips.mjs', import.meta.url), 'utf8');
@@ -3492,7 +3532,8 @@ try {
   // overreach or a stun) and by any rebuild of the creature row (a body falling).
   check('a bird fighting from the air stays up through a reel and a row rebuild', () => {
     const chipsSrc = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
-    assert.match(chipsSrc, /\? "aloft"\n[^\n]*\n[^\n]*\n\s*: FLIERS\.has\(creature\.templateId\) && creature\.groundedUntil && now < creature\.groundedUntil \? "downed"/, 'knocked out of the air is its own state, ahead of reel');
+    const aloftAt = chipsSrc.indexOf('ai.airborne(creature, now) ? "aloft"'), downedAt = chipsSrc.indexOf('now < creature.groundedUntil ? "downed"'), reelAt = chipsSrc.indexOf(': creature.stunned || (creature.staggerUntil');
+    assert.ok(aloftAt > 0 && aloftAt < downedAt && downedAt < reelAt, 'up first, then knocked out of the air as its own state, both ahead of reel');
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const body = pub.slice(pub.indexOf('function paintMobs('), pub.indexOf('function fitMobRow('));
     assert.ok(body.indexOf('var wasAir = {}') > 0 && body.indexOf('var wasAir = {}') < body.indexOf('anims.length = 0'), 'the air is read before the row is torn up');
@@ -5843,6 +5884,57 @@ try {
     assert.deepEqual(drawn, ['aloft'], 'the room is redrawn once, with the owl already up');
     assert.equal(timedPose(owl, now + 60_000), '', 'and when its time up runs out the tick sees the pose change');
     assert.equal(timedPose({ id: 'w', templateId: 'hill-wolf', airborneUntil: now + 9999 }, now), '', 'only a bird');
+  });
+  await checkAsync('an animal eating stays on its feet: the eating frame is set down to where it stands (2026-11-10)', async () => {
+    const sharp = (await import('sharp')).default;
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const drops = new Function('return ' + pub.slice(pub.indexOf('var FRAME_DROP = ') + 17, pub.indexOf('};', pub.indexOf('var FRAME_DROP = ')) + 1))();
+    let checked = 0;
+    for (const m of pub.matchAll(/^\s+"([a-z0-9-]+)":\s*\{ n: (\d+), aspect: [\d.]+, f: (\{[^}]*\}) \}/gm)) {
+      const id = m[1], n = +m[2], f = JSON.parse(m[3]);
+      const eat = f.feed !== undefined ? 'feed' : f.graze !== undefined ? 'graze' : null;
+      if (!eat || f.idle === undefined || f[eat] === f.idle) continue;
+      const file = new URL('../public/mob/' + id + '.webp', import.meta.url);
+      if (!existsSync(file)) continue;
+      const { data, info } = await sharp(fileURLToPath(file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const fw = info.width / n, H = info.height;
+      const foot = (k) => { for (let y = H - 1; y >= 0; y--) for (let x = Math.round(k * fw); x < Math.round((k + 1) * fw); x++) if (data[(y * info.width + x) * 4 + 3] > 60) return y; return -1; };
+      const off = (foot(f.idle) - foot(f[eat])) / H - (drops[id]?.[eat] ?? 0);
+      assert.ok(Math.abs(off) <= 0.015, id + ' eats ' + (off * 100).toFixed(1) + '% off its feet');
+      checked++;
+    }
+    assert.ok(checked > 30, 'the strips were read: ' + checked);
+  });
+  check('a bird up stays up through a lost beat, and comes down with a line when the fight goes (2026-11-10)', () => {
+    const now = 2_000_000_000, fed = [], drawn = [];
+    const you = { pubkey: 'you', hp: 100, roomId: 'r' };
+    const raven = { id: 'v', templateId: 'the-old-raven', roomId: 'r', hp: 20, target: 'you', airborneUntil: now + 5000 };
+    const z = { sessions: new Map([['you', you]]), roomFeed: (r, t) => fed.push(t), refreshRoomCtx: () => drawn.push(timedPose(raven, now)) };
+    const tmpl = { id: 'the-old-raven', name: 'the old raven', max_hp: 30 };
+    // three beats in which its own turn never came (dazed, held): still up, nothing said
+    for (const t of [4000, 8000, 12000]) styleKeepAloft(z, raven, tmpl, now + t);
+    assert.equal(timedPose(raven, now + 13000), 'aloft', 'still drawn up after beats it lost');
+    assert.equal(fed.length, 0, 'and nothing said while it is up');
+    // winded and up: drawn up, as the words have it
+    raven.windedUntil = now + 99999;
+    assert.equal(timedPose(raven, now + 13000), 'aloft', 'an out-of-breath bird in the air is drawn in the air');
+    // the fight goes from under it: it comes down, and the room is told
+    you.roomId = 'away';
+    styleKeepAloft(z, raven, tmpl, now + 16000);
+    assert.equal(raven.airborneUntil, undefined, 'down');
+    assert.equal(fed.length, 1, 'one line says so');
+    assert.deepEqual(drawn, ['blown'], 'and the picture is redrawn with it on the ground');
+  });
+  check('a kill one animal made of another stays on the ground in the picture, the room text and look alike (2026-11-10)', () => {
+    const now = Date.now();
+    const tmpls = new Map([['rat', { id: 'rat', name: 'a scabby rat', max_hp: 6 }], ['gill-adder', { id: 'gill-adder', name: 'a gill adder', max_hp: 20 }]]);
+    const traces = new Map([['r', [{ kind: 'blood', at: now - 60_000, label: 'a scabby rat', prey: 'rat' }, { kind: 'blood', at: now, label: 'a gill adder', id: 'gill-adder' }]]]);
+    const z = { world: { mobTemplates: tmpls }, traces, creaturesInRoom: () => [] };
+    assert.deepEqual(bodiesIn(z, 'r'), ['gill-adder', 'rat'], 'the adder you killed and the rat it was swallowing both lie there, with nothing eating either');
+    const zoneSrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.ok(/for \(const id of chips\.bodiesIn\(this, room\.id\)\)[\s\S]{0,300}A dead \$\{it\} lies here/.test(zoneSrc), 'the room text names the same bodies');
+    const verbsSrc = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.ok(verbsSrc.includes('if (body && bodiesIn(z, session.roomId).includes(body.tmpl.id))'), 'and look finds only a body the room shows');
   });
   await checkAsync('rare blood is its line at a body: the old raven, the great vulture and the bone-dropper (2026-11-10)', async () => {
     const rooms = new Map(['b', 'away'].map((id) => [id, { id, region: 'mountain' }]));

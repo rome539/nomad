@@ -73,7 +73,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, DAY_SKY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, DAY_SKY, WEATHER_DAY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_END_ODDS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -1346,10 +1346,19 @@ export function dayLine(z: ZoneDO, roomId: string, now = Date.now()): string {
   if (isNight(now) || eclipsePhase(now) === "active") return "";
   const grey = skyCovered(now) || raining(z, roomId) || foggy(z, roomId) || snowed(z, roomId)
     || (wxPhase(z, "rain", roomId) === "aftermath" && !afterRainCleared(z, roomId)) || !!rainNearby(z, roomId);
+  // Weather in the air: the line says it, as the picture draws it.
+  const wx = weatherSky(z, roomId);
+  const part = Math.min(2, Math.max(0, skyBand(now) - 1));
+  if (wx) return WEATHER_DAY[wx][isDawn(now) ? 0 : isDusk(now) ? 4 : part + 1]!;
   if (isDawn(now)) return grey ? DAY_SKY.dawnGrey : DAY_SKY.dawn;
   if (isDusk(now)) return grey ? DAY_SKY.duskGrey : DAY_SKY.dusk;
-  const part = Math.min(2, Math.max(0, skyBand(now) - 1));
   return (grey ? DAY_SKY.grey : skyClear(now) ? DAY_SKY.clear : DAY_SKY.open)[part]!;
+}
+
+// WHAT THE PICTURE HAS IN THE AIR over an open room, in its own order (zone
+// artSkyFor): snow, then fog, then rain. The hour line and the night line say it.
+export function weatherSky(z: ZoneDO, roomId: string): "snow" | "fog" | "rain" | "" {
+  return snowed(z, roomId) ? "snow" : foggy(z, roomId) ? "fog" : raining(z, roomId) ? "rain" : "";
 }
 
 // Ambience while the sky is doing something (zone's ambientLine reads this

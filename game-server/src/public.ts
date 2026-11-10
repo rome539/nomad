@@ -2779,6 +2779,7 @@ var FX_META = {
   // The cold and the wet: told once in the scroll, and held here until they pass.
   chilled:  { label: "chilled",  cls: "fx-cold" },
   wet:      { label: "wet",      cls: "fx-cold" },
+  cold:     { label: "cold",     cls: "fx-cold" },
   // Kit going. One pill for the worst piece you have on: gold, then blood.
   // The bench's figure names which piece; this only says to go and look.
   "kit-worn":    { label: "kit worn",    cls: "fx-wear" },
@@ -12260,7 +12261,26 @@ var MOB_LINE = {
 // no entry on purpose: the Drowned God's seat is a crouch on the rim.
 // ONE FRAME SET LOWER, as a share of the sprite's height (rome, 2026-10-24:
 // the Forgotten King's death, just a little down).
-var FRAME_DROP = { "forgotten-king": { death: 0.03 } };
+// ...AND THE BIRDS' EATING FRAMES ON THEIR FEET (2026-11-10: an animal went up
+// the picture when it put its head down to eat). Each was drawn standing higher
+// in its cell than the bird stands to watch; measured from the strips, the
+// lowest drawn pixel of the eating frame against the idle one. Every four-legged
+// strip measured 0.
+var FRAME_DROP = { "forgotten-king": { death: 0.03 },
+  "tawny-owl": { feed: 0.248 },
+  "ptarmigan": { graze: 0.167 },
+  "black-backed-gull": { feed: 0.134 },
+  "carrion-vulture": { feed: 0.130 },
+  "bittern": { feed: 0.128 },
+  "gibbet-crow": { feed: 0.119 },
+  "mountain-chough": { feed: 0.119 },
+  "hill-eagle": { feed: 0.118 },
+  "eagle-owl": { feed: 0.117 },
+  "the-old-raven": { feed: 0.110 },
+  "the-bone-dropper": { feed: 0.101 },
+  "scarp-raven": { feed: 0.096 },
+  "great-gull": { feed: 0.075 },
+  "oystercatcher": { graze: 0.069 } };
 var SEAT_ON = {
   "sunken-throne": { up: 0.305, s: 1.09 },  // the Forgotten King: the redrawn seat drawn at the live king's size (rome, 2026-10-24)
   "marrow-seat":   { up: 0.03, s: 0.95 },   // the Marrow-King

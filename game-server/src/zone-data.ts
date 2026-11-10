@@ -9125,6 +9125,39 @@ export const DAY_SKY = {
   dusk: "Dusk: the low sky is burning orange along its edge, and above it the blue is going to night.",
   duskGrey: "Dusk, under heavy grey cloud: the light is going from grey to dark, with no sunset in it.",
 };
+// ...AND WHATEVER THE PICTURE HAS IN THE AIR, THE HOUR SAYS (2026-11-10: the room
+// said the mountain was under snow and then, the next line, only grey cloud,
+// with snow falling in the picture; rain and fog the same). One set per weather
+// the picture draws (events.weatherSky): dawn, morning, midday, afternoon, dusk.
+export const WEATHER_DAY: Record<"snow" | "rain" | "fog", string[]> = {
+  snow: [
+    "Dawn, and snow coming down out of heavy grey cloud: the light is coming up grey through it, with no sun.",
+    "Morning, and snow coming down out of heavy grey cloud.",
+    "The middle of the day, and snow coming down out of heavy grey cloud.",
+    "Afternoon, and snow coming down out of heavy grey cloud, the light already going dull.",
+    "Dusk, and snow coming down out of heavy grey cloud, the light going from grey to dark.",
+  ],
+  rain: [
+    "Dawn, and rain coming down out of heavy grey cloud: the light is coming up grey through it, with no sun.",
+    "Morning, and rain coming down out of heavy grey cloud.",
+    "The middle of the day, and rain coming down out of heavy grey cloud.",
+    "Afternoon, and rain coming down out of heavy grey cloud, the light already going dull.",
+    "Dusk, and rain coming down out of heavy grey cloud, the light going from grey to dark.",
+  ],
+  fog: [
+    "Dawn, and fog all round: the light is coming up grey in it, and no sky to be seen.",
+    "Morning, and fog all round, too thick for any sky to be seen.",
+    "The middle of the day, and fog all round, too thick for any sky to be seen.",
+    "Afternoon, and fog all round, the light in it already going dull.",
+    "Dusk, and the fog all round going from grey to dark.",
+  ],
+};
+// ...and by night, in place of the open black sky or the moon.
+export const WEATHER_NIGHT: Record<"snow" | "rain" | "fog", string> = {
+  snow: "Night, and snow coming down out of the dark, no moon and no star through it.",
+  rain: "Night, and rain coming down out of the dark, no moon and no star through it.",
+  fog: "Night, and fog all round you in the dark, no moon and no star through it.",
+};
 export const SKY_NIGHT = "Night. The sky is dark blue going to black, full of stars, and grey cloud drifts slowly across them, covering some and letting others out.";
 // AND ON THE HILL IT IS A REAL SUN, which is the mountain's whole conceit and
 // the thing its own line already said better than anything else in the file:

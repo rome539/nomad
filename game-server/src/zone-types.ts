@@ -56,6 +56,7 @@ export interface Session {
   habitLine?: string;   // the last tell it performed, so the same one never lands twice running
   quirkAt: number;      // and the same clock for a carried treasure acting out its past
   loudSelfAt?: number; // last time we told the mover their own load made noise (throttle; ephemeral, not persisted)
+  coldNoted?: boolean; // the cold was last told as on you (cough.noteCold; ephemeral)
   coldToldAt?: number; // last time we told a rester the cold was eating their rest (throttle; ephemeral, not persisted)
   ctxCombat: boolean; // the combat state the last chip set was drawn for (see syncCombatCtx)
   gateSmeltable?: boolean; // cached: enough scrap across pack+lockbox+vault to smelt a bar — gates the 'smelt' chip (refreshGateStock; sync chip builder can't load containers itself)

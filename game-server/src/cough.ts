@@ -22,7 +22,7 @@ import * as den from "./den";
 import * as campfire from "./campfire";
 import { underCover } from "./detail";
 import {
-  WARM_ROOMS,
+  WARM_ROOMS, SHELTER_ROOMS,
   WET_DRY_MS, CHILL_BITE_MS, CHILL_FLOOR,
   COUGH_WATER_MS, COUGH_WATER_PER_MIN, COUGH_CHILL_AFTER_MS, COUGH_CHILL_PER_MIN, COUGH_SMOKE_PER_MIN,
   COUGH_WATER_LINES, COUGH_CHILL_LINES, COUGH_SMOKE_LINES, COUGH_DUST_LINES,
@@ -79,6 +79,21 @@ function warm(z: ZoneDO, s: Session, now: number): boolean {
   return z.inGatehouse.has(s.pubkey) || den.hearthWarm(z, s) || (s.warmUntil ?? 0) > now || campfire.warmsYou(z, s, now)
     || WARM_ROOMS.has(s.roomId); // the Litter Chamber's own heat (mig 355)
 }
+// THE COLD, SAID (2026-11-10: snowing on the mountain, and the first a wanderer
+// heard of the cold was a rest that closed nothing). Is it on you where you
+// stand: cold ground, out of the world's warmth and not under a shelter's roof.
+export function cold(z: ZoneDO, s: Session, now = Date.now()): boolean {
+  return !z.outOfWorld(s) && !warm(z, s, now) && !SHELTER_ROOMS.has(s.roomId) && weather.coldBites(z, s.roomId);
+}
+// ...told when it comes on you and when it lets go, never why; the bar holds it.
+export function noteCold(z: ZoneDO, s: Session, now = Date.now()): void {
+  if (s.hp <= 0) return;
+  const c = cold(z, s, now);
+  if (c === !!s.coldNoted) return;
+  s.coldNoted = c;
+  z.send(s, c ? "The cold gets into you." : "You are out of the cold.", "amb");
+  z.sendStatus(s);
+}
 // A fire dries you: the gatehouse's, a den's hearth, a campfire. (Soup warms
 // you from the inside; it does not dry your coat.)
 function byAFire(z: ZoneDO, s: Session, now: number): boolean {
@@ -121,6 +136,7 @@ export function tick(z: ZoneDO, now: number): void {
   lastTick.set(z, now);
   for (const s of z.sessions.values()) {
     if (s.hp <= 0) continue;
+    noteCold(z, s, now); // the weather turning, a fire lit or gone out
     tickWet(z, s, now);
     // THE CHILL keeps its count whatever else is going on.
     const out = z.outOfWorld(s);

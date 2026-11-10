@@ -459,6 +459,25 @@ export function bluffPending(z: ZoneDO, creature: Creature, tmpl: MobTemplate, p
     && (!creature.bluffedAt || now - creature.bluffedAt > BLUFF_REARM_MS);
 }
 
+// A BIRD UP STAYS UP UNTIL A LINE BRINGS IT DOWN (2026-11-10: fighting the old
+// raven, the picture brought it down while the words still had it overhead).
+// Its time aloft was one beat and a second, renewed only when its own turn ran
+// beforeAttack, so a beat lost to a daze, a song or anything else let it lapse
+// with nothing said: drawn on the ground, reachable, and no line. Every beat,
+// first thing: still in its fight, it stays up; the fight gone from under it,
+// it comes down and the room is told.
+export function keepAloft(z: ZoneDO, creature: Creature, tmpl: MobTemplate, now: number): void {
+  if (!FLIERS.has(creature.templateId) || creature.airborneUntil === undefined) return;
+  const victim = creature.target ? z.sessions.get(creature.target) : undefined;
+  if (victim && victim.hp > 0 && victim.roomId === creature.roomId) {
+    creature.airborneUntil = Math.max(creature.airborneUntil, now + COMBAT_ROUND_MS + 1000);
+    return;
+  }
+  creature.airborneUntil = undefined;
+  z.roomFeed(creature.roomId, `${cap(tmpl.name)} comes down out of the air and settles.`, undefined, false);
+  z.refreshRoomCtx(creature.roomId);
+}
+
 // A throw landed on a bird. While it is up, the hits add up, and enough of them
 // bring it down hard: dazed, and stuck on the ground for a while.
 export function thrownAt(z: ZoneDO, creature: Creature, tmpl: MobTemplate, session: Session, now: number): void {
