@@ -5511,9 +5511,9 @@ try {
     // drawn in the game, not only when the preview asks
     assert.match(src, /var tnAurora = SKY_FX\.aurora \|\| skyAuroraNight\(skyRoll\), tnComet = SKY_FX\.comet \|\| skyCometNight\(skyRoll\);/);
     assert.match(src, /var turning = fxNight, /);
-    // the comet in front of the clouds and still, or it is hidden or carried off the sky (2026-11-11)
+    // the comet still, or it is carried off the sky; behind the clouds, as the rest of the sky (2026-11-11)
     const cAt = src.indexOf('if (!lay.path && tnComet) drawComet(c, w * .3, h * .2,'), clAt = src.indexOf('if (row) c.drawImage(row, x0, top, tw * copies, th);');
-    assert.ok(cAt > clAt && clAt > 0, 'the comet is drawn after the clouds');
+    assert.ok(cAt > 0 && cAt < clAt, 'the comet is drawn before the clouds, behind them');
     assert.equal((src.match(/\bdrawComet\(c, (?!x, y, B\))/g) || []).length, 1, 'drawn in one place only');
     // ...and by day too, said under the open day skies that draw it (rome, 2026-11-11)
     assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /if \(\(daySky === "day" \|\| daySky === "dawn" \|\| daySky === "dusk"\) && cometNight\(\)\) lines\.push\(LORE_LINE \+ NIGHT_COMET\);/);

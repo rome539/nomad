@@ -12827,6 +12827,11 @@ var skyDrift = (function () {
     c.fillStyle = halo; c.fillRect(mx - md * 2.6, my - md * 2.6, md * 5.2, md * 5.2);
     c.drawImage(layArt[lay.disc].im, mx - md / 2, my - md / 2, md, md);
     }
+    // THE COMET, STILL (2026-11-11: turning with the stars it was carried off the
+    // top of the sky for the early night while the words said it stood there),
+    // behind the clouds like the rest of the sky. BY DAY TOO (rome, 2026-11-11):
+    // its days and its nights, on every open sky but the eclipse.
+    if (!lay.path && tnComet) drawComet(c, w * .3, h * .2, Math.max(2, Math.round(s * 3)));
     // tonight's clouds, the farther strip first, each at its pace
     var pick = skyCloudsTonight(lay.clouds), tonight = pick.set;
     for (var k = 0; k < tonight.length; k++) {
@@ -12836,11 +12841,6 @@ var skyDrift = (function () {
       var copies = Math.ceil(w / tw) + 1, row = layCloudRow(cl[0], copies, cl[3] || lay.cloudTint || (lay.dark ? "rgba(2,5,16," + lay.dark + ")" : ""), lay.cloudHue);
       if (row) c.drawImage(row, x0, top, tw * copies, th);
     }
-    // THE COMET IN FRONT OF THE CLOUDS, and still (2026-11-11: under the clouds
-    // and turning with the stars it was hidden, or carried off the top of the
-    // sky, on the nights the words said it stood there). BY DAY TOO (rome,
-    // 2026-11-11): its days and its nights, on every open sky but the eclipse.
-    if (!lay.path && tnComet) drawComet(c, w * .3, h * .2, Math.max(2, Math.round(s * 3)));
   }
   function active() { return !!name && viewMode === "image" && !document.hidden && !still.matches; }
   function stop() {
