@@ -17,7 +17,10 @@ import path from "node:path";
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const src = fs.readFileSync(path.join(HERE, "..", "src/zone.ts"), "utf8");
 const at = src.indexOf("public artSkyFor(session: Session)");
-const body = src.slice(src.indexOf("{", at) + 1, src.indexOf("\n  }", at));
+// artSkyFor hands the room to skyFor (2026-11-11); read as one, as it was
+const sfAt = src.indexOf("public skyFor(roomId: string)");
+const body = src.slice(src.indexOf("{", at) + 1, src.indexOf("\n  }", at))
+  .replace("return this.skyFor(session.roomId);", "const roomId = session.roomId;\n" + src.slice(src.indexOf("{", sfAt) + 1, src.indexOf("\n  }", sfAt)));
 
 let fail = 0;
 const t = (n, c, e) => { console.log((c ? "  ok   " : "  FAIL ") + n + (e ? "   " + e : "")); if (!c) fail++; };

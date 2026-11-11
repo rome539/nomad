@@ -9233,6 +9233,17 @@ export const LID_MAX_SHUT = 5; // ~3h45m — a ceiling on the run, so no streak 
 // the same day count (public.ts skyCloudsTonight), so the words and
 // the sky agree: the lid is off for the whole of it, day and night.
 export const SKY_CLEAR_EVERY = 7;
+// THE NIGHT'S EXTRAS (2026-11-11), drawn by the page (public.ts SKY_FX) and said
+// under the room, off one rule each side reads the same way from the day count:
+// on any night the stars are drawn, they turn slowly and now and then one falls;
+// about one night in AURORA_EVERY the northern lights are up; and the comet
+// stands in the sky COMET_NIGHTS nights running, every COMET_EVERY days.
+export const AURORA_EVERY = 9;
+export const COMET_EVERY = 29;
+export const COMET_NIGHTS = 3;
+export const NIGHT_STARS_TURN = "The stars are wheeling slowly round over you, and now and then one falls, a short bright streak and gone.";
+export const NIGHT_AURORA = "Low over the land the northern lights are up, green curtains going blue at the top, with a fainter violet one behind, slowly moving.";
+export const NIGHT_COMET = "A comet stands in the sky, a small bright head with a pale tail going up and away from it.";
 export const SKY_CLEAR = "The sky is clear today from one edge of the world to the other, without a single cloud in it, only the colour, and it looks further away than a sky has any right to.";
 export const STARS_CLEAR = "A clear night, without one cloud in it anywhere, and the whole sky full of stars, more than anyone down here has any use for.";
 // The low country's sun on a clear day, by the five bands of the day (SUN_LOW's).
@@ -9330,6 +9341,8 @@ export const CRAB_ROAD_REACH = 10;               // how far up the roads the mar
 export const CRAB_BANDS = new Set<string>(["crossing", "road"]);
 
 // ---- THE SPATE (the east road's own arc, 2026-08-10) --------------------------
+// REMOVED (rome, 2026-11-11): the beck no longer floods the road. The course
+// below is kept only as the beck's rooms, for the sound of running water.
 // THE BECK RISES. The east road was built as three independent routes because a
 // corridor is a corridor — and redundancy that never gets tested is just extra
 // rooms. This is the test: every so often the low way goes under, and the two
@@ -9381,20 +9394,11 @@ export const SPATE_COURSE = [
   "the-gill-narrows", "the-shepherds-ford", "the-spring-line", "the-beck-head",
 ];
 export const SPATE_ROOMS = new Set<string>(SPATE_COURSE);
-export const SPATE_INDEX = new Map<string, number>(SPATE_COURSE.map((id, i) => [id, i]));
-export const SPATE_TELEGRAPH_MS = 2 * 60_000;   // the water goes brown and loud BEFORE it comes up — long enough to climb out
-export const SPATE_ACTIVE_MIN_MS = 8 * 60_000;
-export const SPATE_ACTIVE_MAX_MS = 15 * 60_000;
-export const SPATE_AFTERMATH_MS = 12 * 60_000;  // and it drains slowly, and the silt is worth walking
 // The rat-tide's rate (BOIL_BITE), and for the same reason: this is weather, and
 // weather that kills a healthy walker in forty seconds is a trap with a sky over
 // it. What a spate actually costs you is DISTANCE — it puts you back down the
 // valley, and the climb back up the gill is the punishment.
 export const SPATE_BITE = 1;                    // per beat in the water: cold and force, not teeth
-export const SPATE_SWEEP_ODDS = 0.55;           // in a room with a way out, better than half the time it takes you anyway
-export const SPATE_SWEEP_MIN = 2;               // ...and when it does it moves you THIS many rooms, because it is fast
-export const SPATE_SWEEP_MAX = 4;
-export const SPATE_CARRY_ODDS = 0.5;            // each item on a flooded floor, per drain: how often it goes downstream
 // THE RAIN'S LOW GROUND (the road and the fen). Under SETTLED rain these rooms
 // read "up" — the ford, the culvert, the quaking flat — and cost to wade. The
 // law is the crossing's: BITE, NOT BLOCK. You can always cross; it just bills
@@ -12503,7 +12507,7 @@ export const ARC_BAND: Record<string, Region | null> = {
   rain: null, fog: null, cold: null, wind: null, crows: null, eclipse: null,
   bell: "gate", boil: "gate", gloam: "gate", breach: "gate", escape: "gate", song: "gate", exhale: "gate", wake: "gate", tide: "gate",
   mast: "wood", rut: "wood", quiet: "wood", walk: "wood",
-  carrier: "road", spate: "road",
+  carrier: "road",
   clouddown: "mountain", scree: "mountain", shadow: "mountain",
   sea: "crossing", lights: "crossing",
   pack: "den", fever: "den", "fever-strand": "crossing", "fever-hill": "mountain", "fever-fortress": "gate",
@@ -12610,10 +12614,6 @@ export const ARC_TELLINGS: Record<string, string[]> = {
   carrier: [
     "\"There is a carrier on the east paving.\" Word has reached him. Word always has.",
     "\"A man walking a load along a road. Which sounds like nothing at all, until you count how many people on that road have heard the same thing you just did.\"",
-  ],
-  spate: [
-    "\"The beck is up. The low way is not a way tonight.\"",
-    "\"Water off a hill moves faster than it looks, and takes a man off his feet in a foot of it. Puts everything onto the high ground at once, besides. You, and whatever else was down there.\"",
   ],
   // ---- the mountain ----
   clouddown: [

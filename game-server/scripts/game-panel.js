@@ -103,6 +103,50 @@
     skyB.textContent = "20x: " + (fast ? "on" : "off"); skyB.style.color = fast ? "#d8a94e" : "#c9bda3";
   };
 
+  // THE NIGHT'S EXTRAS (SKY_FX in the client): on in the game on their own nights
+  // (the stars always turn); each button here forces one on to be looked at. "fx fast" runs the turn, the aurora and the shooting stars
+  // quickly, so none of them has to be waited for.
+  [["shoot", "shooting stars"], ["aurora", "aurora"], ["comet", "comet"], ["fast", "fx fast"]].forEach(function (f) {
+    var b = mk("button", btnCss, f[1] + ": off");
+    b.onclick = function () {
+      SKY_FX[f[0]] = !SKY_FX[f[0]];
+      b.textContent = f[1] + ": " + (SKY_FX[f[0]] ? "on" : "off"); b.style.color = SKY_FX[f[0]] ? "#d8a94e" : "#c9bda3";
+    };
+  });
+  mk("button", btnCss, "shoot one").onclick = function () { SKY_FX.shootNow = (SKY_FX.shootNow || 1) + 1; };
+
+  // THE FLOOD TRIAL (FX_FLOOD in the client): water standing in the room the
+  // depth map describes. Night, torch on, on a ground with torch effects.
+  mk("span", "", "flood");
+  var floodR = mk("input", "width:110px");
+  floodR.type = "range"; floodR.min = "0"; floodR.max = "100"; floodR.value = "0";
+  // THE GAME'S THREE LEVELS MARKED ON THE SLIDER (rome, 2026-11-11): a tick at
+  // each, the slider catches on it when near, and the readout names it.
+  var floodTicks = document.createElement("datalist"); floodTicks.id = "flood-ticks";
+  [0, 40, 60, 80].forEach(function (n) { var o = document.createElement("option"); o.value = n; floodTicks.appendChild(o); });
+  floodR.parentNode.appendChild(floodTicks); floodR.setAttribute("list", "flood-ticks");
+  var FLOOD_STOP = { 0: "dry", 40: "depth 1: awash (game)", 60: "depth 2: half flood (game)", 80: "depth 3: spring tide (game)" };
+  var floodLv = mk("span", "color:#c9bda3;min-width:190px;display:inline-block", "dry");
+  // ...and why nothing shows, when nothing does: the water is drawn by the
+  // room's effects layer, which only runs on a picture that has a depth map.
+  var floodSay = mk("span", "color:#d8a94e", "");
+  var floodWhy = function () {
+    floodSay.textContent = !FX_FLOOD ? "" : fxReady ? "water on: " + fxName
+      : "no water here: this ground has no depth map";
+  };
+  floodR.oninput = function () {
+    var n = +floodR.value;
+    n = [0, 40, 60, 80].reduce(function (b, k) { return Math.abs(n - k) < Math.abs(n - b) ? k : b; }, 0); // locks to a level
+    floodR.value = n;
+    var was = FX_FLOOD, v = n / 100;
+    floodLv.textContent = n + " = " + (FLOOD_STOP[n] || "not a game level");
+    FX_FLOOD_PANEL = v > 0 ? v : -1; // at 0 the room's own depth from the game rules again
+    FX_FLOOD = v > 0 ? v : FLOOD_DEPTHS[Math.min(3, lastSea)] || 0;
+    if (!was !== !FX_FLOOD) paint(); // the effects layer is chosen when the room is painted
+    floodWhy();
+  };
+  setInterval(floodWhy, 700);
+
   var torchB = mk("button", btnCss, "torch: off"); var torch = 0;
   torchB.onclick = function () { torch = torch ? 0 : 1; torchB.textContent = "torch: " + (torch ? "on" : "off"); torchB.style.color = torch ? "#d8a94e" : "#c9bda3"; paint(); };
 

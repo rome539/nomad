@@ -87,7 +87,9 @@ try {
         "export {OUTDOOR_REGIONS, INDOOR_ROOMS} from './zone-data';",
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
-        "export {isNight, isFullMoon, terrainOf, skyClear, lidOpen, foodGone} from './zone-util';",
+        "export {isNight, isFullMoon, terrainOf, skyClear, lidOpen, foodGone, auroraNight, cometNight} from './zone-util';",
+        "export {nightExtras} from './events';",
+        "export {NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN} from './zone-data';",
         "export {tickFoodRot, rottedAway, feverPhase, feverGravesOf} from './events';",
         "export {FEVER_GRAVES} from './zone-data';",
         "export {loadContainer, setRottedAway} from './world';",
@@ -108,7 +110,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
+  const { wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, auroraNight, cometNight, nightExtras, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -329,6 +331,15 @@ try {
     const loop = src.slice(src.indexOf('for (const c of scattered) {'), src.indexOf('this.armStrayDecay(fell);'));
     const v = loop.indexOf('voidMint('), d = loop.indexOf('this.dropInstance(');
     assert.ok(v >= 0 && d >= 0 && v < d, 'voidMint has to run before the dropInstance continue');
+  });
+
+  check('the spate is gone: the beck never floods the road (2026-11-11)', () => {
+    // Removed outright: not drawn by the roll, never ticked, no water on screen,
+    // and a beck left up by an older build is cleared on the first beat.
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    assert.ok(!/\["spate",/.test(ev), 'the spate is back in the roll');
+    assert.ok(!/tickSpate|spated\(|silted\(/.test(ev), 'the spate still ticks or floods');
+    assert.ok(/z\.events\.delete\("spate"\)/.test(ev), 'an old spate state is not cleared');
   });
 
   // ---------------------------------------------------------------- worth
@@ -4088,7 +4099,7 @@ try {
   });
   check('a roof whose picture is the outside gets the outside\'s sky, and dawn and dusk are sent (2026-10-25)', () => {
     const z = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
-    assert.match(z, /const openSkyForArt = this\.world!\.entryRooms\.has\(session\.roomId\) \|\| ROOF_SHOWS_OUTSIDE\.has\(session\.roomId\);/);
+    assert.match(z, /const openSkyForArt = this\.world!\.entryRooms\.has\(roomId\) \|\| ROOF_SHOWS_OUTSIDE\.has\(roomId\);/);
     assert.match(z, /lo: !seesArt\(session\.pubkey\) \? undefined : \(session\.artLow = lowLight\(\)\)/);
     assert.match(z, /lowLight\(\) !== \(s\.artLow \?\? 0\)\) this\.sendStatus\(s\)/, 'the picture turns at dawn even when the sky stays fog');
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
@@ -5430,7 +5441,7 @@ try {
     // one rule for both: the lid shut, less the full moon that shows through
     assert.match(zu, /export function skyCovered\(now = Date\.now\(\)\): boolean \{\n  return !lidOpen\(now\) && !\(isNight\(now\) && isFullMoon\(now\)\);/);
     // the picture: a covered spell is drawn as the after-rain sky at its hour
-    assert.match(z, /\|\| !!\(seesOut \? events\.rainNextDoor\(this, session\.roomId\) : events\.rainNearby\(this, session\.roomId\)\) \|\| skyCovered\(\);/, 'the page is sent the grey sky');
+    assert.match(z, /\|\| !!\(seesOut \? events\.rainNextDoor\(this, roomId\) : events\.rainNearby\(this, roomId\)\) \|\| skyCovered\(\);/, 'the page is sent the grey sky');
     // the words: look sky says the cloud has it, ahead of the stars and the moon
     const i = ev.indexOf('if (skyCovered() &&'), j = ev.indexOf('if (isNight()) return `${SKY_NIGHT}');
     assert.ok(i > 0 && i < j, 'the covered line answers before the starry night');
@@ -5473,6 +5484,44 @@ try {
       assert.ok(at > 0, g);
       assert.match(look.slice(Math.max(0, at - 70), at), /groundAsk/, g + ' answers only look weather');
     }
+  });
+
+  check('the night extras are on the same nights in the words and the picture (2026-11-11)', () => {
+    // The page draws the northern lights and the comet on their own nights, and
+    // the stars turning and falling on every night it draws stars; the room's
+    // words must name exactly those, under exactly those skies.
+    const src = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const grab = (name) => { const i = src.indexOf('function ' + name + '('); return src.slice(i, src.indexOf('\n', i) + 1); };
+    const num = (n) => Number((src.match(new RegExp('SKY_' + n + ' = (\\d+)')) || [])[1]);
+    const hash = (() => { const i = src.indexOf('function skyDayHash('); return src.slice(i, src.indexOf('\n}\n', i) + 2); })();
+    const page = new Function('SKY_AURORA_EVERY', 'SKY_COMET_EVERY', 'SKY_COMET_NIGHTS', hash + grab('skyAuroraNight') + grab('skyCometNight') +
+      'return [skyAuroraNight, skyCometNight];')(num('AURORA_EVERY'), num('COMET_EVERY'), num('COMET_NIGHTS'));
+    let au = 0, co = 0;
+    for (let d = 0; d < 2100; d++) {
+      const night = d * DAY_CYCLE_MS + DAY_CYCLE_MS * .75, said = nightExtras(night);
+      assert.equal(page[0](d), auroraNight(d), 'day ' + d + ': aurora agrees');
+      assert.equal(page[1](d), cometNight(d), 'day ' + d + ': comet agrees');
+      assert.equal(said.includes(NIGHT_AURORA), page[0](d), 'day ' + d + ': the words name the aurora on its nights only');
+      assert.equal(said.includes(NIGHT_COMET), page[1](d), 'day ' + d + ': the words name the comet on its nights only');
+      assert.ok(said.startsWith(NIGHT_STARS_TURN));
+      if (page[0](d)) au++; if (page[1](d)) co++;
+    }
+    assert.ok(au > 150 && au < 320, au + ' aurora nights');
+    assert.ok(co > 180 && co < 260, co + ' comet nights');
+    // drawn in the game, not only when the preview asks
+    assert.match(src, /var tnAurora = SKY_FX\.aurora \|\| skyAuroraNight\(skyRoll\), tnComet = SKY_FX\.comet \|\| skyCometNight\(skyRoll\);/);
+    assert.match(src, /var turning = fxNight, /);
+    assert.match(src, /var fxNight = lay\.stars > 0 && !lay\.path;/);
+    // ...and said only under the skies that draw them: night, moon, blood
+    const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zsrc, /const starry = starSky === "night" \|\| starSky === "moon";/);
+    assert.match(zsrc, /if \(starry \|\| starSky === "blood"\) \{ const ex = events\.nightExtras\(Date\.now\(\), !starry\); if \(ex\) lines\.push\(LORE_LINE \+ ex\); \}/);
+    // the stars are the sky as it is: said in the night line itself, not a line of their own
+    assert.match(zsrc, /starry \? "A full moon rides high and white among the slowly wheeling stars/);
+    assert.match(zsrc, /: starry\n\s+\? \(this\.carriesLight\(session\)\n\s+\? "Night's fully down and the sky over you is open and black, the stars wheeling slowly round in it/);
+    assert.ok(!nightExtras(0, false).includes(NIGHT_STARS_TURN), 'no stars line beside the night line');
+    for (const k of ['night', 'moon', 'blood', 'eclipse']) assert.ok(new RegExp('^  ' + k + ': \\{.*stars: [1-9]', 'm').test(src), k + ' draws stars');
+    assert.match(src, /eclipse: \{[^\n]*path: "eclipse"/, 'the eclipse sky never takes the extras');
   });
 
   check('the clear day is the same day in the words and the picture (2026-11-04)', () => {

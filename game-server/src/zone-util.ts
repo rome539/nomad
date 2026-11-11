@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, FOOD_GONE_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, SKY_CLEAR_EVERY, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
+import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, FOOD_GONE_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, SKY_CLEAR_EVERY, AURORA_EVERY, COMET_EVERY, COMET_NIGHTS, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -171,6 +171,14 @@ export function skyDayHash(d: number): number {
   let h = Math.imul(d ^ 0x2545f491, 0x9e3779b1);
   h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
   return h >>> 0;
+}
+// THE NIGHT'S EXTRAS (zone-data AURORA_EVERY), the page's own rule line for line
+// (public.ts skyAuroraNight, skyCometNight), so words and picture agree.
+export function auroraNight(day = worldDay()): boolean {
+  return skyDayHash(day ^ 0x51a7) % AURORA_EVERY === 0;
+}
+export function cometNight(day = worldDay()): boolean {
+  return day % COMET_EVERY < COMET_NIGHTS;
 }
 export function skyClear(now = Date.now()): boolean {
   return skyDayHash(worldDay(now)) % SKY_CLEAR_EVERY === 0;

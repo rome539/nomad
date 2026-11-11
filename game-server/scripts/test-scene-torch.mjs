@@ -108,6 +108,7 @@ const code = [
   "var fogVeilEl, snowLightEl; sceneEl = _scene; skyEl = _sky; mobsEl = _mobs; floodEl = _flood; fogVeilEl = _veil; snowLightEl = ctx.snowEl;",
   "ctx.paint = paintScene; ctx.pools = SKY_POOL; ctx.scenes = TERRAIN_SCENES; ctx.rooms = ROOM_PLATE;",
   "ctx.setSea = function(v){ lastSea = v; };",
+  "ctx.flood = function(){ return FX_FLOOD; };",
   "ctx.weather = function(){ return weatherKind; };",
   "ctx.shelter = SHELTERED;",
   "var fogMasks = null; ctx.setMasks = function(m){ fogMasks = m; };",
@@ -461,15 +462,20 @@ const at2 = (sea, sky, torch) => {
   return strip(sceneEl.style.backgroundImage);
 };
 t("a dry causeway is the dry plate", at2(0, "day", 0) === "/room-bg/causeway-day.webp", at2(0, "day", 0));
-t("...and under the sea it is a different photograph", at2(2, "day", 0) === "/room-bg/causeway-day-flood.webp", at2(2, "day", 0));
-t("...at night too", at2(2, "night", 0) === "/room-bg/causeway-night-flood.webp", at2(2, "night", 0));
-t("...and with a torch in your hand", at2(2, "night", 1) === "/room-bg/causeway-night-torch-flood.webp", at2(2, "night", 1));
+// THE PAINTED FLOOD PLATES ARE RETIRED (2026-11-11): under the sea the dry plate
+// is painted and the water is drawn over it at the room's depth (FX_FLOOD).
+t("...and under the sea it keeps the dry plate", at2(2, "day", 0) === "/room-bg/causeway-day.webp", at2(2, "day", 0));
+t("...with the water drawn over it at the room's depth", ctx.flood() === 0.6, ctx.flood());
+t("...deeper water stands higher", (at2(3, "day", 0), ctx.flood()) === 0.8, ctx.flood());
+t("...at night too", at2(2, "night", 0) === "/room-bg/causeway-night.webp", at2(2, "night", 0));
+t("...and with a torch in your hand", at2(2, "night", 1) === "/room-bg/causeway-night-torch.webp", at2(2, "night", 1));
 t("walking out of the water goes back to the dry plate", at2(0, "night", 0) === "/room-bg/causeway-night.webp", at2(0, "night", 0));
+t("...and the water is gone", ctx.flood() === 0, ctx.flood());
 // A CONDITION WITH NO FLOOD TWIN FALLS BACK TO DRY rather than asking for a file
 // that is not there. Snow has not been shot flooded; a hole in the world at
 // that hour would be worse than a picture one state behind the prose.
 t("an unshot condition keeps the dry plate", at2(2, "snow", 0) === "/room-bg/causeway-snow.webp", at2(2, "snow", 0));
-t("...and rain over the flood is the flooded day ground (layered weather)", at2(2, "rain", 0) === "/room-bg/causeway-day-flood.webp", at2(2, "rain", 0));
+t("...and rain over the flood is the day ground (layered weather)", at2(2, "rain", 0) === "/room-bg/causeway-day.webp", at2(2, "rain", 0));
 // And a ground with no flood plates at all never looks for one.
 ctx.setSea(3); ctx.paint("mountain", "day", "scree", "sc", 0, 0, "", 3);
 t("a ground that was never shot flooded ignores the tide",
@@ -477,7 +483,7 @@ t("a ground that was never shot flooded ignores the tide",
 // The ford is the second ground shot flooded, and it exists to prove the table
 // does the work rather than the causeway being special-cased somewhere.
 ctx.setSea(2); ctx.paint("mountain", "day", "ford", "fd", 0, 0, "", 2);
-t("the ford floods too", strip(sceneEl.style.backgroundImage) === "/room-bg/ford-day-flood.webp", strip(sceneEl.style.backgroundImage));
+t("the ford floods too", strip(sceneEl.style.backgroundImage) === "/room-bg/ford-day.webp" && ctx.flood() === 0.6, strip(sceneEl.style.backgroundImage) + " " + ctx.flood());
 ctx.setSea(2); ctx.paint("mountain", "snow", "ford", "fs", 0, 0, "", 2);
 t("...and keeps its dry plate at a condition nobody shot flooded", strip(sceneEl.style.backgroundImage) === "/room-bg/ford-snow.webp", strip(sceneEl.style.backgroundImage));
 
@@ -501,7 +507,7 @@ t("and the staithe was shot for every condition, so snow is its own plate", stri
 // bargain it trades against the causeway, and a flood plate here would be
 // arguing with the map.
 ctx.setSea(3); ctx.paint("mountain", "day", "bridge", "br", 0, 0, "", 3);
-t("the bridge is forty feet up and never floods", strip(sceneEl.style.backgroundImage) === "/room-bg/bridge-day.webp", strip(sceneEl.style.backgroundImage));
+t("the bridge is forty feet up and never floods", strip(sceneEl.style.backgroundImage) === "/room-bg/bridge-day.webp" && ctx.flood() === 0, strip(sceneEl.style.backgroundImage) + " " + ctx.flood());
 ctx.setSea(2); ctx.paint("mountain", "rain", "marsh", "ma", 0, 0, "", 2);
 t("nor does the marsh, whatever the sea is doing", strip(sceneEl.style.backgroundImage) === "/room-bg/marsh-day.webp", strip(sceneEl.style.backgroundImage));
 ctx.setSea(0); ctx.paint("mountain", "fog", "shell", "sh", 0, 0, "", 0);

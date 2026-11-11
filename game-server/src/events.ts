@@ -18,7 +18,7 @@ import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
 import * as feverrat from "./feverrat";
-import { cap, foodState, foodGone, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand, skyClear, skyCovered, isDawn, isDusk } from "./zone-util";
+import { cap, foodState, foodGone, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand, skyClear, skyCovered, isDawn, isDusk, auroraNight, cometNight } from "./zone-util";
 import { setItemAcquiredAt, removeItemRow } from "./world";
 import {
   QUICKSAND_ROOMS, QUICKSAND_GRIP_ODDS, HOBBLE_FLEE_MS,
@@ -59,12 +59,11 @@ import {
   TIDE_TELEGRAPH_MS, TIDE_STEP_MS, TIDE_CREST_MS, TIDE_AFTERMATH_MS, TIDE_SILT_ODDS,
   BROODERS, SENTINELS, DROWNERS, DEEP_ROOMS, SUMMIT_BOSSES,
   GLOAM_TELEGRAPH_MS, GLOAM_STEP_MS, GLOAM_ACTIVE_MS, GLOAM_AFTERMATH_MS,
-  SPATE_ROOMS, SPATE_COURSE, SPATE_INDEX, SPATE_BITE, SPATE_SWEEP_ODDS, SPATE_CARRY_ODDS, ROAD_FORDS,
+  SPATE_BITE, ROAD_FORDS,
   CARRIER_TELEGRAPH_MS, CARRIER_ACTIVE_MIN_MS, CARRIER_ACTIVE_MAX_MS, CARRIER_AFTERMATH_MS,
   CARRIER_FROM, CARRIER_TO, CARRIER_STRIDE, CARRIER_SLOW_MULT, CARRIER_ESCORT, CARRIER_ESCORT_ROOMS, CARRIER_SATCHEL,
   CRAB_TELEGRAPH_MS, CRAB_ACTIVE_MS, CRAB_RETREAT_MS, CRAB_HORDE, CRAB_WAVE, CRAB_WAVE_MS, CRAB_DEVIL_ODDS, CRAB_STRIDE,
   CRAB_ROAD_MOUTHS, CRAB_ROAD_REACH, CRAB_BANDS,
-  SPATE_SWEEP_MIN, SPATE_SWEEP_MAX, SPATE_TELEGRAPH_MS, SPATE_ACTIVE_MIN_MS, SPATE_ACTIVE_MAX_MS, SPATE_AFTERMATH_MS,
   FORTRESS_BANDS, SURFACE_BANDS, DEEP_HEARD_BANDS, KEEP_HEARD_BANDS, FEN_HEARD_BANDS, WANT_HEARD_BANDS, GLOAM_HEARD_BANDS, MOUNTAIN_HEARD_BANDS,
   RUT_TELEGRAPH_MS, RUT_ACTIVE_MIN_MS, RUT_ACTIVE_MAX_MS, RUT_AFTERMATH_MS,
   RUT_DEER, RUT_WOLVES, RUT_WOLF_DELAY_MS, RUT_ROAR_EVERY_MS, RUT_ROAR_ODDS,
@@ -73,7 +72,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, DAY_SKY, WEATHER_DAY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, NIGHT_STARS_TURN, NIGHT_AURORA, NIGHT_COMET, DAY_SKY, WEATHER_DAY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_END_ODDS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -117,7 +116,7 @@ const POOL: [string, number, string][] = [
   ["boil", 2, "warrens"], ["wake", 2, "warrens"],
   ["exhale", 2, "deep"], ["song", 2, "deep"],
   ["gloam", 2, "upper"], ["want", 2, "gate"],
-  ["lights", 2, "road"], ["spate", 2, "road"], ["carrier", 2, "road"],
+  ["lights", 2, "road"], ["carrier", 2, "road"], // the spate is gone (rome, 2026-11-11): the beck no longer floods the road
   // The escape is not drawn for either (rome, 2026-10-27): at one ticket in 39
   // it came about once in sixty hours of somebody being on, so nobody met it.
   // It keeps its own clock now, about once a day (tickEscape).
@@ -249,12 +248,11 @@ function rainLeaves(z: ZoneDO, st: EventState, band: string, now: number): strin
   z.events.set(AFTER_PREFIX + band, { phase: "aftermath", until: Math.max(had?.until ?? 0, now + keep), data: sky });
   if (st.since) delete st.since[band];
   // A settled rain loads the die (BIAS, not trigger - the law at the top of
-  // this file) on the ground it fell on: it banks water, so the road's next roll
-  // draws the beck, and it soaks the graves, so the dens' next draws the fever.
+  // this file) on the ground it fell on: it soaks the graves, so the dens' next
+  // draws the fever.
   // Charged as it LEAVES that ground, whether it stops there or moves on: it
   // used to charge only where it happened to be when it stopped, and a rain
   // that sat all day on the road and then drifted off left the beck dry.
-  if (st.data === "settled" && band === "road") chargeBand(z, "road", "spate");
   if (st.data === "settled") feverSooner(z, band, now); // and soaks the graves on that ground
   return going ? undefined : sky;
 }
@@ -351,16 +349,6 @@ export function keepRoom(z: ZoneDO, roomId: string): boolean {
 // z.isDark ORs this in with DARK_ROOMS, so every blind rule (look, chips,
 // torch prose, lurker law) applies without knowing the dark can walk.
 // The room rides EventState.data: a deploy mid-drift doesn't blink it out.
-/** Is the beck up over this room right now? The one read every spate rule uses. */
-export function spated(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "spate") === "active" && SPATE_ROOMS.has(roomId);
-}
-
-/** ...and is it draining? The aftermath is walkable, and worth walking. */
-export function silted(z: ZoneDO, roomId: string): boolean {
-  return phaseOf(z, "spate") === "aftermath" && SPATE_ROOMS.has(roomId);
-}
-
 export function gloamed(z: ZoneDO, roomId: string): boolean {
   const st = z.events.get("gloam");
   return !!st && st.phase === "active" && st.data === roomId;
@@ -858,14 +846,6 @@ export function saysWeather(clause: string, wx: "snow" | "rain" | "fog" | ""): b
 }
 export function skyClause(z: ZoneDO, roomId: string): string {
   if (roomId === boilRoom(z)) return " The floor is a river of rats, pouring through.";
-  if (SPATE_ROOMS.has(roomId)) {
-    switch (phaseOf(z, "spate")) {
-      case "telegraph": return " The beck has gone brown and it is loud — much louder than it was — and it is climbing the bank while you watch.";
-      case "active": return " The beck is OVER this ground, brown and fast and carrying wood, and it is pushing at your legs.";
-      case "aftermath": return " The water has dropped and left everything under a skin of silt, printed all over with what the flood brought down.";
-      default: break;
-    }
-  }
   if (fordUp(z, roomId)) {
     return " The rain has the ford up — brown water running over the gravel and pushing at your legs. Wade it and pay, or go round by the bridge.";
   }
@@ -1342,7 +1322,7 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   // sun, no moon, no stars (zone-util skyCovered), at whatever hour it is.
   if (skyCovered() && /^(the )?(sky|cloud|clouds|weather|lid|overcast)?$/i.test((arg ?? "").trim()))
     return SKY_COVERED[isNight() ? 3 : isDawn() ? 0 : isDusk() ? 2 : 1]!;
-  if (isNight()) return `${SKY_NIGHT} ${MOON_SKY[isFullMoon() ? 0 : moonPhase()] ?? MOON_SKY[6]}`;
+  if (isNight()) return `${SKY_NIGHT} ${MOON_SKY[isFullMoon() ? 0 : moonPhase()] ?? MOON_SKY[6]}` + (skyCovered() ? "" : " " + nightExtras());
   // THE CLEAR DAY says so: the picture has no cloud in it today, so neither do the words.
   if (skyClear()) return SKY_CLEAR;
   // AND ANY OTHER HOUR SAYS WHICH HOUR IT IS (rome, 2026-11-05: at dusk this fell
@@ -1352,6 +1332,13 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   return null;
 }
 
+// THE NIGHT'S EXTRAS, said as the page draws them (public.ts SKY_FX): the stars
+// turning and falling on every night they show, the northern lights and the
+// comet on their own nights (zone-util auroraNight, cometNight).
+export function nightExtras(now = Date.now(), stars = true): string {
+  const day = Math.floor(now / DAY_CYCLE_MS);
+  return [stars ? NIGHT_STARS_TURN : "", auroraNight(day) ? NIGHT_AURORA : "", cometNight(day) ? NIGHT_COMET : ""].filter(Boolean).join(" ");
+}
 // THE PART OF THE DAY, said under a room's words as the night line is at night
 // (rome, 2026-11-08). The same grey the picture uses (zone artSkyFor): covered,
 // the after-rain cloud not yet cleared, rain next door, or weather overhead.
@@ -1794,7 +1781,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickWant(z, now);
   await tickEscape(z, now);
   await tickLights(z, now);
-  await tickSpate(z, now);
+  z.events.delete("spate"); // the spate is gone (rome, 2026-11-11): a beck left up by an older build drains at once
   await tickCarrier(z, now);
   await tickCrabs(z, now);
   await tickCrows(z, now);
@@ -2236,7 +2223,7 @@ async function tickCarrier(z: ZoneDO, now: number): Promise<void> {
       // Weather taxes the run (exposure economy): rain and mud stretch his
       // stride, and high water over the road stops him until it drops. He does
       // not run; he is not in a hurry to die for the bag.
-      const blocked = spated(z, carrier.roomId) || seaUnder(z, carrier.roomId);
+      const blocked = seaUnder(z, carrier.roomId);
       if (blocked) {
         carrier.nextWanderAt = Math.max(carrier.nextWanderAt, now + 30_000);
       } else {
@@ -2441,127 +2428,6 @@ export async function tickCrabs(z: ZoneDO, now: number): Promise<void> {
       st.until = NEVER;
       break;
     }
-  }
-}
-
-// ---- THE SPATE (the east road) ----
-// The beck rises and takes the low way. See zone-data SPATE_COURSE for the full
-// reasoning; the short version is that the east road was built as three
-// independent routes, and this is the thing that makes that a decision you make
-// rather than a fact about the map you never notice.
-async function tickSpate(z: ZoneDO, now: number): Promise<void> {
-  let st = z.events.get("spate");
-  if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("spate", st); }
-
-  // THE WATER WORKS EVERY BEAT IT IS UP, not only on the phase changes. Cold and
-  // force, and then it takes you: one room DOWNSTREAM (a lower index on the
-  // course), and only ever to a room the beck actually connects to. It cannot
-  // pen anybody in — every flooded room keeps its own dry exits, and the sweep
-  // only moves you along a way you could have walked yourself.
-  if (st.phase === "active") {
-    for (const s of [...z.sessions.values()]) {
-      if (!spated(z, s.roomId) || z.outOfWorld(s) || s.hp <= 0) continue;
-      s.hp -= SPATE_BITE;
-      if (s.hp <= 0) {
-        z.send(s, "The beck takes your feet, and then the rest of you, and the last of it is stone and cold and no air at all.", "death big");
-        await z.onPlayerDeath(s, null);
-        continue;
-      }
-      // WHERE THE WATER PUTS YOU. Downstream is a lower index on the course.
-      // A room with a DRY exit (the mill, the flats, the crossings) gives you a
-      // real choice: climb out sideways, or be taken. A room without one — and
-      // the gill is a cleft with water in the bottom and no floor either side —
-      // gives you none, so there the water always takes you. That is the whole
-      // reason this cannot pen anyone in: the places with no way out are exactly
-      // the places it carries you OUT of.
-      const here = SPATE_INDEX.get(s.roomId) ?? 0;
-      const exitsOf = (id: string) => (z.world!.exits.get(id) ?? []).filter((e) => !e.key_item);
-      const hasDryExit = exitsOf(s.roomId).some((e) => !SPATE_ROOMS.has(e.to_room));
-      const stepDown = (id: string) => {
-        const at = SPATE_INDEX.get(id) ?? 0;
-        return exitsOf(id)
-          .filter((e) => (SPATE_INDEX.get(e.to_room) ?? 99) < at)
-          .sort((a, b) => (SPATE_INDEX.get(a.to_room) ?? 0) - (SPATE_INDEX.get(b.to_room) ?? 0))[0];
-      };
-      const first = stepDown(s.roomId);
-      if (first && (!hasDryExit || chance(SPATE_SWEEP_ODDS))) {
-        // It is fast. A sweep is several rooms, not one — otherwise a flush out
-        // of the top of the gill would be twenty beats of standing in a river,
-        // and twenty beats of anything is a death rather than an event.
-        const from = s.roomId;
-        let step = first;
-        let moved = 0;
-        const take = randInt(SPATE_SWEEP_MIN, SPATE_SWEEP_MAX);
-        while (step && moved < take) {
-          s.roomId = step.to_room;
-          moved++;
-          step = stepDown(s.roomId);
-        }
-        const where = z.world!.rooms.get(s.roomId)?.name ?? "somewhere lower";
-        z.send(s, `The water takes your feet and you go with it — ${first.dir} and down, fast, over stone, until it lets you go at ${where}. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin");
-        z.roomFeed(from, `${s.name} is taken off their feet and swept ${first.dir}.`, s.pubkey, false);
-        z.roomFeed(s.roomId, `${s.name} comes down the beck and fetches up here, streaming.`, s.pubkey, false);
-        z.send(s, z.describeRoom(s));
-        z.sendCtx(s);
-      } else {
-        z.send(s, `The beck drives against your legs, cold enough to take the breath, and does not let up. [${hpLabel(s.hp, s.maxHp)}]`, "dmgin");
-      }
-      z.sendStatus(s);
-    }
-  }
-
-  if (now < st.until) return;
-  switch (st.phase) {
-    case "idle": {
-      st.phase = "telegraph";
-      st.until = now + SPATE_TELEGRAPH_MS;
-      feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The beck goes brown between one look and the next, and the noise of it climbs. Somewhere up the gill it has already rained.");
-      z.roomFeedBands(ROAD_HEARD_BANDS, "Word comes off the east road: the beck is up and rising, and the low way will not be a way for much longer.", "evt");
-      // Everything living on the water knows before you do, and starts climbing.
-      for (const c of z.creatures.values()) {
-        if (SPATE_ROOMS.has(c.roomId) && !DROWNERS.has(c.templateId)) {
-          c.nextWanderAt = Math.min(c.nextWanderAt, now + randInt(2000, 10_000));
-        }
-      }
-      break;
-    }
-    case "telegraph": {
-      st.phase = "active";
-      st.until = now + randInt(SPATE_ACTIVE_MIN_MS, SPATE_ACTIVE_MAX_MS);
-      feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The beck comes up over the bank all at once, and the low way stops being ground.");
-      z.roomFeedBands(ROAD_HEARD_BANDS, "The beck is over its banks the whole length of the east road. Whatever is down there is in it now.", "evt");
-      break;
-    }
-    case "active": {
-      st.phase = "aftermath";
-      st.until = now + SPATE_AFTERMATH_MS;
-      // ...AND WHAT IT CARRIED SETTLES LOW. The same law the tide already obeys,
-      // pointed along a valley instead of down a stair: the floor of every
-      // flooded room walks one step downstream. Anything lost up the gill
-      // collects in the flats and the millpond, which is the nearest thing this
-      // world has to a lost-property office and is emphatically not organised.
-      for (let i = SPATE_COURSE.length - 1; i >= 1; i--) {
-        const roomId = SPATE_COURSE[i];
-        const floor = z.ground.get(roomId);
-        if (!floor?.length) continue;
-        const kept: string[] = [];
-        const below = SPATE_COURSE[i - 1];
-        for (const id of floor) {
-          if (chance(SPATE_CARRY_ODDS)) {
-            z.ground.set(below, [...(z.ground.get(below) ?? []), id]);
-            z.stampFresh(below, id);
-          } else kept.push(id);
-        }
-        if (kept.length) z.ground.set(roomId, kept); else z.ground.delete(roomId);
-        z.refreshRoomCtx(roomId);
-        z.refreshRoomCtx(below);
-        z.addTrace(roomId, { kind: "scraps", at: now }); // silt, and what came down in it
-      }
-      feedWhere(z, (roomId) => SPATE_ROOMS.has(roomId), "The water drops as fast as it came up, and leaves the whole course under silt, printed all over with what it brought down.");
-      z.roomFeedBands(ROAD_HEARD_BANDS, "The beck drops back into its bed along the east road. Whatever it took, it has put down somewhere lower.", "evt");
-      break;
-    }
-    case "aftermath": { st.phase = "idle"; st.until = NEVER; break; }
   }
 }
 
@@ -3927,11 +3793,9 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
   }
   paleDrakeSnows(z, now);
   // THE MELT (8f), checked every beat, not just on the arc's clock: when the
-  // mountain's snow runs out, the burns rise — and the next road roll draws
-  // the spate (bias, never trigger). The season ends loudly.
+  // mountain's snow runs out, the burns rise. The season ends loudly.
   if (z.snowUntil && z.snowUntil < now) {
     z.snowUntil = 0;
-    chargeBand(z, "road", "spate");
     z.roomFeedBands(MOUNTAIN_HEARD_BANDS, MELT_LINE, "evt");
   }
   // THE THAW (5a): while the cold is coming out of the ground, the ice is
@@ -4516,6 +4380,18 @@ function seaCrest(z: ZoneDO): number {
 export function seaUnder(z: ZoneDO, roomId: string): boolean {
   const rank = SEA_ROOMS.get(roomId);
   return rank !== undefined && seaLevel(z) >= rank;
+}
+
+/**
+ * HOW MUCH WATER STANDS IN THIS ROOM ON SCREEN, 0-3, from whichever of the two
+ * floods has it: the crossing's sea (ranked by how far over the room's own mark
+ * the water is) and the tideways' tide (likewise, by the room's level). The page draws the
+ * water over the dry plate at this depth; 0 draws nothing.
+ */
+export function roomWater(z: ZoneDO, roomId: string): number {
+  if (seaUnder(z, roomId)) return Math.min(3, Math.max(1, seaLevel(z) - (SEA_ROOMS.get(roomId) ?? 1) + 1));
+  if (tideFlooded(z, roomId)) return Math.min(3, tideRank - floodRank(roomId) + 1);
+  return 0;
 }
 
 /**

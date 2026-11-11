@@ -158,7 +158,7 @@ import { FORGE_STOCK,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS, LB_CHART_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  STARVING_AT, WHITE_ROE, FEVER_RAT, bossStands, DARK_ROOMS, seesArt, ART_ROOMS, SEA_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  STARVING_AT, WHITE_ROE, FEVER_RAT, bossStands, DARK_ROOMS, seesArt, ART_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -5397,7 +5397,7 @@ export class ZoneDO implements DurableObject {
           // moment this one is shown up: it comes up, it swings, and the arms
           // close on nothing. It is also the one drowner flaw a player can use
           // on purpose, by backing onto dry ground.
-          const inWater = events.tideFlooded(this, victim.roomId) || events.seaUnder(this, victim.roomId) || events.spated(this, victim.roomId);
+          const inWater = events.tideFlooded(this, victim.roomId) || events.seaUnder(this, victim.roomId);
           const landBound = creature.traits?.includes("land-bound") && !inWater;
           if (DROWNERS.has(creature.templateId) && !landBound && !victim.seizedBy && chance(seizeOdds)) {
             victim.seizedBy = creature.id;
@@ -8099,10 +8099,15 @@ export class ZoneDO implements DurableObject {
     // ...BUT WEATHER IN THE AIR IS WHAT THE NIGHT IS (2026-11-10): snow, fog or
     // rain in the picture, and the words said an open black sky or the moon.
     const nightWx = !indoors && OUTDOOR_ROOMS.has(room.id) && isNight() ? events.weatherSky(this, room.id) : "";
+    // THE STARS TURNING AND FALLING are the sky as it is, so they are said in
+    // this same line wherever the page draws them (2026-11-11).
+    const starSky = !indoors && OUTDOOR_ROOMS.has(room.id) && isNight() ? this.skyFor(room.id) : "";
+    const starry = starSky === "night" || starSky === "moon";
     if (nightWx) lines.push(LORE_LINE + WEATHER_NIGHT[nightWx]);
     else if (!indoors && OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
       lines.push(LORE_LINE + (isFullMoon()
-        ? "A full moon rides high and white — the grounds lie almost as bright as day."
+        ? (starry ? "A full moon rides high and white among the slowly wheeling stars, and now and then one falls — the grounds lie almost as bright as day."
+          : "A full moon rides high and white — the grounds lie almost as bright as day.")
         // Whose light it is matters here: this line runs for anyone the room is
         // lit FOR, and telling a man he can see past "your light" when the
         // flame is in his companion's fist is the same small lie as the rest of
@@ -8113,10 +8118,19 @@ export class ZoneDO implements DurableObject {
         // and the roofed rooms three paces away are enclosed. The line names
         // the open sky, so the one signal that separates the two kinds of room
         // is in the sentence that only ever fires in one of them.
-        : this.carriesLight(session)
+        : starry
+          ? (this.carriesLight(session)
+            ? "Night's fully down and the sky over you is open and black, the stars wheeling slowly round in it and now and then one falling — past your light, so is everything else."
+            : "Night's fully down and the sky over you is open and black, the stars wheeling slowly round in it and now and then one falling — past the light you're standing in, so is everything else.")
+          : this.carriesLight(session)
           ? "Night's fully down and the sky over you is open and black — past your light, so is everything else."
           : "Night's fully down and the sky over you is open and black — past the light you're standing in, so is everything else."));
     }
+    // THE NIGHT'S EXTRAS (2026-11-11): the northern lights and the comet, on a
+    // line of their own, under exactly the skies the page draws them in (the
+    // clear night, the full moon, the red moon). The red moon has no night line
+    // above, so its stars are said here.
+    if (starry || starSky === "blood") { const ex = events.nightExtras(Date.now(), !starry); if (ex) lines.push(LORE_LINE + ex); }
     // ...AND EVERY OTHER PART OF THE DAY (rome, 2026-11-08), the same look.
     if (!indoors && OUTDOOR_ROOMS.has(room.id) && !isNight()) {
       const day = events.dayLine(this, room.id);
@@ -9319,9 +9333,9 @@ export class ZoneDO implements DurableObject {
           // the tide's phase, because a room three ranks under is not the same
           // picture as one just awash. Absent (and so nothing drawn) for any
           // room the sea does not reach, which is most of the world.
-          sea: seesArt(session.pubkey) && events.seaUnder(this, session.roomId)
-            ? Math.max(1, events.seaLevel(this) - (SEA_ROOMS.get(session.roomId) ?? 1) + 1)
-            : undefined,
+          // The tideways' tide and the river in spate are sent the same way
+          // (events.roomWater), now the water is drawn over the dry plate.
+          sea: seesArt(session.pubkey) ? events.roomWater(this, session.roomId) || undefined : undefined,
           // Lighting and visible sky are separate: a roof can admit daylight.
           sky: (session.artSky = this.artSkyFor(session)),
           // A RAINBOW over a sky that cleared off the rain (events.rainbowOver); the
@@ -9410,7 +9424,12 @@ export class ZoneDO implements DurableObject {
     // gatehouse is (outOfWorld), but the picture, the bar and the chips are of
     // where you actually are: at the gate, on your heels over your kit.
     if (this.inGatehouse.has(session.pubkey)) return "in";
-    const openSkyForArt = this.world!.entryRooms.has(session.roomId) || ROOF_SHOWS_OUTSIDE.has(session.roomId);
+    return this.skyFor(session.roomId);
+  }
+  // THE SKY OVER A ROOM, as the picture draws it, for anyone (the words read it
+  // too: the night's extras are said only under a sky that draws them).
+  public skyFor(roomId: string): string {
+    const openSkyForArt = this.world!.entryRooms.has(roomId) || ROOF_SHOWS_OUTSIDE.has(roomId);
     // A ROOF IN OPEN COUNTRY IS NOT A FORTRESS INTERIOR (rome, 2026-09-20: the
     // Carter's Rest showing him daylight on a night the rest of the world was
     // dark).
@@ -9437,19 +9456,19 @@ export class ZoneDO implements DurableObject {
     // rain, the fog - beside the covered flag, and the CLIENT keeps the weather
     // off the floor (paintScene: a roof shows the weather in its sky and keeps
     // its ground dry). Only the genuinely sunless places still answer "in".
-    const roofed = !OUTDOOR_ROOMS.has(session.roomId) && !openSkyForArt
-      && OUTDOOR_REGIONS.has(this.world!.rooms.get(session.roomId)?.region ?? "");
+    const roofed = !OUTDOOR_ROOMS.has(roomId) && !openSkyForArt
+      && OUTDOOR_REGIONS.has(this.world!.rooms.get(roomId)?.region ?? "");
     const seesOut = openSkyForArt || roofed;
     // grey while the ground is wet, unless its sky cleared off the rain (AFTER_RAIN_CLEARS);
     // rain next door is grey whatever, its cloud is overhead
     // ...and the covered spells, which are the same grey sky without the rain
     // (zone-util skyCovered: no sun, no moon, no stars; `look sky` says so too)
-    const wet = (events.wxPhase(this, "rain", session.roomId) === "aftermath" && !events.afterRainCleared(this, session.roomId))
-      || !!(seesOut ? events.rainNextDoor(this, session.roomId) : events.rainNearby(this, session.roomId)) || skyCovered();
-    return (!OUTDOOR_ROOMS.has(session.roomId) && !seesOut) ? "in"
-    : (seesOut ? events.weatherNow(this, session.roomId) === "snow" : events.snowed(this, session.roomId)) ? "snow"
-    : (seesOut ? events.weatherNow(this, session.roomId) === "fog" : events.foggy(this, session.roomId)) ? "fog"
-    : (seesOut ? events.weatherNow(this, session.roomId) === "rain" : events.raining(this, session.roomId)) ? "rain"
+    const wet = (events.wxPhase(this, "rain", roomId) === "aftermath" && !events.afterRainCleared(this, roomId))
+      || !!(seesOut ? events.rainNextDoor(this, roomId) : events.rainNearby(this, roomId)) || skyCovered();
+    return (!OUTDOOR_ROOMS.has(roomId) && !seesOut) ? "in"
+    : (seesOut ? events.weatherNow(this, roomId) === "snow" : events.snowed(this, roomId)) ? "snow"
+    : (seesOut ? events.weatherNow(this, roomId) === "fog" : events.foggy(this, roomId)) ? "fog"
+    : (seesOut ? events.weatherNow(this, roomId) === "rain" : events.raining(this, roomId)) ? "rain"
     // A BLOOD MOON IS ITS OWN NIGHT. It was collapsing into plain dark,
     // so the one night in the calendar the whole world changes colour —
     // red eyes in the hollow ones, the moon door lit red — looked

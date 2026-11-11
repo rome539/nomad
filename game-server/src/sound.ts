@@ -309,7 +309,7 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
       snow: events.snowed(z, roomId),
       mud: events.muddy(z, roomId),
       seaUp: events.seaUnder(z, roomId),
-      runUp: events.fordUp(z, roomId) || events.spated(z, roomId) || events.fenUp(z, roomId),
+      runUp: events.fordUp(z, roomId) || events.fenUp(z, roomId),
       hour: isNight() ? "night" : isDusk() || isDawn() ? "low" : "day",
       fog: events.wxPhase(z, "fog", roomId) === "active",
       // where the cold actually bites (events.coldBites): open ground under it,

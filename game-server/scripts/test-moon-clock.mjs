@@ -12,7 +12,9 @@ try {
  const clock=await import(pathToFileURL(outfile));
  const zone=await readFile(new URL('../src/zone.ts',import.meta.url),'utf8');
  assert.ok(zone.includes('? moonriseLine(now)'),'nightfall uses the tested calendar announcement');
- const method=zone.match(/  public artSkyFor\(session: Session\): string \| undefined \{[\s\S]*?^  \}/m)[0];
+ // artSkyFor hands the room to skyFor (2026-11-11); read as one, as it was
+ const sf=zone.match(/  public skyFor\(roomId: string\): string \{\n([\s\S]*?)^  \}/m)[1];
+ const method=zone.match(/  public artSkyFor\(session: Session\): string \| undefined \{[\s\S]*?^  \}/m)[0].replace('    return this.skyFor(session.roomId);\n','    const roomId=session.roomId;\n'+sf);
  const {code}=await transform(method.replace('public artSkyFor','function artSkyFor'),{loader:'ts'});
  let now=0,weather='';
  const c={seesArt:(pk)=>pk==='synthetic',OUTDOOR_ROOMS:new Set(['outside']),OUTDOOR_REGIONS:new Set(['out','road','wood','mountain','den','crossing']),ROOF_SHOWS_OUTSIDE:new Set(),events:{weatherNow:()=>weather,snowed:()=>weather==='snow',foggy:()=>weather==='fog',raining:()=>weather==='rain',phaseOf:()=>'',wxPhase:()=>'',afterRainCleared:()=>true,rainNearby:()=>false}};

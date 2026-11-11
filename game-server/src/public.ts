@@ -10472,11 +10472,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "132";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "64";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "27";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "48";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "28";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "50";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -12550,6 +12550,11 @@ function skyDayHash(d) { // zone-util skyDayHash, line for line
   h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
   return h >>> 0;
 }
+// THE NIGHT'S EXTRAS ON THEIR NIGHTS (zone-util auroraNight, cometNight, line for
+// line), so the room's words name what the sky is drawing.
+var SKY_AURORA_EVERY = 9, SKY_COMET_EVERY = 29, SKY_COMET_NIGHTS = 3; // zone-data
+function skyAuroraNight(d) { return skyDayHash(d ^ 0x51a7) % SKY_AURORA_EVERY === 0; }
+function skyCometNight(d) { return d % SKY_COMET_EVERY < SKY_COMET_NIGHTS; }
 function skyCloudsTonight(list) {
   var h = skyDayHash(skyRoll);
   if (h % SKY_CLEAR_EVERY === 0) return { set: [], dir: 1 };
@@ -12599,7 +12604,15 @@ function skyNightThrough(now) {
 function skyMoonAt(f) {
   return { x: 0.08 + 0.84 * f, y: 0.22 - 0.08 * Math.sin(Math.PI * f) };
 }
+// THE NIGHT'S EXTRAS (2026-11-10): shooting stars, the stars turning through
+// the night, an aurora and a comet. ON IN THE GAME since 2026-11-11, with the
+// room's words saying them (events.nightExtras): on every night the stars are
+// drawn they turn and now and then one falls; the aurora and the comet keep
+// their own nights (skyAuroraNight, skyCometNight). The preview panel's buttons
+// force each on whatever the night, to be looked at.
+var SKY_FX = { shoot: false, turn: false, aurora: false, comet: false, fast: false, shootNow: 0 };
 var skyDrift = (function () {
+  var shots = [], shotNext = 0, shotSeen = 0, shotFast = false, turnStars = {};
   var layer = null, tiles = [], starCv = null, starCtx = null, stars = {};
   var layCv = null, layCtx = null, lay = null, layArt = {}, layStars = {}, layRow = {};
   var name = "", dir = 1, frame = null, stamp = 0, t = 0, geo = null, img = "";
@@ -12644,6 +12657,93 @@ var skyDrift = (function () {
     }
     return (layStars[n] = out);
   }
+  // The stars for a turning sky: scattered round the pole they wheel about (a
+  // point above the top of the picture), so the turn never brings an empty
+  // corner round. [radius 0-1, angle, brightness, phase, rate]
+  function layTurnList(n, count) {
+    if (turnStars[n]) return turnStars[n];
+    var s = 9173, rnd = function () { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+    var out = [];
+    for (var i = 0; i < count * 5; i++) { var b = rnd(); out.push([Math.sqrt(rnd()), rnd() * 6.2832, b * b, rnd() * 6.3, .5 + rnd() * 1.6]); }
+    return (turnStars[n] = out);
+  }
+  // THE AURORA AND THE COMET ARE DRAWN IN THE PLATES' OWN GRAIN (rome,
+  // 2026-11-10: smooth light looked off beside the pixel pictures). Both are
+  // made of square blocks the size of a plate's pixel, in a few flat steps of
+  // strength with a checker between steps, as the painted skies shade.
+  var auCv = null, auCtx = null, auImg = null;
+  var BAYER = [0, .5, .75, .25];
+  function drawAurora(c, w, h, B) {
+    var bw = Math.ceil(w / B), bh = Math.ceil(h * .5 / B), tt = t * (SKY_FX.fast ? .5 : .12);
+    if (!auCv) { auCv = document.createElement("canvas"); auCtx = auCv.getContext && auCv.getContext("2d"); }
+    if (!auCtx) return;
+    if (auCv.width !== bw || auCv.height !== bh) { auCv.width = bw; auCv.height = bh; auImg = null; }
+    if (!auImg) auImg = auCtx.createImageData(bw, bh);
+    var d = auImg.data, hb = h / B, STEPS = 12, TOP = .38;
+    for (var z = 0; z < d.length; z++) d[z] = 0;
+    for (var k = 0; k < 2; k++) {
+      // green at the foot going to blue above; the farther curtain violet and fainter
+      var c0 = k ? [112, 96, 196] : [74, 196, 150], c1 = k ? [84, 78, 176] : [70, 112, 204];
+      for (var x = 0; x < bw; x++) {
+        var u = x / bw * 6.3;
+        var foot = hb * (.23 + .04 * k + .035 * Math.sin(u * 1.3 + tt * 1.7 + k * 2) + .02 * Math.sin(u * 3.1 - tt * 2.3 + k));
+        var lift = hb * (.13 + .04 * Math.sin(u * 2.2 + tt + k * 1.3) + .025 * Math.sin(u * 5.3 - tt * 3.1));
+        var a = (k ? .7 : 1) * (.5 + .4 * Math.sin(u * 1.7 - tt * 1.9 + k) + .1 * Math.sin(u * 9.1 + tt * 4.3));
+        if (a <= .02 || lift < 1) continue;
+        var y1 = Math.min(bh - 1, Math.floor(foot)), y0 = Math.max(0, Math.ceil(foot - lift));
+        for (var y = y1; y >= y0; y--) {
+          var f = (foot - y) / lift, v = a * (f < .14 ? f / .14 : 1 - (f - .14) / .86);
+          var q = Math.floor(v * STEPS + BAYER[(x & 1) + ((y & 1) << 1)]) / STEPS;
+          if (q <= 0) continue;
+          var i = (y * bw + x) * 4, al = Math.min(255, d[i + 3] + q * TOP * 255), mix = d[i + 3] / (al || 1);
+          d[i] = d[i] * mix + (c0[0] + (c1[0] - c0[0]) * f) * (1 - mix);
+          d[i + 1] = d[i + 1] * mix + (c0[1] + (c1[1] - c0[1]) * f) * (1 - mix);
+          d[i + 2] = d[i + 2] * mix + (c0[2] + (c1[2] - c0[2]) * f) * (1 - mix);
+          d[i + 3] = al;
+        }
+      }
+    }
+    auCtx.putImageData(auImg, 0, 0);
+    var smooth = c.imageSmoothingEnabled;
+    c.imageSmoothingEnabled = false; c.globalCompositeOperation = "lighter";
+    c.drawImage(auCv, 0, 0, bw * B, bh * B);
+    c.globalCompositeOperation = "source-over"; c.imageSmoothingEnabled = smooth;
+  }
+  // A small soft head and a thin straight tail going up and away from it,
+  // fading: between the first smooth wedge and the blocks that came after.
+  function drawComet(c, x, y, B) {
+    var len = B * 22, tx = x + len, ty = y - len * .6;
+    var g = c.createLinearGradient(x, y, tx, ty);
+    g.addColorStop(0, "rgba(214,226,250,.6)"); g.addColorStop(.3, "rgba(196,212,246,.25)"); g.addColorStop(1, "rgba(196,212,246,0)");
+    c.strokeStyle = g; c.lineWidth = Math.max(1.5, B * 1.2); c.lineCap = "round";
+    c.beginPath(); c.moveTo(x, y); c.lineTo(tx, ty); c.stroke();
+    var r = B * 2.5, hg = c.createRadialGradient(x, y, 0, x, y, r);
+    hg.addColorStop(0, "rgba(246,249,255,.95)"); hg.addColorStop(.45, "rgba(214,226,250,.4)"); hg.addColorStop(1, "rgba(214,226,250,0)");
+    c.fillStyle = hg; c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // A streak that is gone in under a second: now and then, or when asked for.
+  function drawShots(c, w, h, px) {
+    if (!!(SKY_FX.fast || SKY_FX.shoot) !== shotFast) { shotFast = !!(SKY_FX.fast || SKY_FX.shoot); shotNext = 0; }
+    { // every starry night, now and then (the preview's "shooting stars" runs them fast)
+      var gap = SKY_FX.fast || SKY_FX.shoot ? 2 + Math.random() * 4 : 240 + Math.random() * 900;
+      if (!shotNext) shotNext = t + gap; else if (t >= shotNext) { shots.push(0); shotNext = t + gap; }
+    }
+    if (SKY_FX.shootNow !== shotSeen) { shotSeen = SKY_FX.shootNow; shots.push(0); }
+    for (var i = shots.length - 1; i >= 0; i--) {
+      if (!shots[i]) {
+        var a = .3 + .6 * Math.random(), len = w * (.14 + .14 * Math.random()), way = Math.random() < .5 ? -1 : 1;
+        shots[i] = { x: w * (.15 + .7 * Math.random()), y: h * (.05 + .25 * Math.random()), dx: Math.cos(a) * len * way, dy: Math.sin(a) * len, at: t, dur: .5 + .5 * Math.random() };
+      }
+      var sh = shots[i], p = (t - sh.at) / sh.dur;
+      if (p >= 1) { shots.splice(i, 1); continue; }
+      var hx = sh.x + sh.dx * p, hy = sh.y + sh.dy * p, tail = Math.min(p, .35);
+      var tx = hx - sh.dx * tail, ty = hy - sh.dy * tail, al = Math.sin(Math.PI * p);
+      var g = c.createLinearGradient(tx, ty, hx, hy);
+      g.addColorStop(0, "rgba(235,240,255,0)"); g.addColorStop(1, "rgba(245,248,255," + (.9 * al).toFixed(3) + ")");
+      c.strokeStyle = g; c.lineWidth = Math.max(1.2, px * 1.6); c.lineCap = "round";
+      c.beginPath(); c.moveTo(tx, ty); c.lineTo(hx, hy); c.stroke();
+    }
+  }
   // A CLOUD STRIP IS LAID END TO END AT ITS OWN SIZE, THEN SHRUNK ONCE (rome,
   // 2026-11-03: a black line where the copies met). Shrinking each copy on its
   // own softens its edge to see-through, and the dark sky showed in the join.
@@ -12687,20 +12787,42 @@ var skyDrift = (function () {
     var mx = at.x * w, my = at.y * h;
     if (!lay.disc) { mx = -1e6; my = -1e6; } // no moon tonight: nothing for the stars to fade near
     // the stars, fading out in the moon's light
-    var list = layStarList(name, lay.stars), px = Math.max(1, s);
+    // (the night's extras, off in the game: see SKY_FX)
+    var fxNight = lay.stars > 0 && !lay.path;
+    var tnAurora = SKY_FX.aurora || skyAuroraNight(skyRoll), tnComet = SKY_FX.comet || skyCometNight(skyRoll);
+    var turning = fxNight, poleX = w * .5, poleY = -h * .45, low = ft + .78 * fh;
+    var turnA = SKY_FX.fast ? t * .05 : (skyNightThrough(Date.now()) - .5) * 1.1;
+    var poleR = Math.hypot(Math.max(poleX, w - poleX), Math.min(h, low) - poleY);
+    var list = turning ? layTurnList(name, lay.stars) : layStarList(name, lay.stars), px = Math.max(1, s);
     for (var i = 0; i < list.length; i++) {
       var st = list[i], v = Math.sin(t * st[4] + st[3]);
       if (v <= 0) continue;
-      var sx = (w - fw) / 2 + st[0] * fw, sy = ft + st[1] * fh;
+      var sx, sy, thin = 1;
+      if (turning) {
+        sx = poleX + Math.cos(st[1] + turnA) * st[0] * poleR; sy = poleY + Math.sin(st[1] + turnA) * st[0] * poleR;
+        if (sy < 0 || sy > low) continue;
+        thin = Math.pow(1 - (sy - ft) / (low - ft), .8); // thinner toward the low sky, as the still field is
+      } else { sx = (w - fw) / 2 + st[0] * fw; sy = ft + st[1] * fh; }
       if (sx < 0 || sx > w || sy > h) continue;
       var near = Math.min(1, Math.max(0, (Math.hypot(sx - mx, sy - my) - md) / (md * 2.5)));
-      var a = .85 * v * (.35 + .65 * st[2]) * near;
+      var a = .85 * v * (.35 + .65 * st[2]) * near * thin;
       if (a < .02) continue;
       var r = px * (1 + 1.6 * v * (.5 + st[2]));
       var g = c.createRadialGradient(sx, sy, 0, sx, sy, r);
       var sr = lay.starRgb || "232,238,255";
       g.addColorStop(0, "rgba(" + sr + "," + a.toFixed(3) + ")"); g.addColorStop(1, "rgba(" + sr + ",0)");
       c.fillStyle = g; c.fillRect(sx - r, sy - r, r * 2, r * 2);
+    }
+    if (fxNight) {
+      var fxB = Math.max(2, Math.round(s * 3)); // a plate's pixel, on screen
+      // the aurora in finer grain than a plate's pixel, and many steps: soft, but not smooth
+      if (tnAurora) drawAurora(c, w, h, Math.max(1.5, s * 1.6));
+      if (tnComet) {
+        var cx = w * .68, cy = h * .15;
+        if (turning) { var ca = Math.atan2(cy - poleY, cx - poleX) + turnA, cr = Math.hypot(cx - poleX, cy - poleY); cx = poleX + Math.cos(ca) * cr; cy = poleY + Math.sin(ca) * cr; }
+        drawComet(c, cx, cy, fxB);
+      }
+      drawShots(c, w, h, px);
     }
     // the moon's cold light round it, then the disc
     if (lay.disc) {
@@ -12789,7 +12911,9 @@ var skyDrift = (function () {
     if (!active()) { stop(); return; }
     // Fifteen draws a second: at a screen every four minutes the sky moves
     // about a pixel a frame even at that rate, and the stars need no more.
-    if (stamp && now - stamp < 66) { frame = requestAnimationFrame(tick); return; }
+    // (a shooting star is gone in under a second: while one is crossing, every
+    // frame is drawn, or it steps across in a dozen jumps)
+    if (stamp && now - stamp < (shots.length ? 0 : 66)) { frame = requestAnimationFrame(tick); return; }
     t += stamp ? Math.min(.2, (now - stamp) / 1000) : 0;
     stamp = now;
     if (!geo) refit();
@@ -13271,6 +13395,10 @@ var lastSea = 0;
 // The prose still says the causeway is under; the picture is merely a state
 // behind, which is the same bargain every unpainted condition already makes.
 function floodSuffix(ground, cond) {
+  // THE PAINTED FLOOD PLATES ARE RETIRED (rome, 2026-11-11): the water is drawn
+  // over the dry plate by the room's effects layer (FX_FLOOD), at every hour
+  // and on every ground the floods reach, so no flood twin is asked for.
+  return "";
   if (!lastSea) return "";
   var have = FLOOD_SCENES[ground];
   if (!have) return "";
@@ -13705,6 +13833,11 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // walking off a flooded shoal onto a dry road has to put the sheet away, so
   // an absent field is zero rather than "leave it as it was".
   lastSea = sea || 0;
+  // ...and the water drawn over the plate stands that deep (the preview panel's
+  // slider, while it is up, stands in for the game's own depth).
+  // Never on the bridge: its deck is forty feet over the water (its region
+  // header), so the tide under it stands on nothing the picture shows.
+  FX_FLOOD = FX_FLOOD_PANEL >= 0 ? FX_FLOOD_PANEL : terrain === "bridge" ? 0 : FLOOD_DEPTHS[Math.min(3, lastSea)] || 0;
   if (roomKey) lastRoomKey = roomKey;
   // Cleared as well as set: walking out of a singular room and into ordinary
   // ground must stop naming the room, or the summit follows you down the hill.
@@ -14332,7 +14465,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
 // snow's plate is painted for snow, lanterns and all; the night, dawn and dusk
 // grades on it only darken it.
 var FX_UNDER_TINT = { moon: 1, eclipse: 1, blood: 1, dawn: 1, "wet-dawn": 1, "after-rain": 1, rain: 1, "rain-dark": 1, "rain-dawn": 1, "rain-dusk": 1, fog: 1, "snow-night": 1, "snow-dawn": 1, "snow-dusk": 1 };
-var fxCanvas = document.getElementById("scene-fx");
+var fxCanvas = document.getElementById("scene-fx"); var fxFilterKey = "", fxOwnWater = false;
 var sparkCanvas = document.getElementById("scene-sparks");
 var sparkCtx = sparkCanvas && sparkCanvas.getContext && sparkCanvas.getContext("2d");
 var mistCanvas = document.getElementById("scene-mist");
@@ -14341,6 +14474,46 @@ var fxMist = false;
 var fxGl = null, fxProg = null, fxU = {}, fxIndex = null, fxIndexAsked = false;
 var fxName = "", fxEntry = null, fxFrame = null, fxStamp = 0, fxT = 0, fxReady = false, fxSeq = 0;
 var fxTex = {}, fxMobTex = {}, fxEmbers = [], fxDust = [];
+var FX_FLOOD = 0; // the water standing in the room, 0 (none) to 1: set from the room's depth (lastSea)
+var FLOOD_PULL_GROUNDS = /^(causeway|ford|ferry|ferry-hard|staithe|bridge|marsh|marsh-samphire|marsh-carr|marsh-dyke|shell|reed|eyot|shore-road|works|salt-street|salt-fields|salt-common)-/;
+// ...AND THE FEW WHOSE WATER RUNS TO THE PICTURE'S OWN SKYLINE (rome, 2026-11-11:
+// on these the water stopped short of the horizon). Only these; every other
+// ground keeps the horizon above.
+var FLOOD_SKYLINE_GROUNDS = /^(marsh-samphire|shell|the-deep-mark|boulder)-/;
+// THREE GROUNDS SET BY HAND (rome, 2026-11-11): in the reed path and on the cart ruts the water runs to where the
+// ground ends (the reeds' far path, the brown land behind the ruts); on the
+// frost-heaved paving the road climbs away, so the water stops where it rises
+// out, nearer as the water falls. hz: the horizon row; clamp 1: nothing stands
+// on a floor above itself; flat: the floor is the picture's row; shore: the
+// far edge is a - b * level.
+var FLOOD_GROUND = {
+  // water: a spot of open water in the picture; the flood takes its colour there (rome, 2026-11-11: every room with water in its picture)
+  "the-salt-pool": { water: [0.6, 0.55] },
+  "the-deep-mark": { water: [0.6, 0.554] },
+  "shell": { water: [0.467, 0.422] },
+  "road-gill": { water: [0.733, 0.704] },
+  "marsh-carr": { water: [0.65, 0.6], waterNight: [0.72, 0.56] }, // open water in the pool, not the brown of the reeds and mud; by night the pool's dark water, not the sky's bright reflection in it
+  "ford": { water: [0.333, 0.61] },
+  "the-breathing-hall": { walls: [.576, 3.8, 4, .25], hz: .52, keepLut: 1, scale: 1.5 }, // scale: 40 draws as 60 did; // the sea cave's rule: the walls stand on their foot line (where the back wall meets the floor, under the benches; down at the sides), the floor keeps its depth map and runs back to that wall
+  "tideway-throat": { walls: [.348, 1.42, 2], dim: 1 }, // the tunnel walls stand on their feet, back to the far end; in the unlit dark the water is as dark as the room (no lit sheet in a black tunnel)
+  "tideway-works": { water: [.45, .43], dim: 1 }, // the pool along the back wall gives the flood its colour; in the unlit dark the water is as dark as the room
+  "sea-cave": { walls: [.454, 1.55] }, // the cave walls stand on their own feet, which run from the corners to the far end (the depth map blurs them into the floor and the water climbed them)
+  "marsh": { water: [0.33, 0.58], lift: 1.15 }, // the channel's lightest water, a step lighter (rome: the marsh flood has to be lighter)
+  "ferry-hard": { water: [0.6, 0.627] },
+  "causeway": { water: [0.9, 0.55] },
+  "alder": { water: [0.333, 0.525] },
+  "marsh-samphire": { water: [0.48, 0.674], even: 1 }, // one tint over mud and plants alike (it broke into a wall at 40)
+  "reed": { hz: .47, keepLut: 1 }, // a horizon further back, the floor as the depth map reads it: the water lies level back toward the end of the path
+  "the-cart-ruts": { hz: .515, clamp: 1 },
+  "boulder": { scale: .667, rock: [.15, .32, .45, .595, .157, .235, .548] }, // the depth map's own back edge, as at 40; at 60 the back boulders do not go under; in the gap by the front-left rock, both rocks stay dry to their outlines and the water borders them
+  "scree": { shore: [.78, .35] }, // the slope climbs to the ridge: the water lies level and rises up the screen with the level, not up the hill
+  "the-frost-heaved-paving": { shore: [.74, .3] },
+  "staithe": { box: [.101, .147, .474, .56], water: [.7, .6] }, // between the frame poles: the two posts there stand clear of the water like the posts beside them (the depth map blurs them into the frame); the sea between them floods
+  "ferry": { water: [0.5, 0.422], stand: [.518, .14] } // posts and rope stand on the deck's far edge; past it, open sea
+};
+function floodGround(name) { var m = /^(.*?)-(day|night|snow|fog|rain|night-torch)/.exec(name || ""); return m && FLOOD_GROUND[m[1]] || null; }
+var FX_FLOOD_PANEL = -1; // the preview panel's slider, -1 while it is down (the game's depth rules)
+var FLOOD_DEPTHS = [0, .4, .6, .8]; // the server's depth 0-3 as a water level
 // YOUR TORCH ON A SNOWY NIGHT (rome, 2026-10-30): the snow plate's floor glints
 // in it. Set where the scene is painted, on the same terms as the snow's torch
 // light map, but at night only.
@@ -14371,7 +14544,10 @@ function fxInit() {
     "#endif",
     "varying vec2 v;",
     "uniform sampler2D plate, depth, mob0, mob1, mob2, mob3;",
-    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, mistPass, handOn, handFlick, cloud, glintOn;",
+    "uniform float t, aspect, nT, flickOn, wetOn, mistOn, mistPass, handOn, handFlick, cloud, glintOn, flood;",
+    "uniform vec3 floodCol, floodLit;",
+    "uniform sampler2D snapDepth;",
+    "uniform float hz, floodPull, floodClamp, floodShore, floodEven, floodOwn, floodDim; uniform vec3 floodWedge; uniform vec2 floodStand; uniform vec4 floodWalls; uniform vec4 floodBox; uniform vec4 floodLow; uniform vec2 floodShoreX; uniform vec4 floodRock; uniform vec3 floodRockD;",
     "uniform vec2 sway;",
     "uniform vec3 torch[" + FX_TORCHES + "];",
     "uniform float flick[" + FX_TORCHES + "];",
@@ -14465,6 +14641,64 @@ function fxInit() {
     // Written as what to lay over the plate: rest + plate * (1 - a).
     "  float c = (1. - m) * (1. - w) * k;",
     "  vec3 rest = (1. - m) * (w * D * k + add) + m * mc;",
+    // THE ROOM FLOODS (a trial, 2026-11-10; FX_FLOOD, off in the game). The old
+    // drawn sheet had one waterline for every picture. This one is a level
+    // plane in the room the depth map describes: the floor's height is read
+    // off the nearest ground, the water stands a little above it, and it is
+    // drawn only where it lies in front of what the picture shows there - so
+    // it runs back along the floor and stops against whatever stands in it.
+    // THE WATER IS MEASURED AGAINST THE PICTURE'S OWN FLOOR (rome, 2026-11-10:
+    // it has to do without a flood plate anywhere, a long causeway included).
+    // floorLut says, for any distance, which row of the picture the floor is
+    // on at that distance (read off the depth map, row by row, fxFloorLut). A
+    // thing stands on the floor at row yp and is seen at row v.y, so yp - v.y
+    // is how high it stands; the water covers it when that is under the
+    // water's height at that distance, a share of how far the floor there is
+    // below the horizon. No camera and no measured distance come into it.
+    "  if (flood > 0.){",
+    "    float yp = texture2D(snapDepth, v).g;",
+    "    if (floodClamp > .5 && floodClamp < 1.5) yp = max(yp, v.y);", // nothing stands on a floor above itself
+    "    if (floodClamp > 2.5) yp = v.y;", // a flat ground: the floor is the row itself
+    "    if (floodStand.x > 0. && v.y < floodStand.x) yp = d > floodStand.y ? floodStand.x : v.y;", // the ferry: one cut on what stands at the deck's edge, no blur streaks
+        "    if (floodBox.w > 0. && v.x > floodBox.x && v.x < floodBox.y && v.y > floodBox.z && v.y < floodBox.w) yp = length(pl.rgb - floodCol) < .35 * length(floodCol) + .02 ? v.y : 2.;", // the staithe's posts between the poles: sea by the room's own water colour at this hour; the wood stands clear, as the posts beside them do at these levels
+    "    if (floodRock.w > 0. && v.x > floodRock.x && v.x < floodRock.y && v.y > floodRock.z && v.y < floodRock.w && (v.y < floodRockD.z || d > floodRockD.y || d < floodRockD.x || pl.r - pl.b < .09 * max(pl.r, .05) / .4)) yp = 2.;", // a gap between two rocks whose feet the depth map blurs: the front rock (nearer than its outline), the back rock (further than its foot) and anything not the dry grass between stay dry, and the water borders both rocks
+    "    bool rockWet = false;", // set where a ground says this floor takes the water whatever its row
+    "    if (floodWalls.y > 0.) { float yf = floodWalls.x + max(abs(v.x - .5) - floodWalls.w, 0.) / floodWalls.y; bool fl = floodWalls.z > .5 && floodWalls.z < 1.5; if (floodWalls.z > 1.5) { float s = 0.; for (int i = -4; i <= 4; i++) s += texture2D(snapDepth, v + vec2(float(i) * .015, 0.)).g; yp = s / 9.; } if (v.y < yf) { if (floodWalls.z > 3.5) yp = max(yp, yf); else if (floodWalls.z > 2.5) { if (yf - v.y < max(flood - .4, 0.) * .15) rockWet = true; else yp = 2.; } else yp = fl ? yf : max(yp, yf); } else if (fl) yp = v.y; else if (floodWalls.z > 3.5) yp = min(yp, v.y); else if (floodWalls.z > 2.5) { yp = min(yp, v.y); rockWet = true; } }", // a corridor's walls stand no further back than their foot line (what the depth map already stands nearer keeps its own footing); flat (1): the floor is its row; smoothed (2): the floor read across a span, so the depth map's coarse levels do not climb the wall in steps
+    "    float wh = floodWedge.x, wy = v.y - wh;", // the reed path: where the depth map is black, the path's own wedge is the floor
+    "    float jag = (n(vec2(v.x * 64., 3.1)) - .5) * .35 + (n(vec2(v.x * 23., 5.3)) - .5) * .4 + (n(vec2(v.x * 7., 7.7)) - .5) * .3;", // an uneven, wavering edge: no spikes, not ruled
+    "    if (wh > 0. && v.y < floodWedge.z && wy > 0. && abs(v.x - .5) < floodWedge.y * wy * (1. + jag)) yp = v.y;",
+    "    float fall = (wh > 0. && v.y < floodWedge.z && yp == v.y ? yp - wh : yp - hz), up = yp - v.y;",
+    "    float lvl = flood * .5 * (floodClamp > 1.5 && floodClamp < 2.5 ? min(fall, v.y - hz) : fall);", // boulder: a rock's water from its own row
+    "    if (floodLow.x > 0.) lvl *= mix(1., floodLow.x, (1. - smoothstep(floodLow.y, floodLow.z, v.x)) * (1. - smoothstep(floodLow.w, floodLow.w + .06, v.y)));", // a back corner that stands lower, eased in both ways: the depth's shape kept, no step, the near ground as it was
+    "    if (floodWalls.z > 3.5) lvl = flood * .012;", // one waterline for the whole room: it stands as high on the near benches as on the far ones
+    "    lvl += min(floodEven, 1.) * flood * .1;", // low plants on a flat: the water stands round them, not in blocks
+    "    float edge = .004 + floodPull + (floodClamp > 1.5 && floodClamp < 2.5 ? .12 * (1. - flood) : 0.);", // boulder: the water fills from the front
+    "    if ((fall > edge && up < lvl || rockWet) && (floodShoreX.y > 0. ? v.y > floodShore * smoothstep(floodShoreX.x - .03, floodShoreX.x, v.x) * (1. - smoothstep(floodShoreX.y, floodShoreX.y + .03, v.x)) : v.y > floodShore)){",
+    // in the plates' own grain: worked per plate pixel, in flat steps
+    "      vec2 grid = vec2(528., 331.), cell = floor(v * grid), cv = (cell + .5) / grid;",
+    "      float zc = .1 / max(cv.y - hz + lvl, .004), near = clamp((cv.y - hz) * 2., 0., 1.);",
+    "      vec2 sp = vec2((cv.x - .5) * zc * aspect, zc);",
+    "      float rip = n(vec2(sp.x * 70. + t * .3, sp.y * 240. - t * .7)) * n(vec2(sp.x * 23. - t * .2, sp.y * 90. + t * .25));",
+    // (a step back from the full pixel grain, rome 2026-11-10: the water keeps
+    // the plates' pixel size, but shades smoothly - no checker, no stripes -
+    // and its glints are soft-edged and fewer)
+    "      float deep = floodWalls.z > 3.5 ? 1. : clamp((lvl - max(up, 0.)) / max(fall * .2, .001), 0., 1.);",
+    // AS THE PLATES PAINT WATER (rome, 2026-11-10: it still did not match). The
+    // painted sea is the ground showing through a tint, a few flat colours, and
+    // its light in thin level dashes one pixel high - so the water lets the
+    // picture through, its colour is cut to steps, and its glints are dashes
+    // that drift along their rows.
+    "      float op = floodEven > 1.5 ? .74 : floodEven > .5 ? .35 + .5 * flood : (.5 + .5 * deep) * .78;",
+    "      vec3 R = rest + pl.rgb * c;",
+    "      vec3 wc = floodOwn > .5 ? floodCol : floor(floodCol * (.5 + .7 * min(k, 1.3)) * 14.) / 14.;",
+    "      vec3 M = floodOwn > .5 ? mix(R, wc, op) : floor(mix(R, wc, op) * 24. + .5) / 24.;", // the room's own water is not stepped: in the dark one step is a visible jump
+    "      float dash = n(vec2(cell.x * (.07 + .05 * near) - t * .25, cell.y * 1.7)) * n(vec2(cell.x * .021 + t * .07, cell.y * .53));",
+    "      vec3 lit = floodLit * step(.62, dash) * (.10 + .16 * near) * min(k, 1.6);",
+    "      vec3 W = M + lit * op;",
+    "      if (floodDim > .5) { float la = 0.; for (int i = 0; i < 8; i++) { float an = float(i) * .785; la += dot(texture2D(plate, v + vec2(cos(an), sin(an)) * .05).rgb, vec3(.3, .59, .11)); } W = mix(R, W, clamp(la / 8. * c * 10., 0., 1.)); }", // water shows as far as the room around it has light: an area, not a pixel, so the dark clutter at the walls does not punch holes in it
+    "      gl_FragColor = vec4(W, 1.) * pl.a; return;",
+    "    }",
+    "  }",
     "  vec4 o = c <= 1. ? vec4(rest, 1. - c) : vec4(rest + (c - 1.) * pl.rgb, 0.);",
     "  gl_FragColor = o * pl.a;",
     "}"
@@ -14481,11 +14715,113 @@ function fxInit() {
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   var ap = gl.getAttribLocation(fxProg, "p"); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
-  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "mistPass", "handOn", "handFlick", "cloud", "glintOn",
+  ["plate", "depth", "mob0", "mob1", "mob2", "mob3", "t", "aspect", "nT", "flickOn", "wetOn", "mistOn", "mistPass", "handOn", "handFlick", "cloud", "glintOn", "flood", "floodCol", "floodLit", "snapDepth", "hz", "floodPull", "floodClamp", "floodShore", "floodShoreX", "floodEven", "floodOwn", "floodDim", "floodWedge", "floodStand", "floodWalls", "floodBox", "floodLow", "floodRock", "floodRockD",
    "sway", "torch", "flick", "mobRect", "mobFrame"].forEach(function (k) { fxU[k] = gl.getUniformLocation(fxProg, k); });
   gl.uniform1i(fxU.plate, 0); gl.uniform1i(fxU.depth, 1);
   gl.uniform1i(fxU.mob0, 2); gl.uniform1i(fxU.mob1, 3); gl.uniform1i(fxU.mob2, 4); gl.uniform1i(fxU.mob3, 5);
+  gl.uniform1i(fxU.snapDepth, 7);
   return true;
+}
+// THE DEPTH MAP SNAPPED TO THE PICTURE'S OWN EDGES, for the flood only (rome,
+// 2026-11-10: the water would not close round the causeway's post). The depth
+// map is soft at the edge of anything that stands up, so the sea beside a post
+// reads as near as the post and the water leaves a box round it. Along each
+// row the picture is cut where its colour changes, and every run of one colour
+// takes the depth its middle has: the sea up to the post is one run and takes
+// the sea's depth; the post is another and keeps its own. Each row only, since
+// along a row the floor is one distance and down a column it is not.
+function fxSnapDepth(plate, depthImg, lut) {
+  var w = 400, h = Math.max(2, Math.round(400 * depthImg.height / depthImg.width));
+  var a = document.createElement("canvas"); a.width = w; a.height = h;
+  var x = a.getContext("2d"); x.drawImage(plate, 0, 0, w, h);
+  var pc = x.getImageData(0, 0, w, h).data;
+  x.clearRect(0, 0, w, h); x.drawImage(depthImg, 0, 0, w, h);
+  var dp = x.getImageData(0, 0, w, h), dd = dp.data, out = new Uint8Array(w * h * 4), run = [];
+  for (var y = 0; y < h; y++) {
+    var st = 0, r = 0, g = 0, b = 0, n = 0;
+    var close = function (end) {
+      run.length = 0;
+      for (var k = st; k < end; k++) run.push(dd[(y * w + k) * 4]);
+      run.sort(function (p, q) { return p - q; });
+      var m = run[run.length >> 1];
+      // R: the depth the run takes; G: the row the floor is on at that depth (fxFloorLut)
+      for (var k2 = st; k2 < end; k2++) { var o = (y * w + k2) * 4, dv = end - st >= 3 ? m : dd[o]; out[o] = out[o + 2] = dv; out[o + 1] = lut[dv]; out[o + 3] = 255; }
+    };
+    for (var i = 0; i < w; i++) {
+      var q = (y * w + i) * 4, cr = pc[q], cg = pc[q + 1], cb = pc[q + 2];
+      if (n && Math.abs(cr - r / n) + Math.abs(cg - g / n) + Math.abs(cb - b / n) > 54) { close(i); st = i; r = g = b = n = 0; }
+      r += cr; g += cg; b += cb; n++;
+    }
+    close(w);
+  }
+  return { data: out, w: w, h: h };
+}
+// WHERE THE FLOOR IS IN THIS PICTURE, for the flood. Row by row the floor is
+// the farthest thing in the row (what stands on it is nearer), taken a little
+// in from the farthest so one bad pixel does not set it; going up the picture
+// the floor only gets farther, so anything nearer above it (a ceiling, a wall)
+// is ignored. Turned round into a table: for each distance, the row the floor
+// is on. Returns the horizon's row with it, where the floor runs out.
+function fxWaterColour(img, at) {
+  var w = 200, h = Math.max(2, Math.round(200 * img.height / img.width));
+  var cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  var x = cv.getContext("2d"); x.drawImage(img, 0, 0, w, h);
+  var cx = Math.round(at[0] * w), cy = Math.round(at[1] * h), px = x.getImageData(Math.max(0, cx - 6), Math.max(0, cy - 2), 13, 5).data, r = [], g = [], b = [];
+  for (var i = 0; i < px.length; i += 4) if (px[i + 3] > 200) { r.push(px[i]); g.push(px[i + 1]); b.push(px[i + 2]); }
+  if (!r.length) return null;
+  var med = function (a) { a.sort(function (p, q) { return p - q; }); return a[a.length >> 1] / 255; };
+  return [med(r), med(g), med(b)];
+}
+function fxFloorLut(img, plate, hzSet) {
+  var w = 200, h = Math.max(2, Math.round(200 * img.height / img.width));
+  var cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  var x = cv.getContext("2d");
+  // THE PICTURE'S OWN SKYLINE (rome, 2026-11-11: on the open grounds the water
+  // stopped short of the horizon). The plate is see-through where the sky goes,
+  // so the first row the ground fills edge to edge is where the land ends - a
+  // truer horizon than the depth map's, which reads the far sea as far as the
+  // sky. A plate with no sky in it (a cave, a hall) keeps the depth map's.
+  var sky = -1;
+  if (plate) {
+    x.drawImage(plate, 0, 0, w, h);
+    var pa = x.getImageData(0, 0, w, h).data;
+    for (var sy = 0; sy < h && sky < 0; sy++) {
+      var o = 0;
+      for (var sx = 0; sx < w; sx++) if (pa[(sy * w + sx) * 4 + 3] > 128) o++;
+      if (o > w * .95) sky = sy;
+    }
+    x.clearRect(0, 0, w, h);
+  }
+  x.drawImage(img, 0, 0, w, h);
+  var px = x.getImageData(0, 0, w, h).data, F = new Array(h), row = new Array(w);
+  for (var y = 0; y < h; y++) {
+    for (var i = 0; i < w; i++) row[i] = px[(y * w + i) * 4];
+    row.sort(function (a, b) { return a - b; });
+    F[y] = row[Math.floor(w * .12)];
+  }
+  for (var u = h - 2; u >= 0; u--) F[u] = Math.min(F[u], F[u + 1]);
+  var far = F[0], top = 0;
+  while (top < h - 1 && F[top] <= far + 2) top++;
+  if (hzSet) top = Math.round(hzSet * h); // a horizon set by hand (FLOOD_GROUND): the floor runs on up to it
+  // ONE FLOOR, NOT TWO (rome, 2026-11-10: half flooded, only the front of the
+  // causeway was under). Near you the floor read off the road; further back,
+  // where the sea shows beside it, off the sea, which lies lower - so the far
+  // road stood above the water. A flat floor's depth runs in a straight line
+  // with the row, so the line is fitted to the near rows, where the floor you
+  // stand on fills the picture, and carried on up to the horizon.
+  // (the line runs through the horizon, where the floor's depth is the farthest:
+  // a flat floor's depth falls to that at the horizon and nowhere sooner)
+  var y0 = Math.floor(h * .7), snum = 0, sden = 0;
+  for (var yy = y0; yy < h; yy++) { snum += (yy - top) * (F[yy] - far); sden += (yy - top) * (yy - top); }
+  var A = sden ? snum / sden : 0, B = far - A * top;
+  var lut = new Uint8Array(256);
+  for (var d = 0; d < 256; d++) {
+    var row;
+    if (A > .05) row = Math.max(top, Math.min(h - 1, (d - B) / A));
+    else { var r = top; while (r < h - 1 && F[r] < d) r++; row = F[r] < d ? h : r + .5; }
+    lut[d] = Math.round(255 * Math.min(1, row / h));
+  }
+  return { lut: lut, hz: top / h, sky: sky > 0 ? sky / h : 0 };
 }
 function fxUpload(unit, img, linear) {
   var gl = fxGl, tx = gl.createTexture();
@@ -14506,7 +14842,7 @@ function fxLoad(src) { return new Promise(function (ok, no) {
 function fxPrepare(scene, tint, done) {
   var parts = scene ? scene.split("/") : [];
   var name = parts[1] === "room-bg" && parts[2] ? parts[2].slice(0, parts[2].lastIndexOf(".")) : "";
-  if (!name || stillness || viewMode !== "image" || (tint && !FX_UNDER_TINT[tint])) { done(null); return; }
+  if (!name || stillness || viewMode !== "image" || (tint && !FX_UNDER_TINT[tint] && !FX_FLOOD)) { done(null); return; }
   if (!fxIndex) {
     if (!fxPrepare.index) {
       fxIndexAsked = true;
@@ -14520,9 +14856,17 @@ function fxPrepare(scene, tint, done) {
     fxPrepare.index.then(function () { fxPrepare(scene, tint, done); });
     return;
   }
-  var entry = fxIndex[name];
+  var entry = fxIndex[name], depthName = name;
+  // THE FLOOD TRIAL: a picture with no depth map of its own (the day, the plain
+  // night, the fog) borrows its ground's - the torch picture's, or the snow's -
+  // and takes no other effect from it.
+  if (!entry && FX_FLOOD) {
+    var base = name.replace(/-flood$/, "").replace(/-(day|night|fog|rain|snow|dawn|dusk)$/, "");
+    depthName = fxIndex[base + "-night-torch"] ? base + "-night-torch" : fxIndex[base + "-snow"] ? base + "-snow" : "";
+    if (depthName) entry = { borrowed: 1 };
+  }
   if (!entry) { done(null); return; }
-  if (entry.snow && !entry.t && !fxSnowGlint) { done(null); return; } // nothing to show on it right now
+  if (entry.snow && !entry.t && !fxSnowGlint && !FX_FLOOD) { done(null); return; } // nothing to show on it right now
   var cache = fxPrepare.cache || (fxPrepare.cache = new Map());
   var pending = cache.get(name);
   if (pending) {
@@ -14543,7 +14887,7 @@ function fxPrepare(scene, tint, done) {
     var listeners = pending.wait; pending.wait = [];
     listeners.forEach(function (fn) { fn(data); });
   }
-  Promise.all([fxLoad(scene + "?v=" + BG_V), fxLoad("/room-fx/" + name + ".png?v=" + FX_V)])
+  Promise.all([fxLoad(scene + "?v=" + BG_V), fxLoad("/room-fx/" + depthName + ".png?v=" + FX_V)])
     .then(function (images) { finish({ name: name, entry: entry, images: images }); })
     .catch(function () { finish(null); });
 }
@@ -14560,6 +14904,31 @@ function fxScene(scene, tint, prepared, cloud) {
     if (fxTex.plate) fxGl.deleteTexture(fxTex.plate);
     if (fxTex.depth) fxGl.deleteTexture(fxTex.depth);
     fxTex.plate = fxUpload(0, im[0], false); fxTex.depth = fxUpload(1, im[1], true);
+    // (the floor table rides in the snapped depth's second channel: texture unit
+    // 6 is where creature strips are uploaded, and a table kept there was
+    // overwritten the moment a creature came on screen)
+    var hg = floodGround(name), fl = fxFloorLut(im[1], im[0], hg && !hg.wedge && !hg.keepLut && hg.hz), gl2 = fxGl;
+    // THE CAUSEWAY KEEPS ITS OWN HORIZON (the depth map's, pulled back a hair so
+    // the far landscape stays dry - rome, 2026-11-10); every other ground's water
+    // runs to the picture's skyline, and down there nothing on the floor can be
+    // farther than its own row (the shader's floor clamp).
+    var sl = FLOOD_SKYLINE_GROUNDS.test(name) && fl.sky > 0;
+    fxTex.hz = sl ? fl.sky : fl.hz;
+    fxTex.pull = sl ? 0 : FLOOD_PULL_GROUNDS.test(name) ? .015 : 0;
+    // THE BOULDER FIELD (rome, 2026-11-11: the water stood higher at the back
+    // than the front): the depth map reads the far rocks nearer than they are,
+    // so a rock there took the deep water of the near ground. On this ground a
+    // rock's water is measured from its own row, which is never deeper.
+    fxTex.clamp = sl ? (/^boulder-/.test(name) ? 2 : 1) : 0;
+    if (hg && (hg.hz || hg.flat || hg.clamp)) { if (hg.hz) fxTex.hz = hg.hz; fxTex.pull = 0; fxTex.clamp = hg.flat ? 3 : hg.clamp || 0; }
+    fxTex.even = hg && hg.even || 0; fxTex.wedge = hg && hg.wedge || null; fxTex.stand = hg && hg.stand || null; fxTex.walls = hg && hg.walls || null; fxTex.box = hg && hg.box || null; fxTex.dim = hg && hg.dim ? 1 : 0;
+    fxTex.shore = hg && hg.shore || null; fxTex.most = hg && hg.most || 0; fxTex.scale = hg && hg.scale || 0; fxTex.low = hg && hg.low || null; fxTex.rock = hg && hg.rock || null;
+    if (fxTex.snap) gl2.deleteTexture(fxTex.snap);
+    var sd = fxSnapDepth(im[0], im[1], fl.lut);
+    fxTex.snap = gl2.createTexture(); gl2.activeTexture(gl2.TEXTURE0 + 7); gl2.bindTexture(gl2.TEXTURE_2D, fxTex.snap);
+    gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA, sd.w, sd.h, 0, gl2.RGBA, gl2.UNSIGNED_BYTE, sd.data);
+    gl2.texParameteri(gl2.TEXTURE_2D, gl2.TEXTURE_MIN_FILTER, gl2.NEAREST); gl2.texParameteri(gl2.TEXTURE_2D, gl2.TEXTURE_MAG_FILTER, gl2.NEAREST);
+    gl2.texParameteri(gl2.TEXTURE_2D, gl2.TEXTURE_WRAP_S, gl2.CLAMP_TO_EDGE); gl2.texParameteri(gl2.TEXTURE_2D, gl2.TEXTURE_WRAP_T, gl2.CLAMP_TO_EDGE);
     fxTex.aspect = im[0].width / im[0].height;
     var t = entry.t || [], flat = new Float32Array(FX_TORCHES * 3);
     for (var i = 0; i < t.length && i < FX_TORCHES; i++) { flat[i * 3] = t[i][0]; flat[i * 3 + 1] = t[i][1]; flat[i * 3 + 2] = t[i][2]; }
@@ -14572,6 +14941,20 @@ function fxScene(scene, tint, prepared, cloud) {
     fxGl.uniform1f(fxU.mistOn, fxMist ? 1 : 0);
     fxGl.uniform1f(fxU.handOn, fxHandLit(entry) ? 1 : 0);
     fxGl.uniform1f(fxU.glintOn, entry.snow && fxSnowGlint ? 1 : 0);
+    // the water's own colour and glint: lit and grey-blue by day, black by night
+    var light = /-(day|fog|snow|rain|dawn|dusk)(-flood)?$/.test(name);
+    fxGl.uniform3fv(fxU.floodCol, light ? [.30, .38, .45] : [.03, .055, .07]);
+    fxGl.uniform3fv(fxU.floodLit, light ? [.9, .95, 1] : [1, .78, .5]);
+    // THE ROOM'S OWN WATER (rome, 2026-11-11: the flood should be the colour of
+    // the water already painted in the room): read off the picture at a spot of
+    // open water, so it holds at every hour.
+    var hw = floodGround(name), hwAt = hw && (/-night/.test(name) && hw.waterNight || hw.water), own = hwAt ? fxWaterColour(im[0], hwAt) : null; // waterNight: a night plate's own spot, where the day's spot falls on a bright reflection
+    fxGl.uniform1f(fxU.floodOwn, own ? 1 : 0); fxOwnWater = !!own;
+    if (own && hw.lift) own = own.map(function (c) { return Math.min(1, c * hw.lift); });
+    if (own) fxGl.uniform3fv(fxU.floodCol, own);
+    // ON THE CROSSING THE WATER STOPS A HAIR SHORT OF THE HORIZON (rome,
+    // 2026-11-10), so the land painted along it is not drowned with the road.
+    fxGl.uniform1f(fxU.floodPull, fxTex.pull); fxGl.uniform1f(fxU.floodClamp, fxTex.clamp);
     if (t.length) for (var k = 0; k < 60; k++) fxDust.push({ x: Math.random(), y: .05 + Math.random() * .7,
       vx: (Math.random() - .5) * .008, vy: (Math.random() - .6) * .005, s: .6 + Math.random(), ph: Math.random() * 6.3 });
     fxReady = true;
@@ -14580,6 +14963,7 @@ function fxScene(scene, tint, prepared, cloud) {
   } catch (e) { fxStop(); return false; }
 }
 function fxStop() {
+  if (fxWading) { var ff = FX_FLOOD; FX_FLOOD = 0; fxWade(null); FX_FLOOD = ff; }
   fxSeq++;
   fxName = ""; fxEntry = null; fxReady = false;
   if (fxFrame !== null) cancelAnimationFrame(fxFrame);
@@ -14635,6 +15019,29 @@ function fxMobs(box) {
   fxMobPrune();
   return out;
 }
+// A CREATURE STANDS IN THE WATER, NOT ON IT (rome, 2026-11-10). Its feet are
+// on the floor at its row, and the water stands the same height above that
+// floor as the shader puts it (lvl, there): that much of the creature, from its
+// feet up, is hidden, with a soft line where it meets the surface, and the
+// water drawn under the creature shows instead.
+var fxWading = false;
+function fxWade(box) {
+  if (!mobsEl) return;
+  var els = mobsEl.querySelectorAll(".mob");
+  var on = FX_FLOOD > 0 && fxReady && box && box.height > 0;
+  if (!on && !fxWading) return;
+  fxWading = on;
+  var hz = fxTex.hz || .5, pull = fxTex.pull || 0, FL = Math.min(FX_FLOOD * (fxTex.scale || 1), fxTex.most || 1);
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i], cut = 0;
+    if (on) {
+      var r = el.getBoundingClientRect(), foot = (r.bottom - box.top) / box.height, fall = foot - hz;
+      if (fall > .004 + pull + (fxTex.clamp === 2 ? .12 * (1 - FL) : 0) && !(fxTex.shore && foot < (fxTex.shore[3] ? ((r.left + r.width / 2 - box.left) / box.width > fxTex.shore[2] && (r.left + r.width / 2 - box.left) / box.width < fxTex.shore[3] ? fxTex.shore[0] : 0) : fxTex.shore[0] - fxTex.shore[1] * FL))) cut = Math.min(r.height * .9, (fxTex.walls && fxTex.walls[2] === 4 ? FL * .012 : FL * .5 * fall) * box.height); // walls 4: one waterline for the room, on the creatures too
+    }
+    var m = cut > 1 ? "linear-gradient(to top, rgba(0,0,0,.5) " + cut.toFixed(1) + "px, #000 " + (cut + 3).toFixed(1) + "px)" : "";
+    if (el.style.webkitMaskImage !== m) { el.style.webkitMaskImage = m; el.style.maskImage = m; }
+  }
+}
 // Let go of all but the FX_MOB_KEEP most recently seen. What is on the row now
 // was stamped this frame, so it is always among those kept.
 function fxMobPrune() {
@@ -14671,8 +15078,12 @@ function fxDraw(now) {
   }
   var sx = .09 * Math.sin(t * .55) + .03 * Math.sin(t * 1.7 + 2), sy = .04 * Math.sin(t * .8 + 1);
   gl.uniform1f(fxU.t, t); gl.uniform1f(fxU.aspect, fxTex.aspect || 1.6); gl.uniform1f(fxU.cloud, fxCloud);
+  gl.uniform1f(fxU.flood, Math.min(FX_FLOOD * (fxTex.scale || 1), fxTex.most || 1)); /* scale and most: how deep a ground is drawn for its level (the boulder beach: 60 draws as 40 did, 40 lower) */ var rk = fxTex.rock || [0, 0, 0, 0, 0, 0]; gl.uniform4f(fxU.floodRock, rk[0], rk[1], rk[2], rk[3]); gl.uniform3f(fxU.floodRockD, rk[4], rk[5], rk[6] || 0); var lw = fxTex.low || [0, 0, 1, 0]; gl.uniform4f(fxU.floodLow, lw[0], lw[1], lw[2], lw[3]); gl.uniform1f(fxU.hz, fxTex.hz || .5);
+  gl.uniform1f(fxU.floodEven, fxTex.even || 0); gl.uniform1f(fxU.floodDim, fxTex.dim || 0); var bx = fxTex.box || [0, 0, 0, 0]; gl.uniform4f(fxU.floodBox, bx[0], bx[1], bx[2], bx[3]); gl.uniform4f(fxU.floodWalls, fxTex.walls ? fxTex.walls[0] : 0, fxTex.walls ? fxTex.walls[1] : 0, fxTex.walls ? fxTex.walls[2] || 0 : 0, fxTex.walls ? fxTex.walls[3] || 0 : 0); gl.uniform2f(fxU.floodStand, fxTex.stand ? fxTex.stand[0] : 0, fxTex.stand ? fxTex.stand[1] : 0); gl.uniform3f(fxU.floodWedge, fxTex.wedge ? fxTex.wedge[0] : 0, fxTex.wedge ? fxTex.wedge[1] : 0, fxTex.wedge ? fxTex.wedge[2] || 0 : 0);
+  gl.uniform1f(fxU.floodShore, fxTex.shore ? fxTex.shore[0] - fxTex.shore[1] * FX_FLOOD : 0); gl.uniform2f(fxU.floodShoreX, fxTex.shore && fxTex.shore[2] || 0, fxTex.shore && fxTex.shore[3] || 0); /* a shore can hold back only a span of columns, eased in and out: one gap, with no step */
   gl.uniform1fv(fxU.flick, fl); gl.uniform2f(fxU.sway, sx, sy);
   gl.uniform1f(fxU.handFlick, 1 + .06 * Math.sin(t * 2.3) + .04 * Math.sin(t * 6.1 + 1.3) + .03 * Math.sin(t * 15.7 + .4));
+  fxWade(box);
   var mobs = fxHandLit(e) ? fxMobs(box) : [];
   var rects = new Float32Array(FX_MOBS * 4), frames = new Float32Array(FX_MOBS * 2);
   for (var m = 0; m < FX_MOBS; m++) {
@@ -14730,6 +15141,14 @@ function fxDraw(now) {
     }
     sparkCtx.globalCompositeOperation = "source-over";
   }
+  // THE FLOOD TAKES THE ROOM'S WEATHER GRADE (rome, 2026-11-11: in rain and after
+  // rain the water was brighter than the room): the picture is darkened by a
+  // filter on the scene for those hours, which this layer does not sit under,
+  // so while the room floods it wears the same filter.
+  // (followed every frame: the scene's filter eases over .8s when the weather
+  // changes, and a copy taken at the switch kept the old hour's grade)
+  var fk = FX_FLOOD > 0 && fxOwnWater ? getComputedStyle(sceneEl).filter.replace(/^none$/, "") : ""; // only where the flood takes the room's own water colour
+  if (fk !== fxFilterKey) { fxFilterKey = fk; fxCanvas.style.filter = fk; }
   // Reveal only after drawing this room's first frame, never an old buffer.
   fxCanvas.style.display = "block";
   if (sparkCanvas) sparkCanvas.style.display = tl.length ? "block" : "none";
