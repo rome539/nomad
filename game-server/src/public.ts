@@ -8320,9 +8320,23 @@ function mapFloorName(z) {
   return w + (n === 1 ? " floor " : " floors ") + (z > 0 ? "up" : "down");
 }
 
+// A MAP THAT LAGGED (rome, 2026-11-10). Every frame asked the browser for the
+// theme's colours once per room (getComputedStyle is slow), measured every name
+// letter by letter, and drew every room on the sheet whether on screen or not,
+// on every mouse move. Colours are read once a frame, fitted names are kept,
+// rooms off the screen are skipped, and a drag draws once per screen frame.
+var mapVarCache = null, mapFitCache = new Map(), mapDrawPending = false;
 function mapCssVar(name) {
+  if (mapVarCache && mapVarCache[name] !== undefined) return mapVarCache[name];
   var v = getComputedStyle(document.documentElement).getPropertyValue(name);
-  return (v && v.trim()) || "#8a8a8a";
+  v = (v && v.trim()) || "#8a8a8a";
+  if (mapVarCache) mapVarCache[name] = v;
+  return v;
+}
+function mapDrawSoon() {
+  if (mapDrawPending) return;
+  mapDrawPending = true;
+  requestAnimationFrame(function () { mapDrawPending = false; drawMap(); });
 }
 function mapRegionColor(region, isGate, isHamlet) {
   // A GATE IS A GATE WHEREVER IT STANDS. Colour used to ride the region alone,
@@ -8378,6 +8392,14 @@ function mapRegionColor(region, isGate, isHamlet) {
 // then trim to the tile's inner width so the label can never spill onto a
 // neighbour. Measured against the ctx's current font.
 function mapFitLabel(ctx, name, maxW) {
+  var key = ctx.font + "|" + Math.round(maxW) + "|" + name, hit = mapFitCache.get(key);
+  if (hit !== undefined) return hit;
+  if (mapFitCache.size > 4000) mapFitCache.clear();
+  var out = mapFitLabelNow(ctx, name, maxW);
+  mapFitCache.set(key, out);
+  return out;
+}
+function mapFitLabelNow(ctx, name, maxW) {
   var t = String(name || "").replace(/^[Tt]he\\s+/, "");
   if (ctx.measureText(t).width <= maxW) return t;
   var ell = "\\u2026";
@@ -8730,6 +8752,10 @@ function mapResize() {
   drawMap();
 }
 function drawMap() {
+  mapVarCache = {};
+  try { mapPaint(); } finally { mapVarCache = null; }
+}
+function mapPaint() {
   if (!mapGraph || !mapCtx) return;
   var g = mapGraph, ctx = mapCtx, W = mapCv.width, H = mapCv.height, s = mapCam.scale * mapDpr;
   ctx.clearRect(0, 0, W, H);
@@ -8741,6 +8767,8 @@ function drawMap() {
   for (var i = 0; i < g.edges.length; i++) {
     var ed = g.edges[i];
     if (ed.z !== mapFloor) continue;
+    var ex1 = sx(ed.x1), ex2 = sx(ed.x2), ey1 = sy(ed.y1), ey2 = sy(ed.y2);
+    if (Math.max(ex1, ex2) < 0 || Math.min(ex1, ex2) > W || Math.max(ey1, ey2) < 0 || Math.min(ey1, ey2) > H) continue;
     ctx.strokeStyle = ed.vertical || ed.cross ? gold : dim;
     ctx.setLineDash(ed.vertical || ed.cross ? [2 * s, 4 * s] : (ed.bent ? [4 * s, 4 * s] : []));
     ctx.globalAlpha = ed.cross ? 0.4 : ed.vertical ? 0.85 : 1;
@@ -8803,7 +8831,9 @@ function drawMap() {
   for (var o = 0; o < g.order.length; o++) {
     var id = g.order[o], p = g.placed[id]; if (!p) continue;
     var nd = g.nodes[id]; if (nd.fz !== mapFloor) continue;
-    var cx = sx(p.x), cy = sy(p.y), col = mapRegionColor(nd.region, nd.gate, nd.hamlet);
+    var cx = sx(p.x), cy = sy(p.y);
+    if (cx + tw < 0 || cx - tw > W || cy + th * 2 < 0 || cy - th * 2 > H) continue;
+    var col = mapRegionColor(nd.region, nd.gate, nd.hamlet);
     mapRoundRect(ctx, cx - tw / 2, cy - th / 2, tw, th, 6 * s);
     // A DOOR LOOKS LIKE A DOOR (rome, 2026-08-02: "you made a gate not blue").
     // Steel at a 15% wash and a hairline stroke reads as grey — which was fine
@@ -8962,7 +8992,7 @@ function mapZoom(f, clientX, clientY) {
     mapCam.cx += x / MAP_CELL * (1 / before - 1 / after);
     mapCam.cy += y / MAP_CELL * (1 / before - 1 / after);
   }
-  mapCam.scale = after; drawMap();
+  mapCam.scale = after; mapDrawSoon();
 }
 function mapFitChart() {
   if (!mapGraph || !mapWrap) return;
@@ -9055,7 +9085,7 @@ function wireMap() {
     } else if (after.length === 1) {
       mapCam.cx -= (e.clientX - old.x) / (MAP_CELL * mapCam.scale); mapCam.cy -= (e.clientY - old.y) / (MAP_CELL * mapCam.scale);
     }
-    drawMap();
+    mapDrawSoon();
   });
   function end(e) { pointers.delete(e.pointerId); if (!pointers.size) mapWrap.classList.remove("drag"); }
   mapCv.addEventListener("pointerup", end); mapCv.addEventListener("pointercancel", end); mapCv.addEventListener("lostpointercapture", end);

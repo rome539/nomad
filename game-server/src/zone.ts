@@ -5167,8 +5167,10 @@ export class ZoneDO implements DurableObject {
         const fleeAt = tmpl.max_hp * FLEE_BELOW * (creature.traits?.includes("bloodthirsty") ? MOB_BLOODTHIRSTY_FLEE_MULT
           : creature.traits?.includes("skittish") ? MOB_SKITTISH_FLEE_MULT
           : creature.traits?.includes("marked") ? MOB_MARKED_FLEE_MULT : 1) * ratking.fleeMult(this, creature);
-        const wantsFlee = !creature.traits?.includes("maneater") && !creature.traits?.includes("hind-mother") && (
-          ai.dreadsFire(this, creature, victim)
+        const nerve = !creature.traits?.includes("maneater") && !creature.traits?.includes("hind-mother");
+        const fireScare = nerve && ai.dreadsFire(this, creature, victim);
+        const wantsFlee = nerve && (
+          fireScare
           || RUNNERS.has(tmpl.id)
           || ai.packBroken(this, creature)
           || (!tmpl.is_boss && !HOLLOW.has(tmpl.id) && !BROODERS.has(tmpl.id) && !DROWNERS.has(tmpl.id) && !SENTINELS.has(tmpl.id) && !HOARDERS.has(tmpl.id) && !TURNING_BOARS.has(tmpl.id) && creature.hp < fleeAt && chance(FLEE_CHANCE)));
@@ -5190,7 +5192,7 @@ export class ZoneDO implements DurableObject {
               `${cap(tmpl.name)} strains against the pole, feet scrabbling — it is not going anywhere.`,
             ]), "block");
           } else {
-            await ai.creatureMoves(this, creature, now, "flee", false);
+            await ai.creatureMoves(this, creature, now, "flee", false, false, fireScare);
             continue;
           }
         }
@@ -9647,8 +9649,10 @@ export class ZoneDO implements DurableObject {
   // tells them in the second person ("...toward you") and the room in the third,
   // and without it the target got both (rome, 2026-08-30). Optional and last, so
   // every existing caller is untouched.
-  public roomFeed(roomId: string, text: string, exceptPubkey?: string, toRelay = true, cls?: string, speaker?: { name: string; pk: string }, except2?: string, far?: string): void {
-    const base: Record<string, unknown> = { v: 0, kind: 24913, room: roomId, text };
+  // `text` may be a function of the viewer, for a line that reads differently
+  // to each (a creature walking in, told as the look tells it: "fixed on you").
+  public roomFeed(roomId: string, text: string | ((s: Session) => string), exceptPubkey?: string, toRelay = true, cls?: string, speaker?: { name: string; pk: string }, except2?: string, far?: string): void {
+    const base: Record<string, unknown> = { v: 0, kind: 24913, room: roomId, text: typeof text === "string" ? text : "" };
     if (cls) base.cls = cls;
     if (far) base.far = far; // a sound the client plays with the line (FAR in public.ts)
     // Speech carries its speaker so the client can key-colour the name; only the
@@ -9674,14 +9678,14 @@ export class ZoneDO implements DurableObject {
       // in; a bunkmate sharing the same barred room is on your side of it and
       // still speaks to you normally.
       if (this.shelteredInDen(s.pubkey) && !den.sameSide(this, speaker?.pk ?? exceptPubkey, s.pubkey)) continue;
-      try { s.ws.send(frame); } catch {}
+      try { s.ws.send(typeof text === "string" ? frame : JSON.stringify({ ...base, text: text(s) })); } catch {}
     }
     // Players standing here always see it (a cheap in-memory send). The relay,
     // though, only carries what a distant watcher would care about — a fight, a
     // death, an arrival. Idle creature wandering stays LOCAL: it was flooding the
     // relays two ephemeral events per step (leave + enter) with rats pacing empty
     // rooms nobody watches. That noise never leaves the box now.
-    if (toRelay) this.relayFeed("mudroom-" + roomId, text);
+    if (toRelay && typeof text === "string") this.relayFeed("mudroom-" + roomId, text);
   }
 
   // A WORLD-WIDE LINE THAT IS NOT ACTUALLY WORLD-WIDE (rome, 2026-08-02: "I'm

@@ -32,7 +32,7 @@ import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, HOARD_DEN_MS, HOARD_TRAIL_MS, HOARD_SPOOK_MS,
   CUDDLE_ODDS, CUDDLE_COLD_MULT, MOURN_FRESH_MS, MOURN_VIGIL_MS, MURMUR_ODDS, MURMUR_BLOOD_ODDS, MURMUR_COOLDOWN_MS,
-  BLOOD_MOON_HOLLOW_DMG_MULT, BLOOD_MOON_EYES_READ, BLOOD_MOON_WAKERS, BLOOD_MOON_WAKE_TELLS,
+  BLOOD_MOON_HOLLOW_DMG_MULT, BLOOD_MOON_EYES_READ, BLOOD_MOON_EYES_ROOM, BLOOD_MOON_WAKERS, BLOOD_MOON_WAKE_TELLS,
   RANGERS, RANGE_BANDS, RANGE_CHECK_MS, RANGE_STAY_MS, RANGE_THINNED, RANGE_CRASHED, CULLERS, RANGE_BREAK_LOST,
   HOARD_COVET_RARITY, HOARD_COVET_ODDS, HOARD_COVET_MS, HOARD_COVET_LINES, RARITY_RANK,
   PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
@@ -57,7 +57,7 @@ import {
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
-  MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL,
+  MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL, FIRE_FLEE_OUT,
   QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, PITS_ROOMS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, SLOW_WALKERS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   HUNGER_PER_MIN, COLD_HUNGER_MULT,
@@ -717,6 +717,16 @@ export function bloodMoonHollowMult(templateId: string): number {
   // single most-telling clause (phrased to read after "is" OR after a comma),
   // or "" when there's nothing worth saying. `viewer` is the looking player's
   // pubkey, so "fixed on you" only fires for the one being hunted.
+// The walk-in line, built as the room look builds "X is here, ...": the same
+// load, tell, red eyes and condition, so arriving and being found read alike.
+export function arrivalLine(z: ZoneDO, creature: Creature, tmpl: MobTemplate, viewer: string, jingle: (l: string) => string = (l) => l): string {
+  const tell = creatureTell(z, creature, viewer);
+  const fogged = events.foggy(z, creature.roomId);
+  const redEyes = isBloodMoon() && HOLLOW.has(creature.templateId) ? BLOOD_MOON_EYES_ROOM : "";
+  const line = `${cap(tmpl.name)} creeps in${fogged ? "" : z.bearsClause(creature)}${tell ? `, ${tell}` : ""}${fogged ? "" : redEyes}.`;
+  return jingle(line) + (!fogged && creature.hp < tmpl.max_hp ? ` (${z.condition(creature)})` : "");
+}
+
 export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): string {
     // In fog, every state is the same state: unreadable. The other half of
     // "spot odds down both ways" — the world half-misses you, and you can't
@@ -1327,7 +1337,7 @@ export function winded(creature: Creature, now: number): boolean {
   return (creature.windedUntil ?? 0) > now;
 }
 
-export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean, chased = false): Promise<void> {
+export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean, chased = false, fromFire = false): Promise<void> {
     // HELD MEANS HELD (rome, 2026-11-06). A grip only pushed the wander clock back
     // a minute, so big prey, which takes longer to kill, strolled out of it most of
     // the time. It leaves by breaking the grip (worryPrey) or being driven off.
@@ -1850,6 +1860,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       const fleeFam = FLEE_TELL[fledFrom ? z.fleeStyleOf(fledFrom) : "plain"] ?? FLEE_TELL.plain;
       const outLine = mode !== "flee"
         ? `${cap(tmpl.name)} ${tmpl.is_boss ? "moves" : "slips away"} ${exit.dir}.`
+        : fromFire ? `${cap(tmpl.name)} ${pick(FIRE_FLEE_OUT).replace("{dir}", exit.dir)}`
         : runner ? `${cap(tmpl.name)} darts ${exit.dir} and is gone.`
         : hurt ? `${cap(tmpl.name)} ${hurt.out.replace("{dir}", exit.dir)}`
         // `from`, NOT creature.roomId — the creature was already moved (its
@@ -1879,7 +1890,11 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
         : hurt ? hurt.in_ : pick(fleeFam.in_).replace("{ground}", groundWord(z.regionOf(creature.roomId), creature.roomId));
-      if (!hush) z.roomFeed(creature.roomId, jingle(viaPath?.in_ ?? `${cap(tmpl.name)} ${inLine}`), undefined, false);
+      // A walk-in is told whole, as the look tells the animal standing there
+      // (its load, its hunger or what it is about, its wounds), read by each viewer.
+      if (!hush) z.roomFeed(creature.roomId, viaPath || mode === "flee"
+        ? jingle(viaPath?.in_ ?? `${cap(tmpl.name)} ${inLine}`)
+        : (s: Session) => arrivalLine(z, creature, tmpl, s.pubkey, jingle), undefined, false);
       if (!hush) z.roomSound(
         creature.roomId,
         mode === "flee"
@@ -2858,13 +2873,17 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     // the next. One as big or bigger takes all of it, as before.
     const deadT = eaten.prey ? z.world!.mobTemplates.get(eaten.prey)
       : eaten.label ? [...z.world!.mobTemplates.values()].find((t) => t.name === eaten.label) : undefined;
-    const left = (eaten.meat ?? deadT?.max_hp ?? 0) - tmpl.max_hp;
+    // A BIG BODY FEEDS MORE MOUTHS (rome, 2026-11-10: a cave lion should feed
+    // many). A feeder takes half its own size off it, not all of it, so a lion
+    // goes four ways among great vultures and six among hill wolves.
+    const bite = Math.ceil(tmpl.max_hp / 2);
+    const left = (eaten.meat ?? deadT?.max_hp ?? 0) - bite;
     const gone = !deadT || tmpl.max_hp >= deadT.max_hp || left <= 0;
     // THE BODY STAYS WHILE IT IS EATEN (rome, 2026-11-07): a meal takes its
     // time now, so the last of a body is spoken for at the bite, nothing is
     // left on it for another mouth, and it lies there until the last meal on
     // it is done (digest takes it off the floor).
-    const taken = gone ? (eaten.meat ?? deadT?.max_hp ?? 0) : tmpl.max_hp;
+    const taken = gone ? (eaten.meat ?? deadT?.max_hp ?? 0) : bite;
     eaten.meat = gone ? 0 : left;
     const fedFrom6 = creature.hunger;
     creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) && !SMALL_EATERS.has(creature.templateId) ? MEAL_SMALL : MEAL_CORPSE));

@@ -2644,7 +2644,7 @@ export async function counted(z: ZoneDO, session: Session, arg: string, run: (ar
     else send.call(z, s, text, cls, speaker, sounds);
   };
   z.roomFeed = function (...args: Parameters<ZoneDO["roomFeed"]>) {
-    if (args[1].startsWith(mine)) held.push({ kind: "feed", args });
+    if (typeof args[1] === "string" && args[1].startsWith(mine)) held.push({ kind: "feed", args });
     else feed.apply(z, args);
   };
   let first: string | undefined;

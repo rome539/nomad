@@ -6129,7 +6129,7 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "the-tide-warden": { out: "walks {dir} down the causeway at the pace it has always held.", in_: "comes up the causeway {dir}, stops at the milestone, and cuts the stick." },
   "grey-heron": { out: "goes up {dir}, slowly, hugely, complaining.", in_: "drops in on stiff wings and folds itself away." },
   "feral-goat": { out: "goes {dir} up ground that has no business holding it.", in_: "picks its way in and resumes chewing." },
-  "old-billy": { out: "goes {dir} up the rock at a walk, unhurried, and turns at the top.", in_: "picks its way in, stops square on, and lowers its head." },
+  "old-billy": { out: "bolts {dir} over the rocks and is gone.", in_: "picks its way in, stops square on, and lowers its head." },
   "scarp-raven": { out: "tips off the face {dir} and is carried away without a beat.", in_: "lands, hops twice, and looks at you sideways." },
   "gill-adder": { out: "pours away {dir} between the stones.", in_: "flows in and settles into a coil." },
   "lead-dog": { out: "gives ground {dir} still facing you, and only turns at the last.", in_: "walks in and stops, square on, waiting." },
@@ -6526,6 +6526,13 @@ export const BLUNT_TELL_BONE = [
 // weight leaves a broken gait, a point leaves it stuck and leaking. Per-mob
 // HURT_STYLE (the drowned's wet exits) outranks these; the fleet-rat's
 // whole-bodied dart outranks everything. {dir} is the way out.
+// FRIGHTENED OFF BY FIRE (rome, 2026-11-10): an animal that "shrinks from your
+// flame and breaks away" is not hurt and not beaten, so it never takes a wound
+// line ("trailing blood") or its own calm walk-off ("unhurried"). It runs from the light.
+export const FIRE_FLEE_OUT = [
+  "flees {dir} from the light.",
+  "bolts {dir}, away from the fire.",
+];
 export const FLEE_TELL: Record<string, { out: string[]; in_: string[] }> = {
   edge: {
     out: [
