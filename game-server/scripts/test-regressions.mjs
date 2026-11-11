@@ -799,18 +799,7 @@ try {
     assert.doesNotMatch(out, /deep keep/, 'the deep keep stays at the gates');
   });
   check('a keeper speaks only of what is on his own ground (2026-11-02)', () => {
-    // the fever: wood gate yes, fortress and road gates no
-    const at = (pubkey, roomId) => ({ pubkey, roomId, name: pubkey });
-    const folk = [at('fort', 'gate'), at('wood', 'the-gate-arch'), at('road', 'the-relay-house')];
-    const heard = new Map();
-    const z = { sessions: new Map(folk.map((s) => [s.pubkey, s])), inGatehouse: new Set(folk.map((s) => s.pubkey)),
-      creatures: new Map([['r', { templateId: FEVER_RAT, hp: 10 }]]),
-      world: { rooms: new Map([['gate', { region: '' }], ['the-gate-arch', { region: 'wood' }], ['the-relay-house', { region: 'road' }]]) },
-      bandOf(r) { return this.world.rooms.get(r)?.region || (r === 'gate' ? 'gate' : 'upper'); },
-      send: (s, t) => heard.set(s.pubkey, t) };
-    const rnd = crypto.getRandomValues; crypto.getRandomValues = (a) => { a.fill(0); return a; };
-    try { feverrat.keeper(z, 5_000_000); } finally { crypto.getRandomValues = rnd; } // an early clock: the keeper's minute gate is module state the later fever test shares
-    assert.deepEqual([...heard.keys()], ['wood'], 'only the wood\'s keeper speaks of the fever');
+    // (the fever rat's own faded keeper lines were taken out, 2026-11-11)
     // the king is the fortress's, the roe the wood's
     const src = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
     assert.match(src('ratking.ts'), /if \(z\.inGatehouse\.has\(s\.pubkey\)\) \{[\s\S]{0,400}if \(z\.world\?\.rooms\?\.get\(s\.roomId\)\?\.region\) continue;[\s\S]{0,400}RAT_KING_KEEPER_LINES/, 'the king only at a fortress gate');
@@ -4989,24 +4978,22 @@ try {
       sessions: new Map([['me', { pubkey: 'me', roomId: 'gate-w' }], ['out', { pubkey: 'out' }]]), inGatehouse: new Set(['me']), // behind a wood gate: the fever is on his ground
       said: [], send(s, t) { this.said.push([s.pubkey, t]); }, regionOf(r) { return this.world.rooms.get(r)?.region ?? ''; },
     };
-    // no rat up: the keeper says nothing, the old village has only the fever's own lines
-    let t = 10_000_000;
-    for (let m = 0; m < 600; m++) feverrat.keeper(z, t += 60_000);
-    assert.equal(z.said.length, 0, 'nothing to speak of');
+    // no rat up: the old village has only the fever's own lines
     const quiet = new Set(); for (let i = 0; i < 200; i++) quiet.add(eventAmbient(z, 'graves-x'));
     assert.ok(![...quiet].some((l) => /facing the graves|loose earth|breathing among the graves/.test(l)), 'no rat lines without a rat');
     // the rat up in the graves
     z.creatures.set('r', { id: 'r', templateId: FEVER_RAT, hp: 85, roomId: 'graves-x' });
-    for (let m = 0; m < 600; m++) feverrat.keeper(z, t += 60_000);
-    assert.ok(z.said.length > 0, 'the keeper speaks of it');
-    assert.ok(z.said.every(([pk]) => pk === 'me'), 'only to whoever sits by his fire');
-    assert.ok(z.said.length <= 600 / 30 + 1, 'and not more than once in half an hour');
-    for (const [, line] of z.said) { assert.match(line, /graves/); assert.doesNotMatch(line, /kill/i, 'a place, never the rule'); }
     const seen = new Set(); for (let i = 0; i < 200; i++) seen.add(eventAmbient(z, 'graves-x'));
     assert.ok([...seen].some((l) => /facing the graves|loose earth|breathing among the graves/.test(l)), 'the old village sounds of it');
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     assert.doesNotMatch(ev, /The fever sits over/, 'the room text never names a settled fever: the cough tells you (2026-11-06)');
-    assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /feverrat\.keeper\(this, now\);/, 'the keeper is asked every beat');
+    // THE KEEPER SPEAKS OF THE FEVER ONCE, STORIED (rome, 2026-11-11): the rat's faded
+    // lines, a second telling in a second look, are gone
+    assert.doesNotMatch(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /feverrat\.keeper\(/, 'nothing asks for the faded lines');
+    assert.equal(feverrat.keeper, undefined, 'and nothing sends them');
+    const zdk = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.doesNotMatch(zdk, /FEVER_RAT_KEEPER_LINES|Fever's off the graves again|Fever's up out of the dead again/, 'the faded lines are gone');
+    assert.match(zdk, /  fever: \[\n    "\\"The wind has come round off the graves\. It comes warm\./, 'the storied telling stays');
   });
 
   check('the fever rat draws the rat king\'s size, through the size curve (2026-11-01)', () => {

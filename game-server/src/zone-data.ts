@@ -3048,17 +3048,12 @@ export const FEVER_COUGH_LINES = [
   "You cough before you can stop it, a dry hacking that will not let go of you.",
   "Your chest tightens on the sweetish air and you cough, loud, over and over.",
 ];
-export const FEVER_GRAVES: Record<string, { key: string; bands: string[]; rises?: string[]; rise?: string; keeper?: string[] }> = {
+export const FEVER_GRAVES: Record<string, { key: string; bands: string[]; rises?: string[]; rise?: string }> = {
   "the-fever-graves": { key: "fever", bands: ["den", "wood"] },
   "the-strand-graves": { key: "fever-strand", bands: ["crossing"] },
   "the-hill-graves": { key: "fever-hill", bands: ["mountain"] },
   "the-fortress": { key: "fever-fortress", bands: ["upper", "gate", "out"], rises: ["ossuary", "catacomb", "the-plague-trench"],
-    rise: "It settles over the whole fortress, in and out. Sleep will not take, food does you no good, and a dressing may as well be a rag. Somewhere among the fortress's dead, something is digging its way up.",
-    keeper: [
-      "The keeper says, to nobody in particular: \"Something's opened one of the old burials. Not dug it. Opened it. From underneath.\"",
-      "\"Fever's up out of the dead again.\" The keeper doesn't look up. \"Last time it sat like this there was something come up with it, and it didn't lift till somebody went down there.\"",
-      "The keeper sniffs at the hatch and makes a face. \"That's the bone rooms on the air. The garrison tied a cloth over their faces when it came like this. They tied them on their dead too.\"",
-    ] },
+    rise: "It settles over the whole fortress, in and out. Sleep will not take, food does you no good, and a dressing may as well be a rag. Somewhere among the fortress's dead, something is digging its way up." },
 };
 // ...and from a graves' rooms back to it: where its rat can come up.
 export const FEVER_RISES = (graves: string): string[] => FEVER_GRAVES[graves]?.rises ?? [graves];
@@ -3073,17 +3068,11 @@ export const FEVER_FIRST_MAX_MS = 6 * 3_600_000;
 export const FEVER_RAIN_SOON_MIN_MS = 10 * 60_000;
 export const FEVER_RAIN_SOON_MAX_MS = 60 * 60_000;
 export const FEVER_CLOTH_TRAIT = "grave-clothed";      // the grave-cloth's own; on nothing else in the world
-// HOW ANYONE KNOWS IT IS UP (rome, 2026-11-02): the keeper speaks of it at the
-// gatehouse, as he does of the king and the roe; the fever's status line names
+// HOW ANYONE KNOWS IT IS UP (rome, 2026-11-02): the keeper's storied tellings of
+// the fever (ARC_TELLINGS; his faded lines about the rat were taken out on
+// 2026-11-11, rome: he said it twice, two ways); the fever's status line names
 // the graves; and the old village sounds of it while it is out. A place, never
 // a rule: nothing here says kill it and the fever lifts.
-export const FEVER_RAT_KEEPER_PER_MIN = 0.05;
-export const FEVER_RAT_KEEPER_GAP_MS = 30 * 60_000;
-export const FEVER_RAT_KEEPER_LINES = [
-  "The keeper says, to nobody in particular: \"Somebody's opened one of the graves in the old village. Not dug it. Opened it. From underneath.\"",
-  "\"Fever's off the graves again.\" The keeper doesn't look up. \"Last time it sat like this there was something come up out of them with it, and it didn't lift till somebody went out there.\"",
-  "The keeper sniffs at the hatch and makes a face. \"Wind's off the graves. Folk in the old village used to tie a cloth over their faces when it blew like this. They tied them on their dead too.\"",
-];
 export const FEVER_RAT_AMBIENT_ODDS = 0.4;  // of an ambient beat on the old village while it is up
 export const FEVER_RAT_AMBIENT = [
   "Every rat in the old village has gone still, and every one of them is facing the graves.",

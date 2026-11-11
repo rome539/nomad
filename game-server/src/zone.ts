@@ -6312,7 +6312,6 @@ export class ZoneDO implements DurableObject {
     rising.tick(this, now);      // the dead that only seemed to fall get up (rising.ts)
     ratking.roll(this, now);     // about once a day, a rat king comes to the warrens (ratking.ts)
     whiteroe.roll(this, now);    // about once a day, a white roe comes into the wood (whiteroe.ts)
-    feverrat.keeper(this, now);  // while the fever rat is up, the keeper speaks of it (feverrat.ts)
     cough.tick(this, now);       // the drowned's water, a chill, smoke: what sets you coughing (cough.ts)
     this.applyRot(now, false);
     this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches

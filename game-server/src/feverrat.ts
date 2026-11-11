@@ -12,7 +12,7 @@ import type { Session, Creature } from "./zone-types";
 import { chance, pick, randInt, uuid } from "./rng";
 import {
   FEVER_RAT, FEVER_RAT_HOME, FEVER_CLOTH_TRAIT, WANDER_MIN_MS, WANDER_MAX_MS,
-  FEVER_RAT_KEEPER_PER_MIN, FEVER_RAT_KEEPER_GAP_MS, FEVER_RAT_KEEPER_LINES, FEVER_BANDS, FEVER_GRAVES, FEVER_RISES,
+  FEVER_BANDS, FEVER_GRAVES, FEVER_RISES,
 } from "./zone-data";
 
 // One rat to each graves (2026-11-04): the one up out of these graves (or any
@@ -60,27 +60,9 @@ export function goesBack(z: ZoneDO, graves = FEVER_RAT_HOME): boolean {
   return true;
 }
 
-// THE KEEPER SPEAKS OF IT (2026-11-02), once a minute's chance while it is up,
-// to whoever sits by his fire, as he does of the king and the roe.
-let lastKeeper = 0;
-const keeperSaid = new Map<string, number>(); // pubkey -> when he last spoke of it to them
-export function keeper(z: ZoneDO, now: number): void {
-  if (now - lastKeeper < 60_000) return;
-  lastKeeper = now;
-  if (!rat(z)) return;
-  for (const s of z.sessions.values()) {
-    if (!z.inGatehouse.has(s.pubkey)) continue;
-    // His own ground only (rome, 2026-11-02): each fever sits over the ground
-    // its graves stand on (FEVER_GRAVES), so only a keeper at a gate on that
-    // ground speaks of its rat (roomId is the gate you came in by).
-    const region = z.bandOf(s.roomId);
-    const mine = Object.entries(FEVER_GRAVES).find(([, f]) => f.bands.includes(region))?.[0];
-    if (!mine || !rat(z, mine)) continue;
-    if (now - (keeperSaid.get(s.pubkey) ?? 0) < FEVER_RAT_KEEPER_GAP_MS || !chance(FEVER_RAT_KEEPER_PER_MIN)) continue;
-    keeperSaid.set(s.pubkey, now);
-    z.send(s, pick(FEVER_GRAVES[mine]!.keeper ?? FEVER_RAT_KEEPER_LINES), "amb");
-  }
-}
+// THE KEEPER'S FADED LINES ABOUT THE RAT ARE GONE (rome, 2026-11-11): he spoke
+// of the fever twice, in two looks, and the rat's set named the old village at
+// every graves. He speaks of the fever in his own storied tellings (ARC_TELLINGS).
 
 // The grave-cloth: whoever wears it mends as if there were no fever.
 export function spared(z: ZoneDO, s: Session): boolean {
