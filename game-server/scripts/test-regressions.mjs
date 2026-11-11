@@ -5418,7 +5418,7 @@ try {
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
     // a quiet day asked about its sky gets its band; a night gets the night's sky in front of the moon
-    assert.match(ev, /return SKY_HOURS\[skyBand\(\)\]!;/, 'the day answers by its band');
+    assert.match(ev, /return SKY_HOURS\[skyBand\(\)\]! \+ \(cometNight\(\) \? " " \+ NIGHT_COMET : ""\);/, 'the day answers by its band (and its comet)');
     assert.match(ev, /if \(isNight\(\)\) return `\$\{SKY_NIGHT\} /, 'the night describes its sky before the moon');
     const hours = zd.match(/export const SKY_HOURS = \[([\s\S]*?)\n\];/)[1].split('\n').filter((l) => l.trim().startsWith('"'));
     assert.equal(hours.length, 5, 'dawn, morning, midday, afternoon, dusk');
@@ -5511,6 +5511,13 @@ try {
     // drawn in the game, not only when the preview asks
     assert.match(src, /var tnAurora = SKY_FX\.aurora \|\| skyAuroraNight\(skyRoll\), tnComet = SKY_FX\.comet \|\| skyCometNight\(skyRoll\);/);
     assert.match(src, /var turning = fxNight, /);
+    // the comet in front of the clouds and still, or it is hidden or carried off the sky (2026-11-11)
+    const cAt = src.indexOf('if (!lay.path && tnComet) drawComet(c, w * .3, h * .2,'), clAt = src.indexOf('if (row) c.drawImage(row, x0, top, tw * copies, th);');
+    assert.ok(cAt > clAt && clAt > 0, 'the comet is drawn after the clouds');
+    assert.equal((src.match(/\bdrawComet\(c, (?!x, y, B\))/g) || []).length, 1, 'drawn in one place only');
+    // ...and by day too, said under the open day skies that draw it (rome, 2026-11-11)
+    assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /if \(\(daySky === "day" \|\| daySky === "dawn" \|\| daySky === "dusk"\) && cometNight\(\)\) lines\.push\(LORE_LINE \+ NIGHT_COMET\);/);
+    for (const k of ['day', 'dawn', 'dusk']) assert.ok(new RegExp('var ' + k + ' = \\{ far: "' + k + '-far"').test(src), k + ' is a layered sky (no path)');
     assert.match(src, /var fxNight = lay\.stars > 0 && !lay\.path;/);
     // ...and said only under the skies that draw them: night, moon, blood
     const zsrc = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');

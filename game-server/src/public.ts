@@ -12817,11 +12817,6 @@ var skyDrift = (function () {
       var fxB = Math.max(2, Math.round(s * 3)); // a plate's pixel, on screen
       // the aurora in finer grain than a plate's pixel, and many steps: soft, but not smooth
       if (tnAurora) drawAurora(c, w, h, Math.max(1.5, s * 1.6));
-      if (tnComet) {
-        var cx = w * .68, cy = h * .15;
-        if (turning) { var ca = Math.atan2(cy - poleY, cx - poleX) + turnA, cr = Math.hypot(cx - poleX, cy - poleY); cx = poleX + Math.cos(ca) * cr; cy = poleY + Math.sin(ca) * cr; }
-        drawComet(c, cx, cy, fxB);
-      }
       drawShots(c, w, h, px);
     }
     // the moon's cold light round it, then the disc
@@ -12841,6 +12836,11 @@ var skyDrift = (function () {
       var copies = Math.ceil(w / tw) + 1, row = layCloudRow(cl[0], copies, cl[3] || lay.cloudTint || (lay.dark ? "rgba(2,5,16," + lay.dark + ")" : ""), lay.cloudHue);
       if (row) c.drawImage(row, x0, top, tw * copies, th);
     }
+    // THE COMET IN FRONT OF THE CLOUDS, and still (2026-11-11: under the clouds
+    // and turning with the stars it was hidden, or carried off the top of the
+    // sky, on the nights the words said it stood there). BY DAY TOO (rome,
+    // 2026-11-11): its days and its nights, on every open sky but the eclipse.
+    if (!lay.path && tnComet) drawComet(c, w * .3, h * .2, Math.max(2, Math.round(s * 3)));
   }
   function active() { return !!name && viewMode === "image" && !document.hidden && !still.matches; }
   function stop() {

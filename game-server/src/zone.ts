@@ -76,7 +76,7 @@ import {
 import * as invites from "./invites";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { saveMark, cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed, skyCovered } from "./zone-util";
+import { saveMark, cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed, skyCovered, cometNight } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -134,7 +134,7 @@ import { FORGE_STOCK,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS, PICKED_CLEAN_MS, LORE_LINE,
-  WEATHER_NIGHT, HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
+  WEATHER_NIGHT, NIGHT_COMET, HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
   RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_OPEN_BLOOD, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES, PRIZE_EMPTY_ODDS, PRIZE_EMPTY_LINES,
@@ -8135,6 +8135,9 @@ export class ZoneDO implements DurableObject {
     if (!indoors && OUTDOOR_ROOMS.has(room.id) && !isNight()) {
       const day = events.dayLine(this, room.id);
       if (day) lines.push(LORE_LINE + day);
+      // THE COMET BY DAY (rome, 2026-11-11), under the open skies that draw it.
+      const daySky = this.skyFor(room.id);
+      if ((daySky === "day" || daySky === "dawn" || daySky === "dusk") && cometNight()) lines.push(LORE_LINE + NIGHT_COMET);
     }
 
     const exits = world.exits.get(room.id) ?? [];

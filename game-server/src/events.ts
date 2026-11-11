@@ -1324,11 +1324,11 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     return SKY_COVERED[isNight() ? 3 : isDawn() ? 0 : isDusk() ? 2 : 1]!;
   if (isNight()) return `${SKY_NIGHT} ${MOON_SKY[isFullMoon() ? 0 : moonPhase()] ?? MOON_SKY[6]}` + (skyCovered() ? "" : " " + nightExtras());
   // THE CLEAR DAY says so: the picture has no cloud in it today, so neither do the words.
-  if (skyClear()) return SKY_CLEAR;
+  if (skyClear()) return SKY_CLEAR + (cometNight() ? " " + NIGHT_COMET : "");
   // AND ANY OTHER HOUR SAYS WHICH HOUR IT IS (rome, 2026-11-05: at dusk this fell
   // through to a line about an ordinary grey day while the picture burned orange).
   // An open sky only - a sky asked by name (sun, moon, stars) was answered above.
-  if (/^(the )?(sky|cloud|clouds|weather|lid|overcast)?$/i.test((arg ?? "").trim())) return SKY_HOURS[skyBand()]!;
+  if (/^(the )?(sky|cloud|clouds|weather|lid|overcast)?$/i.test((arg ?? "").trim())) return SKY_HOURS[skyBand()]! + (cometNight() ? " " + NIGHT_COMET : "");
   return null;
 }
 
