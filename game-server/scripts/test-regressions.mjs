@@ -5473,6 +5473,27 @@ try {
     }
   });
 
+  check('an animal walking in prints in the look\'s style, not a faded feed line (2026-11-11)', () => {
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /: \(s: Session\) => arrivalLine\(z, creature, tmpl, s\.pubkey, jingle\), undefined, false, "arrive"\);/, 'the walk-in is sent as "arrive"');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /#log \.rm-mob, #log \.arrive \{ color: var\(--cream, inherit\); font-weight: 700; \}/, 'drawn as an animal in the look is');
+    assert.match(pub, /if \(c === "feed" \|\| c === "arrive"\) return "tick";/, 'and keeps the feed\'s sound');
+  });
+
+  check('the mountain cats kill for sport, as the foxes do (2026-11-11)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const set = (zd.match(/export const SURPLUS_KILLERS = new Set\(\[([^\]]*)\]\)/) || [])[1] || '';
+    for (const cat of ['wildcat', 'the-tom', 'lynx', 'cave-lion']) {
+      assert.ok(set.includes('"' + cat + '"'), cat + ' kills for sport');
+      assert.ok(PREYS_ON.has(cat), cat + ' has prey to kill');
+    }
+    for (const fox of ['hill-fox', 'snow-fox', 'the-raiding-fox', 'the-blue-fox']) assert.ok(set.includes('"' + fox + '"'), fox + ' still does');
+    // a sport kill is left lying: no meal
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /\$\{cap\(tmpl\.name\)\} kills \$\{vt\.name\}, and leaves it lying, and does not eat\./);
+  });
+
   check('the night extras are on the same nights in the words and the picture (2026-11-11)', () => {
     // The page draws the northern lights and the comet on their own nights, and
     // the stars turning and falling on every night it draws stars; the room's

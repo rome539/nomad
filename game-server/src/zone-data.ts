@@ -5851,7 +5851,10 @@ export const PRICKLY: Record<string, number> = { "hedgehog": 2 };
 // scavengers come to its ground for the free carrion, and a tracker finds
 // kills nobody ate. Rolled at SURPLUS_ODDS when a fed fox shares a room with
 // its prey, then not again for SURPLUS_REARM_MS. ai.predation.
-export const SURPLUS_KILLERS = new Set(["hill-fox", "snow-fox", "the-raiding-fox", "the-blue-fox"]);
+// ...AND THE MOUNTAIN'S CATS KILL FOR SPORT TOO (rome, 2026-11-11): the wildcat,
+// its rare blood the tom, the lynx and the cave lion, by the same rule.
+export const SURPLUS_KILLERS = new Set(["hill-fox", "snow-fox", "the-raiding-fox", "the-blue-fox",
+  "wildcat", "the-tom", "lynx", "cave-lion"]);
 export const SURPLUS_ODDS = 0.25;
 export const SURPLUS_REARM_MS = 2 * 3_600_000;
 // THE WOLVES TEST YOU (rome, 2026-10-21). A FED wolf alone in a room with a

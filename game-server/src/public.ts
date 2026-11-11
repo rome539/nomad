@@ -1692,7 +1692,7 @@ export const PAGE = `<!doctype html>
   #log .rm-gap  { margin-top: 0.6em; }
   #log .rm-sign { color: var(--dim); font-style: italic; }
   #log .rm-item { color: var(--bone); }
-  #log .rm-mob  { color: var(--cream, inherit); font-weight: 700; }
+  #log .rm-mob, #log .arrive { color: var(--cream, inherit); font-weight: 700; }
   .bitem .kind { color: var(--dim); font-size: .85em; }
   #log .amb    { color: var(--dim); }   /* the walls and the weather talking: there, not shouting (rome, 2026-10-18) */
   /* Gear wearing down — an amber caution so a fraying blade or thinning plate is
@@ -4751,7 +4751,7 @@ function sndFor(line, c) {
   if (c.indexOf("fumble") >= 0) return "crack";
   if (c.indexOf("gain") >= 0) return "chime";
   if (c.indexOf("head") >= 0) return "step";
-  if (c === "feed") return "tick";
+  if (c === "feed" || c === "arrive") return "tick"; // an animal walking in keeps the feed's sound in the look's style
   return null;
 }
 // A combat round can print several lines at once; stagger their voices a

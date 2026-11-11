@@ -1892,9 +1892,11 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
         : hurt ? hurt.in_ : pick(fleeFam.in_).replace("{ground}", groundWord(z.regionOf(creature.roomId), creature.roomId));
       // A walk-in is told whole, as the look tells the animal standing there
       // (its load, its hunger or what it is about, its wounds), read by each viewer.
+      // ...AND IN THE LOOK'S OWN STYLE (rome, 2026-11-11): the bold of an animal in
+      // the room's look ("arrive" in the page), not a faded feed line.
       if (!hush) z.roomFeed(creature.roomId, viaPath || mode === "flee"
         ? jingle(viaPath?.in_ ?? `${cap(tmpl.name)} ${inLine}`)
-        : (s: Session) => arrivalLine(z, creature, tmpl, s.pubkey, jingle), undefined, false);
+        : (s: Session) => arrivalLine(z, creature, tmpl, s.pubkey, jingle), undefined, false, "arrive");
       if (!hush) z.roomSound(
         creature.roomId,
         mode === "flee"
