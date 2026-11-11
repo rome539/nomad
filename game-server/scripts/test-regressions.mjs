@@ -40,7 +40,7 @@ try {
         "export * as campfire from './campfire';",
         "export {cmdCook, moveLoad} from './verbs';",
         "export {walkCost} from './exhaustion';",
-        "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS} from './zone-data';",
+        "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, wardAt} from './zone-data';",
         "export {forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, keeperRead, eatsAt, rollBloodline, reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep, broodBirths} from './ai';",
         "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult} from './ai';",
         "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry, holdLand, holdBody, mobEagle} from './groups';",
@@ -108,7 +108,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
+  const { wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -3329,6 +3329,40 @@ try {
   });
   // 2026-11-07: rats were finishing a wolf's body. A feeder smaller than the dead
   // takes its own size off it and leaves the rest.
+  // 2026-11-10: both of the keeper's warm pieces could be off the shelf at once.
+  check('the keeper always has one warm piece: the wool-lined cap never rotates off', () => {
+    const g = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    assert.match(g, /itemId === SOUP_ITEM \|\| FENCE_ALWAYS\.has\(itemId\)\);/);
+    assert.match(g, /if \(now >= at \|\| fenceStaple\(z, itemId\)\) z\.fenceOut\.delete\(itemId\);/, 'and one already off comes straight back');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const FENCE_ALWAYS = new Set\(\["wool-lined-cap"\]\);/);
+  });
+  // 2026-11-10: a ward was on or off, so a second quiet or padded piece was worth
+  // nothing. Two or more worn pieces of one ward are a step stronger.
+  check('a second piece of the same ward counts: half becomes a third', () => {
+    assert.equal(wardAt('quiet', 0, 0.5), 1);
+    assert.equal(wardAt('quiet', 1, 0.5), 0.5);
+    assert.equal(wardAt('quiet', 2, 0.5), 1 / 3);
+    assert.equal(wardAt('padded', 3, 0.5), 1 / 3, 'a third piece adds no more');
+    assert.equal(wardAt('fleeced', 2, 0.25), 0.125);
+    assert.equal(wardAt('hooded', 2, 0.5), 0.5, 'a ward with no stacked figure stays as it was');
+    const z = new ZoneDO({}, {});
+    z.world = { itemTemplates: new Map([['cap', { id: 'cap', traitMap: new Map([['quiet', 1]]) }], ['boot', { id: 'boot', traitMap: new Map() }]]) };
+    const s = { items: [{ itemId: 'cap', equipped: true }, { itemId: 'boot', equipped: true, rolledMap: new Map([['quiet', 1]]) }, { itemId: 'cap', equipped: false }] };
+    assert.equal(z.wornCount(s, 'quiet'), 2, 'worn pieces only, made or rolled');
+    assert.equal(z.ward(s, 'quiet', 0.5), 1 / 3);
+    const src = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8') + readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8') + readFileSync(new URL('../src/pvp.ts', import.meta.url), 'utf8');
+    for (const tag of ['quiet', 'padded', 'wardhide', 'mailward', 'slick', 'fleeced']) assert.ok(src.includes(`ward(session, "${tag}"`) || src.includes(`ward(victim, "${tag}"`) || src.includes(`ward(defender, "${tag}"`), tag + ' reads the count');
+  });
+  // 2026-11-10: breaking a rare gave 4 stock and forging one cost 3, so any rare
+  // found became any rare wanted, with change. Breaking gives under the forge cost.
+  check('breaking gear down gives less than forging its rarity costs', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const SALVAGE_YIELD: Record<string, number> = \{ common: 1, uncommon: 1, rare: 2, epic: 4 \};/);
+    const mig = readFileSync(new URL('../migrations/382_gear_found_where_it_belongs.sql', import.meta.url), 'utf8');
+    assert.match(mig, /UPDATE mob_templates SET gear_item = NULL, gear_drop = 0 WHERE id = 'cave-lion';/);
+    assert.match(mig, /UPDATE fence_stock SET cost = 40 WHERE item_id = 'strongbox-key';/);
+  });
   // 2026-11-10: a big body feeds more mouths. A feeder takes half its own size,
   // so a cave lion goes four ways among great vultures, six among hill wolves.
   check('a cave lion feeds four great vultures and six hill wolves', () => {

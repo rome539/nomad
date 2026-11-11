@@ -22,7 +22,7 @@ import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord,
 import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, KEEPER_LEARN_SALES, WORTH_MARK_AT, GEAR_FAILING_AT, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
-  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, GLUT_FREE, GLUT_FLOOR, GLUT_EASE_MS, GLUT_EASE_SHARE, CIGARETTES, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, FENCE_MATS, TORCH_ITEM,
+  FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, GLUT_FREE, GLUT_FLOOR, GLUT_EASE_MS, GLUT_EASE_SHARE, CIGARETTES, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, FENCE_ALWAYS, FENCE_MATS, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP, SLOT_WORD,
   GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, SOUP_ITEM, SOUP_WARM_MS, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
@@ -616,7 +616,7 @@ export function fenceStaple(z: ZoneDO, itemId: string): boolean {
   const t = z.world!.itemTemplates.get(itemId);
   // The materials are not staples (rome, 2026-10-22): they run out (matLeft)
   // AND they rotate off the shelf like the gear, so they are not always there.
-  return !!t && (!!t.edible || t.staunch > 0 || itemId === TORCH_ITEM || itemId === SOUP_ITEM);
+  return !!t && (!!t.edible || t.staunch > 0 || itemId === TORCH_ITEM || itemId === SOUP_ITEM || FENCE_ALWAYS.has(itemId));
 }
 
 // The shelf ROTATES (rome, 2026-07-20): the keeper doesn't stock his whole
@@ -634,7 +634,7 @@ export function fenceStaple(z: ZoneDO, itemId: string): boolean {
 export function tickFence(z: ZoneDO, now: number): void {
   tickGlut(z, now); // the keeper moves his stacks on, on the same beat as his shelf
   for (const [itemId, at] of z.fenceOut) {
-    if (now >= at) z.fenceOut.delete(itemId); // it cycled back in; on offer again
+    if (now >= at || fenceStaple(z, itemId)) z.fenceOut.delete(itemId); // it cycled back in (or is never off the shelf); on offer again
   }
   if (!z.nextFenceChurnAt) {
     z.nextFenceChurnAt = now + randInt(FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS);

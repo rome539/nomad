@@ -892,7 +892,7 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
     if (session.away) return false;
     // QUIET gear (felt soles, the grave-shroud) halves what the bones hear —
     // your footfall, your slip past, your reach for the door. Worn, not carried.
-    if (z.wearsTrait(session, "quiet")) odds *= QUIET_WAKE_MULT;
+    odds *= z.ward(session, "quiet", QUIET_WAKE_MULT);
     // A hedgehog rooting in the room covers you (NOISE_COVER, mig 321).
     odds *= noiseCover(z, roomId);
     // The bell outshouts felt soles: while it rings the keep hears everything,

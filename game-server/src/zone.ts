@@ -120,7 +120,7 @@ import { FORGE_STOCK,
   WEAPON_WEAR, ARMOR_WEAR, SEALED_WEAR_MULT, GEAR_WORN_AT, GEAR_FAILING_AT, ARMOR_K, RUST_PER_TICK, FLOOR_RUST_PER_HOUR, FLOOR_RUST_STEP_MS, materialDamp, MATERIAL_STONE, MATERIAL_BONE, MATERIAL_WOOD, MATERIAL_HIDE, MATERIAL_CLOTH, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WOUNDED_FUMBLE_BONUS, WOUNDED_DROP_ODDS, AUTO_EAT_FRACTION, AMBUSH_MULT, THROW_DMG_MIN, THROW_DMG_MAX,
   THROW_COOLDOWN_MS, THROW_SHATTER, THROW_SHATTER_HOLLOW, THROW_TOUGH, WEAPON_WEAR_HOLLOW, DODGE_MAX, DODGE_ZERO_AT, POISE_PER_WEIGHT, POISE_CAP, BURDEN_FREE_IRON, LOOSE_IRON_KG, QUICK_LOAD, BALANCE_KG,
-  STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, BLEED_ODDS,
+  STANCE, RECKLESS_MISS, SHIELD_DRAG_FREE, SHIELD_DRAG_PER_BLOCK, GUARDED_BLOCK_BONUS, GUARDED_WOUND_ODDS, STAGGER_BONUS, PACK_CAP, PACK_FOOD_CAP, PADDED_STUN_MULT, WARDHIDE_WOUND_ODDS, wardAt, BLEED_ODDS,
   TRIP_ODDS, TRIP_HOLD_MS, POCKETED_BONUS,
   HOBBLE_ODDS, HOBBLE_FLEE_MS, VITALS_PVE, VITALS_ARMOR_FULL, findsVitals, BIG_VITALS, BODY_HOLD_MS, VITALS_CREATURE, RAT_KING,
   VITALS_HOUND, VITALS_KILLS, VITALS_KICKER, VITALS_DARK,
@@ -4056,11 +4056,11 @@ export class ZoneDO implements DurableObject {
     // The wound wards are the gear answer, and they roll separately — hide (or
     // mail) under a guard stacks (0.5 × 0.5): the full turtle bleeds a quarter
     // as often. Mail turns edges too: that's what the rings are FOR.
-    if (this.wearsTrait(victim, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
+    if (this.wearsTrait(victim, "wardhide") && !chance(this.ward(victim, "wardhide", WARDHIDE_WOUND_ODDS))) {
       this.send(victim, `Your thick hide turns the ${by} — no wound opens.`, "block");
       return;
     }
-    if (this.wearsTrait(victim, "mailward") && !chance(WARDHIDE_WOUND_ODDS)) {
+    if (this.wearsTrait(victim, "mailward") && !chance(this.ward(victim, "mailward", WARDHIDE_WOUND_ODDS))) {
       this.send(victim, `The ${by} skates across your rings — no wound opens.`, "block");
       return;
     }
@@ -4084,7 +4084,7 @@ export class ZoneDO implements DurableObject {
     // The ward covers the whole wound family (rome, 2026-07-10): hide thick
     // enough to turn a bleed turns the leg-rake too. Its own roll, same odds
     // as the bleed ward, so the two afflictions read as one defense.
-    if (this.wearsTrait(victim, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
+    if (this.wearsTrait(victim, "wardhide") && !chance(this.ward(victim, "wardhide", WARDHIDE_WOUND_ODDS))) {
       this.send(victim, `${cap(tmpl.name)} rakes for your leg — the thick hide takes it, and your stride holds.`, "block");
       return;
     }
@@ -5387,7 +5387,7 @@ export class ZoneDO implements DurableObject {
           // can't flee, and it drags harder until you wrench free or kill it.
           // SLICK hide (eel-skin) gives cold arms half as much to hold; worn MASS
           // (poise) plants you so it can't drag — strongest-wins, never stacked.
-          const seizeMult = Math.min(this.wearsTrait(victim, "slick") ? SLICK_SEIZE_MULT : 1, 1 - this.poiseOf(victim));
+          const seizeMult = Math.min(this.ward(victim, "slick", SLICK_SEIZE_MULT), 1 - this.poiseOf(victim));
           const seizeOdds = SEIZE_ODDS * seizeMult * (creature.traits?.includes("undertow") ? MOB_UNDERTOW_MULT : 1);
           // LAND-BOUND cannot take hold out of the water, and the reason this is
           // worth a trait rather than a footnote is WHERE it fires. In its own
@@ -5417,7 +5417,7 @@ export class ZoneDO implements DurableObject {
           // (cushion) takes the ring out of a share; worn MASS (poise) shrugs the
           // stagger — strongest-wins, so heavy resists by mass and a LIGHT build
           // buys the same by slotting a padded piece (no double-dip).
-          const stunMult = Math.min(this.wearsTrait(victim, "padded") ? PADDED_STUN_MULT : 1, 1 - this.poiseOf(victim));
+          const stunMult = Math.min(this.ward(victim, "padded", PADDED_STUN_MULT), 1 - this.poiseOf(victim));
           const stunOdds = tmpl.stun * stunMult;
           if (tmpl.stun > 0 && !victim.stunned && chance(stunOdds)) {
             victim.stunned = true;
@@ -6125,11 +6125,11 @@ export class ZoneDO implements DurableObject {
         // rest both keep the slow rate. (And the cold never reaches the fire.)
         const byFire = session.resting && (this.outOfWorld(session) || den.hearthWarm(this, session));
         // A fleeced lining keeps the cold off your rest; a sodden one holds it
-        // against you. Best worn piece decides — the traits never stack. And
+        // against you. A second fleeced piece halves it again (STACKED). And
         // the RAIN is the same thief for everyone (5c): real rain holds the
         // cold against you like a sodden coat, and the wind and the dry
         // weather after it is the drying.
-        const coldMult = this.wearsTrait(session, "fleeced") ? FLEECED_COLD_MULT
+        const coldMult = this.wearsTrait(session, "fleeced") ? this.ward(session, "fleeced", FLEECED_COLD_MULT)
           : (this.wearsTrait(session, "sodden") || cough.isWet(session)) ? SODDEN_COLD_MULT : 1;
         // Wind rides the cold: a rest that was already chancy is chancier.
         const inWind = events.windy(this, session.roomId);
@@ -8806,7 +8806,7 @@ export class ZoneDO implements DurableObject {
 
   // Does any EQUIPPED piece carry this trait? (Gear traits — reach, padded,
   // quiet, slick, strapped — are worn, not carried: a spear in the pack blunts
-  // nothing.) Traits are booleans by design; two padded pieces are just padded.
+  // nothing.) Worn or not is asked here; how MANY is wornCount/ward, below.
   // Does anything equipped carry this trait tag? (The trait ledger, 098: tags
   // live on the item row — "padded", "quiet", "slick" — not in code sets.)
   // STAUNCHED (2026-08-03, the wood's answer to its own worst habit): moss-packed
@@ -8831,6 +8831,18 @@ export class ZoneDO implements DurableObject {
       if ((c.rolledMap?.get(tag) ?? 0) > 0) return true;
     }
     return false;
+  }
+
+  /** How many worn pieces carry `tag` (template or rolled), and what the ward is worth at that many (zone-data STACKED). */
+  public wornCount(session: Session, tag: string): number {
+    let n = 0;
+    for (const c of session.items) {
+      if (c.equipped && (hasTrait(this.world!.itemTemplates.get(c.itemId), tag) || (c.rolledMap?.get(tag) ?? 0) > 0)) n++;
+    }
+    return n;
+  }
+  public ward(session: Session, tag: string, one: number): number {
+    return wardAt(tag, this.wornCount(session, tag), one);
   }
 
   // The COUNTED form of wearsTrait: the highest value of `tag` across equipped

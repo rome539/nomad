@@ -375,7 +375,7 @@ async function swingAt(
   // A blunt weapon can ring the skull — one lost beat, never chained; the
   // padded coif takes the ring out of half of them.
   if (weapon && weapon.tmpl.stun > 0 && !defender.stunned) {
-    const odds = z.wearsTrait(defender, "padded") ? weapon.tmpl.stun * PADDED_STUN_MULT : weapon.tmpl.stun;
+    const odds = weapon.tmpl.stun * z.ward(defender, "padded", PADDED_STUN_MULT);
     if (chance(odds)) {
       defender.stunned = true;
       z.send(defender, `${attacker.name} lands like a falling stone — your skull rings and the room tilts.`, "stun");
@@ -402,7 +402,7 @@ async function swingAt(
     : 0;
   const wound = Math.max(effBleed, wickedWound);
   if (wound > 0) {
-    if (z.wearsTrait(defender, "wardhide") && !chance(WARDHIDE_WOUND_ODDS)) {
+    if (z.wearsTrait(defender, "wardhide") && !chance(z.ward(defender, "wardhide", WARDHIDE_WOUND_ODDS))) {
       z.send(defender, `${attacker.name}'s edge drags across the thick hide — it holds.`, "block");
     } else {
       const fresh = !defender.bleedTicks;

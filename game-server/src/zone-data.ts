@@ -836,7 +836,9 @@ export const FISH_POOL_REST_MS = 25 * 60_000;
 // down, between these rails; everything its carrier walks is inked on top.
 export const CRUDE_FILL_MIN = 0.15;   // careless hand: about a seventh of the world
 export const CRUDE_FILL_MAX = 0.45;   // careful hand: nearly half
-export const SALVAGE_YIELD: Record<string, number> = { common: 1, uncommon: 2, rare: 4, epic: 8 };
+// Breaking a piece gives less than making one of its rarity costs (2026-11-10:
+// a rare broke into 4 and cost 3 to forge, so any rare became any other rare).
+export const SALVAGE_YIELD: Record<string, number> = { common: 1, uncommon: 1, rare: 2, epic: 4 };
 export const REPAIR_COST: Record<string, number> = { common: 1, uncommon: 1, rare: 2, epic: 3 };
 // WHAT THE VICE GIVES BACK, AND WHAT THE MEND TAKES (rome, 2026-10-19). Every
 // piece used to break down into scrap iron and be mended with it, whatever it
@@ -1579,6 +1581,10 @@ export const GLUT_FLOOR = 0.25;
 export const GLUT_EASE_MS = 30 * 60_000;
 export const GLUT_EASE_SHARE = 1 / 12;
 export const FENCE_ABSENT_FRACTION = 0.33; // share of the ROTATING catalog gone at any time
+// ALWAYS ON THE SHELF, as food and torches are (rome, 2026-11-10): one warm
+// piece a wanderer can always buy. Both of the keeper's warm pieces could be
+// off the shelf at once, and the cold does not wait for the rotation.
+export const FENCE_ALWAYS = new Set(["wool-lined-cap"]);
 export const FENCE_OUT_MIN_MS = 60 * 60_000;  // an absent item stays gone this long...
 export const FENCE_OUT_MAX_MS = 180 * 60_000; // ...to this — "for some time", then it's back
 export const FENCE_LAST_ONE_ODDS = 0.2; // per item bought: that was his last (staples never sell out)
@@ -10017,9 +10023,20 @@ export const STAGGER_ARMOR_BONUS = 2;
 // damage bump instead, same slot as honed's +1 but bigger since it's earned.
 export const STAGGER_CLEAVE_DMG_BONUS = 2;
 //   two-handed — wants both hands; no shield alongside it (enforced at equip)
-//   padded    — a mob's stun rings you half as often (PADDED_STUN_MULT). Best
-//               piece counts; the trait is a boolean, it never stacks.
+//   padded    — a mob's stun rings you half as often (PADDED_STUN_MULT), and
+//               a second padded piece makes it a third (STACKED, below).
 export const PADDED_STUN_MULT = 0.5;
+// A SECOND PIECE COUNTS (rome, 2026-11-10). The wards were on or off, so one
+// quiet cap was worth as much as a quiet cap, cloak and boots, and a third of
+// the gear in the world differed from its neighbour by a trait already worn.
+// Two or more worn pieces of the same ward are a step stronger: half becomes a
+// third, and the fleece's quarter an eighth. Hooded, strapped and watertight
+// have nothing to strengthen and stay on or off.
+export const STACKED: Record<string, number> = { quiet: 1 / 3, padded: 1 / 3, wardhide: 1 / 3, mailward: 1 / 3, slick: 1 / 3, fleeced: 0.125 };
+/** What a ward is worth at `n` worn pieces: 1 with none, `one` with one, the stacked figure with two or more. */
+export function wardAt(tag: string, n: number, one: number): number {
+  return n <= 0 ? 1 : n === 1 ? one : (STACKED[tag] ?? one);
+}
 // Stun tuning lives in the DATA, not in code multipliers (rome, 2026-07-12,
 // after the Emberknock stun-chain): migration 073 halved every weapon's stun
 // stat at the source. One number per weapon, no special-case laws. Bosses
@@ -10424,6 +10441,7 @@ export const MATERIAL_BONE = new Set([
   // bone, tusk, antler, horn, shell, coral, chitin — the damp has almost no
   // purchase on any of it, which is most of what makes deep gear worth carrying
   "bone-shiv", "sharpened-rib", "crawlers-hooks", "marrow-scepter", "tusk-goad",
+  "antler-tine-spear", "eyrie-talon-hooks", "the-long-tooth", "the-great-shell",
   "skull-headed-maul",
   "chitin-harness", "abyssal-scale-coat", "tusk-sewn-brigandine",
   "bone-barred-visor", "marrow-crown", "wolf-skull-helm", "antler-braced-cap",
@@ -10435,12 +10453,13 @@ export const MATERIAL_BONE = new Set([
 export const MATERIAL_WOOD = new Set([
   "lopped-stave", "quarterstaff", "masons-mallet", "splintered-cudgel",
   "studded-maul", "the-long-crossing",
-  "battered-buckler", "coppice-hurdle", "lashed-plank-shield",
+  "battered-buckler", "coppice-hurdle", "lashed-plank-shield", "the-turnpike",
   "tail-board-targe", "bog-pearl-targe", "iron-bound-shield",
   "longbrand", "pine-brand", "tar-brand",
 ]);
 export const MATERIAL_HIDE = new Set([
   "boiled-cuirass", "cutters-jerkin", "thick-hide-jack", "white-hide-coat",
+  "hare-fur-boots", "wildcat-skin-cap", "winter-pelt-boots", "lynx-fur-hood", "the-bearded-cowl", "the-snow-road",
   "woodwards-coat",
   "leather-cap", "bounds-hood", "pale-hide-hood", "wolfskin-hood", "the-last-bear",
   "cracked-leather-shoes", "worn-boots", "white-hide-boots", "shadow-step-boots",
@@ -10462,6 +10481,7 @@ export const MATERIAL_CLOTH = new Set([
   // wet wool and linen go faster than tanned hide, which is why cloth sits
   // ABOVE leather below and not beneath it
   "padded-jerkin", "rag-vest", "moss-packed-jerkin", "cork-lined-jack",
+  "ermine-trimmed-mantle", "owl-feather-cloak",
   "drovers-frock", "scavenger-coat",
   "quilted-coif", "moss-packed-cap", "shroud-hood", "fowlers-hood",
   "felt-soled-boots", "moss-lined-boots",
