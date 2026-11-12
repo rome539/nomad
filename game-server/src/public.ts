@@ -3665,7 +3665,7 @@ var VOICE_FAMILY = {
   coyote: "coyote",
   hyena: "grave-hyena",
   direhyena: "dire-hyena",
-  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king fever-rat",
+  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king fever-rat water-vole",
   gull: "great-gull black-backed-gull",
   oystercatcher: "oystercatcher",
   chough: "mountain-chough",
@@ -10471,7 +10471,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "132";      // /mob/      strips and their eye layers
+var MOB_V  = "133";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
@@ -15460,6 +15460,7 @@ var MOB_SPRITE = {
   "tawny-owl": 9,             // 0.40  perched
   "wood-sloth": 10,           // 0.60  sitting
   "hedgehog": 4,              // 0.20  just over a rat
+  "water-vole": 3,            // 0.15  fist-sized, the rat's floor (mig 390)
   "the-old-raven": 7,         // 0.55
   "the-one-who-stayed": 34,   // 1.75
   "the-pale-drake": 44,       // 3.50  twice a standing man, same as the drake it is a variant of
@@ -15665,6 +15666,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "water-vole":   { n: 8, aspect: 1.1, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "fever-rat":   { n: 8, aspect: 1.478, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"death":7} },
   "the-cook":   { n: 8, aspect: 0.928, f: {"idle":0,"hone-the-blade":1,"wipe-the-blade":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-king":   { n: 9, aspect: 0.894, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"call-the-rats":6,"feed":7,"death":8} },

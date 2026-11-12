@@ -30,7 +30,8 @@ try {
     const feed = [];
     const z = {
       creatures: new Map(creatures.map((c) => [c.id, c])),
-      world: { mobTemplates: new Map(Object.entries(T).map(([id, hp]) => [id, { id, name: `a ${id}`, max_hp: hp }])) },
+      world: { mobTemplates: new Map(Object.entries(T).map(([id, hp]) => [id, { id, name: `a ${id}`, max_hp: hp }])), exits: new Map(), safeRooms: new Set(), entryRooms: new Set() },
+      openDoors: new Set(), noteCreaturesChanged: () => {},
       creaturesInRoom(r) { return [...this.creatures.values()].filter((c) => c.roomId === r); },
       equippedItem: () => weapon,
       roomFeed: (_r, text) => feed.push(text),
@@ -234,13 +235,24 @@ try {
     lit = true; roll = 0;
     assert.equal(S.beforeAttack(z, crawler, tmpl('pale-crawler'), you('l'), now), false, 'in your light it stays and fights');
     lit = false;
+    // with no way out of the room it waits there in the dark, and comes again
     assert.equal(S.beforeAttack(z, crawler, tmpl('pale-crawler'), you('l'), now), true, 'in the dark it goes back into it');
     assert.ok(S.playerSwing(z, you('l'), crawler, tmpl('pale-crawler'), blade(2), now + 4000).miss, 'and you swing at nothing');
     assert.equal(S.beforeAttack(z, crawler, tmpl('pale-crawler'), you('l'), now + 4000), false, 'it comes again');
     const drop = S.creatureBlow(z, crawler, tmpl('pale-crawler'), you('l'), now + 4000);
     assert.equal(drop.mult, 1.5, 'out of the dark, heavy');
+    // with a way out it leaves the room, and the fight is over (rome, 2026-11-12)
+    const c2 = { id: 'm', templateId: 'pale-crawler', roomId: 'r', hp: 30, target: 'you' };
+    const { z: zz } = world([c2]);
+    zz.world.exits.set('r', [{ dir: 'down', to_room: 'r2' }]);
+    const me = you('m');
+    assert.equal(S.beforeAttack(zz, c2, tmpl('pale-crawler'), me, now), true);
+    assert.equal(c2.roomId, 'r2', 'it has gone off into the dark');
+    assert.equal(c2.hidden, true, 'lurking');
+    assert.equal(c2.target, null, 'not on you any more');
+    assert.equal(me.target, null, 'nor you on it');
     lit = true;
-    console.log('PASS: lurker fades back into the dark without your light and comes again.');
+    console.log('PASS: lurker fades back into the dark without your light, leaving the room if it can.');
   }
 
   { // CUTTHROAT + FOLK

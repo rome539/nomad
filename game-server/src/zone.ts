@@ -158,7 +158,7 @@ import { FORGE_STOCK,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS, LB_CHART_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  STARVING_AT, WHITE_ROE, FEVER_RAT, bossStands, DARK_ROOMS, seesArt, ART_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  STARVING_AT, WHITE_ROE, WALKING_DEAD, FEVER_RAT, bossStands, DARK_ROOMS, seesArt, ART_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
   LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
@@ -1132,7 +1132,7 @@ export class ZoneDO implements DurableObject {
         // has a PATROLS route is exempt, because its route IS where it lives.
         // No existing boss has a route, so nothing else changes.
         if (c.nextWanderAt <= t && (!bossStands(tmpl) || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
-            && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
+            && !BROODERS.has(c.templateId) && (!DROWNERS.has(c.templateId) || WALKING_DEAD.has(c.templateId)) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
           // Silent catch-up runs with no one connected, so no ambush fires here.
           void ai.creatureMoves(this, c, t, "wander", true);
         }
@@ -1206,7 +1206,7 @@ export class ZoneDO implements DurableObject {
       // 2026-10-18: the far world is not frozen, so neither are they).
       const hunted = (await ai.worryPrey(this, c, now)) || await ai.predation(this, c, now) || await ai.rivalsFight(this, c, now) || await groups.holdGround(this, c, now) || await groups.holdBody(this, c, now) || await groups.mobEagle(this, c, now) || await groups.holdLand(this, c, now);
       if (!hunted && c.nextWanderAt <= now && (!bossStands(tmpl) || PATROLS[tmpl.id]) && c.hp >= tmpl.max_hp * FLEE_BELOW
-          && !BROODERS.has(c.templateId) && !DROWNERS.has(c.templateId) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
+          && !BROODERS.has(c.templateId) && (!DROWNERS.has(c.templateId) || WALKING_DEAD.has(c.templateId)) && !SENTINELS.has(c.templateId) && (!AGGRESSIVE.has(c.templateId) || ai.walksAnyway(c)) && !ROOTED.has(c.templateId)) {
         await ai.creatureMoves(this, c, now, "wander", true);
       }
     }
@@ -6051,7 +6051,7 @@ export class ZoneDO implements DurableObject {
           // Only when the crouch is what held it — `hunted` also lands here, and
           // a deer that just ate something is not being calmed by anybody.
           ai.crouchHolds(this, creature); // it holds, and now and then it says so
-        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !bossStands(tmpl) && !BROODERS.has(creature.templateId) && !DROWNERS.has(creature.templateId) && !SENTINELS.has(creature.templateId) && (!AGGRESSIVE.has(creature.templateId) || ai.walksAnyway(creature)) && !ROOTED.has(creature.templateId) && !ai.waitingHere(this, creature)) {
+        } else if (!hunted && !creature.rouseAt && creature.nextWanderAt <= now && !bossStands(tmpl) && !BROODERS.has(creature.templateId) && (!DROWNERS.has(creature.templateId) || WALKING_DEAD.has(creature.templateId)) && !SENTINELS.has(creature.templateId) && (!AGGRESSIVE.has(creature.templateId) || ai.walksAnyway(creature)) && !ROOTED.has(creature.templateId) && !ai.waitingHere(this, creature)) {
           // Mid-wind-up (rouseAt) it holds its ground — a thing that's telegraphed
           // a lunge doesn't stroll off before it commits (keeps the thief's rob,
           // the meal-guard's spring, and the starve-lunge from fizzling out).

@@ -180,6 +180,13 @@ const LINES = {
   "curl-up": "Rolled completely into a tight ball of raised spines, no face, no legs showing",
   alert: "Frozen with nose up and spines half raised along the back",
 },
+"water-vole": {
+  idle: "Crouched low on all four short legs, round body, blunt face toward the viewer",
+  alert: "Sitting bolt upright on its haunches, front paws tucked to its chest, nose up and whiskers forward",
+  graze: "Sitting up on its haunches holding a short cut reed stem in both front paws, nibbling the end of it",
+  rest: "Asleep curled into a round brown ball, nose tucked in, tail wrapped round",
+  attack: "Lunging forward low with its front teeth bared in a quick bite",
+},
 "wood-sloth": {
   idle: "Sitting on its haunches, short claws folded in front, head turned mildly toward the viewer",
   attack: "Rearing back and swinging one front paw in a slow wide swipe, its short claws out",
@@ -1218,6 +1225,8 @@ try { cache = JSON.parse(fs.readFileSync(CACHE, "utf8")); } catch {}
 // So an entry here wins over D1 until its migration ships. DELETE THE ENTRY the
 // moment it does, or this quietly becomes the thing that overrides live prose.
 const PENDING_DESC = {
+  // migration 390 — the water vole, new (rome, 2026-11-12)
+  "water-vole": "A round brown body the size of a fist, a blunt face with the ears lost in the fur, and a tail that is mostly an afterthought. It sits up on the creek bank with a reed stem in both hands, eating it from the bottom like somebody working through a stick of rock, and at the first wrong sound it is a plop in the water and a line of bubbles going away under the bank.",
   // migration 362 — the fever rat, new (rome, 2026-11-01)
   "fever-rat": "A rat the size of a hound, come up out of the ground: the fur gone in patches over skin that is wet and grey, the eyes running, the earth of the grave still packed in its coat. It breathes with its mouth open, fast and shallow, and the air around it is warm and sweetish. There is a strip of old linen caught round its neck, dragged up with it from below.",
   // migration 289 — he comes down off the rope and works standing

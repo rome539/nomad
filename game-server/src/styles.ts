@@ -18,7 +18,7 @@ import type { CarriedItem, ItemTemplate } from "./world";
 import {
   SWARMS, SWARM_STEP, SWARM_MAX_OTHERS, RAT_KING_SWARM_BONUS, STRIKERS, STRIKER_DODGE, STRIKER_DODGE_BARE,
   FLIERS, FLIER_KIND, FLIER_DIVE_ODDS, FLIER_DIVE_OPEN, MOBBER_WHEEL_ODDS, GROUND_LIFT_ODDS, GROUND_DROP_ODDS, HUNTER_CLIMB_ODDS, FLIER_DOWN_HITS, FLIER_GROUNDED_MS, PINCHERS, PIN_ODDS, PINNED_DMG_MULT,
-  HOLLOW, GRAVE_FLESH, HOLLOW_EDGE_MULT, HOLLOW_BLUNT_MULT, LURKERS, LURKER_FADE_ODDS, LURKER_DROP_MULT,
+  HOLLOW, GRAVE_FLESH, HOLLOW_EDGE_MULT, HOLLOW_BLUNT_MULT, LURKERS, OPEN_LURKERS, DARK_ROOMS, SENTINEL_ROOMS, LURKER_FADE_ODDS, LURKER_DROP_MULT,
   CUTTHROATS, FEINT_ODDS, FOLK, FOLK_GUARD_AT, FOLK_RECKLESS_AT, STANCE, COMBAT_ROUND_MS,
   WEAKEST_HUNTERS, WEAKEST_SWITCH_GAP, TURNING_BOARS, BOAR_TURN_AT, BLUFFERS, BLUFF_HOLD_MS, BLUFF_LEAVE_ODDS, BLUFF_REARM_MS,
   STALKERS, STALK_STILL_MS, STALK_GIVEUP_MS, STALK_RANGE,
@@ -31,6 +31,16 @@ import {
 export interface Blow { mult: number; line?: string; flourish?: string; knock: boolean; pin: boolean; feint: boolean }
 
 // The creature is about to land a blow on `victim`. Call once per landed blow.
+/** The next room a lurker slips off into: never a gate, a safe room or a held post; the dark first. */
+export function lurkAway(z: ZoneDO, roomId: string): string | undefined {
+  const world = z.world!;
+  const ways = (world.exits.get(roomId) ?? []).filter((e) => (!e.key_item || z.openDoors.has(`${roomId}:${e.dir}`))
+    && !world.safeRooms.has(e.to_room) && !world.entryRooms.has(e.to_room) && !SENTINEL_ROOMS.has(e.to_room));
+  const dark = ways.filter((e) => DARK_ROOMS.has(e.to_room));
+  const pool = dark.length ? dark : ways;
+  return pool.length ? pick(pool).to_room : undefined;
+}
+
 export function creatureBlow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, victim: Session, now: number): Blow {
   const id = creature.templateId;
   const out: Blow = { mult: 1, knock: false, pin: false, feint: false };
@@ -143,11 +153,27 @@ export function beforeAttack(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
       z.refreshRoomCtx(creature.roomId); // back in the picture
       return false;
     }
-    if (!z.litFor(victim) && chance(LURKER_FADE_ODDS)) {
+    // NOT THE CAVE LION (rome, 2026-11-12): it faded mid-fight; a lion in a fight
+    // stays in the fight, and lurks again only once it is over (ai.lurkerDrifts).
+    if (!OPEN_LURKERS.has(id) && !z.litFor(victim) && chance(LURKER_FADE_ODDS)) {
       creature.hidden = true;
       creature.joinedOpenly = false; // back in the dark: no longer the one that walked in
-      z.send(victim, `${cap(tmpl.name)} is not in front of you any more. Somewhere in the dark, it waits.`, "dmgin");
-      z.refreshRoomCtx(creature.roomId); // gone from the picture
+      // ...AND IT LEAVES THE ROOM (rome, 2026-11-12): back to lurking, it goes off
+      // into the next stretch of dark, the dark side first, and the fight is over.
+      const from = creature.roomId;
+      const to = lurkAway(z, from);
+      if (to) {
+        creature.roomId = to;
+        creature.target = null;
+        if (victim.target === creature.id) victim.target = null;
+        z.noteCreaturesChanged();
+        z.send(victim, `${cap(tmpl.name)} is not in front of you any more. It has gone off into the dark.`, "dmgin");
+        z.refreshRoomCtx(from);
+        z.refreshRoomCtx(to);
+      } else {
+        z.send(victim, `${cap(tmpl.name)} is not in front of you any more. Somewhere in the dark, it waits.`, "dmgin");
+        z.refreshRoomCtx(from); // gone from the picture
+      }
       return true;
     }
   }

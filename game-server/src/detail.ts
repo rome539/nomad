@@ -8042,6 +8042,7 @@ export const WOOD_DARK: Record<string, string> = {
 // It NEVER states a number the stat block already gives. Numbers are the stat
 // block's job and a page that says a thing twice is a page nobody reads twice.
 export const MOB_LORE: Record<string, string> = {
+  "water-vole": "Everything on the marsh eats it, and it knows. It lives along the creek banks in burrows with a door under the water and a door in the grass, and it is never further than one jump from the first. The cut reed stems lying at an angle on the bank, each one bitten off clean at the same slant, are the sign of it; so is the plop that comes a moment before you see anything at all. The viper waits at the grass door, the bittern stands over the water one, and the hounds dig. It breeds as if it had read the arithmetic.",
   // ---- THE OPEN GROUND (mig 194). The first place a player meets the idea the
   // whole world runs on, so it is said plainly here and elaborated later.
   "the-sapper": "He is going EAST. That is the thing to hold onto, because everything else about him is ordinary: a man on his knees in four feet of headroom, working chalk out in front of him with a short pick, at a rhythm he could keep up all day and did. East is the wall. The wall came down two hundred years ago — he brought it down, that was the job, the job succeeded — and he is still driving the gallery toward it. Nobody came back to tell him it had worked.",

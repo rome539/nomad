@@ -26,8 +26,11 @@ if (!out || !ids.length) {
 }
 const esc = (t) => t.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
-const cards = ids.map((id) => {
-  const raw = execFileSync("node", [path.join(HERE, "mob-prompt.mjs"), id], { encoding: "utf8" });
+// An id may carry its own poses, `water-vole:idle,alert,rest`, when the proposed set
+// does not come to a count the cutter takes.
+const cards = ids.map((arg) => {
+  const [id, poses] = arg.split(":");
+  const raw = execFileSync("node", [path.join(HERE, "mob-prompt.mjs"), id, ...(poses ? poses.split(",") : [])], { encoding: "utf8" });
   const cut = (raw.match(/cut-mob-sheet\.mjs <sheet\.png> (.+)/) || [])[1] || "";
   const body = raw.slice(raw.indexOf("Use case:")).trimEnd();
   const name = ((body.match(/Subject: ([^.]+)\./) || [])[1] || id)

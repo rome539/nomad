@@ -145,6 +145,7 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "old-conger": [24, 3, 40, 0],
   "otter": [0, 0, 0, 0],
   "oystercatcher": [0, 0, 0, 0],
+  "water-vole": [0, 0, 0, 0],
   "pale-crawler": [16, 3, 32, 0],
   "pale-stalker": [16, 3, 32, 0],
   "ptarmigan": [0, 0, 0, 0],

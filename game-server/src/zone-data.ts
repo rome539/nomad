@@ -1066,6 +1066,8 @@ export const MEAL_CORPSE = 75;  // a whole body, and it still isn't a kill
 // health: a roe deer has a snow hare's hit points and is not a mouthful.
 export const MEAL_SMALL = 25;
 export const SMALL_PREY = new Set([
+  // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
+  "water-vole",
   "rat", "fleet-rat", "albino-rat", "brood-rat",                  // the rats
   "mountain-hare", "snow-hare",                                   // the hares
   "ptarmigan", "mountain-chough", "oystercatcher", "gibbet-crow", // the small birds
@@ -1373,6 +1375,8 @@ export const ECO_SLOWEST = 4;      // hardest case: an empty den takes 4x as lon
 // Only the living eat. The hollow do not hunger and are not food, so the deep's
 // bone-things keep the flat clock they always had.
 export const ECO_LINES = new Set([
+  // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
+  "water-vole",
   // mig 247, the mountain's rare blood: the-raiding-fox, the-dancer, the-gravid-adder, the-blue-fox, the-tom, the-bone-dropper, the-old-glutton
   "the-raiding-fox", "the-dancer", "the-gravid-adder", "the-blue-fox", "the-tom", "the-bone-dropper", "the-old-glutton",
 
@@ -1731,6 +1735,7 @@ export const ROT_MS = 4 * 3_600_000; // food on the floor keeps this long, then 
 // gets its own voice through the walls — the deep ones especially, so the dark
 // below is never just "something moves."
 export const MOVE_SOUNDS: Record<string, string> = {
+  "water-vole": "A small plop {dir}, and a ring spreading on the water.",
   "rat-king": "Something heavy drags itself {dir}, and a great many small claws hurry along with it.",
   rat: "Claws skitter {dir}.",
   "fleet-rat": "Tiny claws scrabble away {dir}, fast.",
@@ -1843,6 +1848,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
 // a careful boot, beasts = breathing). Hidden lurkers make no sound at all —
 // silence is what an ambush sounds like.
 export const STILL_SOUNDS: Record<string, string> = {
+  "water-vole": "a dry crunching, very small and very steady, of something eating a reed stem",
   "rat-king": "a wet, rattling breath, and the squeak of rats answering it",
   "three-hound": "slow, enormous breathing — three sets of lungs working as one",
   "two-hound": "slow, heavy breathing, doubled — big lungs working in step",
@@ -2431,6 +2437,45 @@ export const MOUNTAIN_GROUPS = new Map<string, { min: number; max: number; lone:
   ["mountain-chough", { min: 3, max: 6, lone: 0.1 }],
   ["ptarmigan", { min: 3, max: 6, lone: 0.15 }],
 ]);
+// THE CROSSING LIVES TOO (rome, 2026-11-12): the second living region. Left out on
+// purpose: the rat (the Salt hamlet is the strand fever rat's ground), the devil
+// crab (rooted in the sea cave), the congers (drowners hold their water and never
+// walk), the people, the bosses and the barrow-wight. Ground: crossing-ground.ts.
+export const CROSSING_ROAMERS = new Set([
+  "marsh-hound", "grey-seal", "great-gull", "oystercatcher", "wrack-crab", "ford-eel", "fen-viper", "bittern", "water-vole",
+]);
+export const CROSSING_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
+  ["marsh-hound", { min: 2, max: 4, lone: 0.2 }], // small packs, about three (rome, 2026-11-12)
+  ["grey-seal", { min: 2, max: 4, lone: 0.15 }],
+  ["great-gull", { min: 3, max: 6, lone: 0.1 }],
+  ["oystercatcher", { min: 3, max: 6, lone: 0.1 }],
+  ["wrack-crab", { min: 3, max: 6, lone: 0.1 }],
+]);
+// THE CROSSING'S DEAD WALK (rome, 2026-11-12). Every one of the dead still at work on
+// the crossing walks the ground round its home as an animal does: the guards off
+// their posts and the water-bound off their water too (ai.walksAnyway, and the
+// DROWNERS gate on the wander). Their homes stay where they are; the bosses stand.
+export const WALKING_DEAD = new Set([
+  "the-fowler", "the-eel-cutter", "the-reed-walker", "the-salt-widow", "the-drover", "the-tide-warden",
+  "the-pilot", "the-refuge-man", "the-scaffold-hand", "the-bridge-mason", "twice-dead",
+]);
+// EVERY LIVING REGION'S TABLES, ONE PLACE (living-regions.md: the first region after
+// the mountain turns its code into per-region tables). The rules in groups.ts read
+// these; a line lives in exactly one region.
+export const LIVING_REGIONS: Record<string, { roamers: Set<string>; groups: Map<string, { min: number; max: number; lone: number; near?: number }> }> = {
+  mountain: { roamers: MOUNTAIN_ROAMERS, groups: MOUNTAIN_GROUPS },
+  crossing: { roamers: CROSSING_ROAMERS, groups: CROSSING_GROUPS },
+};
+/** The living region a roaming line belongs to, or undefined for a line that does not roam. */
+export function roamsIn(line: string): string | undefined {
+  for (const region in LIVING_REGIONS) if (LIVING_REGIONS[region].roamers.has(line)) return region;
+  return undefined;
+}
+/** A roaming line's group sizes, if it lives in company. */
+export function groupOf(line: string): { min: number; max: number; lone: number; near?: number } | undefined {
+  for (const region in LIVING_REGIONS) { const g = LIVING_REGIONS[region].groups.get(line); if (g) return g; }
+  return undefined;
+}
 // A WOLF PACK HOLDS ITS GROUND (rome, 2026-11-06). A pack wolf that finds one of
 // these smaller hunters on its ground goes for it. Mostly the small one runs and
 // stays off the room for RIVAL_AVOID_MS; run off GROUND_DRIVEN_LEAVES times, it
@@ -2450,9 +2495,10 @@ export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox
 // apart as the herds do (groups.pickHome); ravens, vultures and bone-breakers hold
 // no land, but each draws its home on the ground least crowded with its own kind,
 // so they do not all roost on the same few rooms of the bone ground and the crags.
-export const FLOCKS = new Set<string>(["mountain-chough"]);
+// (The crossing's gulls and seals hunt, but live as flocks and herds do, apart.)
+export const FLOCKS = new Set<string>(["mountain-chough", "great-gull", "grey-seal"]);
 export const SPREAD_ROOSTS = new Set<string>(["scarp-raven", "carrion-vulture", "bone-breaker"]);
-export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl"]);
+export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern"]);
 export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a bite in first
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
@@ -2508,7 +2554,8 @@ export const FLIGHT_CHECK_MS = 10_000;
 export const FLIGHT_LOOK_MS = 60_000; // a hungry bird that found nothing looks again about this much later: the search walks every room in reach, so it is not done every check
 // The lynx has no wings, so it will only settle where living prey is close. The
 // hare and the ptarmigan will only settle with grazing inside ROUND_RANGE of home.
-export const SETTLES_BY_PREY = new Set(["lynx"]);
+// The fen viper the same (rome, 2026-11-12), so it lives where its rats and oystercatchers are.
+export const SETTLES_BY_PREY = new Set(["lynx", "fen-viper"]);
 export const SETTLES_BY_GRAZING = new Set(["mountain-hare", "ptarmigan"]);
 // NOTHING STAYS FOR GOOD (rome, 2026-11-06). A mountain animal or group holds a home
 // for 2-5 game days (DAY_CYCLE_MS each), then draws a new one. One that is well fed
@@ -2565,7 +2612,7 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // walks toward a brawl or joins one: the noise sends them away, as it does a
 // runner. The hedgehog the same: it curls, it does not come to look.
 export const NOISE_SHY = new Set(["red-stag", "wood-stag", "feral-goat", "old-billy", "hedgehog"]);
-export const RUNNERS = new Set(["fleet-rat", "roe-deer",
+export const RUNNERS = new Set(["fleet-rat", "roe-deer", "water-vole",
   // THE MOUNTAIN, TIER FOUR (mig 233). It shouts and it goes; it does not fight
   // and it never joins one.
   "mountain-chough",
@@ -3110,6 +3157,8 @@ export const FEVER_RAT_AMBIENT = [
 // not (the aggro loop skips sleepers), so the same room at night is a thing
 // you can creep past, or open on. Same creature, opposite problem, by the hour.
 export const NAPPERS = new Set([
+  // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
+  "water-vole",
   // mig 247, the mountain's rare blood: the-old-raven
   "the-old-raven",
 
@@ -3486,6 +3535,7 @@ export const POSES: Record<string, { self: string; room: string; read: string; e
   },
 };
 export const REST_LINES: Record<string, string> = {
+  "water-vole": "hunched in a round of flattened reed at the water's edge, a brown ball with its nose tucked in",
   "the-baited-bear": "lying on its side in the road like a fallen wall, the chain pooled beside it, breathing slowly",
   "brown-bear": "curled in a bed of trodden bracken with its back to you, the whole hill of it rising and falling",
   "the-chain-breaker": "asleep sitting up against a tree with its back to the trunk, which is very nearly a man's way of doing it",
@@ -3735,7 +3785,7 @@ export const ALARM_CALLERS = new Set(["roe-deer", "white-roe",
   // takes a day to walk; six of these are spread across it, and the moment one
   // of them decides you are close, every living thing on the flats is told.
   "oystercatcher"]);
-export const ALARM_HEEDS = new Set(["roe-deer", "white-roe", "wood-stag", "wild-boar", "old-boar", "otter", "dog-otter", "feral-goat", "old-billy",
+export const ALARM_HEEDS = new Set(["roe-deer", "water-vole", "white-roe", "wood-stag", "wild-boar", "old-boar", "otter", "dog-otter", "feral-goat", "old-billy",
   // THE MOUNTAIN (migs 227-233). The game up here takes a warning the same as
   // the game anywhere else, and on open snow with no cover it is worth more.
   "mountain-hare", "snow-hare", "red-hind", "red-stag",
@@ -4895,6 +4945,9 @@ const OWN_GRAVID_ADDER_LINES = [
   "The gravid adder rubs its old skin away against the stone, and the stone takes it, and the new scales come up bright as water. The year turns, and the adder turns with it, the way it always has.",
 ];
 export const WITNESSED_LINES: Record<string, string[]> = {
+  "water-vole": [
+    "The water vole sits up on the bank with a reed stem held in both hands and eats it from the bottom, steadily, the stem getting shorter and shorter until it has eaten the whole thing and looks about for another.",
+  ],
   // the birds
   "great-gull": OWN_GREAT_GULL_LINES, "black-backed-gull": OWN_BLACK_BACKED_GULL_LINES,
   "oystercatcher": OYSTERCATCHER_LINES,
@@ -5093,7 +5146,9 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // too (16hp/1-3 against 14/1-4, the narrowest win on the table). A snake is a
   // small meal (SMALL_PREY), whoever eats it.
   ["grey-heron", new Set(["gill-adder"])],
-  ["fen-viper", new Set(["rat"])],
+  // and the oystercatcher, its eggs and chicks off the marsh (rome, 2026-11-12: the rats
+  // live only in the Salt hamlet, so a viper anywhere else had nothing to eat)
+  ["fen-viper", new Set(["rat", "oystercatcher", "water-vole"])],
   // THE CAVE LION HUNTS (2026-08-25). It had no row at all — the only apex
   // mammal on the hill that took nothing living, while its smaller neighbours
   // the lynx, the hill-wolf and the glutton all did. It never starved, because
@@ -5249,17 +5304,17 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // ABOVE the hunters rather than behind them — a gull does not wait its turn.
   ["grey-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
   ["conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
-  ["bittern", new Set(["ford-eel", "silver-eel"])],
-  ["great-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],       // it has taken a rat off the parapet, and it did not need to land
-  ["marsh-hound", new Set(["rat", "oystercatcher", "bittern", "wrack-crab", "devil-crab", "fen-viper"])],
+  ["bittern", new Set(["ford-eel", "silver-eel", "water-vole"])],
+  ["great-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher", "water-vole"])],       // it has taken a rat off the parapet, and it did not need to land
+  ["marsh-hound", new Set(["rat", "oystercatcher", "bittern", "wrack-crab", "devil-crab", "fen-viper", "water-vole"])],
   // THE RARE BLOOD HUNTS WHAT ITS OWN LINE HUNTS (mig 212). Listed out rather
   // than resolved through variantBase, because that is how this table has
   // always worked — the roe and the white roe, the rat and the fleet rat are
   // both written down, and a reader should be able to see the whole web here
   // without holding the variant map in their head.
   ["dog-otter", new Set(["rat", "fleet-rat"])],
-  ["black-backed-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher"])],
-  ["a-lymer", new Set(["oystercatcher", "bittern", "wrack-crab", "devil-crab"])],
+  ["black-backed-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher", "water-vole"])],
+  ["a-lymer", new Set(["oystercatcher", "bittern", "wrack-crab", "devil-crab", "water-vole"])],
   ["bull-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
   ["old-conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
 ]);
@@ -5386,6 +5441,7 @@ export const BEAST_PATH_GROUND: Record<string, { through: string; outOf: string 
 // would read them - the shape of the foot and the gait - never the name; telling
 // a fox's line from a cat's round pads is the skill.
 export const TRACK_PRINTS: Record<string, string> = {
+  "water-vole": "tiny star-shaped prints along the soft edge of the bank, and a runway pressed through the grass to the water",
   "rat-king": "a rat's print the size of a hand, a tail dragged heavy through the muck, and a hundred small ones all around it",
   "mountain-hare": "long hind feet set ahead of the small front ones, in bounds",
   "snow-hare": "long hind feet set ahead of the small front ones, in bounds",
@@ -5440,6 +5496,8 @@ export const CROWS_DEAD_MIN_HP = 10;
 // something in PREYS_ON really hunts is sorted; a test holds it. Anything not
 // listed is middling - a roe, a goat, a fox, a dog, a wolf.
 export const KILL_SMALL = new Set([
+  // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
+  "water-vole",
   "rat", "fleet-rat", "brood-rat", "hedgehog", "ptarmigan", "mountain-hare", "snow-hare",
   "oystercatcher", "mountain-chough", "gibbet-crow", "scarp-raven", "ermine", "wrack-crab", "devil-crab",
   "gill-adder", "stone-adder", "fen-viper", "ford-eel", "silver-eel",
@@ -5959,6 +6017,9 @@ export const PRICK_LINES = [
   "The spines drive into your fist and stay there",
 ];
 export const DEN_MOVES = new Map<string, string>([
+  // mig 391: the salt widow, off the Crossing House and out to the salt workings
+  ["spawn-the-salt-widow@the-pan-house#343", "the-pan-house"],
+  ["spawn-the-salt-widow@the-salt-pans#344", "the-salt-pans"],
   // mig 374: the herd people, up off the gates and onto the shelves
   ["spawn-the-herd@the-last-pasture#627", "the-last-pasture"],
   ["spawn-the-herd@the-high-fold#626", "the-high-fold"],
@@ -6111,6 +6172,7 @@ export const RISE_MAX_MS = 45_000;
 export const RISE_LIMIT: Record<string, number> = { "thrice-dead": 2 };
 // How the hollow come apart when they run. The living just bleed.
 export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
+  "water-vole": { out: "drops off the bank {dir} with a plop and is a line of bubbles going away.", in_: "comes scrambling up out of the water and into the reed, low and fast." },
   // THE SURFACE MOVES LIKE ITSELF (2026-08-02). Every road and wood creature was
   // missing from this table, so all eighteen fell through to the generic
   // damage-class lines and fled and arrived identically — the whole new half of
@@ -7460,6 +7522,8 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 // exactly as dangerous as it was. And you can't hunt what runs from you: pelts,
 // haunches and tusks now come to whoever walks in by lantern-light, or by none.
 export const FEARS_FIRE = new Set([
+  // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
+  "water-vole",
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer, the-blue-fox, the-tom, the-bone-dropper, the-old-glutton
   "the-old-raven", "the-raiding-fox", "the-dancer", "the-blue-fox", "the-tom", "the-bone-dropper", "the-old-glutton",
 
@@ -7954,6 +8018,8 @@ export const CRAG_ROOMS = new Set<string>(MOUNTAIN_GROUND.crag);
 // animal before it is anything else. Named here so the next grazer is one line
 // and not a hunt through ai.ts.
 export const GRAZERS = new Set<string>([
+  // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
+  "water-vole",
   // THE MOUNTAIN, TIER TWO (mig 229).
   "snow-hare",
   // THE MOUNTAIN, TIER ONE (mig 227). The mountain feeds its own, and only where

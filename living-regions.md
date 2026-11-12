@@ -1,8 +1,8 @@
 # Living regions
 
-How a region's animals stop being fixed furniture and start deciding where to live. The mountain is the first region built this way (November 2026). Use this as the standard for the others.
+How a region's animals stop being fixed furniture and start deciding where to live. The mountain is the first region built this way (November 2026) and the crossing the second. Use this as the standard for the others.
 
-**Status:** live on the mountain since November 6, 2026. The numbers are first settings from simulation; update this file when real play changes them.
+**Status:** live on the mountain since November 6, 2026; built for the crossing November 12, 2026. The numbers are first settings from simulation; update this file when real play changes them.
 
 ## The goal
 
@@ -10,7 +10,7 @@ A player who comes back finds the region changed, because of what other players 
 
 ## The rules
 
-1. **Where they settle is chance, and food tips the odds.** Every fit room can be drawn. A room with food within 3 rooms counts double at the most, however much food it is (`FOOD_PULL`); for a grazer the food is the grass still left there, so ground eaten bare stops pulling. It used to count one more for every prey animal or grazing room, and the hamlet's rats and the foot's grass drew everything to them. Never "always pick the best room". A home has no height ceiling: an animal may live anywhere from its nearest spawn row upward, so spawn rows set where a line starts, not how high it may live. Herds keep apart: a herd's home is at least 4 rooms from every other herd of its line while there is such ground, and a herd with one place left takes no newcomer, so the next starts its own (packs still fill to their size). Chough flocks keep apart the same way, and ravens, vultures and bone-breakers, which hold no land, each draw their home on the ground least crowded by all three together, not by their own kind alone (`FLOCKS`, `SPREAD_ROOSTS`). On the mountain an animal may make its home in the territory, tier five; only the summit is shut (`mountainHomes`).
+1. **Where they settle is chance, and food tips the odds.** Every fit room can be drawn. A room with food within 3 rooms counts double at the most, however much food it is (`FOOD_PULL`); for a grazer the food is the grass still left there, so ground eaten bare stops pulling. It used to count one more for every prey animal or grazing room, and the hamlet's rats and the foot's grass drew everything to them. Never "always pick the best room". A home has no height ceiling: an animal may live anywhere from its nearest spawn row upward, so spawn rows set where a line starts, not how high it may live. Herds keep apart: a herd's home is at least 4 rooms from every other herd of its line while there is such ground, and a herd with one place left takes no newcomer, so the next starts its own (packs still fill to their size). Chough flocks keep apart the same way, and ravens, vultures and bone-breakers, which hold no land, each draw their home on the ground least crowded by all three together, not by their own kind alone (`FLOCKS`, `SPREAD_ROOSTS`). On the mountain an animal may make its home in the territory, tier five; only the summit is shut (`livingHomes`).
 2. **Animals only settle on their own kind of ground.** A hind on grass, a raven on a crag. This limits homes only: a chased or hungry animal can still cross anything. Each room's kind of ground is read from its own words (`mountain-ground.ts`), and a room can be two kinds. Give the region's animals ground at every height, or they all end up where the food is: a hind may lie up on stone above the grass and walk down to feed, as red deer summer high.
 3. **Prey needs food too.** A grazer only settles with grazing inside its feeding range. Check this for every grazer, or it starves where it landed. A grazer eats as it goes, at hunger 20 rather than waiting to be hungry at 50, so it shows hunger only when the grass round it has run out (`GRAZE_AT`). On the mountain the grazing is every green room, so where the words say grass, heather or moss, grazers can eat, and nowhere else: the bone ground feeds no grazer. The fourth tier had almost none, so fifteen of its rooms were rewritten to say moss grows in them (mig 381); to push grazers onto bare ground, change the room's words first, then its ground. Goats also browse the crags (lichen, moss and ledge plants, `BROWSERS`), so they live and feed up to the top. On the mountain the grass is eaten down: a grazing room holds 6 mouthfuls and grows one back every 20 minutes, so a bare room feeds nothing and a hungry grazer walks on to grass, while its daily round goes to the nearest room with grass left. Rats and thieves live on muck and scraps, which never run out. Everywhere else the ground still never runs dry.
 4. **A hunter with no wings needs prey close.** It only settles within 3 rooms of living prey, when any exists.
@@ -39,6 +39,7 @@ Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a n
 | What | Value | Where |
 |---|---|---|
 | Wolf pack size / goes alone | 3-5 / 1 in 5 | `MOUNTAIN_GROUPS` |
+| Crossing: marsh hound packs, seals, gulls, oystercatchers, wrack crabs | 2-4, 2-4, 3-6, 3-6, 3-6 / alone 1 in 5, about 1 in 7, 1 in 10, 1 in 10, 1 in 10 | `CROSSING_GROUPS` |
 | Hill wolves on the mountain | 12, room for two full packs and sometimes three | spawn rows |
 | Goats, hinds, choughs, ptarmigan | 4-8, 3-6, 3-6, 3-6 / 1 in 10, ptarmigan about 1 in 7 | `MOUNTAIN_GROUPS` |
 | Nearest a wolf settles to a gate | 10 steps | `MOUNTAIN_GROUPS` |
@@ -72,13 +73,15 @@ The numbers are first guesses tested in simulation. A new region can start from 
 - `game-server/src/flight.ts`: birds flying out to feed, in every region
 - `game-server/src/grass.ts`: the mountain's grass, eaten down and growing back
 - `game-server/src/beasts.ts`: the `beasts` command and its daily count
-- `game-server/src/mountain-ground.ts`: each room's kind of ground, and what each animal settles on
+- `game-server/src/zone-data.ts`, `LIVING_REGIONS`: each living region's roamers and groups (`MOUNTAIN_*`, `CROSSING_*`); `roamsIn` and `groupOf` read them
+- `game-server/src/mountain-ground.ts`: each room's kind of ground, and what each animal settles on, for every living region
+- `game-server/src/crossing-ground.ts`: the crossing's ground and what its animals settle on
 - `game-server/src/zone-data.ts`: the lists and numbers above
-- `game-server/src/ai.ts`, `mountainHomes`: which rooms an animal may call home
+- `game-server/src/ai.ts`, `livingHomes`: which rooms an animal may call home, in its own region
 - `game-server/src/herds.ts`: births and strays go through the plan
-- `game-server/scripts/sim-mountain.mjs`: the simulator
+- `game-server/scripts/sim-mountain.mjs` and `sim-crossing.mjs`: the simulators (`sim-crossing.mjs measure` prints each line's homes, and for a hunter the homes with prey in reach)
 
-Apart from flight, these are written for the mountain by name. **The first region after it should turn them into per-region tables, not copy them.**
+Since the crossing, the rules read per-region tables (`LIVING_REGIONS`) rather than the mountain by name. A new region adds its roamers and groups there, its ground file, and its section in `beasts`. The grass that is eaten down is still the mountain's alone; everywhere else the ground never runs dry.
 
 ## Doing another region
 
@@ -115,6 +118,16 @@ Its limits: it starts from a freshly placed world, not the live one; its "player
 ## Checking it live
 
 `beasts` (keeper's key only, kept out of `census`) shows the mountain as it stands: wolf packs and where they live, loners, wolves in the hamlet, each animal alive against its limit, birds in the air and the busiest bird room, and in the last 24 hours homes given up (time run out, hunger, or run off twice), flights, chases, small hunters caught, kills stolen and who killed what. Hunger is left out on purpose. The next region should add its own section here, not a new command.
+
+## The crossing
+
+Built November 12, 2026, the second region, by the steps above.
+
+- **Ground.** All 268 rooms sorted from their whole text into water, tidal (the causeway, shoals and scars the sea covers), shore, marsh, reed, dune, field, stonework, road, hamlet, indoors and the sea cave. Nothing settles on road or indoors.
+- **Who roams.** Marsh hounds (packs of 2-4, about three), grey seals (2-4), great gulls (flocks of 3-6), oystercatchers (3-6) and wrack crabs (3-6) live in company; ford eels, fen vipers and bitterns alone, the vipers and bitterns holding land. Gulls and seals keep apart as flocks do. Rats stay in the Salt hamlet (the strand fever rat's ground), the devil crabs stay rooted, the congers stay because a drowner never walks, and the people, bosses and the barrow-wight stay where they are.
+- **What it measured.** Every line has 54-96 homes against 6-16 rows. The fen viper eats only rats and the rats live only in the Salt hamlet, so 3 of its 56 homes have food in reach; that was true before this work too.
+- **The marsh hounds have no big game.** All they eat is small, so they live as packs but do not pack-hunt or hold ground as the hill wolves do (`GROUND_HOLDERS` is still the wolves).
+- **What the simulation showed** (old once, new twice, 48 hours). The crossing was already over-hunted under the old rules: wrack crabs fell from 16 to about 4, ford eels from 11 to about 3, bitterns, vipers and oystercatchers by half. The new rules land in the same place. What changed is who kills what: packs homing near the Salt hamlet roughly doubled the rats the hounds take (84 a day to 150-166), seals living on the tidal ground took far more crabs (9 to 45-49), and the hounds killed fewer vipers (34 to about 21). Gulls, seals, hounds and congers held at their limits throughout.
 
 ## What the mountain taught us
 

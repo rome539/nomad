@@ -14,10 +14,10 @@ import { chance, randInt, uuid } from "./rng";
 import { cap } from "./zone-util";
 import * as beasts from "./beasts";
 import * as grass from "./grass";
-import { ate, creatureMoves, deadEatsAt, eatingNow, edibleBody, hungers, mountainHomes, preyFalls } from "./ai";
+import { ate, creatureMoves, deadEatsAt, eatingNow, edibleBody, hungers, livingHomes, preyFalls } from "./ai";
 import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
-  DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
+  DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, roamsIn, groupOf,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES, FLOCKS, SPREAD_ROOSTS,
   PACK_QUARRY, PACK_STAG_ODDS, PACK_STAG, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS, FOOD_PULL, LEAN_AGAIN_MS,
   BODY_HOLDERS, MOBBERS, MOB_AT, BODY_CHASE_ODDS, MOB_ODDS, BODY_AVOID_MS, BODY_REST_MS,
@@ -28,19 +28,23 @@ export interface GroupsState { at: number; flownAt?: number; packs: Record<strin
 export interface Plan { home: string; group?: string; lone?: boolean }
 
 function lineOf(z: ZoneDO, templateId: string): string {
-  return MOUNTAIN_ROAMERS.has(templateId) ? templateId : (z.variantBase.get(templateId) ?? templateId);
+  return roamsIn(templateId) ? templateId : (z.variantBase.get(templateId) ?? templateId);
 }
 
-/** Where this line's food is on the mountain, as room -> how much of it. */
+/** Where this line's food is in its own region, as room -> how much of it. */
 function foodRooms(z: ZoneDO, line: string, now: number): Map<string, number> {
   const food = new Map<string, number>();
+  const region = roamsIn(line) ?? "mountain";
   const eats = new Set<string>([...(PREYS_ON.get(line) ?? []), ...(PACK_PREY.get(line)?.keys() ?? [])]);
   if (eats.size) {
     for (const c of z.creatures.values()) {
-      if (c.aloft === undefined && eats.has(c.templateId) && z.regionOf(c.roomId) === "mountain") food.set(c.roomId, (food.get(c.roomId) ?? 0) + 1);
+      if (c.aloft === undefined && eats.has(c.templateId) && z.regionOf(c.roomId) === region) food.set(c.roomId, (food.get(c.roomId) ?? 0) + 1);
     }
     return food;
   }
+  // Off the mountain the ground feeds a grazer everywhere and never runs dry (the
+  // crossing is all shore and saltings, FORAGE_REGIONS), so no room pulls harder.
+  if (region !== "mountain") return food;
   // A scavenger homes by its roost, the bone ground, though the bones feed it
   // nothing now; a goat by the crags it browses as well as the grass (rome, 2026-11-08).
   const ground = SCAVENGERS.has(line) ? CARRION_ROOMS : BROWSERS.has(line) ? new Set([...SURFACE_FORAGE, ...CRAG_ROOMS]) : SURFACE_FORAGE;
@@ -72,6 +76,7 @@ export function keepsOff(z: ZoneDO, owner: string, other: string): boolean {
 /** A home drawn at random across every fit room, each counting for more the more food is in reach of it. */
 export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string): string | undefined {
   const state = z.groups;
+  const region = roamsIn(line) ?? "mountain";
   const barred = new Set<string>();
   // Land already held by its own kind or a bigger hunter after its food (LAND_HOLDERS):
   // how many hold each room, its own kind counting three times over.
@@ -81,7 +86,7 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
     for (const c of z.creatures.values()) {
       const other = lineOf(z, c.templateId);
       if (!c.home || held.has(c.home) || !(LAND_HOLDERS.has(other) || GROUND_HOLDERS.has(other))) continue;
-      if (z.regionOf(c.home) === "mountain" && keepsOff(z, other, line)) held.set(c.home, other === line ? 3 : 1);
+      if (z.regionOf(c.home) === region && keepsOff(z, other, line)) held.set(c.home, other === line ? 3 : 1);
     }
     for (const [h, w] of held) for (const r of z.nearby(h, TERRITORY_RADIUS).keys()) heldBy.set(r, (heldBy.get(r) ?? 0) + w);
   } else if (SPREAD_ROOSTS.has(line)) {
@@ -90,7 +95,7 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
     // the bone-dropper in one room): a vulture counts the bone-breakers' and the ravens'
     // homes as well as its own kind's, and so do they.
     for (const c of z.creatures.values()) {
-      if (!c.home || !SPREAD_ROOSTS.has(lineOf(z, c.templateId)) || z.regionOf(c.home) !== "mountain") continue;
+      if (!c.home || !SPREAD_ROOSTS.has(lineOf(z, c.templateId)) || z.regionOf(c.home) !== region) continue;
       for (const r of z.nearby(c.home, TERRITORY_RADIUS).keys()) heldBy.set(r, (heldBy.get(r) ?? 0) + 1);
     }
   }
@@ -99,13 +104,13 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
     for (const r of z.nearby(room, TERRITORY_RADIUS).keys()) barred.add(r);
   }
   if (leaving) for (const r of z.nearby(leaving, TERRITORY_RADIUS).keys()) barred.add(r);
-  const all = mountainHomes(z, line);
+  const all = livingHomes(z, line);
   // HERDS KEEP APART (rome, 2026-11-08: every herd of a line ended up packed into
   // two or three homes at the foot). A group's home is drawn at least 4 rooms from
   // every other group of its line, as hunters keep their land, while there is
   // such ground; with none, anywhere it fits.
   const apart = new Set<string>();
-  const herd = MOUNTAIN_GROUPS.has(line) && (!PREYS_ON.has(line) || FLOCKS.has(line)); // herds and flocks, not the packs
+  const herd = !!groupOf(line) && (!PREYS_ON.has(line) || FLOCKS.has(line)); // herds and flocks, not the packs
   if (herd) for (const g of Object.values(state.packs)) {
     if (g.line === line) for (const r of z.nearby(g.home, TERRITORY_RADIUS).keys()) apart.add(r);
   }
@@ -148,7 +153,7 @@ function memberCounts(z: ZoneDO): Map<string, number> {
 
 /** Decide where a new animal of this line goes: alone, into a group with room, or starting one. */
 export function plan(z: ZoneDO, line: string, now: number): Plan | undefined {
-  const cfg = MOUNTAIN_GROUPS.get(line);
+  const cfg = groupOf(line);
   if (cfg && !chance(cfg.lone)) {
     const counts = memberCounts(z);
     // A herd with one place left takes no more newcomers: the next starts a herd of
@@ -176,7 +181,7 @@ export function join(c: Creature, p: Plan): void {
   c.lone = p.lone;
 }
 
-/** Look the mountain's groups over: break the finished, move the starving, sort out the undecided. */
+/** Look every living region's groups over: break the finished, move the starving, sort out the undecided. */
 export function tick(z: ZoneDO, now: number): void {
   const state = z.groups;
   if (now - state.at < GROUP_SWEEP_MS) return;
@@ -185,16 +190,17 @@ export function tick(z: ZoneDO, now: number): void {
   let undecided: Creature | undefined;
   for (const c of z.creatures.values()) {
     const line = lineOf(z, c.templateId);
-    if (!MOUNTAIN_ROAMERS.has(line) || c.drift !== undefined) continue;
-    if (z.regionOf(c.home ?? c.roomId) !== "mountain") {
-      if (c.group) { c.group = undefined; c.lone = true; } // it has left the mountain, and the group
+    const region = roamsIn(line);
+    if (!region || c.drift !== undefined) continue;
+    if (z.regionOf(c.home ?? c.roomId) !== region) {
+      if (c.group) { c.group = undefined; c.lone = true; } // it has left its region, and the group
       continue;
     }
     if (c.group) {
       const list = members.get(c.group) ?? [];
       list.push(c);
       members.set(c.group, list);
-    } else if (MOUNTAIN_GROUPS.has(line) && !c.lone) {
+    } else if (groupOf(line) && !c.lone) {
       if (!undecided && !c.target) undecided = c;
     } else {
       const move = (home: string): void => { c.home = home; c.moveAt = undefined; c.kept = undefined; };

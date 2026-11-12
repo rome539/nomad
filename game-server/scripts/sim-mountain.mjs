@@ -60,7 +60,7 @@ const snap=(h)=>{const n={},hungry={},rooms=new Map();let aloft=0;const off=[];
  for(const c of z.creatures.values()){if(lineOf(c)!=='hill-wolf')continue;if(c.group)size.set(c.group,(size.get(c.group)??0)+1);else if(c.lone)lone++;else undec++;if(HAMLET.has(c.home))hamlet++;if(HAMLET.has(c.roomId))standing++;}
  // Where a wolf drawing a home now would go: the hamlet's share of draws, against its share of the ground.
  let draws=0,inH=0;for(let k=0;k<400;k++){const r=groups.pickHome(z,'hill-wolf',NOW);if(r){draws++;if(HAMLET.has(r))inH++;}}
- const homes=ai.mountainHomes(z,'hill-wolf');const hShare=homes.length?homes.filter(r=>HAMLET.has(r)).length/homes.length:NaN;
+ const homes=ai.livingHomes(z,'hill-wolf');const hShare=homes.length?homes.filter(r=>HAMLET.has(r)).length/homes.length:NaN;
  const tot={},wh={};for(const c of z.creatures.values()){const l=lineOf(c);if(!['scarp-raven','feral-goat','rat'].includes(l))continue;tot[l]=(tot[l]??0)+1;const r=z.regionOf(c.home??c.roomId);(wh[l]??={})[r]=(wh[l][r]??0)+1;}
  const allRows={},rowsBy={};for(const s of W.mobSpawns){if(['scarp-raven','feral-goat','rat'].includes(s.template_id)){allRows[s.template_id]=(allRows[s.template_id]??0)+1;const r=z.regionOf(s.room_id);(rowsBy[s.template_id]??={})[r]=(rowsBy[s.template_id][r]??0)+1;}}
  for(const l of Object.keys(tot))log(`  COUNT ${l}: whole world ${tot[l]}/${allRows[l]}  living by region ${JSON.stringify(wh[l])}  rows by region ${JSON.stringify(rowsBy[l])}`);

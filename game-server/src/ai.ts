@@ -53,7 +53,7 @@ import {
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
-  RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, MOUNTAIN_ROAMERS, MOUNTAIN_GROUPS, FOOD_FLIERS, BIRD_CATCH_MULT, SETTLES_BY_GRAZING, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, FOOD_FLIERS, BIRD_CATCH_MULT, SETTLES_BY_GRAZING, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
@@ -2599,6 +2599,7 @@ export function walksAnyway(creature: Creature): boolean {
   // THE CAVE LION WALKS ITS GROUND (rome, 2026-11-12), lurking or not: aggressive
   // and at home, it stood in the Dry Bones for good (lurkerDrifts).
   if (OPEN_LURKERS.has(creature.templateId)) return true;
+  if (WALKING_DEAD.has(creature.templateId)) return true; // the crossing's dead walk their ground (zone-data)
   return !!creature.home && creature.roomId !== creature.home;           // displaced: it goes back
 }
 
@@ -4127,31 +4128,33 @@ function stepsFromGates(world: NonNullable<ZoneDO["world"]>): Map<string, number
   return dist;
 }
 
-// Every room a MOUNTAIN_ROAMERS line may call home: the mountain within the
-// reach of its own rows, off the gates, the hideaways and the drake's ground, on
-// the kind of ground it belongs on (mountain-ground.ts).
-export function mountainHomes(z: ZoneDO, templateId: string): string[] {
+// Every room a roaming line may call home: its own living region (LIVING_REGIONS)
+// within the reach of its own rows, off the gates, the hideaways and, on the
+// mountain, the drake's ground, on the kind of ground it belongs on
+// (mountain-ground.ts, crossing-ground.ts).
+export function livingHomes(z: ZoneDO, templateId: string): string[] {
+  const region = roamsIn(templateId) ?? "mountain";
   const world = z.world!;
   const dist = stepsFromGates(world);
   let near = Infinity;
   for (const s of world.mobSpawns) {
-    if (s.template_id !== templateId || z.regionOf(s.room_id) !== "mountain") continue;
+    if (s.template_id !== templateId || z.regionOf(s.room_id) !== region) continue;
     const d = dist.get(s.room_id);
     if (d === undefined) continue;
     if (d < near) near = d;
   }
-  near = Math.min(near, MOUNTAIN_GROUPS.get(templateId)?.near ?? near);
+  near = Math.min(near, groupOf(templateId)?.near ?? near);
   // THE TERRITORY IS OPEN (rome, 2026-11-09: everything gathered on the high bone
   // ground and the top stood empty). Tier five took no homes, so the crag and bone
   // animals were squeezed onto the five bone rooms below it; only the summit is shut.
-  const barred = new Set(MOUNTAIN_QUARTER_ROOMS.summit ?? []);
+  const barred = new Set(region === "mountain" ? MOUNTAIN_QUARTER_ROOMS.summit ?? [] : []);
   return [...world.rooms.keys()].filter((r) => {
     const d = dist.get(r);
     // NO CEILING (rome, 2026-11-08: every goat and hind lived low). A home was held
     // between the nearest and the furthest of the line's spawn rows, so nothing
     // ever lived higher than its highest row; now only the nearest bounds it, and
     // the ground and the food decide the rest. A goat counts the crags it browses.
-    return d !== undefined && d >= near && z.regionOf(r) === "mountain"
+    return d !== undefined && d >= near && z.regionOf(r) === region
       && !world.entryRooms.has(r) && !world.safeRooms.has(r) && !barred.has(r) && settlesOn(templateId, r)
       && (!SETTLES_BY_GRAZING.has(templateId) || [...z.nearby(r, ROUND_RANGE).keys()].some((n) => SURFACE_FORAGE.has(n) || (BROWSERS.has(templateId) && CRAG_ROOMS.has(n))));
   });
@@ -4180,8 +4183,8 @@ export function rollDen(z: ZoneDO, templateId: string, fallback: string): string
     const anywhere = [...world.rooms.keys()].filter((r) => ok(r) && z.regionOf(r) === band);
     if (anywhere.length) return anywhere[randInt(0, anywhere.length - 1)];
   }
-  if (MOUNTAIN_ROAMERS.has(templateId) && z.regionOf(fallback) === "mountain") {
-    const pool = mountainHomes(z, templateId);
+  if (roamsIn(templateId) && z.regionOf(fallback) === roamsIn(templateId)) {
+    const pool = livingHomes(z, templateId);
     return pool.length ? pool[randInt(0, pool.length - 1)] : fallback;
   }
   if (!ROAMING_DENS.has(templateId)) return fallback;

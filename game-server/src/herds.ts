@@ -33,7 +33,7 @@ import * as groups from "./groups";
 import * as flight from "./flight";
 import * as conditions from "./conditions";
 import {
-  ECO_LINES, HOLLOW, BROODERS, DROWNERS, SENTINELS, PREYS_ON, ROAMING_DENS, MOUNTAIN_ROAMERS,
+  ECO_LINES, HOLLOW, BROODERS, DROWNERS, SENTINELS, PREYS_ON, ROAMING_DENS, roamsIn,
   HERD_PACE_SECS, HERD_BIRTH_PER_H, HERD_BIRTH_MIN, HERD_BIRTH_MAX, HERD_STRAY_FRAC,
   HERD_FLOOR_FRAC, HERD_FLOOR_PER_HUNTER_PER_H, HERD_NO_PREY_SHARE,
   ROOTED, NOCTURNAL, SURFACE_FORAGE, ROUND_REGIONS, ROUND_RANGE, HUNT_RECHECK_MS,
@@ -173,8 +173,8 @@ export function tick(z: ZoneDO, now: number, silent: boolean): void {
             z.regionOf(r) === band && !world.entryRooms.has(r) && !world.safeRooms.has(r));
           if (ground.length) homes = ground;
         }
-        // ...and a mountain line goes where chance and food send it, or to its group.
-        const plan = band === "mountain" && MOUNTAIN_ROAMERS.has(line) ? groups.plan(z, line, now) : undefined;
+        // ...and a living region's line goes where chance and food send it, or to its group.
+        const plan = roamsIn(line) === band ? groups.plan(z, line, now) : undefined;
         if (plan) homes = [plan.home];
         if (!homes.length) break;
         const home = homes[randInt(0, homes.length - 1)];

@@ -1,3 +1,4 @@
+import { CROSSING_GROUND, CROSSING_SETTLES } from "./crossing-ground";
 // WHAT THE MOUNTAIN IS MADE OF (rome, 2026-11-06). Each room's kind of ground, read from
 // its own text, so an animal settles only where that animal belongs. A room can be two
 // kinds: a grass ledge is both green and crag. Every room a mountain animal could call
@@ -117,9 +118,10 @@ export const MOUNTAIN_GROUND: Record<string, string[]> = {
   ],
 };
 
+// Every living region's ground, room -> kinds (the crossing's: crossing-ground.ts).
 export const GROUND_OF = new Map<string, string[]>();
-for (const kind in MOUNTAIN_GROUND) {
-  for (const room of MOUNTAIN_GROUND[kind]) GROUND_OF.set(room, [...(GROUND_OF.get(room) ?? []), kind]);
+for (const table of [MOUNTAIN_GROUND, CROSSING_GROUND]) for (const kind in table) {
+  for (const room of table[kind]) GROUND_OF.set(room, [...(GROUND_OF.get(room) ?? []), kind]);
 }
 // The kinds of ground each animal will settle on. The draw stays random inside them.
 export const SETTLES_ON = new Map<string, string[]>([
@@ -144,6 +146,7 @@ export const SETTLES_ON = new Map<string, string[]>([
   ["bone-breaker", ["crag", "bones"]],
   ["carrion-vulture", ["crag", "bones"]],
   ["stone-adder", ["stone", "crag", "hamlet"]],
+  ...CROSSING_SETTLES,
 ]);
 
 /** Whether this line would settle in this room. A room with no entry refuses nobody. */
