@@ -2545,6 +2545,11 @@ export const FOOD_FLIERS = new Set([
   "great-gull", "black-backed-gull", "gibbet-crow", "tawny-owl", "grey-heron", "bittern", "oystercatcher",
 ]);
 export const BIRD_CATCH_MULT = 0.5; // a flying bird is half as easy to catch (ai.catchMult)
+// HIDDEN IN THE REED (rome, 2026-11-12: the hounds took every bittern there was).
+// A bittern standing in a reed room is that much harder again to catch; out on the
+// open marsh it is a bird like any other.
+export const REED_COVER = new Set(["bittern"]);
+export const REED_COVER_MULT = 0.3;
 export const FLIGHT_RANGE = 25;
 export const FLIGHT_MS_PER_ROOM = 5_000;
 export const FLIGHT_MIN_MS = 15_000;
@@ -5302,7 +5307,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // holes, the bittern takes it in the reed, and the gull takes whatever any of
   // them leaves. This is the first ecology in the game with a genuine scavenger
   // ABOVE the hunters rather than behind them — a gull does not wait its turn.
-  ["grey-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
+  ["grey-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab", "great-gull"])], // and a gull off the water (rome, 2026-11-12): nothing else on the crossing took one
   ["conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab", "marsh-hound"])], // and a hound that wades in where it lies (rome, 2026-11-12): nothing else on the crossing takes one
   ["bittern", new Set(["ford-eel", "silver-eel", "water-vole"])],
   ["great-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher", "water-vole"])],       // it has taken a rat off the parapet, and it did not need to land

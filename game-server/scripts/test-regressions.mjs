@@ -5713,6 +5713,19 @@ try {
     }
   });
 
+  check('the crossing\'s birds: the seal takes a gull, a bittern hides in the reed, more oystercatchers (2026-11-12)', () => {
+    assert.ok(PREYS_ON.get('grey-seal').has('great-gull'), 'nothing else on the crossing took a gull');
+    const z = { variantBase: new Map() };
+    const reed = catchMult(z, { templateId: 'bittern', roomId: 'the-cut-reed' });
+    const marsh = catchMult(z, { templateId: 'bittern', roomId: 'the-salt-marsh' });
+    assert.ok(reed < marsh, 'a bittern in the reed is harder to catch than one on the open marsh');
+    assert.equal(catchMult(z, { templateId: 'oystercatcher', roomId: 'the-cut-reed' }), marsh, 'the reed hides only the bittern');
+    const m393 = readFileSync(new URL('../migrations/393_more_oystercatchers.sql', import.meta.url), 'utf8');
+    const rooms = [...m393.matchAll(/VALUES \('spawn-oystercatcher@([a-z-]+)', 'oystercatcher', '\1'\)/g)].map((m) => m[1]);
+    assert.equal(rooms.length, 5, 'five more, each with an id');
+    for (const r of rooms) assert.ok(settlesOn('oystercatcher', r), r + ' is oystercatcher ground');
+  });
+
   check('the drake\'s shadow never crosses a sun that is not out (2026-11-11)', () => {
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     assert.match(ev, /return pick\(sunOut\(z, roomId\) \? SHADOW_AMBIENT : SHADOW_AMBIENT\.slice\(SHADOW_AMBIENT_SUN\)\);/);
