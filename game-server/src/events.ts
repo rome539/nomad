@@ -1369,6 +1369,11 @@ export function dayLine(z: ZoneDO, roomId: string, now = Date.now()): string {
   return (grey ? DAY_SKY.grey : skyClear(now) ? DAY_SKY.clear : DAY_SKY.open)[part]!;
 }
 
+// IS THE SUN OUT over this room: day, no eclipse, no cover, nothing in the air.
+export function sunOut(z: ZoneDO, roomId: string, now = Date.now()): boolean {
+  return !isNight(now) && eclipsePhase(now) !== "active" && !skyCovered(now) && !weatherNow(z, roomId);
+}
+
 // WHAT THE PICTURE HAS IN THE AIR over an open room, in its own order (zone
 // artSkyFor): snow, then fog, then rain. The hour line and the night line say it.
 export function weatherSky(z: ZoneDO, roomId: string): "snow" | "fog" | "rain" | "" {
@@ -1476,6 +1481,9 @@ const FEVER_AMBIENT = [
   "Flies, in numbers, on a day with no cause for them.",
   "You are sweating, and the wind is cold, and those two things are not agreeing.",
 ];
+// ...the first two need the sun to be out (rome, 2026-11-11: the shape crossed
+// the sun in a snowfall); under snow, rain, fog, cover or night only the rest.
+const SHADOW_AMBIENT_SUN = 2;
 const SHADOW_AMBIENT = [
   "The shadow crosses again, lower, and the wind goes with it.",
   "Far above, a shape crosses the sun, and there is no bird in the world that big.",
@@ -1528,7 +1536,8 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
   // moon is bleeding, the ordinary weather keeps its voice down.
   if (OUTDOOR_ROOMS.has(roomId)) {
     if (eclipsePhase() === "active") return pick(ECLIPSE_AMBIENT);
-    if (isNight() && isBloodMoon()) return pick(BLOOD_MOON_AMBIENT);
+    // ...the moon only when it can be seen (2026-11-11): snow, rain or fog hide it
+    if (isNight() && isBloodMoon() && !weatherNow(z, roomId)) return pick(BLOOD_MOON_AMBIENT);
   }
   if (TIDEWAYS_ROOMS.has(roomId) && phaseOf(z, "tide") === "active") {
     return tideFlooded(z, roomId) ? pick(TIDE_FLOOD_AMBIENT) : pick(TIDE_WING_AMBIENT);
@@ -1566,7 +1575,7 @@ export function eventAmbient(z: ZoneDO, roomId: string): string | null {
     // the hamlets' ground, under a fever off their own graves (2026-11-04)
     return feverrat.rat(z, feverGravesOf(region)) && chance(FEVER_RAT_AMBIENT_ODDS) ? pick(FEVER_RAT_AMBIENT) : pick(FEVER_AMBIENT);
   } else if (region === "mountain") {
-    if (phaseOf(z, "shadow") === "active") return pick(SHADOW_AMBIENT);
+    if (phaseOf(z, "shadow") === "active") return pick(sunOut(z, roomId) ? SHADOW_AMBIENT : SHADOW_AMBIENT.slice(SHADOW_AMBIENT_SUN));
     if (phaseOf(z, "clouddown") === "active") return pick(CLOUDDOWN_AMBIENT);
     if (phaseOf(z, "scree") === "active") return pick(SCREE_AMBIENT);
     if (snowed(z, roomId)) return pick(SNOW_AMBIENT);

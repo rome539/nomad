@@ -45,7 +45,7 @@ import {
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS, THIRST_LATE_MS,
-  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, OPEN_LURKERS, OPEN_LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
+  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, SUN_LINES, OPEN_LURKERS, OPEN_LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, SMALL_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS, HUNTS_NOT_CARRION,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_ROUSED_MS, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
@@ -566,7 +566,7 @@ export function keeperRead(z: ZoneDO, c: Creature, now = Date.now()): string {
   const base = z.variantBase.get(c.templateId);
   const row = world.mobSpawns.some((s) => s.id === c.id) ? `spawn row ${c.id}` : "came in later";
   return [
-    `  keeper: ${c.templateId} #${c.id} · hp ${Math.round(c.hp)}/${tmpl.max_hp} · hunger ${Math.round(c.hunger)} · ${c.asleep ? "asleep" : "awake"}`,
+    `  keeper: ${c.templateId} #${c.id} · hp ${Math.round(c.hp)}/${tmpl.max_hp} · hunger ${Math.round(hungerAsEaten(c, now))} · ${c.asleep ? "asleep" : "awake"}`,
     `  doing: ${doing}`,
     `  home: ${home ? `${home}, ${far}` : "none"} · ${group}`,
     `  next move: ${wander} · flight: ${flight}`,
@@ -3527,8 +3527,9 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
   // you; that rarity is the fiction, not a defect.
   export function mobHabit(z: ZoneDO, creature: Creature, now: number): void {
     void now;
-    const lines = WITNESSED_LINES[creature.templateId];
-    if (!lines || creature.asleep || creature.target) return;
+    // a habit that needs the sun out waits for it (SUN_LINES, 2026-11-11)
+    const lines = WITNESSED_LINES[creature.templateId]?.filter((l) => !SUN_LINES.has(l) || events.sunOut(z, creature.roomId));
+    if (!lines?.length || creature.asleep || creature.target) return;
     if (!playerPresent(z, creature.roomId)) return;
     if (!chance(WITNESSED_ODDS)) return;
     z.roomFeed(creature.roomId, pick(lines), undefined, false, "amb");
@@ -5138,6 +5139,18 @@ export function ate(c: Creature, now = Date.now(), on: Creature["eatingOn"] = "k
   c.nextWanderAt = Math.max(c.nextWanderAt, c.eatingUntil);
   if (drop > 0) c.meal = { owed: drop, from: now, to: now + dur, body };
   else c.meal = undefined;
+}
+
+// THE HUNGER AS FAR AS IT HAS EATEN (rome, 2026-11-11: a vulture read hunger 0
+// with half its meal still to eat). The meal is booked from the first bite so a
+// feeder does not go looking for another, and a meal cut short gives back what
+// was not eaten (digest); this is the number as the meal has gone so far,
+// falling to the booked one as it is eaten. What a look reads.
+export function hungerAsEaten(c: Creature, now = Date.now()): number {
+  const m = c.meal;
+  if (!m || now >= m.to) return c.hunger;
+  const left = Math.max(0, Math.min(1, (m.to - now) / Math.max(1, m.to - m.from)));
+  return Math.min(HUNGER_MAX, c.hunger + m.owed * left);
 }
 
 /** The meal goes on, or stops: finished, it is done; cut short, the uneaten part is given back. */

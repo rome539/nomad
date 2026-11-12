@@ -4782,6 +4782,14 @@ const OWN_BLACK_BACKED_GULL_LINES = [
 const OWN_CARRION_VULTURE_LINES = [
   "The carrion vulture stands on the warm stone with its wings held out wide, sunning the whole of itself, and does not move. Nothing about it is waiting for anything.",
 ];
+// LINES THAT NEED THE SUN OUT (rome, 2026-11-11: the drake's shadow crossed the
+// sun in a snowfall, and these did the same). Said only under a sun that is out
+// (events.sunOut); otherwise the animal or the room says something else.
+export const SUN_LINES = new Set<string>([
+  "The great vulture opens its wings to the sun and stands like a coat hung out to air, and the sun takes it the way the sun takes the rock.",
+  "The shingles tick overhead as the sun crosses them, the way a roof does when somebody is still keeping it whole.",
+  "The brooding vulture stands over its nest with its wings held out wide to the sun, a roof over the eggs that the eggs do not need, and does not move. Nothing about it is waiting for anything.",
+]);
 const OWN_GREAT_VULTURE_LINES = [
   "The great vulture opens its wings to the sun and stands like a coat hung out to air, and the sun takes it the way the sun takes the rock.",
 ];
