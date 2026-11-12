@@ -5187,6 +5187,23 @@ function bodyKey(t: { prey?: string; label?: string; id?: string }): string | un
 function mealKey(b: MealBody): string | undefined {
   return b.key ?? b.prey ?? b.label;
 }
+// THE KEEPER'S READ OF A BODY (rome, 2026-11-11): how much has been eaten off it,
+// to the hit point, and what is at it now - for his key, never for players.
+export function keeperBodyRead(z: ZoneDO, roomId: string, tr: Trace, id: string, now = Date.now()): string {
+  const full = z.world!.mobTemplates.get(id)?.max_hp ?? 0;
+  const left = tr.meat === undefined ? full : Math.max(0, tr.meat);
+  const eaten = Math.max(0, full - left);
+  const at: string[] = [];
+  for (const c of z.creatures.values()) {
+    const m = c.meal;
+    if (!m?.body || m.body.roomId !== roomId || now >= m.to || !sameBody(tr, m.body)) continue;
+    const share = Math.round(m.body.meat * Math.max(0, Math.min(1, (m.to - now) / Math.max(1, m.to - m.from))));
+    at.push(`${c.templateId} (${share} still on its share, ${Math.ceil((m.to - now) / 1000)}s)`);
+  }
+  const age = Math.round((now - tr.at) / 60_000);
+  return `  keeper: body ${id} · meat ${left}/${full} left · ${eaten} eaten (${full ? Math.round(100 * eaten / full) : 0}%) · lying ${age}m`
+    + (at.length ? `\n  eating it: ${at.join(", ")}` : "\n  eating it: nothing");
+}
 function sameBody(t: Trace, b: MealBody): boolean {
   return CORPSE_TRACES.has(t.kind) && bodyKey(t) === mealKey(b);
 }

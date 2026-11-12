@@ -775,7 +775,11 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     : study.findCorpse(z, session.roomId, askDead.dead ? askDead.rest : arg);
   // ...and only a body the room shows: one it no longer draws or names is not
   // lying there to be looked at.
-  if (body && bodiesIn(z, session.roomId).includes(body.tmpl.id)) return z.send(session, bodyRead(z, session.roomId, body.tr, body.tmpl.id, body.tmpl.name), "lore");
+  if (body && bodiesIn(z, session.roomId).includes(body.tmpl.id)) {
+    z.send(session, bodyRead(z, session.roomId, body.tr, body.tmpl.id, body.tmpl.name), "lore");
+    if (session.pubkey === CENSUS_PUBKEY) z.send(session, ai.keeperBodyRead(z, session.roomId, body.tr, body.tmpl.id), "dim"); // what the sim holds on it
+    return;
+  }
   // A chest is a FIXTURE of the room, and 'look' could never see one (rome,
   // 2026-07-26) — every cache carries real description prose in D1 that nothing
   // ever showed. Resolved room-scoped by name, exactly as 'unlock' does, and

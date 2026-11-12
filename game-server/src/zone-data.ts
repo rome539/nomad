@@ -5301,7 +5301,8 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   // and THREE take the stag that nothing below could touch. Read down the
   // numbers and the tier's difficulty curve is written in them — it is not that
   // the wolves are strong, it is that there are enough of them.
-  ["hill-wolf", new Map([["red-hind", 2], ["red-stag", 3], ["scarp-raven", 2], ["bone-breaker", 2], ["carrion-vulture", 2]])],
+  // ...and the old billy, the goats' rare blood, two together as they take a hind (rome, 2026-11-11; armour 2, mig 389)
+  ["hill-wolf", new Map([["red-hind", 2], ["red-stag", 3], ["old-billy", 2], ["scarp-raven", 2], ["bone-breaker", 2], ["carrion-vulture", 2]])],
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —

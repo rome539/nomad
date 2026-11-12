@@ -425,9 +425,15 @@ export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefi
   const reach = z.nearby(g.home, PACK_HUNT_RANGE);
   // a stag only for a pack big enough to take it (PACK_STAG_ODDS)
   const stagOdds = PACK_STAG_ODDS[Math.min(5, alive)] ?? 0;
+  // ONLY WHAT THE PACK CAN KILL (rome, 2026-11-11: five wolves walked to an old
+  // billy, the goats' rare blood, which no hill wolf could take, and turned on
+  // him instead). Judged by the animal itself, not its line: the stag is the
+  // hind's rare blood and the billy the goat's, and each is its own fight.
+  const canTake = (q: Creature): boolean => !!PREYS_ON.get(g.line)?.has(q.templateId)
+    || (PACK_PREY.get(g.line)?.get(q.templateId) ?? Infinity) <= alive;
   const fit = (q: Creature | undefined): q is Creature =>
     !!q && q.hp > 0 && q.aloft === undefined && reach.has(q.roomId) && PACK_QUARRY.has(lineOf(z, q.templateId))
-    && (lineOf(z, q.templateId) !== PACK_STAG || stagOdds > 0);
+    && canTake(q) && (q.templateId !== PACK_STAG || stagOdds > 0);
   let q = g.quarry ? z.creatures.get(g.quarry) : undefined;
   if (!fit(q)) {
     q = undefined;
@@ -440,7 +446,7 @@ export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefi
     for (const o of z.creatures.values()) {
       if (!fit(o)) continue;
       const d = reach.get(o.roomId)!;
-      if (lineOf(z, o.templateId) === PACK_STAG) { if (d < ds) { ds = d; stag = o; } }
+      if (o.templateId === PACK_STAG) { if (d < ds) { ds = d; stag = o; } }
       else if (d < dr) { dr = d; other = o; }
     }
     q = stag && (!other || chance(stagOdds)) ? stag : other;

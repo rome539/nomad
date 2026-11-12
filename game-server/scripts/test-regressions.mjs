@@ -42,7 +42,7 @@ try {
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, wardAt} from './zone-data';",
         "export {forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, keeperRead, eatsAt, rollBloodline, reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep, broodBirths} from './ai';",
-        "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult, lurkerDrifts, hungerAsEaten} from './ai';",
+        "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult, lurkerDrifts, hungerAsEaten, keeperBodyRead} from './ai';",
         "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry, holdLand, holdBody, mobEagle} from './groups';",
         "export {PREYS_ON, PACK_PREY, SMALL_PREY, SMALL_EATERS} from './zone-data';",
         "export * as beasts from './beasts';",
@@ -111,7 +111,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, hungerAsEaten, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
+  const { wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -1300,6 +1300,7 @@ try {
       w1.group = undefined; assert.equal(packQuarry(z, w1, Date.now()), undefined, 'a lone wolf does not'); }
     // THE STAG, MORE OFTEN THE BIGGER THE PACK (2026-11-11): nothing ever set out after a stag
     { const { z, wolf, hind } = mk(); z.world.mobTemplates.set('red-stag', { id: 'red-stag', name: 'a red stag', max_hp: 48, is_boss: 0 });
+      z.variantBase = new Map([['red-stag', 'red-hind'], ['old-billy', 'feral-goat']]); // as the world has them: rare blood of the hind and the goat
       const stag = { id: 's', templateId: 'red-stag', roomId: 'g', home: 'g', hp: 48, target: null, grudges: [], hunger: 0, nextWanderAt: 0 };
       hind.roomId = 'c';
       const pack = (n) => { z.creatures = new Map([['h', hind], ['s', stag]]); for (let k = 0; k < n; k++) z.creatures.set('w' + k, wolf('w' + k, 80)); return z.creatures.get('w0'); };
@@ -1309,6 +1310,19 @@ try {
       assert.ok(three > 0.2 && three < 0.47, 'three take it about one time in three: ' + three);
       assert.ok(five > 0.7 && five < 0.9, 'five mostly go after the big game: ' + five);
       assert.ok(five > three, 'the bigger the pack, the more'); }
+    // ONLY WHAT IT CAN KILL (2026-11-11): five wolves walked to an old billy no hill wolf could take
+    { const { z, wolf } = mk(); z.world.mobTemplates.set('old-billy', { id: 'old-billy', name: 'an old billy', max_hp: 40, is_boss: 0 });
+      z.variantBase = new Map([['red-stag', 'red-hind'], ['old-billy', 'feral-goat']]);
+      const billy = { id: 'b', templateId: 'old-billy', roomId: 'e', home: 'e', hp: 40, target: null, grudges: [], hunger: 0, nextWanderAt: 0 };
+      const pack = (n) => { z.creatures = new Map([['b', billy]]); for (let k = 0; k < n; k++) z.creatures.set('w' + k, wolf('w' + k, 80)); z.groups.packs.p.quarry = undefined; z.groups.packs.p.quarryAt = 0; return z.creatures.get('w0'); };
+      assert.equal(packQuarry(z, pack(2), Date.now()), 'e', 'two go for him, as two take a hind');
+      assert.equal(PACK_PREY.get('hill-wolf').get('old-billy'), 2, 'and two in the room can kill him');
+      assert.ok(!PREYS_ON.get('hill-wolf').has('old-billy'), 'a lone wolf cannot');
+      // a pack sent only after what it can kill: drop him off the list and two leave him be
+      PACK_PREY.get('hill-wolf').delete('old-billy');
+      try { assert.equal(packQuarry(z, pack(2), Date.now()), undefined, 'no walking to a beast it cannot take'); }
+      finally { PACK_PREY.get('hill-wolf').set('old-billy', 2); }
+      assert.match(readFileSync(new URL('../migrations/389_the_old_billy_wears_armor.sql', import.meta.url), 'utf8'), /UPDATE mob_templates SET armor = 2 WHERE id = 'old-billy';/); }
   });
 
   await checkAsync('a gripped animal stays gripped: it cannot walk out of the hold (2026-11-06)', async () => {
@@ -5550,6 +5564,19 @@ try {
     assert.equal(hungerAsEaten({ hunger: 40 }, t0), 40, 'no meal, its hunger');
     const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
     assert.match(ai, /· hunger \$\{Math\.round\(hungerAsEaten\(c, now\)\)\} ·/, 'the look reads it');
+  });
+
+  check('the keeper reads how much of a body has been eaten (2026-11-11)', () => {
+    const now = 5_000_000;
+    const tr = { kind: 'remains', at: now - 6 * 60_000, prey: 'old-billy', label: 'old-billy', meat: 10 };
+    const z = { world: { mobTemplates: new Map([['old-billy', { id: 'old-billy', max_hp: 40 }]]) },
+      creatures: new Map([['v', { templateId: 'great-vulture', meal: { owed: 60, from: now - 60_000, to: now + 60_000, body: { roomId: 'r', prey: 'old-billy', label: 'old-billy', meat: 20 } } }]]) };
+    const out = keeperBodyRead(z, 'r', tr, 'old-billy', now);
+    assert.match(out, /meat 10\/40 left · 30 eaten \(75%\) · lying 6m/, out);
+    assert.match(out, /eating it: great-vulture \(10 still on its share, 60s\)/, out);
+    assert.match(keeperBodyRead({ ...z, creatures: new Map() }, 'r', tr, 'old-billy', now), /eating it: nothing/);
+    const v = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(v, /if \(session\.pubkey === CENSUS_PUBKEY\) z\.send\(session, ai\.keeperBodyRead\(z, session\.roomId, body\.tr, body\.tmpl\.id\), "dim"\);/, 'the keeper key only');
   });
 
   check('the cave lion hunts the stag (2026-11-11)', () => {
