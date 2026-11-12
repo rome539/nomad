@@ -5511,6 +5511,13 @@ try {
     } finally { for (const r of added) OUTDOOR_ROOMS.delete(r); }
   });
 
+  check('the wind is kept down in the Resurgence, snow or no snow (2026-11-11)', () => {
+    const snd = readFileSync(new URL('../src/sound.ts', import.meta.url), 'utf8');
+    assert.match(snd, /export const WIND_KEPT_DOWN = new Set<string>\(\["the-resurgence"\]\);/);
+    assert.match(snd, /if \(WIND_KEPT_DOWN\.has\(roomId\)\) wind = Math\.min\(wind, 2\);\n/);
+    assert.ok(snd.indexOf('if (WIND_KEPT_DOWN.has(roomId))') > snd.indexOf('else if (rain || w.snow) wind = Math.min(3, wind + 1);'), 'after the snow raises it');
+  });
+
   check('the cave lion hunts the stag (2026-11-11)', () => {
     assert.ok(PREYS_ON.get('cave-lion').has('red-stag'), 'the lion takes a stag alone');
     assert.ok(!PREYS_ON.get('lynx').has('red-stag'), 'the lynx still does not');

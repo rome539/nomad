@@ -72,6 +72,11 @@ export const FALLS_ROOMS = new Set<string>([
   "the-force", "the-lower-force", "the-upper-force", "the-dam-walk", "the-hanging-wood", "the-gill-narrows",
   "the-gill-foot", "the-stepping-stones", "the-resurgence", "the-weir",
 ]);
+// THE WIND KEPT DOWN (rome, 2026-11-11: in the Resurgence the snow raised the
+// wind to a gale over the falls, and the two rang like an echo). Here the wind
+// never goes past the mountain's ordinary wind; the snow and the water are as
+// they were.
+export const WIND_KEPT_DOWN = new Set<string>(["the-resurgence"]);
 // Standing pools and inland gravel do not make breaking surf or river hiss.
 export const QUIET_WATER_ROOMS = new Set<string>([
   "the-flashes", "the-wet-carr", "the-burn-flats", "the-peat-cuts",
@@ -228,6 +233,7 @@ export function soundscapeOf(p: Place, w: Weather): Soundscape {
   } else if (!sunless && !buried && w.windUp) {
     wind = 1; // a gale outside is still heard through the walls
   }
+  if (WIND_KEPT_DOWN.has(roomId)) wind = Math.min(wind, 2);
   const seaUp = !inside && w.seaUp;
   const runUp = !inside && w.runUp;
   const falls = FALLS_ROOMS.has(roomId);
