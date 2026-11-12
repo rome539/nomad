@@ -12661,7 +12661,7 @@ export const ARC_TELLINGS: Record<string, string[]> = {
   // ---- the dens ----
   pack: [
     "\"Dogs on the Waste. A lot of them, and none of them anybody's.\" He had stopped work before he said it.",
-    "\"Bar your door and let them through. Or do not, and find out why the ones who stayed out did not come back. Short night either way.\"",
+    "\"Bar your door and let them through. Or do not, and find out why the ones who stayed out did not come back. Short work either way.\"",
   ],
   fever: [
     "\"The wind has come round off the graves. It comes warm.\" The rag stops. \"That is the wrong thing for it to be.\"",
@@ -12863,7 +12863,7 @@ export const GATEHOUSE_FOG = [
   "Whoever last came in brought the white with them, and it took a while to give the room back.",
 ];
 export const GATEHOUSE_COLD = [
-  "The fire is earning its keep tonight. The wall three feet behind you is not.",
+  "The fire is earning its keep. The wall three feet behind you is not.",
   "Frost has got in on the INSIDE of the shutter, in a fern-pattern, very beautiful and very bad news.",
   "The cold comes off the door in a slow sheet, and stops about where the bench is.",
   "Nobody here is in a hurry to be the next one through that door.",

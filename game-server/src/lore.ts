@@ -9,7 +9,7 @@ import type { Region, World, Exit } from "./world";
 import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
 import { journalLoad, journalStudy, creditAccount, creditChart, journalTraitsLoad, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
-import { hashSeed, mulberry32, nameMatches } from "./zone-util";
+import { hashSeed, isNight, mulberry32, nameMatches } from "./zone-util";
 import { pick, chance } from "./rng";
 import { uuid } from "./rng";
 import * as den from "./den";
@@ -1008,6 +1008,11 @@ function packKeeperTold(told: Map<string, number>): string {
 // the data: after the first sentence he speaks ("Twice a day," the keeper
 // says. "It has been..."), or, for a one-sentence quote, on the "He" that
 // follows it. A line that already names him is left alone.
+// "Tonight" said by daylight (rome, 2026-11-12: "hard cold tonight" in the
+// morning): these turns run at any hour, so by day he says today.
+export function byDay(line: string, now = Date.now()): string {
+  return isNight(now) ? line : line.replace(/\bTonight\b/g, "Today").replace(/\btonight\b/g, "today");
+}
 export function keeperVoiced(line: string): string {
   if (/keeper/i.test(line)) return line;
   if (line.startsWith("He ")) return "The keeper " + line.slice(3);
@@ -1077,14 +1082,21 @@ export function keeperTells(z: ZoneDO, session: Session, now: number): boolean {
   // Like the door aside, this does NOT touch keeperTold: the region's telling is
   // eleven lines and stays eleven lines. A night he talked about the fog is not
   // a page torn out of it.
+  // HIS OWN GROUND'S WEATHER, AS HIS SLATE HAS IT (rome, 2026-11-12): the rain,
+  // fog, cold and wind lie on some grounds and not others, and every keeper told
+  // the Halls' hard frost to a gate standing clear. Weather that names its grounds
+  // is told only where it lies; the rest of the sky (crows, eclipse) is everyone's.
+  const ground = z.bandOf(session.roomId);
   const live = Object.keys(ARC_TELLINGS).filter((id) => {
     const owner = ARC_BAND[id];
     if (owner !== null && owner !== band) return false;
+    const st = z.events.get(id);
+    if (owner === null && st?.bands?.length && (!st.bands.includes(ground) || st.phase === "aftermath")) return false; // gone off the slate, gone from his mouth
     return events.phaseOf(z, id) !== "idle";
   });
   if (live.length && chance(ARC_TELLING_ODDS)) {
     session.keeperDueAt = 0;
-    z.send(session, keeperVoiced(pick(ARC_TELLINGS[pick(live)]!)), "lore");
+    z.send(session, keeperVoiced(byDay(pick(ARC_TELLINGS[pick(live)]!), now)), "lore");
     return true;
   }
   // NEWS (rome, 2026-11-02): what has happened lately, from anywhere, as he

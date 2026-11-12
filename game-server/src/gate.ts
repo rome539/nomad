@@ -3053,7 +3053,7 @@ function gatehouseParts(z: ZoneDO, session: Session, arriving: boolean): { head:
   // chalk read from the inside of the same wall.
   const want = wantedItem(z);
   if (want) {
-    lines.push(`Chalked across the shut hatch: wanted tonight — ${want.name}, double in trade.`);
+    lines.push(`Chalked across the shut hatch: wanted ${isNight() ? "tonight" : "today"} — ${want.name}, double in trade.`);
   }
   // Carvings set down by the fire stand here, as they would anywhere.
   if (!arriving) lines.push(...carving.roomLines(z, session));
