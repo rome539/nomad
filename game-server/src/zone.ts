@@ -134,7 +134,7 @@ import { FORGE_STOCK,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
   FLEE_BELOW, FLEE_CHANCE, COMBAT_NOISE_EVERY_MS, NOISE_HEED_ODDS, DOGPILE_CAP, CROWD_CAP, LINKDEAD_MS, RAIN_NOISE_MASK,
   ARMOR_SLOTS, BLEED_TICKS, BLEED_STACK_CAP, BLEED_KILL_ODDS, BANDAGE_FRACTION, TRACE_LIFE_MS, TRACE_CAP, CARVE_CAP, ROT_MS, PICKED_CLEAN_MS, LORE_LINE,
-  WEATHER_NIGHT, NIGHT_COMET, HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
+  WEATHER_NIGHT, NIGHT_COMET, SUMMIT_BOSSES, HOLLOW, BLOODLESS, GRAVE_FLESH, DROWNED_GOD, GOD_ROUSE_MS, KING_WORDS, THIEVES, RUNNERS, BROODERS, SENTINELS, AGGRESSIVE, HOUND_WAKE_MS, HOUND_HEADS,
   BLOOD_MOON_EYES_ROOM, BLOOD_MOON_EYES_DARK,
   SNOW_TRACE_LIFE_MULT, SNOW_NOISE_MULT,
   RING_KEY, RING_LAST_KEY_ODDS, MOON_DOOR_KEY, TIDE_DOOR_KEY, RIDDLE_DOOR_KEY, MOON_DOOR_OPEN, MOON_DOOR_OPEN_BLOOD, MOON_DOOR_SHUT, TIDE_DOOR_OPEN, TIDE_DOOR_SHUT, TIDE_DOOR_SILT, DOOR_PRIZE_BOXES, PRIZE_EMPTY_ODDS, PRIZE_EMPTY_LINES,
@@ -535,6 +535,14 @@ export class ZoneDO implements DurableObject {
 
   public async saveLoadouts(pubkey: string, sets: import("./loadouts").Loadout[]): Promise<void> {
     await this.state.storage.put("loadouts:" + pubkey, sets);
+  }
+
+  // A FLAME IN HAND, kept where a deploy cannot put it out (light.keepFlames).
+  public async savedFlame(pubkey: string): Promise<light.Flame | undefined> {
+    return await this.state.storage.get<light.Flame>("flame:" + pubkey);
+  }
+  public saveFlame(pubkey: string, f: light.Flame | null): void {
+    void (f ? this.state.storage.put("flame:" + pubkey, f) : this.state.storage.delete("flame:" + pubkey)).catch(() => {});
   }
 
   // The census's hourly readings (verbs.recordCensus).
@@ -1607,9 +1615,14 @@ export class ZoneDO implements DurableObject {
       session.limpingSince = displaced.limpingSince;
       session.litUntil = displaced.litUntil;
       session.litSource = displaced.litSource;
+      session.litRow = displaced.litRow;
       session.torchWarned = displaced.torchWarned;
       session.linkdeadUntil = undefined;
     }
+    // ...and a flame still burning when the server last went down (a deploy) is
+    // handed back with the time it had left (rome, 2026-11-11: an update put his
+    // torch out, and the torch is spent into the flame when it is lit).
+    if (!displaced) await light.restoreFlame(this, session);
     this.sessions.set(pubkey, session);
     this.syncExhaustion(session);
     await this.checkpointBody(session);
@@ -5544,7 +5557,7 @@ export class ZoneDO implements DurableObject {
       if (!seesArt(s.pubkey)) continue;
       // ...and night falling or lifting re-sends for everyone, not only the dens:
       // a rain that runs on into the dark has to turn its picture to night too.
-      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || (isNight() ? 1 : 0) !== s.artNight || lowLight() !== (s.artLow ?? 0)) this.sendStatus(s);
+      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || this.drakeOverFor(s) !== (s.artDrake ?? "") || (isNight() ? 1 : 0) !== s.artNight || lowLight() !== (s.artLow ?? 0)) this.sendStatus(s);
     }
     // ...and the soundscape the same way: the rain is heard arriving.
     for (const s of this.sessions.values()) {
@@ -6146,7 +6159,7 @@ export class ZoneDO implements DurableObject {
         // The pack crouch at a gate is still out in it.
         const indoors = this.inGatehouse.has(session.pubkey) || den.hearthWarm(this, session) // ...nor by a den's lit hearth
           || campfire.warmsYou(this, session); // ...nor at a campfire
-        if (!byFire && !indoors && !warmed && !souped && events.coldBites(this, session.roomId) && chance(restSkip * coldMult)) {
+        if (!byFire && !indoors && !warmed && !souped && events.coldOnYou(this, session.roomId) && chance(restSkip * coldMult)) {
           // A silent tax is a lie: tell them, once in a while, why the rest is
           // closing nothing. (Throttled — not a line every skipped tick.)
           //
@@ -6313,6 +6326,7 @@ export class ZoneDO implements DurableObject {
     ratking.roll(this, now);     // about once a day, a rat king comes to the warrens (ratking.ts)
     whiteroe.roll(this, now);    // about once a day, a white roe comes into the wood (whiteroe.ts)
     cough.tick(this, now);       // the drowned's water, a chill, smoke: what sets you coughing (cough.ts)
+    light.keepFlames(this, now); // every flame in hand, saved where a deploy cannot put it out
     this.applyRot(now, false);
     this.rustFloors(now, false); // and the slower drain, on gear, which nothing else touches
     this.sweepSpoiledHearts(now, false);
@@ -9343,6 +9357,7 @@ export class ZoneDO implements DurableObject {
           // A RAINBOW over a sky that cleared off the rain (events.rainbowOver); the
           // page draws it only where the sky is open and lit.
           bow: (session.artBow = this.artBowFor(session)) || undefined,
+          dk: (session.artDrake = this.drakeOverFor(session)) || undefined,
           // What the place sounds like, for the page's own synth (sound.ts).
           amb: (() => { const a = soundscapeFor(this, session); session.ambKey = soundKey(a); return a; })(),
           // Light through a doorway can follow the hour without exposing sky.
@@ -9415,6 +9430,19 @@ export class ZoneDO implements DurableObject {
   // sent and pushes a frame when it differs, which covers every reason the sky
   // can change at once: the hour turning, dusk and dawn opening and closing,
   // the moon, an eclipse, weather arriving or lifting, and walking under a roof.
+  // THE DRAKE IN THE SKY IS THE REAL ONE (rome, 2026-11-11: one flew over him
+  // while it lay asleep in front of him). Which leg of a drake's flight is over
+  // this player's band right now, as "id:leg", or "" for none: the page flies one
+  // drake across the sky for each leg, and none at any other time.
+  public drakeOverFor(session: Session): string {
+    if (!seesArt(session.pubkey) || this.inGatehouse.has(session.pubkey)) return "";
+    const band = this.bandOf(session.roomId);
+    for (const c of this.creatures.values()) {
+      if (!SUMMIT_BOSSES.has(c.templateId) || c.aloft === undefined || !c.flightPlan) continue;
+      if (c.flightPlan[c.flightIdx ?? 0] === band) return c.id + ":" + (c.flightIdx ?? 0);
+    }
+    return "";
+  }
   public artBowFor(session: Session): number {
     const sky = this.artSkyFor(session);
     return (sky === "day" || sky === "dawn" || sky === "dusk") && events.rainbowOver(this, session.roomId) ? 1 : 0;

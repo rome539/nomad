@@ -5838,6 +5838,7 @@ async function connect() {
       if (f.art) grantArt();
       lastEcl = f.ecl ? 1 : 0;
       lastBow = f.bow ? 1 : 0;
+      lastDrake = f.dk || "";
       paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered, f.nt, f.lo);
       roomEl.textContent = "";
       if (f.room) {
@@ -12830,8 +12831,10 @@ var skyDrift = (function () {
     // THE COMET, STILL (2026-11-11: turning with the stars it was carried off the
     // top of the sky for the early night while the words said it stood there),
     // behind the clouds like the rest of the sky. BY DAY TOO (rome, 2026-11-11):
-    // its days and its nights, on every open sky but the eclipse.
-    if (!lay.path && tnComet) drawComet(c, w * .3, h * .2, Math.max(2, Math.round(s * 3)));
+    // its days and its nights, on every open sky but the eclipse. PINNED TO THE
+    // FAR SKY as the stars are (rome, 2026-11-11: it moved about between rooms),
+    // so it holds one place behind the skyline whatever the box.
+    if (!lay.path && tnComet) drawComet(c, (w - fw) / 2 + fw * .3, ft + fh * .3, Math.max(2, Math.round(s * 3)));
     // tonight's clouds, the farther strip first, each at its pace
     var pick = skyCloudsTonight(lay.clouds), tonight = pick.set;
     for (var k = 0; k < tonight.length; k++) {
@@ -13132,6 +13135,9 @@ var skyLife = (function () {
       var e = pool[i], up = false;
       for (j = 0; j < flyers.length; j++) if (flyers[j].e.id === e.id) up = true;
       if (up || (bigUp && big(e)) || (only && e.id !== only)) continue;
+      // THE DRAKE IS NEVER SCENERY (rome, 2026-11-11): it flies only when the real
+      // one is crossing over this ground (lastDrake), once for each leg.
+      if (e.id === "the-drake" && !only) continue;
       ok.push(e); tot += e.w;
     }
     if (!ok.length) return null;
@@ -13139,8 +13145,9 @@ var skyLife = (function () {
     for (i = 0; i < ok.length; i++) { r -= ok[i].w; if (r <= 0) return ok[i]; }
     return ok[ok.length - 1];
   }
-  function spawn(early) {
-    var e = pick(); if (!e) return;
+  var drakeFlown = "";
+  function spawn(early, forced) {
+    var e = forced || pick(); if (!e) return;
     load(e.id);
     var size = h * rnd(e.size[0], e.size[1]), d = Math.random() < .5 ? -1 : 1;
     var near = (size / h - e.size[0]) / Math.max(.001, e.size[1] - e.size[0]);
@@ -13176,6 +13183,12 @@ var skyLife = (function () {
     var c = cx;
     if (!birds()) return;
     if (t >= next) { if (flyers.length < 2) spawn(false); next = t + rnd(9, 34); }
+    // the real drake over this ground: across the sky once per leg of its flight
+    if (lastDrake && lastDrake !== drakeFlown) {
+      drakeFlown = lastDrake;
+      var de = (SKY_LIFE[band] || []).filter(function (e) { return e.id === "the-drake"; })[0] || { id: "the-drake", kind: "lone", size: [0.045, 0.052], w: 0, glide: .5, slow: 1, steady: 1 };
+      spawn(false, de);
+    }
     for (var i = flyers.length - 1; i >= 0; i--) {
       var f = flyers[i], u = (t - f.t0) / f.dur;
       if (u >= 1) { flyers.splice(i, 1); continue; }
@@ -13273,6 +13286,7 @@ var skyLife = (function () {
 var viewBtn = null;   // built only for a granted key, see buildViewRow
 var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED FOR
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "";
+var lastDrake = ""; // the real drake's flight leg over this ground, from the server (zone.drakeOverFor): the sky flies it once
 var lastBow = 0;   // a rainbow over this sky, from the server (events.rainbowOver)
 // Whether the moon is red, kept apart from which sky is painted - see the
 // note beside "red" in zone.ts. Weather decides the picture; the moon decides

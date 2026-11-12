@@ -42,7 +42,7 @@ try {
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, wardAt} from './zone-data';",
         "export {forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, keeperRead, eatsAt, rollBloodline, reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep, broodBirths} from './ai';",
-        "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult} from './ai';",
+        "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult, lurkerDrifts} from './ai';",
         "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry, holdLand, holdBody, mobEagle} from './groups';",
         "export {PREYS_ON, PACK_PREY, SMALL_PREY, SMALL_EATERS} from './zone-data';",
         "export * as beasts from './beasts';",
@@ -88,7 +88,8 @@ try {
         "export {WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE} from './zone-data';",
         "export {VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS} from './zone-data';",
         "export {isNight, isFullMoon, terrainOf, skyClear, lidOpen, foodGone, auroraNight, cometNight} from './zone-util';",
-        "export {nightExtras} from './events';",
+        "export {nightExtras, heightCold, coldOnYou} from './events';",
+        "export {MOUNTAIN_QUARTER_ROOMS as MQR} from './detail';",
         "export {NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN} from './zone-data';",
         "export {tickFoodRot, rottedAway, feverPhase, feverGravesOf} from './events';",
         "export {FEVER_GRAVES} from './zone-data';",
@@ -110,7 +111,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, auroraNight, cometNight, nightExtras, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
+  const { wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -5473,6 +5474,101 @@ try {
     }
   });
 
+  check('the cave lion moves about its own ground, unseen (2026-11-11)', () => {
+    // it sat in the Dry Bones for good: aggressive, so it never wandered, and a
+    // lurker whose drift only went to born-dark rooms, of which its ground has none
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /const open = OPEN_LURKERS\.has\(creature\.templateId\);/);
+    assert.match(ai, /if \(open && !best\) \{\n[^\n]*\n\s+const ground = \[\.\.\.z\.nearby\(home, TERRITORY_RADIUS\)\.keys\(\)\]/, 'any open room of its own ground');
+    assert.match(ai, /\(!open && !DARK_ROOMS\.has\(roomId\)\)/, 'not only the born-dark');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const OPEN_LURKERS = new Set\(\["cave-lion"\]\);/);
+    // and it stays a lurker that holds no wander of its own (it moves unseen)
+    assert.match(zd, /\n  "cave-lion",\n  \/\/ THE CROSSING'S TWO WATCHERS/, 'still a lurker');
+    // run it: a fed lion on open ground with no dark in it moves, and stays on its ground
+    const ground = ['the-dry-bones', 'g1', 'g2', 'g3'], far = 'g9';
+    const added = [...ground, far].filter((r) => !OUTDOOR_ROOMS.has(r)); for (const r of added) OUTDOOR_ROOMS.add(r);
+    try {
+      const lion = { id: 'L', templateId: 'cave-lion', roomId: 'the-dry-bones', home: 'the-dry-bones', hidden: true, hunger: 0 };
+      const z = { creatures: new Map([['L', lion]]), traces: new Map(), sessions: new Map(),
+        nearby: () => new Map(ground.map((r, i) => [r, i ? 1 : 0])), noteCreaturesChanged() {}, reachable: () => true };
+      const seen = new Set();
+      let t = Date.now();
+      for (let i = 0; i < 200; i++) { lurkerDrifts(z, lion, t); seen.add(lion.roomId); t += 30 * 60_000; }
+      assert.ok(seen.size >= 3, 'it walks its ground: ' + [...seen].join(' '));
+      assert.ok([...seen].every((r) => ground.includes(r)), 'and never off it');
+    } finally { for (const r of added) OUTDOOR_ROOMS.delete(r); }
+  });
+
+  check('a goat running for its life comes in running (2026-11-11)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const line = (zd.match(/  "feral-goat": \{ out: "[^"]*", in_: "([^"]*)" \},/) || [])[1] || '';
+    assert.ok(line && !/chewing|picks its way/.test(line), 'not calm: ' + line);
+  });
+
+  check('the high ground is cold, and only the drake\'s room is warm (2026-11-11)', () => {
+    const z = { world: { rooms: new Map() }, snowUntil: 0, events: new Map() };
+    // the world folds the mountain into OUTDOOR_ROOMS at load (zone.ts init); done here as it would be, then undone
+    const high = MQR.high.filter((r) => !INDOOR_ROOMS.has(r)), added = high.filter((r) => !OUTDOOR_ROOMS.has(r));
+    for (const r of added) OUTDOOR_ROOMS.add(r);
+    try {
+    assert.ok(high.length > 40, high.length + ' open high rooms');
+    for (const r of high) assert.ok(heightCold(z, r) && coldOnYou(z, r), r + ' is cold on you');
+    assert.ok(!heightCold(z, 'the-summit'), 'the summit stays warm');
+    for (const q of ['territory', 'cloud', 'middle', 'foot']) for (const r of MQR[q]) assert.ok(!heightCold(z, r), r + ' is not cold for its height');
+    for (const r of MQR.high.filter((x) => INDOOR_ROOMS.has(x))) assert.ok(!heightCold(z, r), r + ' is under a roof');
+    } finally { for (const r of added) OUTDOOR_ROOMS.delete(r); }
+    // and the wanderer is told: the cough's cold reads it
+    const cs = readFileSync(new URL('../src/cough.ts', import.meta.url), 'utf8');
+    assert.match(cs, /const coldHere = \(z: ZoneDO, roomId: string\): boolean => weather\.coldBites\(z, roomId\) \|\| weather\.heightCold\(z, roomId\);/);
+    assert.match(cs, /!SHELTER_ROOMS\.has\(s\.roomId\) && coldHere\(z, s\.roomId\);/);
+  });
+
+  check('the drake in the sky is the real one, never scenery (2026-11-11)', () => {
+    // one flew over him while it lay asleep in front of him
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /if \(e\.id === "the-drake" && !only\) continue;/, 'never picked as scenery');
+    assert.match(pub, /if \(lastDrake && lastDrake !== drakeFlown\) \{/, 'flown once for each leg of the real flight');
+    assert.match(pub, /lastDrake = f\.dk \|\| "";/, 'read off the server');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /if \(!SUMMIT_BOSSES\.has\(c\.templateId\) \|\| c\.aloft === undefined \|\| !c\.flightPlan\) continue;\n\s+if \(c\.flightPlan\[c\.flightIdx \?\? 0\] === band\) return c\.id \+ ":" \+ \(c\.flightIdx \?\? 0\);/, 'only while one is aloft over your ground');
+    assert.match(zs, /this\.drakeOverFor\(s\) !== \(s\.artDrake \?\? ""\)/, 'its passing re-sends the picture');
+    // the comet pinned to the far sky, as the stars are
+    assert.match(pub, /drawComet\(c, \(w - fw\) \/ 2 \+ fw \* \.3, ft \+ fh \* \.3,/);
+  });
+
+  await checkAsync('a flame in hand outlives a deploy (2026-11-11)', async () => {
+    // the torch is spent into the flame when lit and the burning lived only in
+    // memory, so a restart put it out and the torch was gone with it
+    const store = new Map();
+    const z = { sessions: new Map(), saveFlame: (pk, v) => (v ? store.set(pk, v) : store.delete(pk)), savedFlame: async (pk) => store.get(pk) };
+    const now = Date.now();
+    const me = { pubkey: 'me', items: [], litUntil: now + 600_000, litSource: 'torch' };
+    z.sessions.set('me', me);
+    light.keepFlames(z, now);
+    assert.equal(store.get('me')?.until, now + 600_000, 'the flame is saved');
+    // the server goes down and comes back: a fresh body, nothing in memory
+    const back = { pubkey: 'me', items: [] };
+    await light.restoreFlame(z, back);
+    assert.ok(light.carriesLight(back) && back.litSource === 'torch', 'the torch is still burning, with its time left');
+    // a lantern or brand needs its own row still on you
+    store.set('b', { until: now + 600_000, source: 'brand', row: 'r1' });
+    const gone = { pubkey: 'b', items: [] }; await light.restoreFlame(z, gone);
+    assert.ok(!light.carriesLight(gone), 'no brand, no flame');
+    const kept = { pubkey: 'b', items: [{ rowId: 'r1' }] }; await light.restoreFlame(z, kept);
+    assert.ok(light.carriesLight(kept), 'the brand still in hand burns on');
+    // burnt out or put out: the saved flame goes
+    store.set('old', { until: now - 1, source: 'torch' });
+    const late = { pubkey: 'old', items: [] }; await light.restoreFlame(z, late);
+    assert.ok(!light.carriesLight(late), 'a flame that burnt out while away stays out');
+    me.litUntil = undefined; me.litSource = undefined;
+    light.keepFlames(z, now);
+    assert.ok(!store.has('me'), 'a flame put out is no longer kept');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /if \(!displaced\) await light\.restoreFlame\(this, session\);\n    this\.sessions\.set\(pubkey, session\);/, 'given back as the body comes in');
+    assert.match(zs, /light\.keepFlames\(this, now\);/, 'kept every beat');
+  });
+
   check('an animal walking in prints in the look\'s style, not a faded feed line (2026-11-11)', () => {
     const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
     assert.match(ai, /: \(s: Session\) => arrivalLine\(z, creature, tmpl, s\.pubkey, jingle\), undefined, false, "arrive"\);/, 'the walk-in is sent as "arrive"');
@@ -5520,7 +5616,7 @@ try {
     assert.match(src, /var tnAurora = SKY_FX\.aurora \|\| skyAuroraNight\(skyRoll\), tnComet = SKY_FX\.comet \|\| skyCometNight\(skyRoll\);/);
     assert.match(src, /var turning = fxNight, /);
     // the comet still, or it is carried off the sky; behind the clouds, as the rest of the sky (2026-11-11)
-    const cAt = src.indexOf('if (!lay.path && tnComet) drawComet(c, w * .3, h * .2,'), clAt = src.indexOf('if (row) c.drawImage(row, x0, top, tw * copies, th);');
+    const cAt = src.indexOf('if (!lay.path && tnComet) drawComet(c, (w - fw) / 2 + fw * .3, ft + fh * .3,'), clAt = src.indexOf('if (row) c.drawImage(row, x0, top, tw * copies, th);');
     assert.ok(cAt > 0 && cAt < clAt, 'the comet is drawn before the clouds, behind them');
     assert.equal((src.match(/\bdrawComet\(c, (?!x, y, B\))/g) || []).length, 1, 'drawn in one place only');
     // ...and by day too, said under the open day skies that draw it (rome, 2026-11-11)

@@ -13,6 +13,7 @@ import { hpLabel } from "./util";
 // hours picks ONE event from the pool — four to six a day, never a schedule.
 // An arc that isn't mid-run parks at NEVER; only the roll starts one.
 import * as cough from "./cough";
+import { MOUNTAIN_QUARTERS } from "./detail";
 import type { ZoneDO } from "./zone";
 import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
@@ -542,6 +543,18 @@ export function coldBites(z: ZoneDO, roomId: string): boolean {
     || (z.snowUntil > Date.now() && z.world!.rooms.get(roomId)?.region === "mountain");
 }
 
+// THE HIGH GROUND IS COLD (rome, 2026-11-11: the top of the mountain is cold,
+// and only the drake's room is warm). The high tier's open rooms are cold on a
+// wanderer all the time, snap or no snap, as their words always said; the
+// summit is a warm room. Wanderers only: the animals keep the weather's cold.
+export function heightCold(z: ZoneDO, roomId: string): boolean {
+  return MOUNTAIN_QUARTERS[roomId] === "high" && OUTDOOR_ROOMS.has(roomId) && !WARM_ROOMS.has(roomId);
+}
+// The cold on a wanderer where they stand: the weather's, or the height's.
+export function coldOnYou(z: ZoneDO, roomId: string): boolean {
+  return coldBites(z, roomId) || heightCold(z, roomId);
+}
+
 // Is the mountain under its snow right now? The one persistent season.
 export function snowed(z: ZoneDO, roomId: string): boolean {
   return z.snowUntil > Date.now() && z.world!.rooms.get(roomId)?.region === "mountain";
@@ -716,7 +729,7 @@ export function beginShadow(z: ZoneDO, now: number): boolean {
 }
 
 export function coldTorchMult(z: ZoneDO, roomId: string): number {
-  if (!coldBites(z, roomId)) return 1;
+  if (!coldOnYou(z, roomId)) return 1;
   // Wind rides the cold: the already-halved burn becomes a quarter.
   return windy(z, roomId) ? COLD_TORCH_MULT * WIND_CHILL_TORCH_MULT : COLD_TORCH_MULT;
 }
@@ -3841,7 +3854,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       // The first bite eats the flame: a burning torch out in it loses half
       // of whatever it had left. (The lantern's oil doesn't care.)
       for (const s of z.sessions.values()) {
-        if (coldBites(z, s.roomId) && s.litSource === "torch" && s.litUntil && s.litUntil > now) {
+        if (coldOnYou(z, s.roomId) && s.litSource === "torch" && s.litUntil && s.litUntil > now) {
           s.litUntil = now + Math.floor((s.litUntil - now) * COLD_TORCH_MULT);
         }
       }

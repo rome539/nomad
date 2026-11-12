@@ -45,7 +45,7 @@ import {
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS, THIRST_LATE_MS,
-  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
+  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, OPEN_LURKERS, OPEN_LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, SMALL_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS, HUNTS_NOT_CARRION,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_ROUSED_MS, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
@@ -3677,11 +3677,14 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
     // 3h drift. Fed, it falls back to the slow territorial drift below.
     const prey = PREYS_ON.get(creature.templateId);
     const hunting = !!prey && (creature.hunger ?? 0) >= HUNGRY_AT;
-    const interval = hunting ? LURKER_HUNT_DRIFT_MS : LURKER_DRIFT_MS;
+    const open = OPEN_LURKERS.has(creature.templateId); // waits on open ground, not in the born-dark
+    const interval = hunting ? LURKER_HUNT_DRIFT_MS : open ? OPEN_LURKER_DRIFT_MS : LURKER_DRIFT_MS;
     if (creature.repositionAt === undefined) {
       creature.repositionAt = now + randInt(Math.round(interval / 2), interval);
       return;
     }
+    // (a lion already waiting on the old 3-hour clock is brought onto its own)
+    if (creature.repositionAt > now + interval * 2) creature.repositionAt = now + randInt(Math.round(interval / 2), interval);
     if (creature.repositionAt > now) return;
     creature.repositionAt = now + randInt(interval, interval * 2);
     const home = creature.home ?? creature.roomId;
@@ -3693,16 +3696,22 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
       // out to LURKER_HUNT_RADIUS from home; steps toward the closest such room.
       let bestDist = Infinity;
       const consider = (roomId: string) => {
-        if (roomId === creature.roomId || !DARK_ROOMS.has(roomId) || shunned.has(roomId)) return;
-        if (!z.withinRadius(home, roomId, LURKER_HUNT_RADIUS)) return;
+        if (roomId === creature.roomId || (!open && !DARK_ROOMS.has(roomId)) || shunned.has(roomId)) return;
+        if (!z.withinRadius(home, roomId, open ? TERRITORY_RADIUS : LURKER_HUNT_RADIUS)) return;
         if (lurkersIn(z, roomId, creature.id) >= LURKER_CROWD) return; // that stretch of dark is taken
         const d = z.roomDist(creature.roomId, roomId);
         if (d < bestDist) { bestDist = d; best = roomId; }
       };
       for (const c of z.creatures.values()) if (prey!.has(c.templateId)) consider(c.roomId); // meat on the hoof
       for (const [roomId, list] of z.traces) if (list.some(edibleBody)) consider(roomId); // carrion
-      if (!best) for (const roomId of WARRENS_ROOMS) consider(roomId); // nothing yet — drift toward where rats run
-    } else {
+      if (!best && !open) for (const roomId of WARRENS_ROOMS) consider(roomId); // nothing yet — drift toward where rats run
+    }
+    if (open && !best) {
+      // the lion's own ground, a different room of it each time
+      const ground = [...z.nearby(home, TERRITORY_RADIUS).keys()].filter((r) => r !== creature.roomId && !shunned.has(r)
+        && OUTDOOR_ROOMS.has(r) && lurkersIn(z, r, creature.id) < LURKER_CROWD);
+      if (ground.length) best = ground[randInt(0, ground.length - 1)];
+    } else if (!hunting) {
       // FULL: the old aimless drift — shift the ambush to the freshest-trafficked
       // born-dark room in its own territory (your habitual corridor stops being safe).
       let bestAt = 0;

@@ -104,6 +104,32 @@ export const TORCH_IN_HAND_LINE = "a torch, burning in your hand";
 
 // A kindled light throws light until it gutters (litUntil). Read everywhere the
 // dark matters: seeing a lightless room, and waking the fire-fear.
+// A FLAME OUTLIVES A DEPLOY (rome, 2026-11-11: the game updating put his torch
+// out). The burning lives in memory, and the torch is spent into it when it is
+// lit, so a restart took both. Each beat every session's flame is saved where it
+// changed (the zone's own storage), and nothing is cleared when a player drops,
+// so a body that comes back while it still burns takes it up again.
+export interface Flame { until: number; source: "torch" | "lantern" | "brand"; row?: string }
+export function keepFlames(z: ZoneDO, now: number): void {
+  for (const s of z.sessions.values()) {
+    const lit = carriesLight(s) && s.litSource ? s.litUntil! : 0;
+    const key = lit ? lit + "|" + s.litSource + "|" + (s.litRow ?? "") : "";
+    if (key === s.flameSaved) continue;
+    s.flameSaved = key;
+    z.saveFlame(s.pubkey, lit && lit > now ? { until: lit, source: s.litSource!, row: s.litRow } : null);
+  }
+}
+export async function restoreFlame(z: ZoneDO, session: Session): Promise<void> {
+  const f = await z.savedFlame(session.pubkey);
+  if (!f || f.until <= Date.now()) return;
+  // a lantern or a brand burns in its own row, which has to be on you still
+  if (f.source !== "torch" && !session.items.some((c) => c.rowId === f.row)) return;
+  session.litUntil = f.until;
+  session.litSource = f.source;
+  session.litRow = f.row;
+  session.flameSaved = f.until + "|" + f.source + "|" + (f.row ?? "");
+}
+
 export function carriesLight(session: Session): boolean {
   return !!session.litUntil && Date.now() < session.litUntil;
 }

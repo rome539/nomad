@@ -73,12 +73,14 @@ export interface Session {
   litUntil?: number; // ms epoch a kindled light burns until; while now < this you carry light (sees dark rooms; a torch also wakes fire-fear). Reset on wake — a rekindle is cheap.
   litSource?: "torch" | "lantern" | "brand"; // what burns: a torch is an open flame (fire-fear), a lantern a tame one (light only, and the lantern stays in the pack), a brand an open flame in the WEAPON hand (2026-08-20)
   litRow?: string; // WHICH row is alight, when litSource is "brand" (2026-08-20): more than one burning weapon can ride in a pack now, so the burnout must spend the one actually lit and not the first brand it finds
+  flameSaved?: string; // the flame last saved for this body (light.keepFlames): until|source|row, "" for none
   torchWarned?: boolean; // fired the one-time "burning low" warning for the current light
   // THE LAST SKY THIS PLAYER WAS TOLD ABOUT. Not state the world runs on — the
   // sky is derived fresh every time it is asked for — only a record of what has
   // been SENT, so the tick can notice the hour turning under someone standing
   // still and push them a frame. Undefined until the first status frame.
   artSky?: string;
+  artDrake?: string; // the drake flight leg last sent (zone.drakeOverFor), so its passing re-sends the status
   artBow?: number; // the rainbow last sent, so its coming and going re-sends the status
   artNight?: number; // the last `nt` sent: a den's picture turns at nightfall even when the sky string does not
   artLow?: number; // the last `lo` sent: fog at dawn and dusk turns with the low light even when the sky string stays "fog"

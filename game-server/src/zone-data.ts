@@ -4977,6 +4977,13 @@ export const PACK_CALL_ODDS = 0.09; // per combat round: ~1 call across a 7-8 ro
 // to the born-dark room (tether-bound) with the freshest footprints — vary
 // your route. It never moves under an eye, and torchlight still reveals it.
 export const LURKER_DRIFT_MS = 3 * 3_600_000;
+// A LURKER OF THE OPEN (rome, 2026-11-11: the cave lion sat in the Dry Bones
+// all the time). Every other lurker waits in the born-dark, and its drift only
+// goes to born-dark rooms, so the lion, with none on its ground, never moved.
+// These shift their wait to any open room of their own ground (home and the
+// TERRITORY_RADIUS round it), unseen, on this shorter clock.
+export const OPEN_LURKERS = new Set(["cave-lion"]);
+export const OPEN_LURKER_DRIFT_MS = 30 * 60_000;
 // The food web: who hunts (or drives off) whom. A predator sharing a room with
 // prey it outranks may turn on it — when it's hungry, or when there's a kill or
 // bait to fight over. Every predator genuinely outstats its prey (hp + dmg);
@@ -6126,7 +6133,8 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "the-wrecker": { out: "walks off {dir} along the tideline without hurrying, which is worse.", in_: "comes down the shingle {dir}, looking at what you are carrying." },
   "the-tide-warden": { out: "walks {dir} down the causeway at the pace it has always held.", in_: "comes up the causeway {dir}, stops at the milestone, and cuts the stick." },
   "grey-heron": { out: "goes up {dir}, slowly, hugely, complaining.", in_: "drops in on stiff wings and folds itself away." },
-  "feral-goat": { out: "goes {dir} up ground that has no business holding it.", in_: "picks its way in and resumes chewing." },
+  // (rome, 2026-11-11: a goat running from a hunter came in "resuming chewing")
+  "feral-goat": { out: "goes {dir} up ground that has no business holding it.", in_: "comes in at a scrambling run, stones going from under its hooves, and does not stop." },
   "old-billy": { out: "bolts {dir} over the rocks and is gone.", in_: "picks its way in, stops square on, and lowers its head." },
   "scarp-raven": { out: "tips off the face {dir} and is carried away without a beat.", in_: "lands, hops twice, and looks at you sideways." },
   "gill-adder": { out: "pours away {dir} between the stones.", in_: "flows in and settles into a coil." },

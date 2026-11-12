@@ -314,7 +314,7 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
       fog: events.wxPhase(z, "fog", roomId) === "active",
       // where the cold actually bites (events.coldBites): open ground under it,
       // the deep beneath all of it, the mountain under its snow - never a roof
-      cold: !inside && events.coldBites(z, roomId),
+      cold: !inside && events.coldOnYou(z, roomId),
     });
 }
 

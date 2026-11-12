@@ -64,7 +64,7 @@ export function dust(z: ZoneDO, roomId: string): void {
 
 // The weather the chill reads (a seam the tests can set).
 export const weather = {
-  coldBites: events.coldBites, raining: events.raining, windy: events.windy,
+  coldBites: events.coldBites, heightCold: events.heightCold, raining: events.raining, windy: events.windy,
   inWater: (z: ZoneDO, roomId: string) => events.tideFlooded(z, roomId) || events.seaUnder(z, roomId),
 };
 
@@ -82,8 +82,10 @@ function warm(z: ZoneDO, s: Session, now: number): boolean {
 // THE COLD, SAID (2026-11-10: snowing on the mountain, and the first a wanderer
 // heard of the cold was a rest that closed nothing). Is it on you where you
 // stand: cold ground, out of the world's warmth and not under a shelter's roof.
+// the weather's cold or the high ground's (events.heightCold)
+const coldHere = (z: ZoneDO, roomId: string): boolean => weather.coldBites(z, roomId) || weather.heightCold(z, roomId);
 export function cold(z: ZoneDO, s: Session, now = Date.now()): boolean {
-  return !z.outOfWorld(s) && !warm(z, s, now) && !SHELTER_ROOMS.has(s.roomId) && weather.coldBites(z, s.roomId);
+  return !z.outOfWorld(s) && !warm(z, s, now) && !SHELTER_ROOMS.has(s.roomId) && coldHere(z, s.roomId);
 }
 // ...told when it comes on you and when it lets go, never why; the bar holds it.
 export function noteCold(z: ZoneDO, s: Session, now = Date.now()): void {
@@ -144,7 +146,7 @@ export function tick(z: ZoneDO, now: number): void {
       const wasChilled = !!s.chilled;
       s.chilled = false; s.chillMs = 0;
       if (wasChilled) { z.send(s, "The warmth gets into your chest at last, and the cough lets go of you."); z.sendStatus(s); }
-    } else if (!out && weather.coldBites(z, s.roomId) && (isWet(s, now) || z.wearsTrait(s, "sodden"))) {
+    } else if (!out && coldHere(z, s.roomId) && (isWet(s, now) || z.wearsTrait(s, "sodden"))) {
       s.chillMs = (s.chillMs ?? 0) + 60_000;
       if (!s.chilled && s.chillMs >= COUGH_CHILL_AFTER_MS) {
         s.chilled = true;
