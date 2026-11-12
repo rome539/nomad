@@ -5692,6 +5692,27 @@ try {
     assert.match(zone, /\(!DROWNERS\.has\(creature\.templateId\) \|\| WALKING_DEAD\.has\(creature\.templateId\)\) && !SENTINELS/, 'the water-bound leave their water');
   });
 
+  check('the brood mother is hunted by every rat-eater her size or bigger (2026-11-12)', () => {
+    // nothing but the deep's pale things ate her, so she bred the rats back over their limit
+    for (const h of ['hill-wolf', 'lead-wolf', 'marsh-hound', 'great-gull', 'black-backed-gull', 'eagle-owl', 'wildcat', 'grey-wolf'])
+      assert.ok(PREYS_ON.get(h).has('brood-rat'), h + ' takes the brood mother');
+    for (const h of ['hill-fox', 'ermine', 'fen-viper', 'gill-adder', 'stone-adder', 'otter', 'coyote'])
+      assert.ok(!PREYS_ON.get(h).has('brood-rat'), h + ' is smaller than she is');
+    // every rat-eater is one or the other: none was missed
+    for (const [h, eats] of PREYS_ON) if (eats.has('rat')) assert.ok(eats.has('brood-rat') || ['hill-fox', 'ermine', 'fen-viper', 'gill-adder', 'stone-adder', 'otter', 'coyote'].includes(h), h + ' is sorted');
+  });
+
+  check('something on the crossing kills a marsh hound: the conger, up the creeks where they walk (2026-11-12)', () => {
+    // only the drake took one; a conger never leaves its water, so three come up the creeks
+    assert.ok(PREYS_ON.get('conger').has('marsh-hound'), 'the conger takes a hound');
+    const m392 = readFileSync(new URL('../migrations/392_the_conger_comes_up_the_creeks.sql', import.meta.url), 'utf8');
+    for (const [id, to] of [['spawn-conger@the-green-water#312', 'the-wide-creek'], ['spawn-conger@the-deep-mark#313', 'the-crooked-creek'], ['spawn-conger@the-under-rope#314', 'the-creek-mouth']]) {
+      assert.ok(m392.includes(`SET room_id = '${to}' WHERE id = '${id}'`), id + ' goes to ' + to);
+      assert.ok(readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8').includes(`["${id}", "${id.split('@')[1].split('#')[0]}"]`), id + ' standing goes with its home');
+      assert.ok(CROSSING_SETTLES.find(([l]) => l === 'marsh-hound')[1].some((k) => CROSSING_GROUND[k].includes(to)), to + ' is hound ground');
+    }
+  });
+
   check('the drake\'s shadow never crosses a sun that is not out (2026-11-11)', () => {
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     assert.match(ev, /return pick\(sunOut\(z, roomId\) \? SHADOW_AMBIENT : SHADOW_AMBIENT\.slice\(SHADOW_AMBIENT_SUN\)\);/);

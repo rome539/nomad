@@ -5303,7 +5303,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // them leaves. This is the first ecology in the game with a genuine scavenger
   // ABOVE the hunters rather than behind them — a gull does not wait its turn.
   ["grey-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
-  ["conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
+  ["conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab", "marsh-hound"])], // and a hound that wades in where it lies (rome, 2026-11-12): nothing else on the crossing takes one
   ["bittern", new Set(["ford-eel", "silver-eel", "water-vole"])],
   ["great-gull", new Set(["rat", "wrack-crab", "devil-crab", "ford-eel", "silver-eel", "oystercatcher", "water-vole"])],       // it has taken a rat off the parapet, and it did not need to land
   ["marsh-hound", new Set(["rat", "oystercatcher", "bittern", "wrack-crab", "devil-crab", "fen-viper", "water-vole"])],
@@ -5318,6 +5318,17 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["bull-seal", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
   ["old-conger", new Set(["ford-eel", "silver-eel", "wrack-crab", "devil-crab"])],
 ]);
+// THE BROOD MOTHER IS HUNTED (rome, 2026-11-12: the rats ran over their limit on
+// the mountain and the crossing, and nothing but the deep's pale things ever ate a
+// brood mother, so she bred her nest back up as fast as the hounds and the wolves
+// ate her young). Every rat-eater at least her size (24) takes her too; the
+// foxes, ermines, adders, vipers, otters and the coyote are smaller and do not.
+export const BROOD_RAT_HUNTERS = [
+  "albino-rat", "black-backed-gull", "dire-hyena", "dire-wolf", "dog-otter", "eagle-owl", "grave-hyena", "great-gull",
+  "grey-wolf", "hill-wolf", "lead-dog", "lead-wolf", "marsh-hound", "masterless-dog", "snow-fox", "tawny-owl",
+  "the-baited-bear", "the-chain-breaker", "the-gravid-adder", "the-tom", "three-hound", "wildcat",
+];
+for (const h of BROOD_RAT_HUNTERS) PREYS_ON.get(h)!.add("brood-rat");
 // THE PACK (rome, 2026-08-02: "multiple grey wolves beats old boar"). PREYS_ON
 // is a stats table — every edge in it holds because the predator genuinely
 // outstats the prey alone. That law is right and it makes wolves wrong: a wolf
@@ -6017,6 +6028,10 @@ export const PRICK_LINES = [
   "The spines drive into your fist and stay there",
 ];
 export const DEN_MOVES = new Map<string, string>([
+  // mig 392: three congers, off the open channels and up the marsh creeks where the hounds walk
+  ["spawn-conger@the-green-water#312", "the-green-water"],
+  ["spawn-conger@the-deep-mark#313", "the-deep-mark"],
+  ["spawn-conger@the-under-rope#314", "the-under-rope"],
   // mig 391: the salt widow, off the Crossing House and out to the salt workings
   ["spawn-the-salt-widow@the-pan-house#343", "the-pan-house"],
   ["spawn-the-salt-widow@the-salt-pans#344", "the-salt-pans"],
