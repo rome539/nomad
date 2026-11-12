@@ -1889,7 +1889,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       if (!hush) z.roomFeed(from, jingle(viaPath?.out ?? outLine), undefined, false);
       const inLine = mode !== "flee" ? "creeps in."
         : runner ? "skitters in, already looking for the next way out."
-        : hurt ? hurt.in_ : pick(fleeFam.in_).replace("{ground}", groundWord(z.regionOf(creature.roomId), creature.roomId));
+        : hurt ? hurt.in_.replace(/ \{dir\}/g, "") : pick(fleeFam.in_).replace("{ground}", groundWord(z.regionOf(creature.roomId), creature.roomId));
       // A walk-in is told whole, as the look tells the animal standing there
       // (its load, its hunger or what it is about, its wounds), read by each viewer.
       // ...AND IN THE LOOK'S OWN STYLE (rome, 2026-11-11): the bold of an animal in
@@ -2577,6 +2577,10 @@ export function crouchHolds(z: ZoneDO, creature: Creature): void {
 // holds its ground, as before.
 export function walksAnyway(creature: Creature): boolean {
   if (PATROLS[creature.templateId]) return true;                                  // its route is its ground
+  // THE LION SEEN WALKS ITS GROUND (rome, 2026-11-12): out of hiding it never
+  // moved, aggressive and at home, so it stood in the Dry Bones for good. Seen,
+  // it walks the rooms of its own ground like any animal; unseen it drifts.
+  if (OPEN_LURKERS.has(creature.templateId) && !creature.hidden) return true;
   return !!creature.home && creature.roomId !== creature.home;           // displaced: it goes back
 }
 
