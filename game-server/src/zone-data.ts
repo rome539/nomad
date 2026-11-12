@@ -2777,7 +2777,11 @@ export const SCAVENGERS = new Set([
   // ("something has still been chewing on the ends of these, which is the only
   // reason anything comes to this room"). 245 wrote it as an animal cornered in
   // its own larder. This is the larder.
-  "cave-lion"]);
+  "cave-lion",
+  // THE CROSSING'S CARRION (rome, 2026-11-12): only the rats and the crabs ate its
+  // dead. The gull takes whatever any of them leaves, and its rare blood with it,
+  // and the marsh hound finishes what it did not start, as the hill wolf does.
+  "great-gull", "black-backed-gull", "marsh-hound", "a-lymer"]);
 // THE HYENAS HUNT (rome, 2026-10-30). They live in the pits and the camp
 // graves, and those are carrion ground, so every time they got hungry they ate
 // the room and were never hungry enough to go after anything. They are not

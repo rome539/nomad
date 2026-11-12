@@ -5715,6 +5715,9 @@ try {
 
   check('the crossing\'s birds: the seal takes a gull, a bittern hides in the reed, more oystercatchers (2026-11-12)', () => {
     assert.ok(PREYS_ON.get('grey-seal').has('great-gull'), 'nothing else on the crossing took a gull');
+    // and the gull eats the crossing's dead, where only the rats and the crabs did
+    const scav = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8').match(/export const SCAVENGERS = new Set\(\[([\s\S]*?)\]\);/)[1];
+    for (const g of ['great-gull', 'black-backed-gull', 'marsh-hound', 'a-lymer']) assert.ok(scav.includes(`"${g}"`), g + ' is a scavenger');
     const z = { variantBase: new Map() };
     const reed = catchMult(z, { templateId: 'bittern', roomId: 'the-cut-reed' });
     const marsh = catchMult(z, { templateId: 'bittern', roomId: 'the-salt-marsh' });
