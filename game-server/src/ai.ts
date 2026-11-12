@@ -45,7 +45,7 @@ import {
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS, THIRST_LATE_MS,
-  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, SUN_LINES, OPEN_LURKERS, OPEN_LURKER_DRIFT_MS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
+  RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, SUN_LINES, OPEN_LURKERS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
   PREYS_ON, PACK_PREY, PREDATION_ODDS, STARVE_HUNTERS, SMALL_HUNTERS, ECO_LINES, ECO_SLOWEST, CARRION_ROOMS, HUNTS_NOT_CARRION,
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_ROUSED_MS, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
@@ -1285,6 +1285,21 @@ function forageErrand(z: ZoneDO, creature: Creature, now: number): string | unde
   return (creature.forageFor = best);
 }
 
+/** The cave lion, hungry: the nearest room on its own ground with something it eats. */
+export function lionStalks(z: ZoneDO, creature: Creature): string | undefined {
+  if (!OPEN_LURKERS.has(creature.templateId) || (creature.hunger ?? 0) < HUNGRY_AT) return undefined;
+  const prey = PREYS_ON.get(creature.templateId);
+  if (!prey?.size) return undefined;
+  const ground = z.nearby(creature.home ?? creature.roomId, TERRITORY_RADIUS);
+  let best: string | undefined, bestD = Infinity;
+  for (const c of z.creatures.values()) {
+    if (!prey.has(c.templateId) || c.hp <= 0 || c.aloft !== undefined || !ground.has(c.roomId)) continue;
+    const d = c.roomId === creature.roomId ? 0 : z.roomDist(creature.roomId, c.roomId);
+    if (d < bestD) { bestD = d; best = c.roomId; }
+  }
+  return best;
+}
+
 function huntGround(z: ZoneDO, creature: Creature, now: number): string | undefined {
   const prey = PREYS_ON.get(creature.templateId);
   if (!prey?.size || (creature.hunger ?? 0) < HUNGRY_AT) {
@@ -1466,9 +1481,13 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
       // A HUNGRY PACK closes on its quarry (groups.packQuarry), all the way into its room.
       const quarry = creature.wateringTo ? undefined : groups.packQuarry(z, creature, now);
       if (quarry === creature.roomId) return; // there: it stays with the pack's kill
+      // THE LION STALKS WHEN HUNGRY (rome, 2026-11-12): it closes on the nearest
+      // meal on its ground, and stays when it is there.
+      const stalk = quarry || creature.wateringTo ? undefined : lionStalks(z, creature);
+      if (stalk === creature.roomId) return;
       // A bird down from the sky walks the ground round where it landed (flight.ts).
       const landed = creature.awayUntil !== undefined && creature.aloft === undefined ? creature.awayAt : undefined;
-      const anchor = creature.wateringTo ?? quarry ?? landed ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
+      const anchor = creature.wateringTo ?? quarry ?? stalk ?? landed ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
       // ONE capped walk out from the den answers both halves — am I inside my
       // range, and which of these exits are. This is the hottest distance query
       // in the game (every wandering creature, every beat); routing it through
@@ -1498,11 +1517,11 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
           if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
         }
       } else {
-        const within = quarry ? exits.filter((e) => (near.get(e.to_room) ?? Infinity) < d) : exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
+        const within = quarry || stalk ? exits.filter((e) => (near.get(e.to_room) ?? Infinity) < d) : exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
         if (within.length) exits = within;
         // ...and inside its range, the hour decides which ground it keeps to:
         // out on the feeding ground in its waking hours, back in cover after.
-        if (!quarry) exits = herds.roundExits(z, creature, exits, now);
+        if (!quarry && !stalk) exits = herds.roundExits(z, creature, exits, now);
       }
     }
     // A patroller's route IS its territory. It leaves the circuit sometimes — it
@@ -2577,10 +2596,9 @@ export function crouchHolds(z: ZoneDO, creature: Creature): void {
 // holds its ground, as before.
 export function walksAnyway(creature: Creature): boolean {
   if (PATROLS[creature.templateId]) return true;                                  // its route is its ground
-  // THE LION SEEN WALKS ITS GROUND (rome, 2026-11-12): out of hiding it never
-  // moved, aggressive and at home, so it stood in the Dry Bones for good. Seen,
-  // it walks the rooms of its own ground like any animal; unseen it drifts.
-  if (OPEN_LURKERS.has(creature.templateId) && !creature.hidden) return true;
+  // THE CAVE LION WALKS ITS GROUND (rome, 2026-11-12), lurking or not: aggressive
+  // and at home, it stood in the Dry Bones for good (lurkerDrifts).
+  if (OPEN_LURKERS.has(creature.templateId)) return true;
   return !!creature.home && creature.roomId !== creature.home;           // displaced: it goes back
 }
 
@@ -3676,20 +3694,25 @@ export function thiefWhistle(z: ZoneDO, roomId: string, now: number, runner: Cre
   // vary the route. It never moves under an eye (either end), it stays
   // hidden, and torchlight still reveals it the same as ever.
 export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
+    // THE CAVE LION WALKS ITS GROUND, LURKING OR NOT (rome, 2026-11-12): it does
+    // not jump about unseen like the dark's lurkers; it walks its territory step by
+    // step (walksAnyway), unheard while it lurks. Seen, it goes back to lurking
+    // the moment nobody is left in the room with it and it is not fighting.
+    if (OPEN_LURKERS.has(creature.templateId)) {
+      if (!creature.hidden && !creature.target && !playerPresent(z, creature.roomId)) { creature.hidden = true; z.noteCreaturesChanged(); }
+      return;
+    }
     if (!LURKERS.has(creature.templateId) || creature.target || !creature.hidden) return;
     // A rat-hunter (a lurker that keeps a prey map) that's HUNGRY leaves its lurk
     // and ranges toward the rat-runs — wider, and far more often than the idle
     // 3h drift. Fed, it falls back to the slow territorial drift below.
     const prey = PREYS_ON.get(creature.templateId);
     const hunting = !!prey && (creature.hunger ?? 0) >= HUNGRY_AT;
-    const open = OPEN_LURKERS.has(creature.templateId); // waits on open ground, not in the born-dark
-    const interval = hunting ? LURKER_HUNT_DRIFT_MS : open ? OPEN_LURKER_DRIFT_MS : LURKER_DRIFT_MS;
+    const interval = hunting ? LURKER_HUNT_DRIFT_MS : LURKER_DRIFT_MS;
     if (creature.repositionAt === undefined) {
       creature.repositionAt = now + randInt(Math.round(interval / 2), interval);
       return;
     }
-    // (a lion already waiting on the old 3-hour clock is brought onto its own)
-    if (creature.repositionAt > now + interval * 2) creature.repositionAt = now + randInt(Math.round(interval / 2), interval);
     if (creature.repositionAt > now) return;
     creature.repositionAt = now + randInt(interval, interval * 2);
     const home = creature.home ?? creature.roomId;
@@ -3701,22 +3724,16 @@ export function lurkerDrifts(z: ZoneDO, creature: Creature, now: number): void {
       // out to LURKER_HUNT_RADIUS from home; steps toward the closest such room.
       let bestDist = Infinity;
       const consider = (roomId: string) => {
-        if (roomId === creature.roomId || (!open && !DARK_ROOMS.has(roomId)) || shunned.has(roomId)) return;
-        if (!z.withinRadius(home, roomId, open ? TERRITORY_RADIUS : LURKER_HUNT_RADIUS)) return;
+        if (roomId === creature.roomId || !DARK_ROOMS.has(roomId) || shunned.has(roomId)) return;
+        if (!z.withinRadius(home, roomId, LURKER_HUNT_RADIUS)) return;
         if (lurkersIn(z, roomId, creature.id) >= LURKER_CROWD) return; // that stretch of dark is taken
         const d = z.roomDist(creature.roomId, roomId);
         if (d < bestDist) { bestDist = d; best = roomId; }
       };
       for (const c of z.creatures.values()) if (prey!.has(c.templateId)) consider(c.roomId); // meat on the hoof
       for (const [roomId, list] of z.traces) if (list.some(edibleBody)) consider(roomId); // carrion
-      if (!best && !open) for (const roomId of WARRENS_ROOMS) consider(roomId); // nothing yet — drift toward where rats run
-    }
-    if (open && !best) {
-      // the lion's own ground, a different room of it each time
-      const ground = [...z.nearby(home, TERRITORY_RADIUS).keys()].filter((r) => r !== creature.roomId && !shunned.has(r)
-        && OUTDOOR_ROOMS.has(r) && lurkersIn(z, r, creature.id) < LURKER_CROWD);
-      if (ground.length) best = ground[randInt(0, ground.length - 1)];
-    } else if (!hunting) {
+      if (!best) for (const roomId of WARRENS_ROOMS) consider(roomId); // nothing yet — drift toward where rats run
+    } else {
       // FULL: the old aimless drift — shift the ambush to the freshest-trafficked
       // born-dark room in its own territory (your habitual corridor stops being safe).
       let bestAt = 0;

@@ -6055,7 +6055,7 @@ export class ZoneDO implements DurableObject {
           // Mid-wind-up (rouseAt) it holds its ground — a thing that's telegraphed
           // a lunge doesn't stroll off before it commits (keeps the thief's rob,
           // the meal-guard's spring, and the starve-lunge from fizzling out).
-          await ai.creatureMoves(this, creature, now, "wander", false);
+          await ai.creatureMoves(this, creature, now, "wander", !!creature.hidden); // a lurking lion walks unheard
         }
       }
     }

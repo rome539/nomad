@@ -4996,10 +4996,10 @@ export const LURKER_DRIFT_MS = 3 * 3_600_000;
 // A LURKER OF THE OPEN (rome, 2026-11-11: the cave lion sat in the Dry Bones
 // all the time). Every other lurker waits in the born-dark, and its drift only
 // goes to born-dark rooms, so the lion, with none on its ground, never moved.
-// These shift their wait to any open room of their own ground (home and the
-// TERRITORY_RADIUS round it), unseen, on this shorter clock.
+// These walk their own ground (home and the TERRITORY_RADIUS round it) like any
+// animal, lurking or seen, unheard while they lurk, and go back to lurking once
+// nobody is in the room (2026-11-12, ai.lurkerDrifts/walksAnyway).
 export const OPEN_LURKERS = new Set(["cave-lion"]);
-export const OPEN_LURKER_DRIFT_MS = 30 * 60_000;
 // The food web: who hunts (or drives off) whom. A predator sharing a room with
 // prey it outranks may turn on it — when it's hungry, or when there's a kill or
 // bait to fight over. Every predator genuinely outstats its prey (hp + dmg);

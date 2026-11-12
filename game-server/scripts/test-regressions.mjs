@@ -42,7 +42,7 @@ try {
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, wardAt} from './zone-data';",
         "export {forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, keeperRead, eatsAt, rollBloodline, reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep, broodBirths} from './ai';",
-        "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult, lurkerDrifts, walksAnyway, hungerAsEaten, keeperBodyRead} from './ai';",
+        "export {waters, ratHoards, godMet, godRemembers, rollDen, mountainHomes, catchMult, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead} from './ai';",
         "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry, holdLand, holdBody, mobEagle} from './groups';",
         "export {PREYS_ON, PACK_PREY, SMALL_PREY, SMALL_EATERS} from './zone-data';",
         "export * as beasts from './beasts';",
@@ -111,7 +111,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
+  const { keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, mountainHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -5499,40 +5499,6 @@ try {
     }
   });
 
-  check('the cave lion moves about its own ground, unseen (2026-11-11)', () => {
-    // it sat in the Dry Bones for good: aggressive, so it never wandered, and a
-    // lurker whose drift only went to born-dark rooms, of which its ground has none
-    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
-    assert.match(ai, /const open = OPEN_LURKERS\.has\(creature\.templateId\);/);
-    assert.match(ai, /if \(open && !best\) \{\n[^\n]*\n\s+const ground = \[\.\.\.z\.nearby\(home, TERRITORY_RADIUS\)\.keys\(\)\]/, 'any open room of its own ground');
-    assert.match(ai, /\(!open && !DARK_ROOMS\.has\(roomId\)\)/, 'not only the born-dark');
-    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
-    assert.match(zd, /export const OPEN_LURKERS = new Set\(\["cave-lion"\]\);/);
-    // and it stays a lurker that holds no wander of its own (it moves unseen)
-    assert.match(zd, /\n  "cave-lion",\n  \/\/ THE CROSSING'S TWO WATCHERS/, 'still a lurker');
-    // run it: a fed lion on open ground with no dark in it moves, and stays on its ground
-    const ground = ['the-dry-bones', 'g1', 'g2', 'g3'], far = 'g9';
-    const added = [...ground, far].filter((r) => !OUTDOOR_ROOMS.has(r)); for (const r of added) OUTDOOR_ROOMS.add(r);
-    try {
-      const lion = { id: 'L', templateId: 'cave-lion', roomId: 'the-dry-bones', home: 'the-dry-bones', hidden: true, hunger: 0 };
-      const z = { creatures: new Map([['L', lion]]), traces: new Map(), sessions: new Map(),
-        nearby: () => new Map(ground.map((r, i) => [r, i ? 1 : 0])), noteCreaturesChanged() {}, reachable: () => true };
-      const seen = new Set();
-      let t = Date.now();
-      for (let i = 0; i < 200; i++) { lurkerDrifts(z, lion, t); seen.add(lion.roomId); t += 30 * 60_000; }
-      assert.ok(seen.size >= 3, 'it walks its ground: ' + [...seen].join(' '));
-      assert.ok([...seen].every((r) => ground.includes(r)), 'and never off it');
-    } finally { for (const r of added) OUTDOOR_ROOMS.delete(r); }
-  });
-
-  check('the cave lion seen walks its ground too (2026-11-12)', () => {
-    // the 11-11 fix moved only a hidden lion; one in plain sight stood in the Dry Bones for good
-    const seen = { templateId: 'cave-lion', roomId: 'the-dry-bones', home: 'the-dry-bones', hidden: false };
-    assert.equal(walksAnyway(seen), true, 'seen, it walks');
-    assert.equal(walksAnyway({ ...seen, hidden: true }), false, 'unseen, it drifts instead');
-    assert.equal(walksAnyway({ ...seen, templateId: 'hill-wolf' }), false, 'only the lion');
-  });
-
   check('an animal running hurt from a fight runs, and comes in running (2026-11-12)', () => {
     // a near-dead cave lion broke off "at a walk, without hurrying"; the flee lines are HURT_STYLE
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
@@ -5591,6 +5557,43 @@ try {
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
     assert.ok(!zd.includes('Short night either way') && !zd.includes('earning its keep tonight'));
     assert.match(readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8'), /wanted \$\{isNight\(\) \? "tonight" : "today"\} — /);
+  });
+
+  check('the cave lion walks its ground lurking or not, stalks when hungry, and goes back to lurking (2026-11-12)', () => {
+    // it sat in the Dry Bones: aggressive and at home it never wandered, and once seen it never moved again
+    const lion = { id: 'L', templateId: 'cave-lion', roomId: 'home', home: 'home', hunger: 0 };
+    assert.equal(walksAnyway({ ...lion, hidden: true }), true, 'lurking, it walks');
+    assert.equal(walksAnyway({ ...lion, hidden: false }), true, 'seen, it walks');
+    assert.equal(walksAnyway({ ...lion, templateId: 'hill-wolf' }), false, 'only the lion');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /await ai\.creatureMoves\(this, creature, now, "wander", !!creature\.hidden\);/, 'unheard while it lurks');
+    // back to lurking: seen, nobody left in the room, not fighting
+    let changed = 0;
+    const sessions = new Map();
+    const z = { sessions, creatures: new Map(), reachable: () => true, noteCreaturesChanged: () => changed++ };
+    const seen = { ...lion, hidden: false, target: null };
+    sessions.set('p', { roomId: 'home', pubkey: 'p' });
+    lurkerDrifts(z, seen, Date.now());
+    assert.equal(seen.hidden, false, 'not while someone stands there');
+    sessions.clear();
+    seen.target = 'p'; lurkerDrifts(z, seen, Date.now());
+    assert.equal(seen.hidden, false, 'not mid-fight');
+    seen.target = null; lurkerDrifts(z, seen, Date.now());
+    assert.equal(seen.hidden, true, 'alone, it lurks again');
+    assert.equal(seen.roomId, 'home', 'and never jumps rooms');
+    // hungry, it closes on the nearest meal on its own ground
+    const ground = new Map([['home', 0], ['a', 1], ['b', 2]]);
+    const hare = { id: 'h', templateId: 'mountain-hare', roomId: 'b', hp: 5 };
+    const hungry = { ...lion, hunger: 999 };
+    const z2 = { creatures: new Map([['L', hungry], ['h', hare]]), nearby: () => ground, roomDist: (a, b) => (b === 'b' ? 2 : 1) };
+    assert.equal(lionStalks(z2, hungry), 'b', 'to the hare');
+    assert.equal(lionStalks(z2, { ...hungry, hidden: true }), 'b', 'lurking too');
+    assert.equal(lionStalks(z2, lion), undefined, 'fed, it only walks');
+    hare.roomId = 'off'; assert.equal(lionStalks(z2, hungry), undefined, 'nothing off its own ground');
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /const stalk = quarry \|\| creature\.wateringTo \? undefined : lionStalks\(z, creature\);\n\s+if \(stalk === creature\.roomId\) return;/);
+    assert.match(ai, /creature\.wateringTo \?\? quarry \?\? stalk \?\? landed/);
+    assert.match(ai, /const within = quarry \|\| stalk \? exits\.filter/);
   });
 
   check('the drake\'s shadow never crosses a sun that is not out (2026-11-11)', () => {
@@ -6668,7 +6671,7 @@ try {
       assert.equal(c.aloft, undefined, 'a scavenger still waits out its time'); }
 
     // ...and the walk is anchored where it came down (ai.creatureMoves).
-    assert.match(readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8'), /const anchor = creature\.wateringTo \?\? quarry \?\? landed \?\?/, 'it walks the ground round where it landed');
+    assert.match(readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8'), /const anchor = creature\.wateringTo \?\? quarry \?\? stalk \?\? landed \?\?/, 'it walks the ground round where it landed');
 
     // A BIRD THAT EATS ONLY THE DEAD FLIES TO BODIES CLOSE BY (2026-11-07): a vulture
     // two rooms from the dead passed them over, too near to fly to, too far to smell.
