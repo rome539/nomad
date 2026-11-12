@@ -2457,7 +2457,15 @@ export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a b
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
 // together, so the two a hind needs are in the room at once.
-export const PACK_QUARRY = new Set(["red-hind", "feral-goat"]);
+export const PACK_QUARRY = new Set(["red-stag", "red-hind", "feral-goat"]);
+// ...AND THE STAG, MORE OFTEN THE BIGGER THE PACK (rome, 2026-11-11: nothing ever
+// set out after a stag, which died only when three wolves happened into its
+// room; a pack of five should mostly go after the big game). A pack picking its
+// quarry goes for the nearest stag in reach at these odds by how many of it are
+// alive (none under three: a stag needs three in the room, PACK_PREY), and
+// otherwise for the nearest hind or goat, as before.
+export const PACK_STAG_ODDS: Record<number, number> = { 3: 1 / 3, 4: 0.5, 5: 0.8 };
+export const PACK_STAG = "red-stag";
 export const PACK_HUNT_RANGE = 12;
 export const GROUND_CHASE_ODDS = 0.35;
 export const GROUND_KILL_ODDS = 0.1;
@@ -5103,8 +5111,10 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // Eleven, which sets it level with the grey wolf and the grave hyena — right
   // for an apex that holds a small high territory instead of ranging. It keeps
   // SCAVENGERS: the glutton and the hill-wolf are both, and so is this.
+  // ...AND THE STAG (rome, 2026-11-11): the lion is the one thing on the hill
+  // big enough to take it alone, as the lead wolf does.
   ["cave-lion", new Set(["mountain-hare", "snow-hare", "ptarmigan", "ermine", "mountain-chough",
-    "snow-fox", "hill-wolf", "glutton", "scarp-raven", "carrion-vulture", "lynx"])],
+    "snow-fox", "hill-wolf", "glutton", "scarp-raven", "carrion-vulture", "lynx", "red-stag"])],
   // NEITHER EYRIE BIRD HAS A ROW. They are SCAVENGERS and AGGRESSIVE, which is a
   // different thing from a hunter: they will have YOU for standing on the ledge
   // and they will not chase a hare across open ground for a living.

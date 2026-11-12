@@ -1298,6 +1298,17 @@ try {
       z.creatures = new Map([['w1', w1], ['w2', w2], ['h', hind]]);
       assert.equal(packQuarry(z, w1, Date.now()), 'g', 'it reaches out a long way from home');
       w1.group = undefined; assert.equal(packQuarry(z, w1, Date.now()), undefined, 'a lone wolf does not'); }
+    // THE STAG, MORE OFTEN THE BIGGER THE PACK (2026-11-11): nothing ever set out after a stag
+    { const { z, wolf, hind } = mk(); z.world.mobTemplates.set('red-stag', { id: 'red-stag', name: 'a red stag', max_hp: 48, is_boss: 0 });
+      const stag = { id: 's', templateId: 'red-stag', roomId: 'g', home: 'g', hp: 48, target: null, grudges: [], hunger: 0, nextWanderAt: 0 };
+      hind.roomId = 'c';
+      const pack = (n) => { z.creatures = new Map([['h', hind], ['s', stag]]); for (let k = 0; k < n; k++) z.creatures.set('w' + k, wolf('w' + k, 80)); return z.creatures.get('w0'); };
+      const stagShare = (n) => { const w = pack(n); let st = 0; for (let k = 0; k < 600; k++) { z.groups.packs.p.quarry = undefined; z.groups.packs.p.quarryAt = 0; if (packQuarry(z, w, Date.now()) === 'g') st++; } return st / 600; };
+      assert.equal(stagShare(2), 0, 'a pack of two never: a stag needs three');
+      const three = stagShare(3), five = stagShare(5);
+      assert.ok(three > 0.2 && three < 0.47, 'three take it about one time in three: ' + three);
+      assert.ok(five > 0.7 && five < 0.9, 'five mostly go after the big game: ' + five);
+      assert.ok(five > three, 'the bigger the pack, the more'); }
   });
 
   await checkAsync('a gripped animal stays gripped: it cannot walk out of the hold (2026-11-06)', async () => {
@@ -5498,6 +5509,11 @@ try {
       assert.ok(seen.size >= 3, 'it walks its ground: ' + [...seen].join(' '));
       assert.ok([...seen].every((r) => ground.includes(r)), 'and never off it');
     } finally { for (const r of added) OUTDOOR_ROOMS.delete(r); }
+  });
+
+  check('the cave lion hunts the stag (2026-11-11)', () => {
+    assert.ok(PREYS_ON.get('cave-lion').has('red-stag'), 'the lion takes a stag alone');
+    assert.ok(!PREYS_ON.get('lynx').has('red-stag'), 'the lynx still does not');
   });
 
   check('a goat running for its life comes in running (2026-11-11)', () => {

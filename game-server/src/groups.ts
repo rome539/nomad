@@ -19,7 +19,7 @@ import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
   DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, MOUNTAIN_GROUPS, MOUNTAIN_ROAMERS,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES, FLOCKS, SPREAD_ROOSTS,
-  PACK_QUARRY, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS, FOOD_PULL, LEAN_AGAIN_MS,
+  PACK_QUARRY, PACK_STAG_ODDS, PACK_STAG, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS, FOOD_PULL, LEAN_AGAIN_MS,
   BODY_HOLDERS, MOBBERS, MOB_AT, BODY_CHASE_ODDS, MOB_ODDS, BODY_AVOID_MS, BODY_REST_MS,
 } from "./zone-data";
 
@@ -419,24 +419,31 @@ export async function mobEagle(
 export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefined {
   const g = c.group ? z.groups.packs[c.group] : undefined;
   if (!g || !GROUND_HOLDERS.has(g.line) || (c.hunger ?? 0) < HUNGRY_AT) return undefined;
-  let hungry = 0;
-  for (const m of z.creatures.values()) if (m.group === c.group && (m.hunger ?? 0) >= HUNGRY_AT) hungry++;
+  let hungry = 0, alive = 0;
+  for (const m of z.creatures.values()) if (m.group === c.group && m.hp > 0) { alive++; if ((m.hunger ?? 0) >= HUNGRY_AT) hungry++; }
   if (hungry < 2) { g.quarry = undefined; return undefined; }
   const reach = z.nearby(g.home, PACK_HUNT_RANGE);
+  // a stag only for a pack big enough to take it (PACK_STAG_ODDS)
+  const stagOdds = PACK_STAG_ODDS[Math.min(5, alive)] ?? 0;
   const fit = (q: Creature | undefined): q is Creature =>
-    !!q && q.hp > 0 && PACK_QUARRY.has(lineOf(z, q.templateId)) && q.aloft === undefined && reach.has(q.roomId);
+    !!q && q.hp > 0 && q.aloft === undefined && reach.has(q.roomId) && PACK_QUARRY.has(lineOf(z, q.templateId))
+    && (lineOf(z, q.templateId) !== PACK_STAG || stagOdds > 0);
   let q = g.quarry ? z.creatures.get(g.quarry) : undefined;
   if (!fit(q)) {
     q = undefined;
     g.quarry = undefined;
     if ((g.quarryAt ?? 0) > now) return undefined; // looked a moment ago and found none
     g.quarryAt = now + HUNT_RECHECK_MS;
-    let best = Infinity;
+    // the nearest stag and the nearest of the rest; the bigger the pack, the
+    // likelier it goes for the stag
+    let stag: Creature | undefined, other: Creature | undefined, ds = Infinity, dr = Infinity;
     for (const o of z.creatures.values()) {
       if (!fit(o)) continue;
       const d = reach.get(o.roomId)!;
-      if (d < best) { best = d; q = o; }
+      if (lineOf(z, o.templateId) === PACK_STAG) { if (d < ds) { ds = d; stag = o; } }
+      else if (d < dr) { dr = d; other = o; }
     }
+    q = stag && (!other || chance(stagOdds)) ? stag : other;
     if (!q) return undefined;
     g.quarry = q.id;
   }
