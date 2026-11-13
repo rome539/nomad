@@ -14,14 +14,17 @@ import { cap, isNight } from "./zone-util";
 import * as beasts from "./beasts";
 import {
   CARRION_ROOMS, CORPSE_TRACES, CROWD_CAP, FLIGHT_CHECK_MS, FLIGHT_LOOK_MS, FLIGHT_MIN_MS, FLIGHT_MS_PER_ROOM, FLIGHT_RANGE, FLIGHT_REST_MS,
-  FLIGHT_STAY_MS, FOOD_FLIERS, GRAZERS, HUNGRY_AT, NOCTURNAL, OUTDOOR_REGIONS, OUTDOOR_ROOMS, PREYS_ON, TERRITORY_RADIUS, WOUNDED_FRACTION,
+  FLIGHT_STAY_MS, FOOD_FLIERS, GRAZERS, HUNGRY_AT, NOCTURNAL, OUTDOOR_REGIONS, OUTDOOR_ROOMS, PREYS_ON, SCAVENGERS, TERRITORY_RADIUS, WOUNDED_FRACTION,
 } from "./zone-data";
 
 const lineOf = (z: ZoneDO, id: string): string => FOOD_FLIERS.has(id) ? id : (z.variantBase.get(id) ?? id);
 
 /** Whether this room feeds this bird right now. */
-function foodIn(z: ZoneDO, c: Creature, line: string, room: string): boolean {
+export function foodIn(z: ZoneDO, c: Creature, line: string, room: string): boolean {
   const eats = PREYS_ON.get(c.templateId) ?? PREYS_ON.get(line);
+  // A SCAVENGER THAT HUNTS FLIES TO THE DEAD TOO (rome, 2026-11-12: the gulls ate
+  // bodies only where they stood, so the crossing's dead lay where they fell).
+  if ((SCAVENGERS.has(c.templateId) || SCAVENGERS.has(line)) && (z.traces.get(room) ?? []).some(edibleBody)) return true;
   if (eats?.size && z.creaturesInRoom(room).some((o) => eats.has(o.templateId) && !o.hidden)) return true;
   // A bird that grazes and hunts both (the heron) flies to either (rome, 2026-11-08).
   if (GRAZERS.has(c.templateId) || GRAZERS.has(line)) return forageGround(z, c.templateId, room);

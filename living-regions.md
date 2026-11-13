@@ -126,8 +126,21 @@ Built November 12, 2026, the second region, by the steps above.
 - **Ground.** All 268 rooms sorted from their whole text into water, tidal (the causeway, shoals and scars the sea covers), shore, marsh, reed, dune, field, stonework, road, hamlet, indoors and the sea cave. Nothing settles on road or indoors.
 - **Who roams.** Marsh hounds (packs of 2-4, about three), grey seals (2-4), great gulls (flocks of 3-6), oystercatchers (3-6) and wrack crabs (3-6) live in company; ford eels, fen vipers and bitterns alone, the vipers and bitterns holding land. Gulls and seals keep apart as flocks do. Rats stay in the Salt hamlet (the strand fever rat's ground), the devil crabs stay rooted, the congers stay because a drowner never walks, and the people, bosses and the barrow-wight stay where they are.
 - **What it measured.** Every line has 54-96 homes against 6-16 rows. The fen viper eats only rats and the rats live only in the Salt hamlet, so 3 of its 56 homes have food in reach; that was true before this work too.
-- **The marsh hounds have no big game.** All they eat is small, so they live as packs but do not pack-hunt or hold ground as the hill wolves do (`GROUND_HOLDERS` is still the wolves).
+- **The marsh hounds' big game is the seal and the conger.** When two or more of a pack are hungry, the pack picks the nearest grey seal or conger within 12 rooms of home and closes on it together, as the wolves do a stag; it takes three hounds in the room (`PACK_HUNTERS`, `PACK_QUARRY`, `PACK_PREY`). They still do not hold ground as the hill wolves do (`GROUND_HOLDERS` is still the wolves).
 - **What the simulation showed** (old once, new twice, 48 hours). The crossing was already over-hunted under the old rules: wrack crabs fell from 16 to about 4, ford eels from 11 to about 3, bitterns, vipers and oystercatchers by half. The new rules land in the same place. What changed is who kills what: packs homing near the Salt hamlet roughly doubled the rats the hounds take (84 a day to 150-166), seals living on the tidal ground took far more crabs (9 to 45-49), and the hounds killed fewer vipers (34 to about 21). Gulls, seals, hounds and congers held at their limits throughout.
+- **Changed after the first build** (November 12, 2026).
+  - **Water voles.** They live in the reeds and the creeks and feed the vipers, bitterns, hounds and gulls.
+  - **Brood mothers.** Every rat-eater her size or bigger hunts her. Before this the rats bred over their limit.
+  - **Hunters for the big animals.**
+    - The conger takes a marsh hound. Three congers moved up the marsh creeks where the hounds walk, because a conger never leaves its water.
+    - The grey seal takes a gull.
+  - **Bitterns and oystercatchers.**
+    - A bittern in a reed room is much harder to catch.
+    - The oystercatchers went from 7 to 12.
+  - **Scavengers.** The gull and the marsh hound now eat the dead, each with its rare blood. A gull flies to a body as well as to live prey, and a hound at a body runs a gull off it. Before this only the rats and crabs ate the crossing's dead.
+  - **Small hunters.** The bittern is one, so a vole or an eel fills it.
+  - **Fights.** The wrack crab and the ford eel keep out of a fight's noise.
+  - **Seals and congers are hunted.** Three marsh hounds of one pack bring down either one.
 
 ## What the mountain taught us
 

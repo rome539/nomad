@@ -48,7 +48,7 @@ try {
         "export {CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS} from './zone-data';",
         "export {CROSSING_GROUND, CROSSING_SETTLES} from './crossing-ground';",
         "export * as beasts from './beasts';",
-        "export {tick as flightTick} from './flight';",
+        "export {tick as flightTick, foodIn as flightFoodIn} from './flight';",
         "export {GROUND_OF, SETTLES_ON, settlesOn} from './mountain-ground';",
         "export {MOUNTAIN_QUARTER_ROOMS} from './detail';",
         "export * as chronicle from './chronicle';",
@@ -113,7 +113,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
+  const { CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -5718,6 +5718,11 @@ try {
     // and the gull eats the crossing's dead, where only the rats and the crabs did
     const scav = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8').match(/export const SCAVENGERS = new Set\(\[([\s\S]*?)\]\);/)[1];
     for (const g of ['great-gull', 'black-backed-gull', 'marsh-hound', 'a-lymer']) assert.ok(scav.includes(`"${g}"`), g + ' is a scavenger');
+    // ...and a gull flies to a body, not only to live prey: it never did, so the dead lay where they fell
+    const zb = { creaturesInRoom: () => [], traces: new Map([['the-gull-flats', [{ kind: 'remains', label: 'a wrack crab' }]]]) };
+    assert.equal(flightFoodIn(zb, { templateId: 'great-gull' }, 'great-gull', 'the-gull-flats'), true, 'a gull flies to a body');
+    assert.equal(flightFoodIn(zb, { templateId: 'great-gull' }, 'great-gull', 'the-hard'), false, 'and not to bare ground');
+    assert.equal(flightFoodIn(zb, { templateId: 'hill-eagle' }, 'hill-eagle', 'the-gull-flats'), false, 'a hunter that is no scavenger still flies only to prey');
     const z = { variantBase: new Map() };
     const reed = catchMult(z, { templateId: 'bittern', roomId: 'the-cut-reed' });
     const marsh = catchMult(z, { templateId: 'bittern', roomId: 'the-salt-marsh' });
@@ -5727,6 +5732,34 @@ try {
     const rooms = [...m393.matchAll(/VALUES \('spawn-oystercatcher@([a-z-]+)', 'oystercatcher', '\1'\)/g)].map((m) => m[1]);
     assert.equal(rooms.length, 5, 'five more, each with an id');
     for (const r of rooms) assert.ok(settlesOn('oystercatcher', r), r + ' is oystercatcher ground');
+  });
+
+  check('the crossing keeps the living-regions rules: a hound has the body, the bittern is a small hunter, crab and eel keep out of a fight (2026-11-12)', () => {
+    const zdText = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const holders = zdText.slice(zdText.indexOf('export const BODY_HOLDERS'), zdText.indexOf(']);', zdText.indexOf('export const BODY_HOLDERS')));
+    assert.match(holders, /\["marsh-hound",\s+new Set\(\["great-gull"\]\)\]/, 'a hound at a body runs a gull off it, as a wolf does a raven');
+    assert.ok(SMALL_EATERS.has('bittern'), 'a vole or an eel fills a bittern');
+    for (const p of ['wrack-crab', 'ford-eel']) assert.equal(shiesNoise(p), true, p + ' keeps out of a fight');
+  });
+
+  check('a pack of marsh hounds gangs up on a seal or a conger, as the wolves do a stag (2026-11-12)', () => {
+    const z = new ZoneDO({}, {});
+    const line = ['a', 'b', 'c', 'd'];
+    const ex = (i) => [...(i ? [{ dir: 'west', to_room: line[i - 1], key_item: null }] : []), ...(i < 3 ? [{ dir: 'east', to_room: line[i + 1], key_item: null }] : [])];
+    z.world = { mobTemplates: new Map(), mobSpawns: [], itemTemplates: new Map(), rooms: new Map(line.map((r) => [r, { id: r, region: 'crossing' }])),
+      exits: new Map(line.map((r, i) => [r, ex(i)])), entryRooms: new Set(), safeRooms: new Set() };
+    z.variantBase = new Map();
+    const hound = (id) => ({ id, templateId: 'marsh-hound', roomId: 'a', home: 'a', group: 'p', hp: 32, hunger: 80 });
+    for (const [prey, at] of [['grey-seal', 'c'], ['conger', 'd']]) {
+      z.groups = { at: 0, packs: { p: { line: 'marsh-hound', home: 'a', size: 3, peak: 3 } }, gone: {} };
+      const q = { id: 'q', templateId: prey, roomId: at, home: at, hp: 40 };
+      z.creatures = new Map([['h1', hound('h1')], ['h2', hound('h2')], ['h3', hound('h3')], ['q', q]]);
+      assert.equal(packQuarry(z, z.creatures.get('h1'), Date.now()), at, 'three hungry hounds set out after the ' + prey);
+      z.groups = { at: 0, packs: { p: { line: 'marsh-hound', home: 'a', size: 3, peak: 3 } }, gone: {} };
+      z.creatures.delete('h3');
+      assert.equal(packQuarry(z, z.creatures.get('h1'), Date.now()), undefined, 'two are too few for the ' + prey);
+    }
+    for (const h of ['marsh-hound', 'a-lymer']) for (const p of ['grey-seal', 'conger']) assert.equal(PACK_PREY.get(h)?.get(p), 3, h + ': three take a ' + p);
   });
 
   check('the drake\'s shadow never crosses a sun that is not out (2026-11-11)', () => {

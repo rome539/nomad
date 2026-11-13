@@ -1094,6 +1094,7 @@ export const SMALL_EATERS = new Set([
   "hill-fox", "the-raiding-fox", "snow-fox", "the-blue-fox", "wildcat", "the-tom",
   "gill-adder", "fen-viper", "stone-adder", "the-gravid-adder",
   "scarp-raven", "the-old-raven", "mountain-chough",
+  "bittern", // the crossing's small hunter: voles and eels fill it (rome, 2026-11-12)
 ]);
 
 // SCRAPS HAVE TO BE FOUND (rome, 2026-10-11: you should be able to meet a hungry
@@ -2503,7 +2504,11 @@ export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a b
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
 // together, so the two a hind needs are in the room at once.
-export const PACK_QUARRY = new Set(["red-stag", "red-hind", "feral-goat"]);
+export const PACK_QUARRY = new Set(["red-stag", "red-hind", "feral-goat",
+  "grey-seal", "conger"]); // the marsh hounds' big game (rome, 2026-11-12), as the stag is the wolves'
+// WHO HUNTS AS A PACK. The hill wolves, and the marsh hounds, which gang up on a
+// seal or a conger as the wolves do on a stag; the hounds still hold no ground.
+export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound"]);
 // ...AND THE STAG, MORE OFTEN THE BIGGER THE PACK (rome, 2026-11-11: nothing ever
 // set out after a stag, which died only when three wolves happened into its
 // room; a pack of five should mostly go after the big game). A pack picking its
@@ -2526,6 +2531,7 @@ export const BODY_HOLDERS = new Map<string, Set<string>>([
   ["lead-wolf",    new Set(["carrion-vulture", "scarp-raven", "bone-breaker"])],
   ["hill-eagle",   new Set(["scarp-raven"])],
   ["bone-breaker", new Set(["carrion-vulture", "scarp-raven"])],   // 44 hp over 40 and 20
+  ["marsh-hound",  new Set(["great-gull"])],                        // the crossing (rome, 2026-11-12): 32 hp over 28
 ]);
 // ...UNLESS THE RAVENS ARE SEVERAL. Two or more ravens in a room go up at an
 // eagle together and push it out, kill or no kill; one raven alone is run off.
@@ -2616,7 +2622,8 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // cornered, so they do not bolt at a footstep as RUNNERS do, but no deer or goat
 // walks toward a brawl or joins one: the noise sends them away, as it does a
 // runner. The hedgehog the same: it curls, it does not come to look.
-export const NOISE_SHY = new Set(["red-stag", "wood-stag", "feral-goat", "old-billy", "hedgehog"]);
+export const NOISE_SHY = new Set(["red-stag", "wood-stag", "feral-goat", "old-billy", "hedgehog",
+  "wrack-crab", "ford-eel"]); // the crossing's crab and eel keep out of a fight too (rome, 2026-11-12)
 export const RUNNERS = new Set(["fleet-rat", "roe-deer", "water-vole",
   // THE MOUNTAIN, TIER FOUR (mig 233). It shouts and it goes; it does not fight
   // and it never joins one.
@@ -5377,6 +5384,10 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   // numbers and the tier's difficulty curve is written in them — it is not that
   // the wolves are strong, it is that there are enough of them.
   // ...and the old billy, the goats' rare blood, two together as they take a hind (rome, 2026-11-11; armour 2, mig 389)
+  // THE CROSSING (rome, 2026-11-12): nothing but the drake took a seal and nothing
+  // took a conger. Three hounds bring down either, as three wolves do a stag.
+  ["marsh-hound", new Map([["grey-seal", 3], ["conger", 3]])],
+  ["a-lymer", new Map([["grey-seal", 3], ["conger", 3]])],
   ["hill-wolf", new Map([["red-hind", 2], ["red-stag", 3], ["old-billy", 2], ["scarp-raven", 2], ["bone-breaker", 2], ["carrion-vulture", 2]])],
 ]);
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
