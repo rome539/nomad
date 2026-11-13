@@ -7357,7 +7357,7 @@ try {
 
   check('a crude map left on the floor goes to pulp inside the hour; one in a pack, or any other map, is untouched (2026-11-13)', () => {
     const fed = [];
-    const z = { ground: new Map([['boat', ['crude-map', 'oar']]]), groundInstances: new Map([['hall', [{ itemId: 'crude-map', journalId: 'm1' }, { itemId: 'surveyor-map', journalId: 'm2' }, { itemId: 'hunters-journal', journalId: 'j1' }]]]),
+    const z = { rot: [], ground: new Map([['boat', ['crude-map', 'oar']]]), groundInstances: new Map([['hall', [{ itemId: 'crude-map', journalId: 'm1' }, { itemId: 'surveyor-map', journalId: 'm2' }, { itemId: 'hunters-journal', journalId: 'j1' }]]]),
       roomFeed: (room, text) => fed.push([room, text]), refreshRoomCtx() {} };
     z.dropInstance = (room, itemId) => { const h = z.groundInstances.get(room) ?? []; h.push({ itemId }); z.groundInstances.set(room, h); };
     const armed = []; z.armStrayDecay = (room) => armed.push(room);
@@ -7378,6 +7378,21 @@ try {
     assert.equal(fed.length, 2); assert.match(fed[0][1], /gone to pulp/);
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     assert.match(ev, /tickMapRot\(z, now\);/, 'the world runs it');
+  });
+
+  check('food lying on any floor gets its rot clock, however it got there; keeping food and curing meat are left alone (2026-11-13)', () => {
+    const edible = new Set(['crab-claw', 'pale-eel', 'raw-venison', 'salt-fish', 'deep-heart']);
+    const z = { world: { itemTemplates: { get: (id) => ({ edible: edible.has(id) }) } },
+      ground: new Map([['strand', ['crab-claw', 'crab-claw', 'pale-eel', 'oar', 'salt-fish', 'deep-heart']], ['racks', ['raw-venison']]]),
+      rot: [{ itemId: 'pale-eel', roomId: 'strand', at: 5 }, { itemId: 'raw-venison', roomId: 'racks', at: 9, kind: 'cure' }, { itemId: 'crab-claw', roomId: 'strand', at: 1, kind: 'gatecure' }] };
+    maprot.armFoodRot(z, 1000);
+    const added = z.rot.slice(3);
+    assert.deepEqual(added.map((r) => r.itemId + '@' + r.roomId), ['crab-claw@strand', 'crab-claw@strand'], 'both claws dropped with no clock get one; the eel already had its own');
+    for (const r of added) { assert.equal(r.at, 1000 + 4 * 3_600_000, 'the plain 4 hours'); assert.equal(r.kind, undefined, 'a plain rot'); }
+    maprot.armFoodRot(z, 2000);
+    assert.equal(z.rot.length, 5, 'a second sweep doubles nothing');
+    const ms = readFileSync(new URL('../src/maprot.ts', import.meta.url), 'utf8');
+    assert.match(ms, /lastSweep\.set\(z, now\);\n\s+armFoodRot\(z, now\);/, 'every sweep runs it');
   });
 
   check('the full moons have kinds: the page draws the moon the words name, and each sets its own thing going (2026-11-13)', () => {
