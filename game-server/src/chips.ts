@@ -25,7 +25,7 @@ import { hasTrait } from "./world";
 import * as trail from "./trail";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, LANTERN_FAT_MS, LANTERN_WELL_MS, FAT_ITEM, seesArt,
-  FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
+  FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DETAILED_MAP, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES, DEN_BUILDS,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   WRECK_DIVE_ROOMS, WELL_ROOMS, SPRING_ROOMS, BEACON_ROOM, VANTAGE_ROOMS, GIBBET_ROOM, ALTAR_ROOMS, DEEP_HEART, HEART_FRESH_SEC, CORPSE_TRACES, SENTINELS, FLIERS, CACHE_ART, HOLLOW, FLEE_SHOWN_MS,} from "./zone-data";
@@ -619,8 +619,10 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     }
     // Knowledge you carry: open a map or the journal (each pops its modal).
     if (session.items.some((c) => MAP_ITEMS.has(c.itemId))) suggest.push("map");
-    // The way you came, once there is some of it (trail.ts).
-    if (trail.size(z, session) > 1) suggest.push("trail");
+    // The way you came, once there is some of it (trail.ts). Not while a
+    // surveyor's map is in the pack: that already shows the way (rome,
+    // 2026-11-13). The verb still works typed.
+    if (trail.size(z, session) > 1 && !session.items.some((c) => c.itemId === DETAILED_MAP)) suggest.push("trail");
     // A map's journalId is its ink-rail, not a book — only a true journal (has a
     // journalId and isn't a map) offers the `journal` chip (097 overload fix).
     if (session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) suggest.push("journal");

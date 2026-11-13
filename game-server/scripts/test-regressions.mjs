@@ -7312,6 +7312,8 @@ try {
     assert.match(zs, /this\.inGatehouse\.add\(session\.pubkey\);[^\n]*\n\s*trail\.wipe\(this, session\.pubkey\)/, 'going into a gatehouse wipes it');
     assert.match(zs, /chronicle\.died\(this, victim, tmpl, slayerName\);[^\n]*\n\s*trail\.wipe\(this, victim\.pubkey\)/, 'and so does dying');
     assert.equal(parse('trail').verb, 'trail'); assert.equal(parse('retrace').verb, 'trail');
+    const chipSrc = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    assert.match(chipSrc, /trail\.size\(z, session\) > 1 && !session\.items\.some\(\(c\) => c\.itemId === DETAILED_MAP\)\) suggest\.push\("trail"\)/, "no trail chip while a surveyor's map is carried");
     // it rides the player's own saved row, and a wiped one leaves the row as it was
     const rows = new Map();
     const storage = { sql: { exec(q, ...v) {
