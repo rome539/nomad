@@ -21,6 +21,7 @@ import * as den from "./den";
 import * as feverrat from "./feverrat";
 import * as grass from "./grass";
 import { tickFinds } from "./finds";
+import { tickMapRot } from "./maprot";
 import { cap, foodState, foodGone, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, moonKind, moonMonth, fullMoonTonight, lidOpen, skyBand, skyClear, skyCovered, isDawn, isDusk, auroraNight, cometNight } from "./zone-util";
 import { setItemAcquiredAt, removeItemRow } from "./world";
 import {
@@ -1823,6 +1824,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickBreach(z, now);
   tickMoon(z, now);
   tickFinds(z, now);
+  tickMapRot(z, now);
   await tickTide(z, now);
   await tickSea(z, now);
   await tickRut(z, now);

@@ -130,7 +130,7 @@ import { FORGE_STOCK,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS, LATCH_GIVE_STEP, LATCH_GIVE_MAX, ROCK_LATCH_WEAR,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
-  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY,
+  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY, WILT_LINES,
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, WIND_HEED_MULT, WIND_CHILL_REST_SKIP, FEVER_MEND_MULT, MOB_BLOODTHIRSTY_FLEE_MULT, MOB_BUTTERFINGERS_MULT, MOB_WEAKGRIP_MULT, MOB_SKITTISH_FLEE_MULT, MOB_MARKED_FLEE_MULT, MOB_KEEPS_DROP_MULT, MOB_SHADOW_DMG_MULT, MOB_PATIENT_MULT, MOB_UNDERTOW_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, PLAYER_SAVE_MAX_MS, SIM_STEP_MS, CATCHUP_CAP_MS, CATCHUP_MAX_STEPS,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
@@ -6727,9 +6727,7 @@ export class ZoneDO implements DurableObject {
           if (!silent) {
             this.roomFeed(r.roomId,
               r.kind === "sodden" ? "A torch left on the wet stone has drunk the damp — rag and black sludge now, no light left in it."
-              : r.kind === "wilt" ? (r.itemId === "linen-strips"
-                  ? "Linen strips left on the floor have gone grey and sour with mildew — no use to anyone now."
-                  : "Cut bloodwort, left where it fell, has wilted to brown slime.")
+              : r.kind === "wilt" ? (WILT_LINES[r.itemId] ?? WILT_LINES.bloodwort!)
               : "A loose rock, kicked among the rubble, is lost in it.", undefined, false); // housekeeping — off the relay
             this.refreshRoomCtx(r.roomId);
           }

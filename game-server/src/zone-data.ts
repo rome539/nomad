@@ -737,6 +737,10 @@ export const NO_SALVAGE = new Set(["rusted-pick"]);
 // Knowledge as loot (see migration 029). Read by id, like the scrap above.
 export const DETAILED_MAP = "surveyor-map";
 export const CRUDE_MAP = "crude-map";
+// A crude copy left lying goes to pulp in 30-60 min (maprot.ts), checked once a minute.
+export const MAP_PULP_MIN_MS = 30 * 60_000;
+export const MAP_PULP_MAX_MS = 60 * 60_000;
+export const MAP_PULP_SWEEP_MS = 60_000;
 // A chart somebody already finished. Holds no map_ink at all — the renderer
 // treats it as complete, so it STAYS complete as the world grows (mig 182).
 export const FULL_MAP = "finished-chart";
@@ -1490,6 +1494,19 @@ export const STRAY_DECAY: Record<string, { kind: "crumble" | "sodden" | "wilt"; 
   "loose-rock":   { kind: "crumble", min: ROCK_CRUMBLE_MIN_MS,  max: ROCK_CRUMBLE_MAX_MS },
   "bloodwort":    { kind: "wilt",    min: WILT_MIN_MS,          max: WILT_MAX_MS },
   "linen-strips": { kind: "wilt",    min: WILT_MIN_MS,          max: WILT_MAX_MS },
+  // The other three dressings (rome, 2026-11-13): moss, fleece and a made
+  // dressing lay on any floor for ever while the strips and the wort wilted.
+  "bog-moss":       { kind: "wilt",  min: WILT_MIN_MS,          max: WILT_MAX_MS },
+  "hank-of-fleece": { kind: "wilt",  min: WILT_MIN_MS,          max: WILT_MAX_MS },
+  "linen-dressing": { kind: "wilt",  min: WILT_MIN_MS,          max: WILT_MAX_MS },
+};
+// What the room sees when each one wilts.
+export const WILT_LINES: Record<string, string> = {
+  "linen-strips": "Linen strips left on the floor have gone grey and sour with mildew — no use to anyone now.",
+  "bloodwort": "Cut bloodwort, left where it fell, has wilted to brown slime.",
+  "bog-moss": "A plug of bog-moss, left lying, has dried to a brittle grey crust that would drink nothing now.",
+  "hank-of-fleece": "A hank of fleece left on the floor has gone sodden and foul, matted with grit.",
+  "linen-dressing": "A dressing left lying has soaked through with the damp and gone sour — no use on a wound now.",
 };
 // The two kinds of renewable (rome, 2026-07-11 — the larder was a healing
 // pump): living forage (moss, lichen, nettle, caps, water) GROWS, and keeps

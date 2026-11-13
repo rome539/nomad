@@ -353,6 +353,7 @@ export interface GroundInstance {
   itemId: string;
   journalId?: string;
   inviteCode?: string;
+  rotAt?: number; // a crude map on the floor goes to pulp at this time (maprot.ts)
 }
 
 // Everything the world needs to keep existing while nobody watches.
