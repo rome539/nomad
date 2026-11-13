@@ -1,4 +1,5 @@
 import * as grass from "./grass";
+import * as finds from "./finds";
 import * as beasts from "./beasts";
 import * as chronicle from "./chronicle";
 import { hpLabel } from "./util";
@@ -2283,7 +2284,10 @@ export async function cmdGet(z: ZoneDO, session: Session, arg: string, fromDive 
   const roamKey = `${itemId}@${session.roomId}`;
   const tookRoamRock = z.roamed.has(roamKey);
   if (tookRoamRock) z.roamed.delete(roamKey);
-  if (tookRoamRock || z.world!.groundSpawns.some((g) => g.item_id === itemId && g.room_id === session.roomId && g.regrows)) {
+  // A rare or epic find owes nothing back: its place stands empty until the
+  // dice fill it with some other piece (finds.ts).
+  const tookFind = finds.taken(z, roamKey);
+  if (!tookFind && (tookRoamRock || z.world!.groundSpawns.some((g) => g.item_id === itemId && g.room_id === session.roomId && g.regrows))) {
     const stillHere = here.includes(itemId);
     const alreadyRegrowing = z.regrow.some((r) => r.itemId === itemId && r.roomId === session.roomId);
     if (!stillHere && !alreadyRegrowing) {

@@ -85,6 +85,8 @@ import * as ai from "./ai";
 import * as simstore from "./simstore";
 import * as light from "./light";
 import * as grass from "./grass";
+import * as finds from "./finds";
+import * as trail from "./trail";
 import * as lore from "./lore";
 import { soundscapeFor, soundKey } from "./sound";
 import * as chips from "./chips";
@@ -128,7 +130,7 @@ import { FORGE_STOCK,
   CACHE_EMPTY_ODDS, ROCK_SMASH_ODDS, HAMMERSTONE_SMASH_ODDS, LATCH_GIVE_STEP, LATCH_GIVE_MAX, ROCK_LATCH_WEAR,
   HAMMERSTONE_HAUNTS, STONE_GROUND_CAP, STONE_ROLL_MIN_MS, STONE_ROLL_MAX_MS, STONE_MINT_ODDS, STONE_WEAR,
   BRAND_ITEM, BRAND_HAUNTS, BRAND_GROUND_CAP, BRAND_ROLL_MIN_MS, BRAND_ROLL_MAX_MS, BRAND_MINT_ODDS,
-  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, GEAR_REGROW_ODDS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY,
+  GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS, RELIABLE_GEAR, DICE_REGROW, STRAY_DECAY,
   MAP_ITEMS, JOURNAL_ITEM, RATE_CAPACITY, RATE_REFILL_PER_SEC, REST_REGEN_PER_TICK, FIRE_REST_REGEN_PER_TICK, COLD_REST_SKIP, WIND_HEED_MULT, WIND_CHILL_REST_SKIP, FEVER_MEND_MULT, MOB_BLOODTHIRSTY_FLEE_MULT, MOB_BUTTERFINGERS_MULT, MOB_WEAKGRIP_MULT, MOB_SKITTISH_FLEE_MULT, MOB_MARKED_FLEE_MULT, MOB_KEEPS_DROP_MULT, MOB_SHADOW_DMG_MULT, MOB_PATIENT_MULT, MOB_UNDERTOW_MULT, RUT_NOISE_MASK, FLUSH_INTERVAL_MS, PLAYER_SAVE_MAX_MS, SIM_STEP_MS, CATCHUP_CAP_MS, CATCHUP_MAX_STEPS,
   FOOD_LOCKBOX_STACK, FLOOR_ITEMS_BRIEF,
   CREATURE_HEAL_PER_MIN, HUNGER_PER_MIN, SLOW_EATERS, HUNGER_MAX, HUNGRY_AT, WANDER_MIN_MS, WANDER_MAX_MS, 
@@ -377,6 +379,8 @@ export class ZoneDO implements DurableObject {
   // wander pick alone once the whole floor roams. Persisted as an array (see
   // save/load); a Set is only the in-memory shape.
   public roamed = new Set<string>();
+  public finds = new Set<string>(); // which of those are rare or epic finds (finds.ts)
+  public nextFindAt = 0;
   // The shrine's kept hearts — pubkeys with a still-cold heart on the stone,
   // one promise per wanderer, cold until they come for it. Persisted with the
   // sim; a sleeping world still keeps what was laid on its altars.
@@ -494,6 +498,7 @@ export class ZoneDO implements DurableObject {
   // world's ear settling between rings. Not persisted — silence is the
   // default a sleeping world wakes to.
   public ringAt = 0;
+  public trail = new Map<string, Set<string>>();    // rooms each player has stood in since their last gatehouse (trail.ts)
   public walked = new Map<string, Set<string>>();   // rooms each player has crossed — the wall's evidence (walkedOf)
   private wallLoaded = new Set<string>();          // pubkeys whose marks have been read up out of D1 this wake
   public knownPaths = new Map<string, Set<string>>(); // the animal paths each wanderer has seen used (paths.ts)
@@ -832,6 +837,8 @@ export class ZoneDO implements DurableObject {
       // the live world keeps every stone it has already moved.
       this.roamed = new Set((saved.roamedGround as string[] | undefined)
         ?? ((saved.roamRocks as string[] | undefined) ?? []).map((r) => `loose-rock@${r}`));
+      this.finds = new Set(saved.finds ?? []);
+      this.nextFindAt = saved.nextFindAt ?? 0;
       this.altarHearts = new Set(saved.altarHearts ?? []);
       this.gibbetCut = saved.gibbetCut ?? false;
       this.arrivals = new Map(Object.entries(saved.arrivals));
@@ -885,6 +892,9 @@ export class ZoneDO implements DurableObject {
           : [],      );
       this.walked = new Map(
         Object.entries(saved.walked ?? {}).map(([pk, rooms]) => [pk, new Set(rooms)] as const),
+      );
+      this.trail = new Map(
+        Object.entries(saved.trail ?? {}).map(([pk, rooms]) => [pk, new Set(rooms)] as const),
       );
       this.snowUntil = (saved.snowUntil as number) ?? 0;
       this.board = saved.board ?? [];
@@ -1232,6 +1242,8 @@ export class ZoneDO implements DurableObject {
       groundInstances: Object.fromEntries(this.groundInstances),
       regrow: this.regrow,
       roamedGround: [...this.roamed],
+      finds: [...this.finds],
+      nextFindAt: this.nextFindAt,
       altarHearts: [...this.altarHearts],
       gibbetCut: this.gibbetCut,
       arrivals: Object.fromEntries(this.arrivals),
@@ -1281,6 +1293,9 @@ export class ZoneDO implements DurableObject {
       // Same law as the chalk above: an empty walk is not worth a row.
       walked: Object.fromEntries(
         [...this.walked].filter(([, rooms]) => rooms.size).map(([pk, rooms]) => [pk, [...rooms]]),
+      ),
+      trail: Object.fromEntries(
+        [...this.trail].filter(([, rooms]) => rooms.size).map(([pk, rooms]) => [pk, [...rooms]]),
       ),
       board: this.board,
       stoneNames: Object.fromEntries(this.stoneNames),
@@ -1333,6 +1348,9 @@ export class ZoneDO implements DurableObject {
     this.groundInstances.clear();
     this.regrow = [];
     this.roamed.clear();
+    this.finds.clear();
+    this.nextFindAt = 0;
+    this.trail.clear();
     this.altarHearts.clear();
     this.gibbetCut = false;
     this.arrivals.clear();
@@ -2510,6 +2528,7 @@ export class ZoneDO implements DurableObject {
       case "unvault": return gate.counted(this, session, cmd.arg, (a) => gate.cmdRetrieve(this, session, a, "vault"));
       case "publish": return this.cmdPublish(session, cmd.arg);
       case "map": return lore.cmdMap(this, session, cmd.arg);
+      case "trail": return trail.cmdTrail(this, session);
       case "study": return lore.cmdStudy(this, session, cmd.arg);
       case "journal": return lore.cmdJournal(this, session, cmd.arg);
       case "fish": return verbs.cmdFish(this, session);
@@ -3598,6 +3617,7 @@ export class ZoneDO implements DurableObject {
     // you crouch in the open, still in reach. (trading/forging are gate-only.)
     if (atGate) {
       this.inGatehouse.add(session.pubkey); // you are INSIDE now, and a dropped socket won't undo it
+      trail.wipe(this, session.pubkey); // and the way you came is gone
       // The keeper gets round to one line of the region's story this visit, and
       // one only — armed here, spent when he uses it (lore.keeperTells). Not at
       // the instant the door shuts: he finishes what he was doing first, and a
@@ -6935,7 +6955,7 @@ export class ZoneDO implements DurableObject {
       // the spot bare and re-arms the next roll; only consumables and the
       // starter rock restore on the clock.
       const gear = !!t && (t.slot !== "" || DICE_REGROW.has(g.itemId)) && !RELIABLE_GEAR.has(g.itemId);
-      if (gear && !chance(GEAR_REGROW_ODDS)) {
+      if (gear && !chance(finds.gearRegrowOdds(t))) {
         g.at = now + randInt(GEAR_ROLL_MIN_MS, GEAR_ROLL_MAX_MS);
         return true;
       }
@@ -7582,6 +7602,7 @@ export class ZoneDO implements DurableObject {
   private async onPlayerDeathInner(victim: Session, tmpl: MobTemplate | null, slayerName?: string, vital = false): Promise<void> {
     const slayer = slayerName ?? (tmpl ? tmpl.name : "their own wounds"); // tmpl null = bled out (or a wanderer's steel), no beast on the blow
     chronicle.died(this, victim, tmpl, slayerName); // every death goes on the record where it fell, before the body is moved
+    trail.wipe(this, victim.pubkey); // the dead do not remember the way
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
     }
@@ -7975,6 +7996,7 @@ export class ZoneDO implements DurableObject {
   public markWalked(session: Session): void {
     session.visited.add(session.roomId);
     this.walkedOf(session.pubkey).add(session.roomId);
+    trail.note(this, session);
   }
 
   public enterDescribe(session: Session): string {

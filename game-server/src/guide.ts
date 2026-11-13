@@ -271,8 +271,10 @@ export const GUIDE_PAGE = `<!doctype html>
     it, and which way. Fog takes it, and so does the dark unless the moon is full.</dd>
     <dt><code>map</code> (chart)</dt>
     <dd>Open a map you carry. A surveyor's map starts blank and sets down every room
-    its carrier walks. A crude map comes with part of the world already drawn, true as
-    far as it goes, and takes what you walk too.</dd>
+    its carrier walks.</dd>
+    <dt><code>trail</code> (retrace)</dt>
+    <dd>The way you came: every room you have stood in since you last left a
+    gatehouse, with or without a map. It is gone when you go into a gatehouse, or die.</dd>
     <dt><code>dive [item]</code> (swim)</dt>
     <dd>In a drowned room, go under and feel across the floor; name a thing to bring
     it up. The splash carries. Some water soaks you to the skin.</dd>

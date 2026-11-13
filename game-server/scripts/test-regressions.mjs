@@ -57,7 +57,7 @@ try {
         "export { gatehouseHeard } from './gate';",
         "export * as follow from './follow';",
         "export { cmdEmote, emoteLine } from './verbs';",
-        "export {nextBellAt, dayLine, weatherSky, saysWeather, skyClause} from './events';", "export * as grassPatch from './grass';",
+        "export {nextBellAt, dayLine, weatherSky, saysWeather, skyClause} from './events';", "export * as grassPatch from './grass';", "export * as findsMod from './finds';", "export * as trailMod from './trail';",
         "export {milestoneRead, keeperTells, byDay} from './lore';",
         "export {ROOM_FEATURES} from './detail';",
         "export {starvingHunts, huntsAt, woundedPreyHunts} from './ai';",
@@ -115,7 +115,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon } = await import(pathToFileURL(output));
+  const { CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -7200,6 +7200,145 @@ try {
     const p = mig.plan(real, []);
     assert.equal(p.stop, undefined, 'every real migration is named right and no two share a number');
     assert.equal(p.pending.length, real.filter((f) => f.endsWith('.sql')).length);
+  });
+
+  check('rare and epic finds: each region keeps a few empty places, filled by dice with a piece that region already gives, and the better pieces come back slower (2026-11-13)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const item = (id, rarity, slot = 'weapon') => [id, { id, rarity, slot, name: id }];
+    const rooms = new Map([['gate', { region: 'wood', is_safe: 0 }], ['bolt', { region: 'wood', is_safe: 1 }], ['hall', { region: '', is_safe: 0 }], ['fen', { region: 'crossing', is_safe: 0 }]]);
+    for (let i = 0; i < 12; i++) rooms.set('w' + i, { region: 'wood', is_safe: 0 });
+    const world = {
+      rooms, entryRooms: new Set(['gate']),
+      itemTemplates: new Map([item('wood-rare', 'rare'), item('wood-rare-2', 'rare'), item('wood-epic', 'epic'), item('locked-epic', 'epic'), item('king-blade', 'epic'), item('hammerstone', 'rare'), item('cap', 'common', 'helm'), item('pelt', 'rare', '')]),
+      groundSpawns: [{ item_id: 'wood-rare', room_id: 'w0', regrows: 1 }, { item_id: 'hammerstone', room_id: 'w1', regrows: 1 }, { item_id: 'cap', room_id: 'w2', regrows: 1 }, { item_id: 'pelt', room_id: 'w3', regrows: 1 }],
+      caches: [{ keyItem: 'strongbox-key', roomId: 'w4', loot: [{ itemId: 'wood-epic', chance: 0.1 }] }, { keyItem: 'wardens-key', roomId: 'w5', loot: [{ itemId: 'locked-epic', chance: 0.1 }] }],
+      mobSpawns: [{ template_id: 'king', room_id: 'w6' }, { template_id: 'woodward', room_id: 'w7' }],
+      mobTemplates: new Map([['king', { is_boss: 1, gear_item: 'king-blade' }], ['woodward', { is_boss: 0, gear_item: 'wood-rare-2' }]]),
+    };
+    assert.deepEqual(findsMod.pool(world, 'wood', 'rare'), ['wood-rare', 'wood-rare-2'], 'the rare draw is what the region lays out and its people wear: no trophy, no hammerstone, no common');
+    assert.deepEqual(findsMod.pool(world, 'wood', 'epic'), ['wood-epic'], 'the epic draw leaves out what a special key or a boss holds');
+    assert.deepEqual(findsMod.pool(world, 'crossing', 'rare'), [], 'and a region gives only its own');
+    const roadWorld = { ...world, rooms: new Map([['rd', { region: 'road', is_safe: 0 }]]), groundSpawns: [], mobSpawns: [],
+      itemTemplates: new Map([item('cargo-plate', 'epic', 'armor'), item('chain-lined-mantle', 'epic', 'cloak'), item('grave-glaive', 'epic')]),
+      caches: [{ keyItem: 'strongbox-key', roomId: 'rd', loot: [{ itemId: 'cargo-plate', chance: 0.06 }] }, { keyItem: 'clerks-key', roomId: 'rd', loot: [{ itemId: 'grave-glaive', chance: 0.05 }] }] };
+    assert.deepEqual(findsMod.pool(roadWorld, 'road', 'epic'), ['cargo-plate', 'chain-lined-mantle', 'grave-glaive'], "the road's epic find is one of three: the two from the clerk's chests are given to its draw by name");
+    const mkz = () => ({ world, ground: new Map([['w0', ['wood-rare']]]), roamed: new Set(), finds: new Set(), nextFindAt: 0, groundRolled: new Map(), rollTraits: () => 'keen', refreshRoomCtx() {} });
+    const real = crypto.getRandomValues;
+    const miss = () => { crypto.getRandomValues = (a) => { a.fill(0xffffffff); return a; }; };
+    const hit = () => { crypto.getRandomValues = (a) => { a.fill(0); return a; }; };
+    try {
+      let z = mkz();
+      miss(); // every die misses
+      findsMod.tickFinds(z, 1000);
+      assert.equal(z.finds.size, 0, 'a miss leaves the places empty');
+      assert.ok(z.nextFindAt >= 1000 + 30 * 60_000, 'and the next look is half an hour or more off');
+      findsMod.tickFinds(z, 2000);
+      assert.equal(z.finds.size, 0, 'nothing is checked between looks');
+      hit(); // every die hits
+      findsMod.tickFinds(z, z.nextFindAt);
+      const kinds = [...z.finds].map((k) => world.itemTemplates.get(k.split('@')[0]).rarity);
+      assert.equal(kinds.filter((r) => r === 'rare').length, 8, 'the wood fills its eight rare places');
+      assert.equal(kinds.filter((r) => r === 'epic').length, 1, 'and its one epic');
+      for (const k of z.finds) {
+        const [id, room] = k.split('@');
+        assert.ok(/^w\d+$/.test(room), 'a find lies in its own region, never at a gate or in a safe room: ' + room);
+        assert.ok(z.ground.get(room).includes(id), 'it is on that floor');
+        assert.ok(z.roamed.has(k), 'and it is the world own piece, so rust and scavengers leave it');
+        assert.equal(z.groundRolled.get(k), 'keen', 'it rolls its traits like any floor piece');
+      }
+      assert.equal(z.ground.get('w0').filter((i) => i === 'wood-rare').length, 1, 'never laid on a room that already holds that piece');
+      const before = z.finds.size;
+      findsMod.tickFinds(z, z.nextFindAt);
+      assert.equal(z.finds.size, before, 'full places are not filled twice');
+      // a hand takes one
+      const key = [...z.finds].find((k) => k.startsWith('wood-rare'));
+      const [id, room] = key.split('@');
+      z.ground.set(room, z.ground.get(room).filter((i) => i !== id)); z.roamed.delete(key);
+      assert.equal(findsMod.taken(z, key), true, 'taking a find is known as such');
+      assert.equal(findsMod.taken(z, 'cap@w2'), false, 'and taking anything else is not');
+      assert.equal(z.finds.size, before - 1);
+      findsMod.tickFinds(z, z.nextFindAt);
+      assert.equal(z.finds.size, before, 'the empty place is filled again by the dice');
+      // one that left its floor some other way is forgotten
+      const gone = [...z.finds][0], [gid, groom] = gone.split('@');
+      z.ground.set(groom, z.ground.get(groom).filter((i) => i !== gid));
+      miss();
+      findsMod.tickFinds(z, z.nextFindAt);
+      assert.ok(!z.finds.has(gone) && !z.roamed.has(gone), 'a find no longer on its floor is not counted');
+    } finally { crypto.getRandomValues = real; }
+    const odds = (rarity, slot = 'weapon') => findsMod.gearRegrowOdds({ rarity, slot });
+    assert.equal(odds('common'), 0.2); assert.equal(odds('uncommon'), 0.2);
+    assert.equal(odds('rare'), 1 / 8, 'a rare comes back at 1 in 8');
+    assert.equal(odds('epic'), 1 / 15, 'an epic at 1 in 15');
+    assert.equal(odds('rare', ''), 0.2, 'the dice trophies keep their own odds');
+    const src = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
+    assert.match(src('zone.ts'), /gear && !chance\(finds\.gearRegrowOdds\(t\)\)/, 'the floor renewal rolls by rarity');
+    assert.match(src('verbs.ts'), /const tookFind = finds\.taken\(z, roamKey\);\s*\n\s*if \(!tookFind && \(/, 'a taken find arms no named regrow');
+    assert.match(src('simstore.ts'), /"finds", "nextFindAt"/, 'the finds are saved');
+    assert.match(src('events.ts'), /tickFinds\(z, now\);/, 'and the world checks them');
+    for (const r of ['wood: { rare: 8, epic: 1 }', 'crossing: { rare: 6, epic: 1 }', 'road: { rare: 6, epic: 1 }', '"": { rare: 3, epic: 0 }', 'deep: { rare: 1, epic: 0 }', 'out: { rare: 1, epic: 0 }']) assert.ok(zd.includes(r), 'the counts rome agreed: ' + r);
+    // mig 394: the dressings and the torches
+    const mig = readFileSync(new URL('../migrations/394_dressings_and_torches_where_there_were_none.sql', import.meta.url), 'utf8');
+    assert.equal((mig.match(/\('bog-moss'/g) || []).length, 8); assert.equal((mig.match(/\('linen-strips'/g) || []).length, 5); assert.equal((mig.match(/\('torch'/g) || []).length, 5);
+  });
+
+  await checkAsync('the way you came: every wanderer keeps the rooms walked since the last gatehouse, map or no map, and the crude map is no longer given out (2026-11-13)', async () => {
+    const { z, me, frames } = mapWorld('map-trail');
+    me.items = []; me.visited = new Set();
+    const said = []; z.send = (_s, text) => said.push(text);
+    const walk = (room) => { me.roomId = room; z.markWalked(me); };
+    walk('r50'); walk('r51'); walk('r52');
+    trailMod.cmdTrail(z, me);
+    let f = frames.at(-1);
+    assert.equal(f.t, 'map'); assert.equal(f.trail, 1, 'the window is told it is the trail');
+    assert.deepEqual(shownOf(f).map((r) => r.id).sort(), ['r50', 'r51', 'r52'], 'it holds the rooms walked and nothing ahead');
+    for (const r of shownOf(f)) for (const e of r.exits) assert.ok(['r50', 'r51', 'r52'].includes(e.to), 'no passage to ground not walked');
+    assert.deepEqual(f.reveal, [], 'it is not kept, so it lights no room names');
+    assert.match(said.at(-1), /3 rooms, since you last left a gatehouse/);
+    assert.equal(trailMod.size(z, me), 3);
+    // with a map in the pack it is kept all the same, and `map` still opens the map
+    me.items = [{ rowId: 'row1', itemId: 'crude-map', serial: null, equipped: false, condition: 100, journalId: 'map-trail' }];
+    walk('r53');
+    trailMod.cmdTrail(z, me);
+    assert.equal(shownOf(frames.at(-1)).length, 4, 'a carried map does not stop the trail being kept');
+    await cmdMap(z, me, '');
+    assert.ok(!frames.at(-1).trail, 'and map opens the paper, not the trail');
+    // the gatehouse door and death wipe it
+    trailMod.wipe(z, me.pubkey);
+    trailMod.cmdTrail(z, me);
+    assert.deepEqual(shownOf(frames.at(-1)).map((r) => r.id), ['r53'], 'wiped, it is only the ground underfoot');
+    assert.match(said.at(-1), /there is none yet/);
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /this\.inGatehouse\.add\(session\.pubkey\);[^\n]*\n\s*trail\.wipe\(this, session\.pubkey\)/, 'going into a gatehouse wipes it');
+    assert.match(zs, /chronicle\.died\(this, victim, tmpl, slayerName\);[^\n]*\n\s*trail\.wipe\(this, victim\.pubkey\)/, 'and so does dying');
+    assert.equal(parse('trail').verb, 'trail'); assert.equal(parse('retrace').verb, 'trail');
+    // it rides the player's own saved row, and a wiped one leaves the row as it was
+    const rows = new Map();
+    const storage = { sql: { exec(q, ...v) {
+      if (/^SELECT k, v FROM sim_kv/.test(q)) return [...rows].map(([k, val]) => ({ k, v: val }));
+      if (/^INSERT INTO sim_kv/.test(q)) { rows.set(v[0], v[1]); return []; }
+      if (/^DELETE FROM sim_kv/.test(q)) { rows.delete(v[0]); return []; }
+      return [];
+    } }, transactionSync(fn) { fn(); } };
+    rows.set('b:meta', JSON.stringify({}));
+    let cache = newCache(); const state = loadSim(storage, cache);
+    state.walked = { me: ['a'] }; state.trail = { me: ['a', 'b'] };
+    saveSim(storage, state, cache);
+    const back = loadSim(storage, newCache());
+    assert.deepEqual(back.trail, { me: ['a', 'b'] }, 'the trail comes back after a restart');
+    const row = [...rows].find(([k]) => k.endsWith(':me'));
+    assert.ok(row, 'it is in the player own row');
+    cache = newCache(); const st2 = loadSim(storage, cache); st2.trail = {};
+    cache.walkedWroteAt = 0; cache.lastFullFlushAt = 0; saveSim(storage, st2, cache);
+    assert.ok(!/"trail"/.test([...rows].find(([k]) => k.endsWith(':me'))[1]), 'a wiped trail is not kept in the row');
+    // the crude map is no longer given out
+    const mig = readFileSync(new URL('../migrations/395_the_crude_map_goes.sql', import.meta.url), 'utf8');
+    for (const t of ['fence_stock', 'mob_keys', 'ground_spawns']) assert.match(mig, new RegExp('DELETE FROM ' + t + ' +WHERE \\w+ += \'crude-map\''), 'off ' + t);
+    assert.ok(!/DELETE FROM (item_templates|player_items)/.test(mig), 'no copy is taken out of a pack');
+    const lore = readFileSync(new URL('../src/lore.ts', import.meta.url), 'utf8');
+    assert.ok(!/half-drawn crude one/.test(lore), 'the no-map line no longer offers one');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /trail \? "The Way You Came"/, 'the window names the trail');
   });
 
   check('the full moons have kinds: the page draws the moon the words name, and each sets its own thing going (2026-11-13)', () => {

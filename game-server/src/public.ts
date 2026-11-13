@@ -9127,10 +9127,14 @@ function wireMap() {
 function renderMap(f) {
   var detailed = !!f.detailed;
   var wall = !!f.wall;
+  var trail = !!f.trail; // the way you came: memory, not paper
+  document.getElementById("mapclose").textContent = trail ? "close" : "roll it up"; // there is no paper to roll
   mapEl.classList.toggle("crude", !detailed);
-  document.getElementById("maptitle").textContent = wall ? "The Wall Chart" : detailed ? "Surveyor's Map" : "Crude Map";
+  document.getElementById("maptitle").textContent = wall ? "The Wall Chart" : trail ? "The Way You Came" : detailed ? "Surveyor's Map" : "Crude Map";
   document.getElementById("mapsub").textContent = wall
     ? "Scratched into the plaster by everyone who walked it and made it back."
+    : trail
+      ? "Every room you have stood in since you last left a gatehouse. It is gone when you go back in."
     : detailed
       ? "Set down true, hall by hall \\u2014 as far as this copy's carriers have walked."
       : "Somebody's rough copy, true as far as it goes \\u2014 and what you walk with it, it takes.";

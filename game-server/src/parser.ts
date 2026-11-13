@@ -56,6 +56,7 @@ export type Verb =
   | "sheet"
   | "leaderboard"
   | "map"
+  | "trail"
   | "study"
   | "journal"
   | "fish"
@@ -253,6 +254,7 @@ export const VERB_ALIASES: Record<string, Verb> = {
   ranks: "leaderboard", ranking: "leaderboard", rankings: "leaderboard",
   top: "leaderboard", standings: "leaderboard", reckoning: "leaderboard",
   map: "map", chart: "map", atlas: "map",
+  trail: "trail", retrace: "trail",
   study: "study", observe: "study", watch: "study", note: "study",
   scan: "scan", sight: "scan", glass: "scan",
   journal: "journal", bestiary: "journal", logbook: "journal", ledger: "journal",
@@ -449,6 +451,7 @@ export const HELP_TEXT = [
   "  listen [dir]       hear what is in the rooms around you",
   "  scan               from a height or an edge, see one step out",
   "  map                open a map you carry",
+  "  trail              (retrace) the rooms you walked since the last gatehouse",
   "  dive [item]        go under in drowned rooms and feel for what is there",
   "",
   "FIGHTING",

@@ -136,10 +136,10 @@ const SHARD_FALLBACK = "world";
 // haunting.
 type PerBlobField = "creatures" | "ground" | "groundInstances" | "groundCond"
   | "groundLore" | "groundRolled" | "groundHeart" | "groundTorch" | "traces"
-  | "walked" | "wallMarks";
+  | "walked" | "wallMarks" | "trail";
 type MetaField = Exclude<keyof SimState, PerBlobField>;
 const META_FIELDS = [
-  "savedAt", "regrow", "roamRocks", "roamedGround", "altarHearts", "gibbetCut", "arrivals", "herds", "groups", "conditions", "condTrack", "openDoors", "doorCloseAt", "fenceOut", "fenceMats", "glut", "nextGlutAt",
+  "savedAt", "regrow", "roamRocks", "roamedGround", "finds", "nextFindAt", "altarHearts", "gibbetCut", "arrivals", "herds", "groups", "conditions", "condTrack", "openDoors", "doorCloseAt", "fenceOut", "fenceMats", "glut", "nextGlutAt",
   "bloodOn", "nextStoneAt", "nextBrandAt", "nextSmokeTorchAt", "nextCarrionAt", "rot", "placedSpawns", "seededDens", "inGatehouse", "inDen", "board", "stoneNames",
   "campfires", "cacheSpent", "cacheRoom", "nextSurfaceAt", "events", "fishStock", "works", "nextWorksAt", "nextChainmanAt", "snowUntil",
   "nests", "bounties", "nextBountyChurnAt", "nextFenceChurnAt", "bountyTaken", "keeperBowl",
@@ -291,9 +291,11 @@ function metaBlob(state: SimState): string {
 function walkedBlobs(state: SimState): Map<string, string> {
   const walked = (state.walked ?? {}) as Record<string, string[]>;
   const marks = (state.wallMarks ?? {}) as Record<string, string[]>;
+  const trail = (state.trail ?? {}) as Record<string, string[]>;
   const out = new Map<string, string>();
-  for (const pk of [...new Set([...Object.keys(walked), ...Object.keys(marks)])].sort()) {
-    out.set(B_WALK_PREFIX + pk, JSON.stringify({ walked: walked[pk] ?? [], wallMarks: marks[pk] ?? [] }));
+  for (const pk of [...new Set([...Object.keys(walked), ...Object.keys(marks), ...Object.keys(trail)])].sort()) {
+    // the trail only when there is one, so a row with none reads as it always did
+    out.set(B_WALK_PREFIX + pk, JSON.stringify({ walked: walked[pk] ?? [], wallMarks: marks[pk] ?? [], ...(trail[pk]?.length ? { trail: trail[pk] } : {}) }));
   }
   return out;
 }
@@ -382,15 +384,17 @@ function unshardBlobs(rows: Map<string, string>): SimState {
   // THE PLAYER ROWS WIN; the old one-row b:walked is read only by a world that
   // has not crossed over to them yet.
   if (walkSplit) {
-    const walked: Record<string, string[]> = {}, marks: Record<string, string[]> = {};
+    const walked: Record<string, string[]> = {}, marks: Record<string, string[]> = {}, trail: Record<string, string[]> = {};
     for (const [k, v] of rows) {
       if (!isWalkShard(k)) continue;
-      const pk = k.slice(B_WALK_PREFIX.length), parsed = JSON.parse(v) as { walked?: string[]; wallMarks?: string[] };
+      const pk = k.slice(B_WALK_PREFIX.length), parsed = JSON.parse(v) as { walked?: string[]; wallMarks?: string[]; trail?: string[] };
       if (parsed.walked?.length) walked[pk] = parsed.walked;
       if (parsed.wallMarks?.length) marks[pk] = parsed.wallMarks;
+      if (parsed.trail?.length) trail[pk] = parsed.trail;
     }
     state.walked = walked;
     state.wallMarks = marks;
+    state.trail = trail;
   } else {
     const w = rows.get(B_WALKED);
     if (w) {

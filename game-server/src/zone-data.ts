@@ -1423,6 +1423,31 @@ export const REGROW_MAX_MS = 25 * 60_000;
 export const GEAR_ROLL_MIN_MS = 30 * 60_000; // a bare spot re-checks itself every 30–60 min
 export const GEAR_ROLL_MAX_MS = 60 * 60_000;
 export const GEAR_REGROW_ODDS = 0.2;         // ~1 roll in 5 hangs the piece back up
+// THE BETTER THE PIECE, THE LONGER THE ODDS (rome, 2026-11-13). A common cap
+// and an epic blade used to come back on the same 1 in 5. Commons arm
+// newcomers and keep it; a rare is 1 in 8 and an epic 1 in 15.
+export const RARE_REGROW_ODDS = 1 / 8;
+export const EPIC_REGROW_ODDS = 1 / 15;
+// RARE AND EPIC FINDS (finds.ts): how many empty places each region keeps for
+// one, at the mountain's own rate of about one to 36 rooms. The mountain is
+// not here: its dozen are named pieces in ground_spawns. "" is the fortress,
+// whose chests already hold most of the world's epics, like the deep's.
+export const FIND_SLOTS: Record<string, { rare: number; epic: number }> = {
+  wood: { rare: 8, epic: 1 },
+  crossing: { rare: 6, epic: 1 },
+  road: { rare: 6, epic: 1 },
+  "": { rare: 3, epic: 0 },
+  deep: { rare: 1, epic: 0 },
+  out: { rare: 1, epic: 0 },
+};
+export const FIND_ROLL_MIN_MS = GEAR_ROLL_MIN_MS; // the empty places are checked on the floor gear's own clock
+export const FIND_ROLL_MAX_MS = GEAR_ROLL_MAX_MS;
+export const FIND_NEVER = new Set(["hammerstone", "longbrand"]); // each has its own haunts and its own dice
+export const FIND_CHEST_KEYS = new Set(["strongbox-key", ""]);   // what the special keys open stays behind them
+// ...but for these (rome, 2026-11-13). The road gave one epic outside the
+// clerk's chests, so its epic find was always the cargo plate; the mantle and
+// the glaive from those chests join its draw, and the chests stay the surer way.
+export const FIND_ALSO: Record<string, string[]> = { road: ["chain-lined-mantle", "grave-glaive"] };
 export const RELIABLE_GEAR = new Set(["loose-rock"]); // the starter tool: exempt, always comes back
 // TROPHIES THAT RIDE THE DICE CLOCK. The floor-renewal law keys the gear roll
 // off slot != "" — which is right for GEAR and wrong for a regrowing TROPHY:
@@ -12341,7 +12366,7 @@ export const GATEHOUSE_BARRED = new Set([
 // (rome, 2026-07-15). Their bare forms still work; only the arg cases were broken.
 export const GATEHOUSE_NOARG = new Set([
   "who", "inventory", "rest", "enter", "exit", "barter",
-  "map", "study", "carve", "sheet", "help", "smoke",
+  "map", "trail", "study", "carve", "sheet", "help", "smoke",
   // `journal` is NOT here: it takes a creature ("journal red stag") to read one
   // page, so with words after it it is still a command, not something said.
   // The bones. `roll` and `stand` are bare-only, so "stand up" and "roll with

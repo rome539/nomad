@@ -364,6 +364,8 @@ export interface SimState {
   regrow: Regrow[];
   roamRocks?: string[]; // LEGACY, read once on load and folded into roamedGround: rooms holding a wandering fortress rock, from when the rock was the only thing that moved
   roamedGround?: string[]; // "itemId@roomId" for every wandered floor thing — it has no spawn row where it lies, so this is what stops the decay sweep taking it for litter
+  finds?: string[]; // "itemId@roomId" for each rare or epic find lying out (finds.ts); every one is in roamedGround too
+  nextFindAt?: number; // when the empty find places are next checked
   altarHearts?: string[]; // pubkeys whose still-cold heart the shrine is keeping — one promise per wanderer, cold until they come for it
   gibbetCut?: boolean; // the hanged man is down and stays down — see ZoneDO.gibbetCut for why this is persisted and not per-wake
   arrivals: Record<string, number>; // templateId -> ms when a migrant arrives
@@ -395,6 +397,7 @@ export interface SimState {
   inGatehouse?: string[]; // pubkeys standing INSIDE — a dropped socket must not throw you out the door
   inDen?: [string, string][]; // pubkey -> the holder whose den they stepped into (mig 172); a dropped socket must not put you out on the street
   walked?: Record<string, string[]>;    // rooms each player has been SEEN to stand in — what 'carve' may set down. Kept in the world's state, not on the session: buildSession runs on every reconnect and every DO rebuild, and a hibernating DO is not an event a player can see or avoid.
+  trail?: Record<string, string[]>; // PER PUBKEY: rooms stood in since the last gatehouse (trail.ts); rides the player walk row
   wallMarks?: Record<string, string[]>; // gatehouse wall chart, PER PUBKEY: your own chalk, your own chart. (Was a shared string[]; a legacy array is dropped on load — it has no author recorded, so it cannot be attributed to anyone.)
   board?: { name: string; words: string; at: number }[]; // the gatehouse board, oldest first — the one thing said here that outlives the saying
   stoneNames?: Record<string, { name: string; at: number }[]>; // milestone roomId -> the register cut into it, oldest first (the road's record of who walked it)

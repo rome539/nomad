@@ -76,7 +76,9 @@
   var hPrev = mk("button", stepCss, "\u2039");
   var hour = mk("select", btnCss);
   var hNext = mk("button", stepCss, "\u203a");
-  ["day", "dawn", "dusk", "night", "moon", "blood", "eclipse", "fog", "rain", "snow", "after-rain", "wet-dawn", "wet-dusk", "wet-night"].forEach(function (h) {
+  // "moon" is the moon the calendar gives; "moon great" and the rest force a full
+  // moon's kind (zone-data MOON_KINDS) to be looked at, in the hours, not a control of their own.
+  ["day", "dawn", "dusk", "night", "moon", "moon plain", "moon great", "moon harvest", "moon pale", "moon ash", "moon micro", "blood", "eclipse", "fog", "rain", "snow", "after-rain", "wet-dawn", "wet-dusk", "wet-night"].forEach(function (h) {
     var o = document.createElement("option"); o.value = h; o.textContent = h; hour.appendChild(o); });
   // THE TIME OF DAY UNDER THE WEATHER. The server sends fog, rain and snow at
   // any hour, with the night flag and the low light (dawn, dusk) beside them, so
@@ -93,60 +95,30 @@
     var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; eyeSel.appendChild(o); });
   eyeSel.onchange = function () { lastEyes = eyeSel.value ? [eyeSel.value, eyeSel.value, eyeSel.value, eyeSel.value] : null; };
 
-  // THE SKY AT 20x. At the game's pace a screen of sky takes four minutes to go
-  // by, which is right for playing and useless for checking a seam; this runs
-  // the same drift twenty times over so the join comes past in seconds.
-  var skyB = mk("button", btnCss, "20x: off"), skyBase = SKY_DRIFT;
-  skyB.onclick = function () {
-    var fast = SKY_DRIFT === skyBase;
-    SKY_DRIFT = fast ? skyBase * 20 : skyBase;
-    skyB.textContent = "20x: " + (fast ? "on" : "off"); skyB.style.color = fast ? "#d8a94e" : "#c9bda3";
-  };
-
-  // THE NIGHT'S EXTRAS (SKY_FX in the client): on in the game on their own nights
-  // (the stars always turn); each button here forces one on to be looked at. "fx fast" runs the turn, the aurora and the shooting stars
-  // quickly, so none of them has to be waited for.
-  [["shoot", "shooting stars"], ["aurora", "aurora"], ["comet", "comet"], ["fast", "fx fast"]].forEach(function (f) {
-    var b = mk("button", btnCss, f[1] + ": off");
-    b.onclick = function () {
-      SKY_FX[f[0]] = !SKY_FX[f[0]];
-      b.textContent = f[1] + ": " + (SKY_FX[f[0]] ? "on" : "off"); b.style.color = SKY_FX[f[0]] ? "#d8a94e" : "#c9bda3";
-    };
-  });
-  mk("button", btnCss, "shoot one").onclick = function () { SKY_FX.shootNow = (SKY_FX.shootNow || 1) + 1; };
-  // THE FULL MOON'S KIND (zone-data MOON_KINDS): the moon sky wears the one the
-  // calendar gives it; this forces one, to be looked at. Pick "moon" in the hours.
-  var moonSel = mk("select", btnCss);
-  [["", "moon: as the calendar"], ["plain", "moon: plain"], ["great", "moon: great"], ["harvest", "moon: harvest"], ["pale", "moon: pale"], ["ash", "moon: ash"], ["micro", "moon: micro"]].forEach(function (x) {
-    var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; moonSel.appendChild(o); });
-  moonSel.onchange = function () { SKY_FX.moon = moonSel.value; if (hour.value !== "moon") { hour.value = "moon"; paint(); } };
-
-  // THE FLOOD TRIAL (FX_FLOOD in the client): water standing in the room the
-  // depth map describes. Night, torch on, on a ground with torch effects.
-  mk("span", "", "flood");
-  var floodR = mk("input", "width:110px");
-  floodR.type = "range"; floodR.min = "0"; floodR.max = "100"; floodR.value = "0";
-  // THE GAME'S THREE LEVELS MARKED ON THE SLIDER (rome, 2026-11-11): a tick at
-  // each, the slider catches on it when near, and the readout names it.
-  var floodTicks = document.createElement("datalist"); floodTicks.id = "flood-ticks";
-  [0, 40, 60, 80].forEach(function (n) { var o = document.createElement("option"); o.value = n; floodTicks.appendChild(o); });
-  floodR.parentNode.appendChild(floodTicks); floodR.setAttribute("list", "flood-ticks");
-  var FLOOD_STOP = { 0: "dry", 40: "depth 1: awash (game)", 60: "depth 2: half flood (game)", 80: "depth 3: spring tide (game)" };
-  var floodLv = mk("span", "color:#c9bda3;min-width:190px;display:inline-block", "dry");
-  // ...and why nothing shows, when nothing does: the water is drawn by the
-  // room's effects layer, which only runs on a picture that has a depth map.
+  // THE EXTRAS, ONE LIST (rome, 2026-11-13: the panel was crowded). Each is one
+  // thing forced on to be looked at, one at a time; "none" is the game's own:
+  //   the sky at 20x - a screen of sky in seconds, so a seam comes past
+  //   the night's extras (SKY_FX) - on in the game on their own nights; "all, fast"
+  //     runs the turn, the aurora and the shooting stars quickly
+  //   the flood (FX_FLOOD) - water standing at the game's three levels, on a
+  //     picture with a depth map; the readout says when this ground has none
+  var skyBase = SKY_DRIFT;
+  var extraSel = mk("select", btnCss);
+  [["", "extras: none"], ["20x", "sky 20x"], ["shoot", "shooting stars"], ["aurora", "aurora"], ["comet", "comet"], ["fast", "all extras, fast"],
+   ["f40", "flood 1: awash"], ["f60", "flood 2: half flood"], ["f80", "flood 3: spring tide"]].forEach(function (x) {
+    var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; extraSel.appendChild(o); });
   var floodSay = mk("span", "color:#d8a94e", "");
   var floodWhy = function () {
     floodSay.textContent = !FX_FLOOD ? "" : fxReady ? "water on: " + fxName
       : "no water here: this ground has no depth map";
   };
-  floodR.oninput = function () {
-    var n = +floodR.value;
-    n = [0, 40, 60, 80].reduce(function (b, k) { return Math.abs(n - k) < Math.abs(n - b) ? k : b; }, 0); // locks to a level
-    floodR.value = n;
-    var was = FX_FLOOD, v = n / 100;
-    floodLv.textContent = n + " = " + (FLOOD_STOP[n] || "not a game level");
-    FX_FLOOD_PANEL = v > 0 ? v : -1; // at 0 the room's own depth from the game rules again
+  extraSel.onchange = function () {
+    var e = extraSel.value;
+    SKY_DRIFT = e === "20x" ? skyBase * 20 : skyBase;
+    SKY_FX.shoot = e === "shoot" || e === "fast"; SKY_FX.aurora = e === "aurora" || e === "fast";
+    SKY_FX.comet = e === "comet"; SKY_FX.fast = e === "fast";
+    var was = FX_FLOOD, v = e.charAt(0) === "f" && e !== "fast" ? +e.slice(1) / 100 : 0;
+    FX_FLOOD_PANEL = v > 0 ? v : -1; // none: the room's own depth from the game rules again
     FX_FLOOD = v > 0 ? v : FLOOD_DEPTHS[Math.min(3, lastSea)] || 0;
     if (!was !== !FX_FLOOD) paint(); // the effects layer is chosen when the room is painted
     floodWhy();
@@ -315,9 +287,9 @@
   var ambSeen = {};
   var BAND_OF = { "The Mountain": "mountain", "The Crossing": "crossing", "The Road": "road", "The Wood": "wood", "Assart End": "den" };
   function soundHere() {
-    var key = gnd.value + "|" + hour.value, first = !ambSeen[key];
+    var key = gnd.value + "|" + hourSky(), first = !ambSeen[key];
     var band = BAND_OF[groundAt[gnd.value.slice(7)]] || "";
-    fetch("/amb?sel=" + encodeURIComponent(gnd.value) + "&sky=" + encodeURIComponent(hour.value) + "&band=" + band)
+    fetch("/amb?sel=" + encodeURIComponent(gnd.value) + "&sky=" + encodeURIComponent(hourSky()) + "&band=" + band)
       .then(function (r) { return r.json(); }).then(function (a) {
         ambSeen[key] = a;
         if (soundOn) scapeSet(a);
@@ -433,8 +405,13 @@
   if (torch) { torchB.textContent = "torch: on"; torchB.style.color = "#d8a94e"; }
 
   var skyRollN = 0;
+  // the sky an hour asks for: a forced full moon is still the moon sky
+  function hourSky() { var h = hour.value; return h.indexOf("moon ") === 0 ? "moon" : h; }
   function paint() {
     var v = gnd.value, h = hour.value;
+    // a forced full moon is the moon hour wearing that kind
+    SKY_FX.moon = h.indexOf("moon ") === 0 ? h.slice(5) : "";
+    if (SKY_FX.moon) h = "moon";
     soundHere();
     // THE RED NIGHT IS A FLAG, NOT A SKY. The server sends it beside the sky on
     // every frame, and it is what lights the hollow's eyes - so choosing the
@@ -538,7 +515,7 @@
     // L steps through how far the bolt is: your own room, your ground, the next
     // ground over, and a storm too far off to see (the storm has a place).
     else if (k === "l" || k === "L") {
-      var seenL = ambSeen[gnd.value + "|" + hour.value], roofL = gnd.value === "ground:gatehouse" || !!(seenL && seenL.covered), nL = boltN++ % 4;
+      var seenL = ambSeen[gnd.value + "|" + hourSky()], roofL = gnd.value === "ground:gatehouse" || !!(seenL && seenL.covered), nL = boltN++ % 4;
       if (nL === 3) thunderFar(); else lightningBolt(false, roofL, roofL && nL === 0 ? 1 : nL);
       heardL.textContent = "lightning: " + ["in this room", "on this ground", "the next ground over", "far off - only thunder"][nL] + (roofL && nL < 3 ? ", under a roof" : "");
     }

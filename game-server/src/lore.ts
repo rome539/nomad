@@ -165,7 +165,7 @@ export async function copyCounts(z: ZoneDO, session: Session | undefined, ...lis
 export async function cmdMap(z: ZoneDO, session: Session, arg: string): Promise<void> {
   const maps = session.items.filter((c) => MAP_ITEMS.has(c.itemId));
   if (!maps.length) {
-    return z.send(session, "You carry no map. The keeper sells them — a surveyor's blank dear, a half-drawn crude one cheap.");
+    return z.send(session, "You carry no map. The keeper sells the surveyor's blank, and it is dear.");
   }
   if (session.mapInk === undefined || maps.some((c) => !c.journalId)) await inkRooms(z, session); // every copy named and its ink in hand, so the counts are the map's own
   const counts = new Map<CarriedItem, number>();
@@ -435,20 +435,25 @@ export function mapRegionOf(z: ZoneDO, id: string): string {
 // Build and send the map frame. A surveyor's map is what its carriers walked
 // and lights its rooms 'known' on the HUD; a crude map is a true scatter of the
 // world the copyist got down, plus what its carriers walked, and lights nothing.
-function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: boolean): void {
+/** The way you came (trail.ts): the same window, drawn from memory instead of a copy's ink. */
+export function sendTrailMap(z: ZoneDO, session: Session, rooms: Set<string>): void {
+  sendMap(z, session, null, true, rooms);
+}
+
+function sendMap(z: ZoneDO, session: Session, carried: CarriedItem | null, detailed: boolean, trail?: Set<string>): void {
   const world = z.world!;
   // A FINISHED CHART IS ALREADY EVERYWHERE. It carries no ink of its own — the
   // rooms are not something it learns, they are what it IS — so it draws the
   // whole grid and keeps drawing it as the world grows (mig 182). Everything
   // below this line is the machinery for a map that has to be earned; a chart
   // that was earned by somebody else, a long time ago, skips all of it.
-  const complete = carried.itemId === FULL_MAP;
+  const complete = carried?.itemId === FULL_MAP;
   // A CRUDE COPY IS TRUE AS FAR AS IT GOES (rome, 2026-10-23). The copyist got
   // some share of the world down (its hand, CRUDE_FILL_*), picked room by room
   // off the copy's own identity, so the same copy always shows the same rooms
   // and a second copy shows different ones; whatever its carriers walked is
   // inked on top. Nothing on it lies.
-  const copy = carried.journalId ?? carried.rowId;
+  const copy = carried?.journalId ?? carried?.rowId ?? "";
   const hand = detailed ? 1 : crudeHand(copy);
   const fill = CRUDE_FILL_MIN + hand * (CRUDE_FILL_MAX - CRUDE_FILL_MIN);
   const drawn = (id: string) => mulberry32(hashSeed(copy + ":" + id))() < fill;
@@ -460,7 +465,7 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
   // scatter of everything else, right or not.
   const ink = complete
     ? new Set<string>(roomIds)   // all of it, and it stays all of it
-    : (session.mapInk?.get(carried.journalId ?? "") ?? new Set<string>());
+    : trail ?? (session.mapInk?.get(carried?.journalId ?? "") ?? new Set<string>());
   const shown = new Set<string>();
   for (const id of roomIds) {
     if (detailed) {
@@ -554,10 +559,11 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem, detailed: bo
   }
   try {
     session.ws.send(JSON.stringify({
-      v: 0, t: "map", detailed: detailed ? 1 : 0, here: session.roomId,
+      v: 0, t: "map", detailed: detailed ? 1 : 0, trail: trail ? 1 : 0, here: session.roomId,
       // A true map is knowledge you keep: its rooms light gold on the HUD. A
       // crude one reveals nothing it can be trusted on.
-      reveal: detailed ? [...shown].map((id) => world.rooms.get(id)!.name) : [],
+      // The trail is not kept, so it lights nothing.
+      reveal: detailed && !trail ? [...shown].map((id) => world.rooms.get(id)!.name) : [],
       bands: worldGrid(z).bands,
       regions: Object.values(regions).filter((r) => r.rooms.length),
     }));

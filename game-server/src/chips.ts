@@ -22,6 +22,7 @@ import * as dice from "./dice";
 import * as light from "./light";
 import { chipName, nameMatches, shortName, isNight, isFullMoon } from "./zone-util";
 import { hasTrait } from "./world";
+import * as trail from "./trail";
 import {
   LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, LANTERN_FAT_MS, LANTERN_WELL_MS, FAT_ITEM, seesArt,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DROWNERS,
@@ -618,6 +619,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     }
     // Knowledge you carry: open a map or the journal (each pops its modal).
     if (session.items.some((c) => MAP_ITEMS.has(c.itemId))) suggest.push("map");
+    // The way you came, once there is some of it (trail.ts).
+    if (trail.size(z, session) > 1) suggest.push("trail");
     // A map's journalId is its ink-rail, not a book — only a true journal (has a
     // journalId and isn't a map) offers the `journal` chip (097 overload fix).
     if (session.items.some((c) => c.journalId && !MAP_ITEMS.has(c.itemId))) suggest.push("journal");
