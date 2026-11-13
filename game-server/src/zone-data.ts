@@ -9174,6 +9174,51 @@ export const MOON_SKY = [
   "Half a moon, filling. The lit side is the other side now, which is how you know which way the month is going.",
   "The moon is very nearly whole — one clean edge of it left to fill. One more night of this.",
 ];
+// THE FULL MOONS HAVE KINDS (rome, 2026-11-13). Every full moon but the red one
+// wears one of these for its night, each in its turn (rome: in order, not
+// drawn), so the whole world sees the same moon (zone-util moonKind; public.ts
+// skyMoonKind makes the same pick). Each is the one disc recoloured and resized, and each sets one
+// thing in the world going (events.tickMoon):
+//   great   - the biggest tide of the month comes in, and holds
+//   harvest - the mast falls, the eaten-down grass is back, and grazing feeds more
+//   pale    - a hard frost
+//   ash     - the fever comes up out of the graves
+//   micro   - the rare blood is born and comes in far more often
+//   plain   - the full moon as it always was
+// Every kind is a full moon to everything else: the lit ground, the moon door.
+export const MOON_KINDS = ["great", "harvest", "pale", "ash", "micro", "plain"] as const; // in turn, in this order (rome)
+export type MoonKind = typeof MOON_KINDS[number] | "blood";
+// What rises (the moonrise line; plain is MOON_NIGHTS[0])...
+export const MOON_KIND_RISE: Record<string, string> = {
+  great: "The moon comes up over the grounds enormous: low and white and far too near, filling the edge of the sky. You could count the lines on your hand by it.",
+  harvest: "A full moon rises over the grounds deep amber and heavy, hanging low as if the weight of it held it down, and the air smells of everything the ground is giving.",
+  pale: "A full moon rises over the grounds small and hard and white, and the sky round it is as clear as glass.",
+  ash: "A full moon rises over the grounds the colour of old ash, dull and yellowed, as if seen through a smoke there is no fire for.",
+  micro: "The moon comes up full but small, a far-off coin of light, and the dark round it is very wide.",
+};
+// ...and what looking up at it says (`look moon`, `look sky`; plain is MOON_SKY[0]).
+export const MOON_KIND_SKY: Record<string, string> = {
+  great: "The moon is full and enormous, sitting low and near and whiter than a moon has any right to be. There is light enough out here tonight to read a coin by.",
+  harvest: "The moon is full and the deep amber of late fruit, heavy and low over the ground. There is light enough out here tonight to do without a torch.",
+  pale: "The moon is full but small and hard and white, a cold coin with a clear sky all round it. It lights the ground as well as any full moon, and warms none of it.",
+  ash: "The moon is full, but the colour of old ash, dull and yellowed as if through smoke. It lights the ground all the same, the way a sickroom candle does.",
+  micro: "The moon is full, but small and far off, a bright coin with a great width of dark round it. It lights the ground, just.",
+};
+// ...and the line every outdoor room says under it at night: the moon, then the
+// ground it lights, with the turning stars between when the sky shows them
+// (zone.ts; plain is the full moon's line as it always was).
+export const MOON_KIND_ROOM: Record<string, [string, string]> = {
+  plain: ["A full moon rides high and white", "the grounds lie almost as bright as day."],
+  great: ["An enormous full moon hangs low and white", "the grounds lie as bright as day."],
+  harvest: ["A full moon hangs low and amber", "the grounds lie warm-lit, almost as bright as day."],
+  pale: ["A small, hard, white full moon rides high", "the grounds lie bright and cold."],
+  ash: ["A full moon the colour of old ash rides high", "the grounds lie in a dull, yellowed light."],
+  micro: ["A small, far-off full moon rides high", "the grounds lie lit, but only just."],
+};
+export const GREAT_TIDE_CREST_MULT = 2;  // the great moon's tide holds at the crest twice as long
+export const HARVEST_MEAL_MULT = 1.6;    // a grazing meal under the harvest moon, in hunger off and in healing
+export const MICRO_RARE_MULT = 4;        // every rare blood's chance at a birth or an arrival under the micro moon
+export const PALE_FROST = "pale-moon";   // a cold the pale moon brought: it sets in as a hard frost
 // ...and what the sky says when somebody asks after the moon in broad daylight.
 export const MOON_DAY = "You look for the moon and get the day instead. Whatever it is doing, it is doing it on the other side of that.";
 // ...AND THE SUN, WHICH HAD NO ANSWER AT ALL OUTSIDE AN ECLIPSE (rome,

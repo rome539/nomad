@@ -76,7 +76,7 @@ import {
 import * as invites from "./invites";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { saveMark, cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed, skyCovered, cometNight } from "./zone-util";
+import { saveMark, cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed, skyCovered, cometNight, moonKind } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -145,7 +145,7 @@ import { FORGE_STOCK,
   SHELTER_ROOMS, YEW_ROOM, GIBBET_ROOM,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_KIND_ROOM, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT, CHILL_MEND_MULT,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, KILL_SMALL, KILL_BIG, MOB_HIT, MOB_VITALS,
@@ -5697,7 +5697,7 @@ export class ZoneDO implements DurableObject {
         if (!PACK_CALLERS.has(c.templateId) || c.asleep || c.target) continue;
         if (sang.has(c.roomId) || !chance(MOON_HOWL_ODDS)) continue;
         sang.add(c.roomId);
-        this.roomFeed(c.roomId, "It puts its head back and howls at the white of it — long, and not at anything.", undefined, false, "evt");
+        this.roomFeed(c.roomId, "It puts its head back and howls up at the moon — long, and not at anything.", undefined, false, "evt");
         this.roomSound(c.roomId, "A howl goes up {dir}, and hangs.", undefined, undefined, false, { mob: c.templateId, act: "call" });
       }
       if (sang.size) {
@@ -8119,9 +8119,11 @@ export class ZoneDO implements DurableObject {
     const starry = starSky === "night" || starSky === "moon";
     if (nightWx) lines.push(LORE_LINE + WEATHER_NIGHT[nightWx]);
     else if (!indoors && OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
+      // the full moon by its kind, so the words say the moon the sky is drawing
+      const [moonIs, groundIs] = MOON_KIND_ROOM[moonKind()] ?? MOON_KIND_ROOM.plain!;
       lines.push(LORE_LINE + (isFullMoon()
-        ? (starry ? "A full moon rides high and white among the slowly wheeling stars, and now and then one falls — the grounds lie almost as bright as day."
-          : "A full moon rides high and white — the grounds lie almost as bright as day.")
+        ? (starry ? `${moonIs} among the slowly wheeling stars, and now and then one falls — ${groundIs}`
+          : `${moonIs} — ${groundIs}`)
         // Whose light it is matters here: this line runs for anyone the room is
         // lit FOR, and telling a man he can see past "your light" when the
         // flame is in his companion's fist is the same small lie as the rest of

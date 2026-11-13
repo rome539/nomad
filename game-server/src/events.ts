@@ -19,7 +19,8 @@ import type { Session, EventState } from "./zone-types";
 import { pick, randInt, uuid, chance } from "./rng";
 import * as den from "./den";
 import * as feverrat from "./feverrat";
-import { cap, foodState, foodGone, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, lidOpen, skyBand, skyClear, skyCovered, isDawn, isDusk, auroraNight, cometNight } from "./zone-util";
+import * as grass from "./grass";
+import { cap, foodState, foodGone, isNight, moonPhase, eclipsePhase, isBloodMoon, isFullMoon, moonKind, moonMonth, fullMoonTonight, lidOpen, skyBand, skyClear, skyCovered, isDawn, isDusk, auroraNight, cometNight } from "./zone-util";
 import { setItemAcquiredAt, removeItemRow } from "./world";
 import {
   QUICKSAND_ROOMS, QUICKSAND_GRIP_ODDS, HOBBLE_FLEE_MS,
@@ -73,7 +74,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, NIGHT_STARS_TURN, NIGHT_AURORA, NIGHT_COMET, DAY_SKY, WEATHER_DAY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_KIND_SKY, GREAT_TIDE_CREST_MULT, PALE_FROST, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, NIGHT_STARS_TURN, NIGHT_AURORA, NIGHT_COMET, DAY_SKY, WEATHER_DAY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_END_ODDS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -181,6 +182,11 @@ function bandsBusy(z: ZoneDO): { any: boolean; bands: Set<string> } {
 
 export function phaseOf(z: ZoneDO, id: string): EventState["phase"] {
   return z.events.get(id)?.phase ?? "idle";
+}
+// The moon's words for this night of its month, the full moon by its kind
+// (zone-data MOON_KIND_SKY) so the words say the moon the picture draws.
+function fullMoonSky(phase: number): string | undefined {
+  return phase === 0 ? (MOON_KIND_SKY[moonKind()] ?? MOON_SKY[0]) : MOON_SKY[phase];
 }
 
 // ---- WEATHER HAS A PLACE (rome, 2026-10-15) ----
@@ -1213,7 +1219,7 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
     const phase = isFullMoon() ? 0 : moonPhase(); // the blood moon's second night is still full
     // The phase is WHAT it is; the arc is where it has got to. No arc on the
     // dark of the month — a moon that is not there is not climbing anywhere.
-    return (MOON_SKY[phase] ?? MOON_SKY[6]!) + (phase === 6 ? "" : MOON_ARC[skyBand()] ?? "");  // 6 is the dark of the month
+    return (fullMoonSky(phase) ?? MOON_SKY[6]!) + (phase === 6 ? "" : MOON_ARC[skyBand()] ?? "");  // 6 is the dark of the month
   }
   // AND THE SUN AND THE STARS, for the same reason and the same way. Both are
   // questions about the hour rather than about the weather, so they outrank it —
@@ -1335,7 +1341,7 @@ export function skyLook(z: ZoneDO, roomId: string, arg?: string): string | null 
   // sun, no moon, no stars (zone-util skyCovered), at whatever hour it is.
   if (skyCovered() && /^(the )?(sky|cloud|clouds|weather|lid|overcast)?$/i.test((arg ?? "").trim()))
     return SKY_COVERED[isNight() ? 3 : isDawn() ? 0 : isDusk() ? 2 : 1]!;
-  if (isNight()) return `${SKY_NIGHT} ${MOON_SKY[isFullMoon() ? 0 : moonPhase()] ?? MOON_SKY[6]}` + (skyCovered() ? "" : " " + nightExtras());
+  if (isNight()) return `${SKY_NIGHT} ${fullMoonSky(isFullMoon() ? 0 : moonPhase()) ?? MOON_SKY[6]}` + (skyCovered() ? "" : " " + nightExtras());
   // THE CLEAR DAY says so: the picture has no cloud in it today, so neither do the words.
   if (skyClear()) return SKY_CLEAR + (cometNight() ? " " + NIGHT_COMET : "");
   // AND ANY OTHER HOUR SAYS WHICH HOUR IT IS (rome, 2026-11-05: at dusk this fell
@@ -1814,6 +1820,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickWind(z, now);
   await tickGloam(z, now);
   await tickBreach(z, now);
+  tickMoon(z, now);
   await tickTide(z, now);
   await tickSea(z, now);
   await tickRut(z, now);
@@ -2138,6 +2145,46 @@ async function tickClouddown(z: ZoneDO, now: number): Promise<void> {
 // double (ai.ts), mast lies on the floor to be picked up (real food, placed
 // once per fall), and the wood is briefly generous — the one event the wood has
 // that gives rather than takes.
+// ---- THE FULL MOON'S KIND (rome, 2026-11-13; zone-data MOON_KINDS) ----
+// Once a full moon, the first beat of its night, the moon's kind sets its one
+// thing going. Kept on the events (data = the month) so a restart or a world
+// asleep at moonrise still gets it the first beat it is awake under that moon.
+// Each one starts an arc that already exists; none is a new kind of weather.
+// The micro moon's rare blood and the harvest moon's bigger meals are read
+// where they happen (ai.rollBloodline, ai's grazing), all night long.
+export function tickMoon(z: ZoneDO, now: number): void {
+  const kind = fullMoonTonight(now);
+  if (!kind || kind === "blood" || kind === "plain") return;
+  const month = String(moonMonth(now));
+  const st = z.events.get("moonkind") ?? { phase: "idle" as const, until: NEVER };
+  if (st.data === month) return;
+  st.data = month;
+  z.events.set("moonkind", st);
+  // Bring an idle arc in this beat (its own ticker telegraphs it as ever).
+  const bring = (id: string, extra?: Partial<EventState>): void => {
+    const ev = z.events.get(id) ?? { phase: "idle" as const, until: NEVER };
+    if (ev.phase !== "idle") return;
+    ev.until = now;
+    Object.assign(ev, extra);
+    z.events.set(id, ev);
+  };
+  switch (kind) {
+    case "great": bring("tide"); break;
+    case "harvest": bring("mast"); grass.regrowAll(z); break;
+    case "pale": {
+      const cold = z.events.get("cold");
+      if (cold && cold.phase !== "idle") { cold.data = HARD_FROST; break; } // the cold already on turns hard
+      const bands = wxPlace(z);
+      if (bands.length) bring("cold", { bands, data: PALE_FROST });
+      break;
+    }
+    case "ash":
+      for (const graves of Object.keys(FEVER_GRAVES)) bring(FEVER_GRAVES[graves]!.key);
+      break;
+    case "micro": break;
+  }
+}
+
 async function tickMast(z: ZoneDO, now: number): Promise<void> {
   let st = z.events.get("mast");
   if (!st) { st = { phase: "idle", until: NEVER }; z.events.set("mast", st); }
@@ -3839,7 +3886,8 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       st.until = now + COLD_TELEGRAPH_MS;
       // Which cold this is, decided as it comes (HARD_FROST_ODDS) and kept on
       // the state, so a restart mid-frost is still a frost.
-      st.data = chance(HARD_FROST_ODDS) ? HARD_FROST : undefined;
+      // A cold the pale moon brought is always the hard frost (tickMoon).
+      st.data = st.data === PALE_FROST || chance(HARD_FROST_ODDS) ? HARD_FROST : undefined;
       feedSky(z, inCold, "The air goes glass-clear and bitter, sharpening by the breath.");
       // The living feel it first and head for cover (coldDrives in ai.ts);
       // the hollow don't so much as pause.
@@ -4626,7 +4674,8 @@ async function tickTide(z: ZoneDO, now: number): Promise<void> {
       // to be a flat roll, and the prose claimed the moon. Now the die reads
       // the sky — fullest at the full and the dark, sleeping through the
       // quarters. Still a die; the moon leans on it, never forces it.
-      st.data = String(chance(Math.min(1, TIDE_HIGH_ODDS * (TIDE_MOON_SPRING[moonPhase()] ?? 1))) ? TIDE_LEVELS.length - 1 : Math.max(0, TIDE_LEVELS.length - 2));
+      // ...and under the great moon it is the biggest water there is (tickMoon).
+      st.data = String(fullMoonTonight(now) === "great" || chance(Math.min(1, TIDE_HIGH_ODDS * (TIDE_MOON_SPRING[moonPhase()] ?? 1))) ? TIDE_LEVELS.length - 1 : Math.max(0, TIDE_LEVELS.length - 2));
       tideWingFeed(z, "The drips quicken, everywhere at once — a patter, then a drumming. Below, something vast is inhaling.");
       // The wing gets the water; the rest of the fortress gets the news of it.
       // An arc that drowns a whole region and is inaudible one floor up was the
@@ -4645,7 +4694,7 @@ async function tickTide(z: ZoneDO, now: number): Promise<void> {
       const crestRank = Number(st.data ?? "1");
       tideRank = 0;
       tideStepAt = now + TIDE_STEP_MS;
-      st.until = now + TIDE_STEP_MS * (crestRank + 1) + TIDE_CREST_MS;
+      st.until = now + TIDE_STEP_MS * (crestRank + 1) + TIDE_CREST_MS * (fullMoonTonight(now) === "great" ? GREAT_TIDE_CREST_MULT : 1);
       tideWingFeed(z, "The tide comes in. Below you, stone starts to drown.");
       z.roomFeedBands(DEEP_HEARD_BANDS, "The tide is in. A whole wing of the deep is going under, and the water is still climbing.", "evt", true, "water");
       await floodLevel(z, 0, now);

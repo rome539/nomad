@@ -41,6 +41,11 @@ export function has(z: ZoneDO, templateId: string, roomId: string, now: number):
   return !counts(z, templateId, roomId) || left(z, roomId, now) > 0;
 }
 
+/** Every room's grass back at once (the harvest moon, events.tickMoon). */
+export function regrowAll(z: ZoneDO): void {
+  of(z).clear();
+}
+
 /** A meal taken here: one mouthful less. */
 export function crop(z: ZoneDO, templateId: string, roomId: string, now: number): void {
   if (!counts(z, templateId, roomId)) return;

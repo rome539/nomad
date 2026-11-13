@@ -82,6 +82,8 @@ try {
         "export {beforeAttack as styleBeforeAttack, keepAloft as styleKeepAloft, lurkAway} from './styles';",
         "export * as carving from './carving';",
         "export * as feverrat from './feverrat';",
+        "export {moonKind, moonMonth, fullMoonTonight, moonriseLine} from './zone-util';",
+        "export {tickMoon} from './events';",
         "export {tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, coldBites, snowed, paleDrakeSnows} from './events';",
         "export {FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, bossStands} from './zone-data';",
         "export * as pvp from './pvp';",
@@ -113,7 +115,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms } = await import(pathToFileURL(output));
+  const { CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -5949,7 +5951,7 @@ try {
     assert.match(zsrc, /const starry = starSky === "night" \|\| starSky === "moon";/);
     assert.match(zsrc, /if \(starry \|\| starSky === "blood"\) \{ const ex = events\.nightExtras\(Date\.now\(\), !starry\); if \(ex\) lines\.push\(LORE_LINE \+ ex\); \}/);
     // the stars are the sky as it is: said in the night line itself, not a line of their own
-    assert.match(zsrc, /starry \? "A full moon rides high and white among the slowly wheeling stars/);
+    assert.match(zsrc, /starry \? `\$\{moonIs\} among the slowly wheeling stars, and now and then one falls/);
     assert.match(zsrc, /: starry\n\s+\? \(this\.carriesLight\(session\)\n\s+\? "Night's fully down and the sky over you is open and black, the stars wheeling slowly round in it/);
     assert.ok(!nightExtras(0, false).includes(NIGHT_STARS_TURN), 'no stars line beside the night line');
     for (const k of ['night', 'moon', 'blood', 'eclipse']) assert.ok(new RegExp('^  ' + k + ': \\{.*stars: [1-9]', 'm').test(src), k + ' draws stars');
@@ -7198,6 +7200,82 @@ try {
     const p = mig.plan(real, []);
     assert.equal(p.stop, undefined, 'every real migration is named right and no two share a number');
     assert.equal(p.pending.length, real.filter((f) => f.endsWith('.sql')).length);
+  });
+
+  check('the full moons have kinds: the page draws the moon the words name, and each sets its own thing going (2026-11-13)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    const KINDS = ['plain', 'great', 'harvest', 'pale', 'ash', 'micro'];
+    const D = DAY_CYCLE_MS, M = 11 * D;
+    // the page's own pick, run as it is served, against the server's, month by month
+    const hashSrc = pub.slice(pub.indexOf('function skyDayHash(d)'), pub.indexOf('// THE NIGHT\'S EXTRAS ON THEIR NIGHTS'));
+    const kindSrc = pub.slice(pub.indexOf('var SKY_MOON_EVERY'), pub.indexOf('// Each kind is the one disc'));
+    const skyMoonKind = new Function(hashSrc + kindSrc + 'return skyMoonKind;')();
+    const seen = new Set(), order = [];
+    for (let m = 0; m < 400; m++) {
+      const night = m * M + D * 0.75; // the full moon's night
+      const k = moonKind(night);
+      assert.equal(skyMoonKind(Math.floor(night / D)), k, 'month ' + m + ': the picture and the words name the same moon');
+      assert.equal(k === 'blood', m % 5 === 0, 'the red moon keeps its months');
+      if (k !== 'blood') { assert.ok(KINDS.includes(k)); order.push(k); }
+      seen.add(k);
+      assert.equal(fullMoonTonight(m * M + D * 0.25), null, 'by day it is no full moon tonight');
+      assert.equal(fullMoonTonight(m * M + 5 * D + D * 0.75), null, 'nor on a half-moon night');
+    }
+    for (const k of KINDS) assert.ok(seen.has(k), k + ' comes round');
+    const TURN = ['great', 'harvest', 'pale', 'ash', 'micro', 'plain'];
+    order.forEach((k, i) => assert.equal(k, TURN[i % 6], 'the other moons come in turn, in order (moon ' + i + ')'));
+    const at = (kind) => { for (let m = 1; ; m++) if (moonKind(m * M) === kind) return m * M + D * 0.75; };
+    // its words: the moonrise and the look
+    for (const k of ['great', 'harvest', 'pale', 'ash', 'micro']) {
+      assert.match(zd, new RegExp('MOON_KIND_RISE[\\s\\S]*?\\n  ' + k + ': "'), k + ' has a moonrise');
+      assert.match(zd, new RegExp('MOON_KIND_SKY[\\s\\S]*?\\n  ' + k + ': "'), k + ' has a look');
+      assert.match(pub, new RegExp('\\n  ' + k + ': +\\{ size: '), k + ' has a look in the picture');
+      assert.match(zd, new RegExp('MOON_KIND_ROOM[\\s\\S]*?\\n  ' + k + ': \\["'), k + ' has its line in every outdoor room');
+    }
+    assert.match(moonriseLine(at('great')), /enormous/, 'the great moon rises as itself');
+    assert.match(moonriseLine(at('plain')), /huge and white/, 'the plain moon rises as it always did');
+    assert.match(moonriseLine(at('great') + 5 * D), /moon|light/, 'and other nights are the month as ever');
+    assert.equal((ev.match(/fullMoonSky\(/g) || []).length, 3, 'look moon and look sky both read the full moon by its kind');
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zs, /MOON_KIND_ROOM\[moonKind\(\)\]/, 'the room says the full moon by its kind');
+    assert.ok(!/rides high and white/.test(zs) && !/white of it/.test(zs), 'and nothing in the rooms calls every full moon white');
+    // what each sets going, once a moon
+    const mkz = () => ({ events: new Map() });
+    let z = mkz(), now = at('great');
+    tickMoon(z, now);
+    assert.equal(z.events.get('tide').until, now, 'the great moon brings the tide in');
+    z.events.get('tide').until = 5; z.events.get('tide').phase = 'idle';
+    tickMoon(z, now + 60_000);
+    assert.equal(z.events.get('tide').until, 5, 'once a moon, not every beat');
+    z = mkz(); now = at('harvest');
+    grassPatch.crop({ regionOf: () => 'mountain' }, 'red-hind', 'x', now);
+    tickMoon(z, now);
+    assert.equal(z.events.get('mast').until, now, 'the harvest moon brings the mast down');
+    z = mkz(); now = at('ash');
+    tickMoon(z, now);
+    for (const g of Object.keys(FEVER_GRAVES)) assert.equal(z.events.get(FEVER_GRAVES[g].key).until, now, 'the ash moon brings the fever up at ' + g);
+    z = mkz(); now = at('pale');
+    z.events.set('cold', { phase: 'active', until: now + 1 });
+    tickMoon(z, now);
+    assert.equal(z.events.get('cold').data, 'hard frost', 'the pale moon turns a cold already on into the hard frost');
+    assert.match(ev, /st\.data = st\.data === PALE_FROST \|\| chance\(HARD_FROST_ODDS\)/, 'and a cold it brings sets in hard');
+    z = mkz(); now = at('plain');
+    tickMoon(z, now);
+    assert.equal(z.events.size, 0, 'the plain moon sets nothing going');
+    // the micro moon: the rare blood comes far more often
+    const roeT = { id: 'roe-deer' }, whiteT = { id: 'white-roe', name: 'a white roe', max_hp: 20 };
+    const rooms = new Map([['ride', { id: 'ride', region: 'wood' }]]);
+    const zr = { world: { rooms, mobVariants: [{ baseId: 'roe-deer', variantId: 'white-roe', chance: 0.25 }], mobTemplates: new Map([['roe-deer', roeT], ['white-roe', whiteT]]), mobSpawns: [] }, creatures: new Map(), regionOf: (r) => rooms.get(r)?.region };
+    const realNow = Date.now;
+    try {
+      const rolls = (t) => { Date.now = () => t; let n = 0; for (let i = 0; i < 200; i++) if (rollBloodline(zr, roeT, 'ride').id === 'white-roe') n++; return n; };
+      assert.equal(rolls(at('micro')), 200, 'under the micro moon a quarter chance is a sure one');
+      assert.ok(rolls(at('plain')) < 200, 'under any other moon it is a quarter');
+      // and the harvest moon's meals
+      assert.match(readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8'), /MEAL_GRAZE \* \(harvest \? HARVEST_MEAL_MULT : 1\)/, 'a grazing meal is bigger under the harvest moon');
+    } finally { Date.now = realNow; }
   });
 
   console.log(`\n${passed} regression checks pass`);

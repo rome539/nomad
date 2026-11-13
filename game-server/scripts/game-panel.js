@@ -114,6 +114,12 @@
     };
   });
   mk("button", btnCss, "shoot one").onclick = function () { SKY_FX.shootNow = (SKY_FX.shootNow || 1) + 1; };
+  // THE FULL MOON'S KIND (zone-data MOON_KINDS): the moon sky wears the one the
+  // calendar gives it; this forces one, to be looked at. Pick "moon" in the hours.
+  var moonSel = mk("select", btnCss);
+  [["", "moon: as the calendar"], ["plain", "moon: plain"], ["great", "moon: great"], ["harvest", "moon: harvest"], ["pale", "moon: pale"], ["ash", "moon: ash"], ["micro", "moon: micro"]].forEach(function (x) {
+    var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; moonSel.appendChild(o); });
+  moonSel.onchange = function () { SKY_FX.moon = moonSel.value; if (hour.value !== "moon") { hour.value = "moon"; paint(); } };
 
   // THE FLOOD TRIAL (FX_FLOOD in the client): water standing in the room the
   // depth map describes. Night, torch on, on a ground with torch effects.

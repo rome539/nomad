@@ -22,7 +22,7 @@ import * as ratking from "./ratking";
 import { MOUNTAIN_QUARTER_ROOMS } from "./detail";
 import { settlesOn, GROUND_OF } from "./mountain-ground";
 import * as beasts from "./beasts";
-import { cap, isNight, isFullMoon, isBloodMoon, morphOf } from "./zone-util";
+import { cap, isNight, isFullMoon, isBloodMoon, fullMoonTonight, morphOf } from "./zone-util";
 import * as events from "./events";
 import * as styles from "./styles";
 import * as whiteroe from "./whiteroe";
@@ -70,7 +70,7 @@ import {
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING, WHITE_ROE, FEVER_RAT, bossStands, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
   EAT_SHOW_MS, MEAL_MIN_MS, EAT_SAY_MIN_MS, EAT_SAY_MAX_MS, EAT_WORDS,
-  RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS,
+  RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS, HARVEST_MEAL_MULT, MICRO_RARE_MULT,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -78,7 +78,8 @@ import {
 export function rollBloodline(z: ZoneDO, tmpl: MobTemplate, room?: string): MobTemplate {
     const world = z.world!;
     for (const v of world.mobVariants) {
-      if (v.baseId !== tmpl.id || !chance(v.chance)) continue;
+      // Under the micro moon the rare blood comes far more often (zone-data MOON_KINDS).
+      if (v.baseId !== tmpl.id || !chance(v.chance * (fullMoonTonight() === "micro" ? MICRO_RARE_MULT : 1))) continue;
       // The white roe is the wood's: a roe born anywhere else stays a plain roe.
       if (v.variantId === WHITE_ROE && (!room || z.regionOf(room) !== "wood")) continue;
       // A nester is immortal and sessile, so every extra mother is forever.
@@ -2094,10 +2095,13 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       // within the hour now, which is what a thing living on scraps does.
       // A bear on its own feeding ground eats a real meal (OWN_FORAGE_MEAL_LEFT).
       const fedFrom3 = creature.hunger;
-      creature.hunger = grazeHere && OWN_FORAGE_ROOMS.has(creature.templateId) ? Math.min(creature.hunger, OWN_FORAGE_MEAL_LEFT) : Math.max(0, creature.hunger - MEAL_GRAZE);
+      // Under the harvest moon the ground gives more: a bigger meal, and more good of it.
+      const harvest = grazeHere && fullMoonTonight(at) === "harvest";
+      creature.hunger = grazeHere && OWN_FORAGE_ROOMS.has(creature.templateId) ? Math.min(creature.hunger, OWN_FORAGE_MEAL_LEFT) : Math.max(0, creature.hunger - MEAL_GRAZE * (harvest ? HARVEST_MEAL_MULT : 1));
       ate(creature, at, grazeHere ? "graze" : "scraps", fedFrom3 - creature.hunger);
       if (grazeHere) grass.crop(z, creature.templateId, creature.roomId, at);
-      creature.hp = Math.min(tmpl.max_hp, creature.hp + (grazeHere && events.mastOn(z) ? Math.round(FORAGE_HEAL * MAST_FORAGE_MULT)
+      creature.hp = Math.min(tmpl.max_hp, creature.hp + (harvest ? Math.round(FORAGE_HEAL * Math.max(HARVEST_MEAL_MULT, events.mastOn(z) ? MAST_FORAGE_MULT : 1))
+        : grazeHere && events.mastOn(z) ? Math.round(FORAGE_HEAL * MAST_FORAGE_MULT)
         : grazeHere && events.wrackIn(z, creature.roomId) ? Math.round(FORAGE_HEAL * WRACK_FORAGE_MULT)
         : grazeHere && events.muddy(z, creature.roomId) ? Math.round(FORAGE_HEAL * FORAGE_RAIN_MULT)
         : FORAGE_HEAL));

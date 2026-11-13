@@ -8,7 +8,7 @@ import {build,transform} from 'esbuild';
 const dir=await mkdtemp(join(tmpdir(),'nomad-moon-'));
 try {
  const outfile=join(dir,'clock.mjs');
- await build({stdin:{contents:'export * from "./zone-util";export {DAY_CYCLE_MS,MOON_FULL_EVERY,BLOOD_MOON_EVERY} from "./zone-data";',resolveDir:new URL('../src',import.meta.url).pathname},bundle:true,platform:'node',format:'esm',outfile,logLevel:'silent'});
+ await build({stdin:{contents:'export * from "./zone-util";export {DAY_CYCLE_MS,MOON_FULL_EVERY,BLOOD_MOON_EVERY,MOON_NIGHTS,MOON_KIND_RISE} from "./zone-data";',resolveDir:new URL('../src',import.meta.url).pathname},bundle:true,platform:'node',format:'esm',outfile,logLevel:'silent'});
  const clock=await import(pathToFileURL(outfile));
  const zone=await readFile(new URL('../src/zone.ts',import.meta.url),'utf8');
  assert.ok(zone.includes('? moonriseLine(now)'),'nightfall uses the tested calendar announcement');
@@ -27,7 +27,7 @@ try {
   now=day*clock.DAY_CYCLE_MS+clock.DAY_CYCLE_MS*.75;
   const sky=c.artSkyFor.call(z,session),line=clock.moonriseLine(now);
   if(clock.isBloodMoon(now)){red++;assert.equal(sky,'blood');assert.match(line,/blood moon/i);assert.ok(!line.includes('white'));}
-  else if(clock.isFullMoon(now)){white++;assert.equal(sky,'moon');assert.match(line,/white/);assert.ok(!line.includes('blood'));}
+  else if(clock.isFullMoon(now)){white++;assert.equal(sky,'moon');const k=clock.moonKind(now);assert.equal(line,clock.MOON_KIND_RISE[k]??clock.MOON_NIGHTS[0],'the full moon rises as its own kind ('+k+')');assert.ok(!line.includes('blood'));}
   else assert.equal(sky,'night');
  }
  assert.ok(red>0&&white>0);

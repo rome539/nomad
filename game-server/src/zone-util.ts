@@ -2,7 +2,7 @@
 // deterministic PRNG for the crude map's consistent lie, and tender rounding.
 // Nothing here touches game state — safe to import anywhere.
 import { chance, randInt } from "./rng";
-import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, FOOD_GONE_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, SKY_CLEAR_EVERY, AURORA_EVERY, COMET_EVERY, COMET_NIGHTS, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
+import { MOON_NIGHTS, HEART_FRESH_SEC, FOOD_FRESH_SEC, FOOD_SPOIL_SEC, FOOD_GONE_SEC, COOKED_FOODS, COOKED_SPOIL_MULT, DAY_CYCLE_MS, MOON_FULL_EVERY, NIGHT_HUNT_MULT, OUTDOOR_ROOMS, NAPPERS, NOCTURNAL, ECLIPSE_EVERY, ECLIPSE_TELEGRAPH_MS, ECLIPSE_TOTAL_MS, ECLIPSE_AFTER_MS, BLOOD_MOON_EVERY, LID_SLOT_MS, LID_OPEN_SHARE, LID_MAX_SHUT, SKY_CLEAR_EVERY, AURORA_EVERY, COMET_EVERY, COMET_NIGHTS, MOON_KINDS, MOON_KIND_RISE, type MoonKind, TERRAIN_RULES, CROSSING_RULES, ROAD_RULES, WOOD_RULES, DEN_RULES } from "./zone-data";
 
 // The day/night world-clock (zone-data.ts DAY_CYCLE_MS): first half of the
 // cycle is day, second half is night. Pure modulo — no persisted state.
@@ -24,7 +24,25 @@ export function isFullMoon(now = Date.now()): boolean {
 // door, the hollow's teeth and eyes, the sky lines. The rest of that month runs
 // one night shorter on the wane, which nobody counting nights will miss.
 function bloodMonth(now: number): boolean {
-  return Math.floor(now / (DAY_CYCLE_MS * MOON_FULL_EVERY)) % BLOOD_MOON_EVERY === 0;
+  return moonMonth(now) % BLOOD_MOON_EVERY === 0;
+}
+// WHICH MOON'S MONTH THIS IS, counted from the start: one full moon each.
+export function moonMonth(now = Date.now()): number {
+  return Math.floor(now / (DAY_CYCLE_MS * MOON_FULL_EVERY));
+}
+// WHICH KIND OF FULL MOON THIS MONTH'S IS (zone-data MOON_KINDS): the red one on
+// its months, and the six taking turns on the rest, in order, so each comes
+// round once in every six of the others (rome, 2026-11-13: in order, not drawn). public.ts skyMoonKind is this line for line, from the
+// world day the page is sent (a month is MOON_FULL_EVERY of those).
+export function moonKind(now = Date.now()): MoonKind {
+  const m = moonMonth(now);
+  if (m % BLOOD_MOON_EVERY === 0) return "blood";
+  // how many of the other moons came before this one: every month less the red ones
+  return MOON_KINDS[(m - Math.floor(m / BLOOD_MOON_EVERY) - 1) % MOON_KINDS.length]!;
+}
+// The full moon up over the world right now, by kind, or null when it is not.
+export function fullMoonTonight(now = Date.now()): MoonKind | null {
+  return isNight(now) && isFullMoon(now) ? moonKind(now) : null;
 }
 // WHICH NIGHT OF THE MOON'S MONTH THIS IS: 0 is full, and it counts up from
 // there — waning, dark, waxing — back round to full again. isFullMoon has
@@ -240,7 +258,8 @@ export function isBloodMoon(now = Date.now()): boolean {
 export function moonriseLine(now = Date.now()): string {
   return isBloodMoon(now)
     ? "A blood moon rises over the grounds, full and red — the hollow things stir beneath it."
-    : MOON_NIGHTS[isFullMoon(now) ? 0 : moonPhase(now)] ?? MOON_NIGHTS[3];
+    : isFullMoon(now) ? (MOON_KIND_RISE[moonKind(now)] ?? MOON_NIGHTS[0]!)
+    : MOON_NIGHTS[moonPhase(now)] ?? MOON_NIGHTS[3];
 }
 // Predators hunt harder after dark, outdoors only — day/night has no opinion
 // on indoor rooms, so neither does this. 1 = no change, the common case.

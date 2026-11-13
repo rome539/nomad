@@ -12556,6 +12556,43 @@ function skyDayHash(d) { // zone-util skyDayHash, line for line
 var SKY_AURORA_EVERY = 9, SKY_COMET_EVERY = 29, SKY_COMET_NIGHTS = 3; // zone-data
 function skyAuroraNight(d) { return skyDayHash(d ^ 0x51a7) % SKY_AURORA_EVERY === 0; }
 function skyCometNight(d) { return d % SKY_COMET_EVERY < SKY_COMET_NIGHTS; }
+// THE FULL MOON'S KIND (zone-util moonKind, line for line, from the world day:
+// a moon's month is SKY_MOON_EVERY of them). Only the moon sky reads it; the red
+// moon has a sky of its own.
+var SKY_MOON_EVERY = 11, SKY_BLOOD_EVERY = 5; // zone-data MOON_FULL_EVERY, BLOOD_MOON_EVERY
+var SKY_MOON_KINDS = ["great", "harvest", "pale", "ash", "micro", "plain"]; // zone-data MOON_KINDS, in turn
+function skyMoonKind(d) {
+  var m = Math.floor(d / SKY_MOON_EVERY);
+  if (m % SKY_BLOOD_EVERY === 0) return "blood";
+  return SKY_MOON_KINDS[(m - Math.floor(m / SKY_BLOOD_EVERY) - 1) % SKY_MOON_KINDS.length];
+}
+// Each kind is the one disc recoloured and resized (rome, 2026-11-13): size is a
+// share of the sky's height (the plain moon's .16), hue recolours the disc and
+// keeps its light and dark, dim darkens it, glow is the light round it.
+var SKY_MOON_LOOK = {
+  great:   { size: .25, glow: "246,240,222" },
+  harvest: { size: .19, hue: "rgb(222,132,44)", glow: "232,150,72" },
+  pale:    { size: .115, hue: "rgb(214,228,255)", glow: "214,230,255" },
+  ash:     { size: .16, hue: "rgb(176,156,104)", dim: .28, glow: "150,134,98" },
+  micro:   { size: .085 }
+};
+var skyMoonDiscs = {};
+function skyMoonDisc(kind, im) {
+  var look = SKY_MOON_LOOK[kind];
+  if (!look || (!look.hue && !look.dim)) return im;
+  var had = skyMoonDiscs[kind];
+  if (had && had.im === im) return had.cv;
+  var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+  if (!w || !h) return im;
+  var cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  var x = cv.getContext("2d");
+  x.drawImage(im, 0, 0);
+  if (look.hue) { x.globalCompositeOperation = "color"; x.fillStyle = look.hue; x.fillRect(0, 0, w, h); }
+  if (look.dim) { x.globalCompositeOperation = "source-over"; x.fillStyle = "rgba(0,0,0," + look.dim + ")"; x.fillRect(0, 0, w, h); }
+  x.globalCompositeOperation = "destination-in"; x.drawImage(im, 0, 0); // back to the disc's own shape
+  skyMoonDiscs[kind] = { im: im, cv: cv };
+  return cv;
+}
 function skyCloudsTonight(list) {
   var h = skyDayHash(skyRoll);
   if (h % SKY_CLEAR_EVERY === 0) return { set: [], dir: 1 };
@@ -12611,7 +12648,7 @@ function skyMoonAt(f) {
 // drawn they turn and now and then one falls; the aurora and the comet keep
 // their own nights (skyAuroraNight, skyCometNight). The preview panel's buttons
 // force each on whatever the night, to be looked at.
-var SKY_FX = { shoot: false, turn: false, aurora: false, comet: false, fast: false, shootNow: 0 };
+var SKY_FX = { shoot: false, turn: false, aurora: false, comet: false, fast: false, shootNow: 0, moon: "" }; // moon: a full moon's kind, forced (the preview's picker)
 var skyDrift = (function () {
   var shots = [], shotNext = 0, shotSeen = 0, shotFast = false, turnStars = {};
   var layer = null, tiles = [], starCv = null, starCtx = null, stars = {};
@@ -12784,7 +12821,9 @@ var skyDrift = (function () {
     if (farTint) { c.fillStyle = farTint; c.fillRect(0, 0, w, h); }
     // the moon's place tonight, and how big
     var at = lay.path === "eclipse" ? skyEclipseAt(skyEclipseThrough(Date.now())) : skyMoonAt(skyNightThrough(Date.now()));
-    var md = h * (lay.discSize || 0.16);
+    var moonKindNow = SKY_FX.moon || skyMoonKind(skyRoll);
+    var moonLook = name === "moon" ? SKY_MOON_LOOK[moonKindNow] : null;
+    var md = h * ((moonLook && moonLook.size) || lay.discSize || 0.16);
     var mx = at.x * w, my = at.y * h;
     if (!lay.disc) { mx = -1e6; my = -1e6; } // no moon tonight: nothing for the stars to fade near
     // the stars, fading out in the moon's light
@@ -12823,10 +12862,10 @@ var skyDrift = (function () {
     // the moon's cold light round it, then the disc
     if (lay.disc) {
     var halo = c.createRadialGradient(mx, my, md * .45, mx, my, md * 2.6);
-    var gl = lay.glow || "190,205,232";
+    var gl = (moonLook && moonLook.glow) || lay.glow || "190,205,232";
     halo.addColorStop(0, "rgba(" + gl + ",.30)"); halo.addColorStop(.35, "rgba(" + gl + ",.12)"); halo.addColorStop(1, "rgba(" + gl + ",0)");
     c.fillStyle = halo; c.fillRect(mx - md * 2.6, my - md * 2.6, md * 5.2, md * 5.2);
-    c.drawImage(layArt[lay.disc].im, mx - md / 2, my - md / 2, md, md);
+    c.drawImage(moonLook ? skyMoonDisc(moonKindNow, layArt[lay.disc].im) : layArt[lay.disc].im, mx - md / 2, my - md / 2, md, md);
     }
     // THE COMET, STILL (2026-11-11: turning with the stars it was carried off the
     // top of the sky for the early night while the words said it stood there),
