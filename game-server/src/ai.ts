@@ -42,7 +42,7 @@ import {
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES, PRESENCE_ODDS, PRESENCE_ROOM_MS, PRESENCE_LINES, PRESENCE_OWN, FOLK, CUTTHROATS,
   ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
-  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, MEAL_SMALL, SMALL_PREY, SMALL_EATERS, HUNGER_MAX, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
+  MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, SMALL_PREY, HUNGER_MAX, HUNGER_FLOOR, mealOf, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS, THIRST_LATE_MS,
@@ -866,7 +866,7 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
       const preySet = preyHere(z, creature);
       if (preySet) {
         const prey = [...z.creatures.values()].find(
-          (c) => c.id !== creature.id && c.roomId === creature.roomId && preySet.has(c.templateId),
+          (c) => c.id !== creature.id && c.roomId === creature.roomId && preySet.has(c.templateId) && !packmates(creature, c),
         );
         if (prey) {
           const pt = z.world!.mobTemplates.get(prey.templateId)!;
@@ -2075,7 +2075,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       z.roamed.delete(`${eaten}@${creature.roomId}`);
       const tmpl = world.mobTemplates.get(creature.templateId)!;
       const fedFrom2 = creature.hunger;
-      creature.hunger = Math.max(0, creature.hunger - MEAL_ITEM);
+      creature.hunger = Math.min(creature.hunger, Math.max(0, creature.hunger - MEAL_ITEM)); // scraps never eat into a banked meal
       ate(creature, undefined, "scraps", fedFrom2 - creature.hunger);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(item.heal, 3));
       z.addTrace(creature.roomId, { kind: "scraps", at });
@@ -2120,7 +2120,7 @@ export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean,
       const fedFrom3 = creature.hunger;
       // Under the harvest moon the ground gives more: a bigger meal, and more good of it.
       const harvest = grazeHere && fullMoonTonight(at) === "harvest";
-      creature.hunger = grazeHere && OWN_FORAGE_ROOMS.has(creature.templateId) ? Math.min(creature.hunger, OWN_FORAGE_MEAL_LEFT) : Math.max(0, creature.hunger - MEAL_GRAZE * (harvest ? HARVEST_MEAL_MULT : 1));
+      creature.hunger = grazeHere && OWN_FORAGE_ROOMS.has(creature.templateId) ? Math.min(creature.hunger, OWN_FORAGE_MEAL_LEFT) : Math.min(creature.hunger, Math.max(0, creature.hunger - MEAL_GRAZE * (harvest ? HARVEST_MEAL_MULT : 1))); // a graze never eats into a banked meal
       ate(creature, at, grazeHere ? "graze" : "scraps", fedFrom3 - creature.hunger);
       if (grazeHere) grass.crop(z, creature.templateId, creature.roomId, at);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + (harvest ? Math.round(FORAGE_HEAL * Math.max(HARVEST_MEAL_MULT, events.mastOn(z) ? MAST_FORAGE_MULT : 1))
@@ -2212,6 +2212,14 @@ export function woundedPreyHunts(z: ZoneDO, creature: Creature): boolean {
 // PACK_PREY lets it take once enough of its own line is standing here. The pack
 // is counted by LINE (variantBase), so a dire wolf counts toward the greys —
 // see PACK_PREY for why that is the whole point of it.
+// NO ONE EATS ITS OWN PACK (2026-11-13). The lead dog, the masterless dog's rare
+// blood, eats masterless dogs ("the mean cousin drives off the plain"), and since the
+// road's dogs live in packs it is born into theirs and ate its own packmates, 8 to 15
+// a day in the road sim. A hunter never takes one of its own group; a stray of its
+// line outside the pack is still fair game.
+export function packmates(a: Creature, b: Creature): boolean {
+  return !!a.group && a.group === b.group;
+}
 function preyHere(z: ZoneDO, creature: Creature): Set<string> | null {
   const solo = PREYS_ON.get(creature.templateId);
   const pack = PACK_PREY.get(creature.templateId);
@@ -2310,7 +2318,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     // A target in the room; prefer one not already busy with a player (the easy meal).
     let victim: Creature | null = chased ?? null;
     for (const c of chased ? [] : z.creaturesInRoom(creature.roomId)) {
-      if (c.id === creature.id || !(prey?.has(c.templateId) || (strays && strayFor(z, creature, c)))) continue;
+      if (c.id === creature.id || packmates(creature, c) || !(prey?.has(c.templateId) || (strays && strayFor(z, creature, c)))) continue;
       // THE MOSS (rome, 2026-10-21): a sloth is a green-grey lump moving too
       // slowly to catch the eye, and a hunter often looks straight past it - no
       // rush, no miss, it never knew.
@@ -2386,7 +2394,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt, creature.templateId);
       const fedFrom4 = creature.hunger;
-      creature.hunger = SMALL_PREY.has(victim.templateId) && !SMALL_EATERS.has(creature.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
+      creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(tmpl.max_hp, vt.max_hp)); // by size: its own weight is two hours fed
       ate(creature, undefined, undefined, fedFrom4 - creature.hunger, undefined, victim.templateId);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
@@ -2463,7 +2471,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     releaseHold(z, creature);
     preyFalls(z, victim, vt, creature.templateId);
     const fedFrom5 = creature.hunger;
-    creature.hunger = SMALL_PREY.has(victim.templateId) && !SMALL_EATERS.has(creature.templateId) ? Math.max(0, creature.hunger - MEAL_SMALL) : 0;
+    creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(tmpl.max_hp, vt.max_hp)); // by size: its own weight is two hours fed
     ate(creature, undefined, undefined, fedFrom5 - creature.hunger, undefined, victim.templateId);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
@@ -2939,7 +2947,7 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     const taken = gone ? (eaten.meat ?? deadT?.max_hp ?? 0) : bite;
     eaten.meat = gone ? 0 : left;
     const fedFrom6 = creature.hunger;
-    creature.hunger = Math.max(0, creature.hunger - (eaten.prey && SMALL_PREY.has(eaten.prey) && !SMALL_EATERS.has(creature.templateId) ? MEAL_SMALL : MEAL_CORPSE));
+    creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(tmpl.max_hp, taken)); // what it took off the body, against its own size
     // A body it took whole, or the share of one it took, goes back if it is cut short.
     ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken, key: bodyKey(eaten), id: eaten.id }, eaten.prey ?? eaten.id);
     // A body picked clean goes once the last meal on it is done, even if the

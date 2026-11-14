@@ -17,7 +17,7 @@ import * as grass from "./grass";
 import { ate, creatureMoves, deadEatsAt, eatingNow, edibleBody, hungers, livingHomes, preyFalls } from "./ai";
 import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
-  DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, MEAL_SMALL, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, roamsIn, groupOf,
+  DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, HUNGER_FLOOR, mealOf, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, roamsIn, groupOf,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES, FLOCKS, SPREAD_ROOSTS,
   PACK_QUARRY, PACK_HUNTERS, PACK_STAG_ODDS, PACK_STAG, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS, FOOD_PULL, LEAN_AGAIN_MS,
   BODY_HOLDERS, MOBBERS, MOB_AT, BODY_CHASE_ODDS, MOB_ODDS, BODY_AVOID_MS, BODY_REST_MS,
@@ -311,7 +311,7 @@ export async function holdGround(
   rival.sleepUntil = undefined;
   const feed = (from: string): void => {
     const fedFrom = wolf.hunger;
-    wolf.hunger = SMALL_PREY.has(from) ? Math.max(0, wolf.hunger - MEAL_SMALL) : 0;
+    wolf.hunger = Math.max(HUNGER_FLOOR, wolf.hunger - mealOf(wt.max_hp, world.mobTemplates.get(from)?.max_hp ?? 0)); // by size (STOMACH_MEAL)
     ate(wolf, now, undefined, fedFrom - wolf.hunger, undefined, from);
     z.fxFed(roomId, wolf.templateId);
   };

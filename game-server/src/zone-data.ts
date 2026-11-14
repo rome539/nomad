@@ -1069,6 +1069,21 @@ export const MEAL_CORPSE = 75;  // a whole body, and it still isn't a kill
 // edge off and no more, the same as scraps. Chosen by the animal, not by its
 // health: a roe deer has a snow hare's hit points and is not a mouthful.
 export const MEAL_SMALL = 25;
+// STOMACHS (rome, 2026-11-13: a rat eats less than a wolf). Every animal used to be
+// filled by any kill and hungry again 100 minutes later, whatever it was and
+// whatever it ate, so a bear and an adder hunted alike and a rat was as good as a
+// goat to a small hunter. Now a meal fills an animal by the meat it ate against its
+// own size: its own weight in meat takes STOMACH_MEAL off its hunger, two hours of
+// being fed at HUNGER_PER_MIN, and a smaller meal proportionally less. A big meal
+// can take it below nothing, banked, down to HUNGER_FLOOR, so it stays fed longer;
+// a graze or scraps never eat into what is banked. Size does what MEAL_SMALL and
+// SMALL_EATERS did for meals, so they no longer decide one.
+export const STOMACH_MEAL = 60;
+export const HUNGER_FLOOR = -60;
+/** What eating `meat` (hit points of body) takes off the hunger of an animal of `eaterHp`. */
+export function mealOf(eaterHp: number, meat: number): number {
+  return STOMACH_MEAL * Math.max(0, meat) / Math.max(1, eaterHp);
+}
 export const SMALL_PREY = new Set([
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
   "water-vole",
@@ -2550,9 +2565,12 @@ export const WALKING_DEAD = new Set([
 // region, and each animal answers to the region its home is in. Left out on purpose:
 // the rats (they stay where their rows are), the footpads and the other people, the
 // barrow-wights, the mire-walkers (drowners hold their water), the toll clerks, the
-// wardens, the miller, the carrier and the baited bear. Ground: road-ground.ts.
+// wardens, the miller and the carrier. Ground: road-ground.ts.
+// THE BAITED BEAR ROAMS (2026-11-13): it stood at the Drove Pound; now it draws its
+// home anywhere on the road's grass, lanes, trees and water, alone, and moves on as
+// the rest do, so where it lies up is never the same twice.
 export const ROAD_ROAMERS = new Set([
-  "feral-goat", "roe-deer", "masterless-dog", "drove-dog", "otter", "grey-heron", "gill-adder", "scarp-raven",
+  "feral-goat", "roe-deer", "masterless-dog", "drove-dog", "otter", "grey-heron", "gill-adder", "scarp-raven", "the-baited-bear",
 ]);
 export const ROAD_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
   ["feral-goat", { min: 4, max: 8, lone: 0.1 }],
@@ -5496,6 +5514,37 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   ["a-lymer", new Map([["grey-seal", 3], ["conger", 3]])],
   ["hill-wolf", new Map([["red-hind", 2], ["red-stag", 3], ["old-billy", 2], ["scarp-raven", 2], ["bone-breaker", 2], ["carrion-vulture", 2]])],
 ]);
+// EVERY RARE BLOOD IS HUNTED LIKE ITS ORIGINAL (rome, 2026-11-13: the snow hare,
+// the mountain hare's rare blood, was missing from the hill fox's, the wildcat's,
+// the tom's and the hill eagle's lists, and so was safe from them; this had
+// happened before, rare blood by rare blood). Once the world's rare bloods are
+// known (mob_variants), whatever hunts a line hunts its rare bloods too, alone or as
+// a pack, without anyone remembering to list them. A hunter never gains its own
+// line's rare blood this way (the lead dog would eat lead dogs). Kept as ruled,
+// listed by hand: the red stag (the lynx cannot take it, three hill wolves can),
+// the old billy (no hill wolf can), and the brood rat (only a rat-eater her size or
+// bigger), each its own fight. And three hunters kept off one rare blood by name:
+// the lynx takes any bird but the great vulture (living-regions.md rule 11), and the
+// baited bear does not take the dire wolf or the dire hyena (only its own rare blood,
+// the chain-breaker, is big enough to).
+// The white roe keeps only the hunters listed for it by name (rome, 2026-11-13).
+export const RULED_RARE_BLOODS = new Set(["red-stag", "old-billy", "brood-rat", "white-roe"]);
+export const RULED_NOT_HUNTED = new Set(["lynx>great-vulture", "the-baited-bear>dire-wolf", "the-baited-bear>dire-hyena"]);
+export function huntRareBloodsAsBase(variants: { baseId: string; variantId: string }[]): void {
+  const lineOf = new Map(variants.map((v) => [v.variantId, v.baseId]));
+  const own = (hunter: string) => lineOf.get(hunter) ?? hunter;
+  for (const v of variants) {
+    if (RULED_RARE_BLOODS.has(v.variantId)) continue;
+    for (const [hunter, eats] of PREYS_ON) {
+      if (eats.has(v.baseId) && own(hunter) !== v.baseId && !RULED_NOT_HUNTED.has(hunter + ">" + v.variantId)) eats.add(v.variantId);
+    }
+    for (const [hunter, need] of PACK_PREY) {
+      const n = need.get(v.baseId);
+      if (n !== undefined && !need.has(v.variantId) && own(hunter) !== v.baseId && !RULED_NOT_HUNTED.has(hunter + ">" + v.variantId)) need.set(v.variantId, n);
+    }
+  }
+}
+
 export const PREDATION_ODDS = 0.35; // chance/tick an eligible predator strikes a roommate
 // A LANDED BITE HOLDS (rome, 2026-08-08: "the landed bite lets go sometimes —
 // the prey just got away").

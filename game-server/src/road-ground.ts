@@ -107,4 +107,5 @@ export const ROAD_SETTLES: [string, string[]][] = [
   ["otter", ["water"]],
   ["grey-heron", ["water", "wet"]],
   ["gill-adder", ["wet", "lane", "crag"]],
+  ["the-baited-bear", ["green", "lane", "wood", "water", "wet"]], // it eats anything and grazes too, so any of it
 ];
