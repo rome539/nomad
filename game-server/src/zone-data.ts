@@ -5754,6 +5754,13 @@ export const STARVE_HUNTERS = new Set([
   // whole band. The bear that ignored you last week is the argument for leaving
   // before it stops being fed.
   "the-baited-bear", "the-chain-breaker", "brown-bear"]);   // the crossing's three, and the gull is the one that comes to YOU
+// THE MAN-HUNTER (2026-11-14; manhunter.ts). One animal of a STARVE_HUNTERS kind,
+// never a small hunter, marked to hunt people: born to it at these odds, or
+// learned by killing a nomad. Hungry and idle it walks toward the nearest nomad
+// in its own region within this many rooms, looking again on this clock.
+export const MAN_HUNTER_BIRTH_ODDS = 1 / 25; // about 110 animals can carry it: 3 to 6 born ones alive at a time
+export const MAN_HUNTER_SCENT_ROOMS = 8;
+export const MAN_HUNTER_CHECK_MS = 30_000;
 // SMALL HUNTERS LEAVE YOU ALONE (rome, 2026-11-07). Hunger keeps these on their
 // own prey: starving, or with you badly hurt, they still do not turn on a person.
 // The big ones in STARVE_HUNTERS do. A fight you start is a fight either way.

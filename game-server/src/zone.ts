@@ -99,6 +99,7 @@ import * as pvp from "./pvp";
 import * as trade from "./trade";
 import * as den from "./den";
 import * as carving from "./carving";
+import * as manhunter from "./manhunter";
 import * as chronicle from "./chronicle";
 import * as aliases from "./aliases";
 import * as follow from "./follow";
@@ -992,6 +993,7 @@ export class ZoneDO implements DurableObject {
           hidden: LURKERS.has(tmpl.id) || undefined,
           home: den,
           traits: traits.length ? traits : undefined,
+          manHunter: manhunter.bornManHunter(tmpl.id, Date.now()),
         });
       }
       // ...AND ONLY DENS (2026-10-25). A world saved before this list existed
@@ -1049,6 +1051,7 @@ export class ZoneDO implements DurableObject {
           hidden: LURKERS.has(tmpl.id) || undefined,
           home: den,
           traits: traits.length ? traits : undefined,
+          manHunter: manhunter.bornManHunter(tmpl.id, Date.now()),
         });
       }
       this.ground.clear();
@@ -5012,6 +5015,7 @@ export class ZoneDO implements DurableObject {
           creature.rouseAt = undefined;
           creature.target = prey.pubkey;
           if (!prey.target) prey.target = creature.id;
+          manhunter.packFollows(this, creature, prey);
           this.send(prey, `${cap(tmpl.name)} lunges — hunger drives it straight onto you.`, "dmgin");
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} runs at ${prey.name}, ${creature.hunger < STARVING_AT ? "hungry" : "starving"}.`, prey.pubkey, false);
         }
@@ -5048,6 +5052,7 @@ export class ZoneDO implements DurableObject {
           creature.rouseAt = undefined;
           creature.target = prey.pubkey;
           if (!prey.target) prey.target = creature.id;
+          manhunter.packFollows(this, creature, prey);
           this.send(prey, `${cap(tmpl.name)} lunges for the wound already open in you.`, "dmgin");
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} runs at ${prey.name}, straight for the hurt.`, prey.pubkey, false);
         }
@@ -5675,6 +5680,8 @@ export class ZoneDO implements DurableObject {
     wanderer.tickWanderer(this, now);
     // The vultures come to wait on whoever is badly hurt (ai.vulturesWait).
     ai.vulturesWait(this, now);
+    // A man-hunter, hungry, goes looking for a nomad (manhunter.ts).
+    manhunter.seek(this, now);
     // The bear decides about its warning; the cats follow and spring (styles.ts).
     await styles.tickHabits(this, now);
     // ...and whatever is running something down follows it (chase.ts).
@@ -7602,6 +7609,7 @@ export class ZoneDO implements DurableObject {
     const slayer = slayerName ?? (tmpl ? tmpl.name : "their own wounds"); // tmpl null = bled out (or a wanderer's steel), no beast on the blow
     chronicle.died(this, victim, tmpl, slayerName); // every death goes on the record where it fell, before the body is moved
     trail.wipe(this, victim.pubkey); // the dead do not remember the way
+    if (!slayerName) manhunter.learned(this, victim, tmpl?.id); // the animal that took them has the taste now (manhunter.ts)
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
     }

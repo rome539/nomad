@@ -31,7 +31,7 @@ import { chance, pick } from "./rng";
 import { cap } from "./zone-util";
 import { RAT_KING, WHITE_ROE, FEVER_RAT, MIGRATION_FACTOR } from "./zone-data";
 
-export type Kind = "slain" | "killed" | "died" | "den-raised" | "den-left" | "den-fell" | "boarded" | "opened" | "fever" | "fever-lifted";
+export type Kind = "slain" | "killed" | "died" | "den-raised" | "den-left" | "den-fell" | "boarded" | "opened" | "fever" | "fever-lifted" | "man-hunter";
 export interface Entry { at: number; region: string; room: string; kind: Kind; who: string; what: string; notable: boolean }
 
 // One record to every region, keyed by the room's own region ('' is the
@@ -109,6 +109,11 @@ function recent(z: ZoneDO): Entry[] {
 }
 
 // When the world wakes: the notable rows the keeper might still be telling.
+// A man-hunter's news is told only while that animal still lives.
+function stillHunts(z: ZoneDO, at: number): boolean {
+  for (const c of z.creatures.values()) if (c.manHunter === at && c.hp > 0) return true;
+  return false;
+}
 export async function load(z: ZoneDO): Promise<void> {
   const since = Date.now() - KEEPER_FORGETS_MS;
   const rows = await z.env.DB.prepare("SELECT at, region, room_id, kind, who, what FROM chronicle WHERE notable = 1 AND at > ? ORDER BY at DESC LIMIT ?")
@@ -163,6 +168,12 @@ export function died(z: ZoneDO, victim: Session, tmpl: MobTemplate | null, slaye
   else record(z, victim.roomId, "died", victim.name, tmpl?.name ?? "", !!tmpl?.is_boss);
 }
 
+// An animal has killed a nomad and learned to hunt people (manhunter.ts). `who`
+// is the nomad it took, `what` the animal; `at` is the creature's own mark, so
+// the keeper stops telling it once that animal is dead.
+export function manHunter(z: ZoneDO, roomId: string, who: string, what: string, at: number): void {
+  record(z, roomId, "man-hunter", who, what, true, at);
+}
 export function denRaised(z: ZoneDO, who: string, roomId: string): void { record(z, roomId, "den-raised", who, "", false); }
 export function denLeft(z: ZoneDO, who: string, roomId: string): void { record(z, roomId, "den-left", who, "", false); }
 export function denFell(z: ZoneDO, who: string, roomId: string): void { record(z, roomId, "den-fell", who, "", false); }
@@ -190,6 +201,7 @@ export function entryLine(z: ZoneDO, e: { kind: Kind; who: string; what: string;
     case "opened": return `${cap(at)}, open again.`;
     case "fever": return "The fever, settled on the old village.";
     case "fever-lifted": return "The fever, lifted.";
+    case "man-hunter": return `${cap(e.what)}, that took ${e.who} at ${at}, hunts people now.`;
   }
 }
 
@@ -245,6 +257,10 @@ export function keeperLine(e: Entry, now: number, clock = KEEPER_SLAIN_DEFAULT_M
       return fresh ? `"${cap(e.what)} took ${e.who}," the keeper says. "${cap(where)}, not long since."`
         : old ? `"${cap(e.what)} has had people before," the keeper says. "It will have more."`
         : `"Somebody went to ${e.what} a while back," the keeper says. "${rough(e.who)}, or near enough."`;
+    case "man-hunter":
+      return fresh ? `"${cap(e.what)} took ${e.who} ${where}," the keeper says. "It has the taste now. It will come looking."`
+        : old ? `"There is something ${where} that hunts people," the keeper says. "Give it room."`
+        : `"${cap(e.what)} ${where} has a taste for us," the keeper says. "Since it took ${rough(e.who)}."`;
     default:
       return null;
   }
@@ -263,7 +279,8 @@ export function keeperNews(z: ZoneDO, session: Session, now: number): boolean {
   const latest = new Map<string, Entry>();
   for (const e of all) if (e.kind === "slain") latest.set(e.what, e); // oldest first, so the last one wins
   const clockOf = (e: Entry) => (e.kind === "slain" ? slainClock(z, e.what) : KEEPER_FORGETS_MS);
-  const live = (e: Entry) => e.kind !== "slain" || (latest.get(e.what) === e && !slainIsBack(z, e.what));
+  const live = (e: Entry) => e.kind === "man-hunter" ? stillHunts(z, e.at)
+    : e.kind !== "slain" || (latest.get(e.what) === e && !slainIsBack(z, e.what));
   const fresh = all.filter((e) => !told.has(e) && !yours(e) && live(e) && keeperLine(e, now, clockOf(e)));
   if (!fresh.length || !chance(KEEPER_NEWS_ODDS)) return false;
   const e = pick(fresh.slice(-3)); // the newest few: what is being talked about

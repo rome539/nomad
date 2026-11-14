@@ -236,6 +236,8 @@ export interface Creature {
   huntFor?: string;     // the room it is walking to because its own ground has nothing left to eat (ai.huntGround)
   forageFor?: string; // a bear's walk to its own feeding ground (ai.forageErrand)
   forageAt?: number;  // when that answer is worth asking again
+  manHunter?: number;  // a man-hunter (manhunter.ts): when it was born to it or learned it. Kept until it dies
+  manHunting?: string; // ...the nomad it is walking toward right now (manhunter.seek)
   group?: string;     // the group it lives in (groups.ts); shares that group's home
   lone?: boolean;     // a group line's animal that goes alone, by chance or as the last of its group
   drivenOff?: number; // how many times a pack has run this small hunter off (groups.holdGround)

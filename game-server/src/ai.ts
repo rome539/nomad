@@ -1,3 +1,4 @@
+import { manHuntsAt, bornManHunter } from "./manhunter";
 import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
 // Creature AI: how the dungeon's animals think between alarms — grudges and
@@ -572,7 +573,7 @@ export function keeperRead(z: ZoneDO, c: Creature, now = Date.now()): string {
     `  doing: ${doing}`,
     `  home: ${home ? `${home}, ${far}` : "none"} · ${group}`,
     `  next move: ${wander} · flight: ${flight}`,
-    `  born: ${row}, bloodline ${base ? `variant of ${base}` : "plain"} · traits: ${c.traits?.length ? c.traits.join(", ") : "none"}`,
+    `  born: ${row}, bloodline ${base ? `variant of ${base}` : "plain"} · traits: ${c.traits?.length ? c.traits.join(", ") : "none"}${c.manHunter ? " · man-hunter" : ""}`,
   ].join("\n");
 }
 
@@ -876,7 +877,7 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
       // Nothing weaker in the room. Past STARVING_AT that hunger has nowhere to
       // go but you — the louder tell, the warning before it might spring (see
       // starvingHunts + the wind-up in the tick loop).
-      if (creature.hunger >= huntsAt(creature.templateId) && starvingHunts(z, creature)) {
+      if (creature.hunger >= manHuntsAt(creature, huntsAt(creature.templateId)) && starvingHunts(z, creature)) {
         return creature.hunger >= STARVING_AT ? "gaunt and ravenous, its eyes fixed on you" : "hungry, and its eyes fixed on you";
       }
       return "restless with hunger";
@@ -2165,7 +2166,8 @@ export function defendsCave(creature: Creature): boolean {
 export function starvingHunts(z: ZoneDO, creature: Creature): boolean {
     if (!STARVE_HUNTERS.has(creature.templateId) || SMALL_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
     if (SENTINELS.has(creature.templateId) || DROWNERS.has(creature.templateId) || AGGRESSIVE.has(creature.templateId)) return false;
-    if ((creature.hunger ?? 0) < huntsAt(creature.templateId)) return false;
+    if ((creature.hunger ?? 0) < manHuntsAt(creature, huntsAt(creature.templateId))) return false;
+    if (creature.manHunter) return true; // a man-hunter is not put off by an easier animal (manhunter.ts)
     // A hunter that DOES keep a prey map (the surface pack) runs down the easier
     // animal first — it only comes for you when there's nothing weaker in the room.
     // The deep's pale hunters have no prey map, so this never spares you: you're it.
@@ -2191,6 +2193,7 @@ export function starvingHunts(z: ZoneDO, creature: Creature): boolean {
 export function woundedPreyHunts(z: ZoneDO, creature: Creature): boolean {
     if (!STARVE_HUNTERS.has(creature.templateId) || SMALL_HUNTERS.has(creature.templateId) || HOLLOW.has(creature.templateId)) return false;
     if (SENTINELS.has(creature.templateId) || DROWNERS.has(creature.templateId) || AGGRESSIVE.has(creature.templateId)) return false;
+    if (creature.manHunter) return true; // a man-hunter is not put off by an easier animal (manhunter.ts)
     const prey = PREYS_ON.get(creature.templateId);
     if (prey) {
       for (const c of z.creaturesInRoom(creature.roomId)) {
@@ -4470,6 +4473,7 @@ export function mintCreature(z: ZoneDO, baseTmpl: MobTemplate, home: string, now
     hidden: LURKERS.has(tmpl.id) || undefined,
     home,
     traits: traits.length ? traits : undefined,
+    manHunter: bornManHunter(tmpl.id, now),
   };
   z.creatures.set(creature.id, creature);
   z.noteCreaturesChanged();
