@@ -9188,6 +9188,8 @@ export const ART_ROOMS = new Set<string>([
   "the-waste-fields",
   "the-field-bank",
   "the-old-plough",
+  // THE HIDEAWAYS (2026-11-14): the always-dark rooms, on their region's shared picture or their own
+  "the-boundary-cave", "the-boundary-cave-slope", "the-oak-cave", "the-oak-cave-crawl", "the-oak-cave-hall", "the-oak-cave-neck", "the-pile-cave", "the-ridge-cave", "the-ridge-cave-drop", "the-ridge-cave-fork", "the-ridge-cave-pocket", "the-ridge-cave-squeeze", "the-wall-cave", "the-wall-cave-passage", "the-wall-cave-turn", "the-oak-hollow", "the-road-kiln", "the-fall-shelter", "the-grave-drain", "the-blowhole", "the-drowned-chamber", "the-fallen-roof", "the-sand-crawl", "the-shingle-bank", "the-weed-gallery", "the-black-pool", "the-dead-alders", "the-holloway",
 ]);
 
 // A ROOF WHOSE PICTURE IS THE GROUND OUTSIDE (rome, 2026-10-25: the Marshal's

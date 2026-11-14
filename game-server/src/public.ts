@@ -10486,8 +10486,8 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "28";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "50";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "29";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "51";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11117,6 +11117,37 @@ var ROOM_PLATE = {
   "the-waiting-hall":       "night",
   "the-marrow-seat":        "night",
   "the-gods-pool":          "night",
+  // THE HIDEAWAYS (2026-11-14): the always-dark rooms that had no picture. One shared
+  // picture for each region's caves and hollows, and the Black Pool, the Dead Alders and
+  // the Holloway their own. Dark at every hour, so night and night-torch only.
+  "the-boundary-cave":    "night night-torch",
+  "the-boundary-cave-slope": "night night-torch",
+  "the-oak-cave":         "night night-torch",
+  "the-oak-cave-crawl":   "night night-torch",
+  "the-oak-cave-hall":    "night night-torch",
+  "the-oak-cave-neck":    "night night-torch",
+  "the-pile-cave":        "night night-torch",
+  "the-ridge-cave":       "night night-torch",
+  "the-ridge-cave-drop":  "night night-torch",
+  "the-ridge-cave-fork":  "night night-torch",
+  "the-ridge-cave-pocket": "night night-torch",
+  "the-ridge-cave-squeeze": "night night-torch",
+  "the-wall-cave":        "night night-torch",
+  "the-wall-cave-passage": "night night-torch",
+  "the-wall-cave-turn":   "night night-torch",
+  "the-oak-hollow":       "night night-torch",
+  "the-road-kiln":        "night night-torch",
+  "the-fall-shelter":     "night night-torch",
+  "the-grave-drain":      "night night-torch",
+  "the-blowhole":         "night night-torch",
+  "the-drowned-chamber":  "night night-torch",
+  "the-fallen-roof":      "night night-torch",
+  "the-sand-crawl":       "night night-torch",
+  "the-shingle-bank":     "night night-torch",
+  "the-weed-gallery":     "night night-torch",
+  "the-black-pool":       "night night-torch",
+  "the-dead-alders":      "night night-torch",
+  "the-holloway":         "night night-torch",
 };
 // A PLATE MAY BE SHARED (rome, 2026-09-09). A room plate's file stem has always
 // been the room id, so two rooms that look the same meant two copies of six
@@ -11393,6 +11424,32 @@ var PLATE_OF = {
   "the-waiting-hall":       "waiting-hall",
   "the-marrow-seat":        "marrow-seat",
   "the-gods-pool":          "gods-pool",
+  // THE HIDEAWAYS (2026-11-14)
+  "the-boundary-cave":    "hideaway-wood",
+  "the-boundary-cave-slope": "hideaway-wood",
+  "the-oak-cave":         "hideaway-wood",
+  "the-oak-cave-crawl":   "hideaway-wood",
+  "the-oak-cave-hall":    "hideaway-wood",
+  "the-oak-cave-neck":    "hideaway-wood",
+  "the-pile-cave":        "hideaway-wood",
+  "the-ridge-cave":       "hideaway-wood",
+  "the-ridge-cave-drop":  "hideaway-wood",
+  "the-ridge-cave-fork":  "hideaway-wood",
+  "the-ridge-cave-pocket": "hideaway-wood",
+  "the-ridge-cave-squeeze": "hideaway-wood",
+  "the-wall-cave":        "hideaway-wood",
+  "the-wall-cave-passage": "hideaway-wood",
+  "the-wall-cave-turn":   "hideaway-wood",
+  "the-oak-hollow":       "hideaway-road",
+  "the-road-kiln":        "hideaway-road",
+  "the-fall-shelter":     "hideaway-road",
+  "the-grave-drain":      "hideaway-road",
+  "the-blowhole":         "hideaway-crossing",
+  "the-drowned-chamber":  "hideaway-crossing",
+  "the-fallen-roof":      "hideaway-crossing",
+  "the-sand-crawl":       "hideaway-crossing",
+  "the-shingle-bank":     "hideaway-crossing",
+  "the-weed-gallery":     "hideaway-crossing",
 };
 // AND WHICH OF THEM THE WEATHER DOES NOT REACH (rome, 2026-09-08).
 //
@@ -11603,6 +11660,35 @@ var SHELTERED = {
   "the-waiting-hall": 1,
   "the-marrow-seat": 1,
   "the-gods-pool": 1,
+  // THE HIDEAWAYS (2026-11-14): always dark, so no hour and no weather on the picture
+  "the-boundary-cave": 1,
+  "the-boundary-cave-slope": 1,
+  "the-oak-cave": 1,
+  "the-oak-cave-crawl": 1,
+  "the-oak-cave-hall": 1,
+  "the-oak-cave-neck": 1,
+  "the-pile-cave": 1,
+  "the-ridge-cave": 1,
+  "the-ridge-cave-drop": 1,
+  "the-ridge-cave-fork": 1,
+  "the-ridge-cave-pocket": 1,
+  "the-ridge-cave-squeeze": 1,
+  "the-wall-cave": 1,
+  "the-wall-cave-passage": 1,
+  "the-wall-cave-turn": 1,
+  "the-oak-hollow": 1,
+  "the-road-kiln": 1,
+  "the-fall-shelter": 1,
+  "the-grave-drain": 1,
+  "the-blowhole": 1,
+  "the-drowned-chamber": 1,
+  "the-fallen-roof": 1,
+  "the-sand-crawl": 1,
+  "the-shingle-bank": 1,
+  "the-weed-gallery": 1,
+  "the-black-pool": 1,
+  "the-dead-alders": 1,
+  "the-holloway": 1,
 };
 // AND WHAT WEATHER LOOKS LIKE FROM UNDER ONE (rome, 2026-09-08). A sheltered
 // room takes no weather plate, but that does not mean weather changes nothing:
@@ -12291,6 +12377,9 @@ var MOB_LINE = {
   "tideway-throat": 55,
   "tideway-works": 55,
   "the-breathing-hall": 55,
+  // THE HIDEAWAYS (2026-11-14), read off the torch plates: the floor starts low under the
+  // walls and roots; the pool and the drowned alders stand creatures on the bank, below the water.
+  "hideaway-wood": 63, "hideaway-road": 63, "hideaway-crossing": 65, "the-black-pool": 70, "the-dead-alders": 70, "the-holloway": 63,
 };
 // THE KING SITS IN HIS THRONE (rome, 2026-09-26). A king's "keep-the-seat" frame
 // is drawn sitting on nothing, and every creature stands on the one foot line -

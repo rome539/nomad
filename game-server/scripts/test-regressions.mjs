@@ -2224,6 +2224,16 @@ try {
     assert.ok(rooms.length > 250, 'read the room plates');
     assert.deepEqual(rooms.filter((r) => !art.has(r)), [], 'these paint black: the server never names their place');
   });
+  check('every always-dark room has a picture of its own dark, never the ground daylight (2026-11-14)', () => {
+    // the Inside of the Oak said pitch dark at noon and painted the road's daylight scene
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const plates = pub.match(/var ROOM_PLATE = \{([\s\S]*?)\n\};/)[1];
+    const scenes = new Map([...plates.matchAll(/^\s+"?([a-z][a-z0-9-]*)"?\s*:\s*"([^"]*)"/gm)].map((m) => [m[1], m[2]]));
+    const missing = [...DARK_ROOMS].filter((r) => !scenes.has(r));
+    assert.deepEqual(missing, [], 'these fall back to an outdoor ground picture');
+    for (const r of ['the-oak-hollow', 'the-ridge-cave', 'the-blowhole', 'the-black-pool', 'the-dead-alders', 'the-holloway'])
+      assert.equal(scenes.get(r), 'night night-torch', r + ' is dark at every hour');
+  });
   check('the peat hut never shows daylight: it is pitch dark inside (2026-11-09)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const plates = pub.match(/var ROOM_PLATE = \{([\s\S]*?)\n\};/)[1];
