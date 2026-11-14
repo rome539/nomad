@@ -2224,6 +2224,11 @@ try {
     assert.ok(rooms.length > 250, 'read the room plates');
     assert.deepEqual(rooms.filter((r) => !art.has(r)), [], 'these paint black: the server never names their place');
   });
+  check('the keeper never says the rat king brings the sickness: the fever does (2026-11-14)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const lines = zd.match(/export const RAT_KING_KEEPER_LINES = \[([\s\S]*?)\n\];/)[1];
+    assert.doesNotMatch(lines, /sickness/i, 'the sickness is the fever rat now, not the king');
+  });
   check('every always-dark room has a picture of its own dark, never the ground daylight (2026-11-14)', () => {
     // the Inside of the Oak said pitch dark at noon and painted the road's daylight scene
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');

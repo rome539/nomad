@@ -7960,7 +7960,7 @@ export const RAT_KING_OMEN_LINES = [
 ];
 export const RAT_KING_KEEPER_LINES = [
   "The keeper says, to nobody in particular: \"Rats up out of the warrens in the daylight. Last time they did that there was a king down there.\"",
-  "The keeper wipes the counter and doesn't look up. \"A rat king means the sickness is coming.\"",
+  "The keeper wipes the counter and doesn't look up. \"A rat king. The warrens won't be fit to walk till somebody puts it down.\"",
   "Somebody at the table coughs, and the keeper looks over sharply. \"Been down below, have you,\" he says. It isn't a question.",
 ];
 // THE FOOD WEB'S FLOOR (rome, 2026-07-18): the dungeon feeds its own. A hungry
