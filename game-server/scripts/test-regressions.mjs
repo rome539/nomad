@@ -7735,6 +7735,14 @@ try {
     for (const line of ROAD_ROAMERS) assert.ok(shown.includes(`"${line}"`), `${line} lives on the road and must be in its section`);
   });
 
+  check('closing the map gives the typing back to the command line on a computer (2026-11-14)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const block = pub.slice(pub.indexOf('[["bench", "bclose"], ["trade", "tclose"], ["forge", "fclose"], ["mapm", "mapclose"]]'), pub.indexOf('// ---- the gatehouse bench'));
+    assert.match(block, /if \(!open && wasOpen && entry\[0\] === "mapm" && \(lost \|\| root\.contains\(document\.activeElement\)\)/, 'whether the focus was in the map or left on the page');
+    assert.match(block, /&& !phoneControls\(\) && !document\.getElementById\("jrnl"\)\?\.classList\.contains\("open"\)/, 'not on a phone, and not when the map closed into the journal');
+    assert.match(block, /\{\n\s*cmd\.focus\(\{ preventScroll: true \}\);/, 'the command line gets it');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

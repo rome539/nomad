@@ -6978,7 +6978,13 @@ installListView("forge", [["frecipes", "Recipes"], ["fread", "Inspect & mend"]],
   new MutationObserver(function () {
     var open = root.classList.contains("open");
     if (open && !wasOpen) { prior = document.activeElement; root.focus({ preventScroll: true }); }
-    if (!open && wasOpen && root.contains(document.activeElement)) {
+    // Closing the map hands the typing back to the command line, wherever the
+    // focus was left (a phone keeps its keyboard down; the journal it opened into keeps it).
+    var lost = !document.activeElement || document.activeElement === document.body;
+    if (!open && wasOpen && entry[0] === "mapm" && (lost || root.contains(document.activeElement))
+        && !phoneControls() && !document.getElementById("jrnl")?.classList.contains("open") && (!prior || prior === cmd || !prior.isConnected)) {
+      cmd.focus({ preventScroll: true });
+    } else if (!open && wasOpen && root.contains(document.activeElement)) {
       if (prior && prior.isConnected && prior !== cmd) prior.focus({ preventScroll: true });
       else document.activeElement.blur();
     }
