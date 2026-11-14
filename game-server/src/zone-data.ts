@@ -2343,6 +2343,49 @@ export const PATROLS_BY_HOME: Record<string, string[]> = {
     "the-tithe-barn", "the-green", "the-tithe-barn", "the-pound",
   ],
 };
+// THE ROAD'S PATROLS (2026-11-13). A bone-knight captain and two rattling skeletons
+// muster on the open ground below the walls and march a road to its end and back:
+// one out of the Drowned Orchard down the west road to the Last Paving, one out of
+// the Waystation down the east road to the Paving End. That is why they walk it:
+// the fortress still sends its dead out along its roads and back. The captain walks
+// the round; the skeletons keep with him, stepping when he steps (squads.ts). With
+// no captain standing they walk the round themselves until the next one comes. Each
+// road has one gate on it (the First Milestone, the Relay House); no creature stands
+// in a gate, so the patrol crosses it in one step (ai.thresholdStep) and the round
+// lists the rooms either side.
+export const SQUADS: { home: string; captain: string; escort: string; route: string[] }[] = [
+  { home: "the-drowned-orchard", captain: "bone-knight", escort: "skeleton", route: [
+    "the-drowned-orchard", "the-cart-road", "the-broken-paving", "the-elder-hedge", "the-sunken-lane",
+    "the-drovers-turn", "the-crooked-gibbet", "the-ash-verge", "the-long-straight", "the-second-milestone",
+    "the-open-heath", "the-burnt-farmstead", "the-wind-row", "the-culvert", "the-crooked-mile",
+    "the-hollow-elm", "the-third-milestone", "the-weed-paving", "the-roadwarden-post", "the-mustering-yard",
+    "the-shallow-ford", "the-drowned-milestone", "the-broken-axle", "the-cutting", "the-rain-shadow",
+    "the-old-boundary", "the-tinkers-camp", "the-last-paving", "the-tinkers-camp", "the-old-boundary",
+    "the-rain-shadow", "the-cutting", "the-broken-axle", "the-drowned-milestone", "the-shallow-ford",
+    "the-mustering-yard", "the-roadwarden-post", "the-weed-paving", "the-third-milestone", "the-hollow-elm",
+    "the-crooked-mile", "the-culvert", "the-wind-row", "the-burnt-farmstead", "the-open-heath",
+    "the-second-milestone", "the-long-straight", "the-ash-verge", "the-crooked-gibbet", "the-drovers-turn",
+    "the-sunken-lane", "the-elder-hedge", "the-broken-paving", "the-cart-road",
+  ] },
+  { home: "the-old-road", captain: "bone-knight", escort: "skeleton", route: [
+    "the-old-road", "the-thorn-gap", "the-east-paving", "the-toll-stone", "the-hollow-way",
+    "the-fifth-milestone", "the-carters-rest", "the-broken-culvert", "the-elm-avenue", "the-weighbridge",
+    "the-cut-bank", "the-sixth-milestone", "the-drowned-ford", "the-fallen-elm", "the-verge-shrine",
+    "the-long-rise", "the-chalk-cut", "the-seventh-milestone", "the-tollkeepers-ruin",
+    "the-hawthorn-narrows", "the-drove-pound", "the-cattle-grid", "the-open-stretch", "the-saddle-gap",
+    "the-eighth-milestone", "the-scarp-foot", "the-quarry-turn", "the-paving-end", "the-quarry-turn",
+    "the-scarp-foot", "the-eighth-milestone", "the-saddle-gap", "the-open-stretch", "the-cattle-grid",
+    "the-drove-pound", "the-hawthorn-narrows", "the-tollkeepers-ruin", "the-seventh-milestone",
+    "the-chalk-cut", "the-long-rise", "the-verge-shrine", "the-fallen-elm", "the-drowned-ford",
+    "the-sixth-milestone", "the-cut-bank", "the-weighbridge", "the-elm-avenue", "the-broken-culvert",
+    "the-carters-rest", "the-fifth-milestone", "the-hollow-way", "the-toll-stone", "the-east-paving",
+    "the-thorn-gap",
+  ] },
+];
+for (const q of SQUADS) {
+  PATROLS_BY_HOME[q.captain + "@" + q.home] = q.route;
+  PATROLS_BY_HOME[q.escort + "@" + q.home] = q.route;
+}
 /** The round this one walks: its own, if where it was set has one, else its kind's. */
 export function patrolRoute(templateId: string, home?: string): string[] | undefined {
   return (home && PATROLS_BY_HOME[templateId + "@" + home]) || PATROLS[templateId];
@@ -2502,21 +2545,39 @@ export const WALKING_DEAD = new Set([
   "the-fowler", "the-eel-cutter", "the-reed-walker", "the-salt-widow", "the-drover", "the-tide-warden",
   "the-pilot", "the-refuge-man", "the-scaffold-hand", "the-bridge-mason", "twice-dead",
 ]);
+// THE ROAD LIVES TOO (2026-11-13): the third living region. The goat and the scarp
+// raven are the mountain's lines as well, so a line may now live in more than one
+// region, and each animal answers to the region its home is in. Left out on purpose:
+// the rats (they stay where their rows are), the footpads and the other people, the
+// barrow-wights, the mire-walkers (drowners hold their water), the toll clerks, the
+// wardens, the miller, the carrier and the baited bear. Ground: road-ground.ts.
+export const ROAD_ROAMERS = new Set([
+  "feral-goat", "roe-deer", "masterless-dog", "drove-dog", "otter", "grey-heron", "gill-adder", "scarp-raven",
+]);
+export const ROAD_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
+  ["feral-goat", { min: 4, max: 8, lone: 0.1 }],
+  ["masterless-dog", { min: 2, max: 4, lone: 0.2 }],
+  ["drove-dog", { min: 2, max: 4, lone: 0.2 }],
+]);
 // EVERY LIVING REGION'S TABLES, ONE PLACE (living-regions.md: the first region after
 // the mountain turns its code into per-region tables). The rules in groups.ts read
 // these; a line lives in exactly one region.
 export const LIVING_REGIONS: Record<string, { roamers: Set<string>; groups: Map<string, { min: number; max: number; lone: number; near?: number }> }> = {
   mountain: { roamers: MOUNTAIN_ROAMERS, groups: MOUNTAIN_GROUPS },
   crossing: { roamers: CROSSING_ROAMERS, groups: CROSSING_GROUPS },
+  road: { roamers: ROAD_ROAMERS, groups: ROAD_GROUPS },
 };
-/** The living region a roaming line belongs to, or undefined for a line that does not roam. */
-export function roamsIn(line: string): string | undefined {
-  for (const region in LIVING_REGIONS) if (LIVING_REGIONS[region].roamers.has(line)) return region;
+/** With a region: that region if the line roams there. Without one: the first living
+ *  region the line roams in (a line may roam in more than one, as the goat does). */
+export function roamsIn(line: string, region?: string): string | undefined {
+  if (region !== undefined) return LIVING_REGIONS[region]?.roamers.has(line) ? region : undefined;
+  for (const r in LIVING_REGIONS) if (LIVING_REGIONS[r].roamers.has(line)) return r;
   return undefined;
 }
-/** A roaming line's group sizes, if it lives in company. */
-export function groupOf(line: string): { min: number; max: number; lone: number; near?: number } | undefined {
-  for (const region in LIVING_REGIONS) { const g = LIVING_REGIONS[region].groups.get(line); if (g) return g; }
+/** A roaming line's group sizes in that region (or the first it has), if it lives in company there. */
+export function groupOf(line: string, region?: string): { min: number; max: number; lone: number; near?: number } | undefined {
+  if (region !== undefined) return LIVING_REGIONS[region]?.groups.get(line);
+  for (const r in LIVING_REGIONS) { const g = LIVING_REGIONS[r].groups.get(line); if (g) return g; }
   return undefined;
 }
 // A WOLF PACK HOLDS ITS GROUND (rome, 2026-11-06). A pack wolf that finds one of
@@ -2541,7 +2602,7 @@ export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox
 // (The crossing's gulls and seals hunt, but live as flocks and herds do, apart.)
 export const FLOCKS = new Set<string>(["mountain-chough", "great-gull", "grey-seal"]);
 export const SPREAD_ROOSTS = new Set<string>(["scarp-raven", "carrion-vulture", "bone-breaker"]);
-export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern"]);
+export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder"]); // the last three: the road (2026-11-13)
 export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a bite in first
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
@@ -2550,7 +2611,7 @@ export const PACK_QUARRY = new Set(["red-stag", "red-hind", "feral-goat",
   "grey-seal", "conger"]); // the marsh hounds' big game (rome, 2026-11-12), as the stag is the wolves'
 // WHO HUNTS AS A PACK. The hill wolves, and the marsh hounds, which gang up on a
 // seal or a conger as the wolves do on a stag; the hounds still hold no ground.
-export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound"]);
+export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog", "drove-dog"]); // the road dog packs close on a goat together (2026-11-13)
 // ...AND THE STAG, MORE OFTEN THE BIGGER THE PACK (rome, 2026-11-11: nothing ever
 // set out after a stag, which died only when three wolves happened into its
 // room; a pack of five should mostly go after the big game). A pack picking its
@@ -2608,7 +2669,10 @@ export const FLIGHT_LOOK_MS = 60_000; // a hungry bird that found nothing looks 
 // The lynx has no wings, so it will only settle where living prey is close. The
 // hare and the ptarmigan will only settle with grazing inside ROUND_RANGE of home.
 // The fen viper the same (rome, 2026-11-12), so it lives where its rats and oystercatchers are.
-export const SETTLES_BY_PREY = new Set(["lynx", "fen-viper"]);
+// The road's otter lives by its rats, which stay put (2026-11-13). Not the gill adder:
+// every road rat is nearer a gate than an adder's rows let it live, so only two of its
+// homes have one in reach, and making it settle by them would pile the adders there.
+export const SETTLES_BY_PREY = new Set(["lynx", "fen-viper", "otter"]);
 export const SETTLES_BY_GRAZING = new Set(["mountain-hare", "ptarmigan"]);
 // NOTHING STAYS FOR GOOD (rome, 2026-11-06). A mountain animal or group holds a home
 // for 2-5 game days (DAY_CYCLE_MS each), then draws a new one. One that is well fed

@@ -7,7 +7,7 @@ import type { Creature } from "./zone-types";
 import { FOOD_FLIERS, SALT_HAMLET_ROOMS, SHIELING_HAMLET_ROOMS, roamsIn } from "./zone-data";
 
 const DAY_MS = 24 * 3_600_000;
-export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Record<string, Record<string, number>>; crossingKills?: Record<string, Record<string, number>> }
+export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Record<string, Record<string, number>>; crossingKills?: Record<string, Record<string, number>>; roadKills?: Record<string, Record<string, number>> }
 type Event = "moved" | "flights" | "chases" | "caught" | "stolen";
 
 const SHOWN = [
@@ -18,9 +18,14 @@ const SHOWN = [
 const CROSSING_SHOWN = [
   "rat", "water-vole", "wrack-crab", "devil-crab", "oystercatcher", "ford-eel", "bittern", "fen-viper", "great-gull", "grey-seal", "conger", "marsh-hound",
 ];
-const lineOf = (z: ZoneDO, id: string): string => SHOWN.includes(id) || CROSSING_SHOWN.includes(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
+// THE ROAD'S SECTION (2026-11-13): the third living region, read the same way.
+const ROAD_SHOWN = [
+  "rat", "roe-deer", "feral-goat", "otter", "gill-adder", "grey-heron", "scarp-raven", "masterless-dog", "drove-dog", "the-baited-bear",
+];
+const lineOf = (z: ZoneDO, id: string): string => SHOWN.includes(id) || CROSSING_SHOWN.includes(id) || ROAD_SHOWN.includes(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
 const onMountain = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "mountain";
 const onCrossing = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "crossing";
+const onRoad = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "road";
 
 function tally(z: ZoneDO, now: number): Tally {
   const state = z.groups;
@@ -39,9 +44,11 @@ export function note(z: ZoneDO, what: Event, now = Date.now()): void {
 /** A living region's animal has died. `by` is what killed it: a creature's template, or "wanderers". */
 export function noteKill(z: ZoneDO, victim: Creature, by: string, now = Date.now()): void {
   const line = lineOf(z, victim.templateId);
-  if (!(onMountain(z, victim) && SHOWN.includes(line)) && !(onCrossing(z, victim) && CROSSING_SHOWN.includes(line))) return;
-  if (onCrossing(z, victim)) {
-    const row = ((tally(z, now).crossingKills ??= {})[line] ??= {});
+  if (!(onMountain(z, victim) && SHOWN.includes(line)) && !(onCrossing(z, victim) && CROSSING_SHOWN.includes(line))
+    && !(onRoad(z, victim) && ROAD_SHOWN.includes(line))) return;
+  if (onCrossing(z, victim) || onRoad(z, victim)) {
+    const t = tally(z, now);
+    const row = ((onRoad(z, victim) ? (t.roadKills ??= {}) : (t.crossingKills ??= {}))[line] ??= {});
     const who = by === "wanderers" ? by : lineOf(z, by);
     row[who] = (row[who] ?? 0) + 1;
     return;
@@ -106,43 +113,60 @@ export function lines(z: ZoneDO, now: number): string[] {
       .map(([k, n]) => `${k === "wanderers" ? k : name(k)} ${n}`).join(", ");
     out.push(`  ${name(line)} ${total}: ${who}`);
   }
-  out.push("", ...crossingLines(z, now));
+  out.push("", ...regionLines(z, now, CROSSING_VIEW));
+  out.push("", ...regionLines(z, now, ROAD_VIEW));
   return out;
 }
 
-function crossingLines(z: ZoneDO, now: number): string[] {
+// What a living region's section shows: its packs, its herds, its lines against
+// their limit, and what was killed and by what.
+interface RegionView { title: string; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" }
+const CROSSING_VIEW: RegionView = {
+  title: "THE CROSSING", region: "crossing", shown: CROSSING_SHOWN, kills: "crossingKills",
+  packs: [{ line: "marsh-hound", label: "Marsh hounds", hamlet: SALT_HAMLET_ROOMS }],
+  herds: ["grey-seal", "great-gull", "oystercatcher", "wrack-crab"],
+};
+const ROAD_VIEW: RegionView = {
+  title: "THE ROAD", region: "road", shown: ROAD_SHOWN, kills: "roadKills",
+  packs: [{ line: "masterless-dog", label: "Masterless dogs" }, { line: "drove-dog", label: "Drove dogs" }],
+  herds: ["feral-goat"],
+};
+
+function regionLines(z: ZoneDO, now: number, v: RegionView): string[] {
   const world = z.world!;
   const name = (id: string) => (world.mobTemplates.get(id)?.name ?? id).replace(/^(an?|the) /i, "");
   const roomName = (id: string) => world.rooms.get(id)?.name ?? id;
-  const out = ["THE CROSSING", ""];
+  const out = [v.title, ""];
+  const here = (c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === v.region;
   const alive = new Map<string, number>();
-  const hounds: Creature[] = [];
   for (const c of z.creatures.values()) {
-    if (!onCrossing(z, c)) continue;
+    if (!here(c)) continue;
     const line = lineOf(z, c.templateId);
     alive.set(line, (alive.get(line) ?? 0) + 1);
-    if (line === "marsh-hound") hounds.push(c);
   }
-  const packs = new Map<string, number>();
-  for (const c of hounds) if (c.group) packs.set(c.group, (packs.get(c.group) ?? 0) + 1);
-  const alone = hounds.filter((c) => !c.group && c.lone).length;
-  const unsorted = hounds.filter((c) => !c.group && !c.lone).length;
-  const inHamlet = new Set(SALT_HAMLET_ROOMS);
-  const hamlet = hounds.filter((c) => inHamlet.has(c.home ?? "") || inHamlet.has(c.roomId)).length;
-  out.push(`Marsh hounds: ${hounds.length} alive, ${alone} alone, ${hamlet} in the hamlet${unsorted ? `, ${unsorted} not sorted yet` : ""}`);
-  for (const [id, n] of packs) out.push(`  pack of ${n} at ${roomName(z.groups.packs[id]?.home ?? "")}`);
-  if (!packs.size) out.push("  no packs");
+  for (const p of v.packs) {
+    const dogs = [...z.creatures.values()].filter((c) => here(c) && lineOf(z, c.templateId) === p.line);
+    const packs = new Map<string, number>();
+    for (const c of dogs) if (c.group) packs.set(c.group, (packs.get(c.group) ?? 0) + 1);
+    const alone = dogs.filter((c) => !c.group && c.lone).length;
+    const unsorted = dogs.filter((c) => !c.group && !c.lone).length;
+    const inHamlet = new Set(p.hamlet ?? []);
+    const hamlet = p.hamlet ? `, ${dogs.filter((c) => inHamlet.has(c.home ?? "") || inHamlet.has(c.roomId)).length} in the hamlet` : "";
+    out.push(`${p.label}: ${dogs.length} alive, ${alone} alone${hamlet}${unsorted ? `, ${unsorted} not sorted yet` : ""}`);
+    for (const [id, n] of packs) out.push(`  pack of ${n} at ${roomName(z.groups.packs[id]?.home ?? "")}`);
+    if (!packs.size) out.push("  no packs");
+  }
   // the herds and flocks: how many, and how big
-  for (const line of ["grey-seal", "great-gull", "oystercatcher", "wrack-crab"]) {
+  for (const line of v.herds) {
     const sizes = new Map<string, number>();
-    for (const c of z.creatures.values()) if (c.group && onCrossing(z, c) && lineOf(z, c.templateId) === line) sizes.set(c.group, (sizes.get(c.group) ?? 0) + 1);
+    for (const c of z.creatures.values()) if (c.group && here(c) && lineOf(z, c.templateId) === line) sizes.set(c.group, (sizes.get(c.group) ?? 0) + 1);
     out.push(`  ${name(line)}: ${sizes.size ? [...sizes.values()].join(", ") : "none"} in company`);
   }
   out.push("", "Alive, against the limit:");
   const rows = new Map<string, number>();
-  for (const s of world.mobSpawns) if (z.regionOf(s.room_id) === "crossing") rows.set(s.template_id, (rows.get(s.template_id) ?? 0) + 1);
-  for (const line of CROSSING_SHOWN) out.push(`  ${name(line)}: ${alive.get(line) ?? 0} of ${rows.get(line) ?? 0}`);
-  const killed = Object.entries(tally(z, now).crossingKills ?? {})
+  for (const s of world.mobSpawns) if (z.regionOf(s.room_id) === v.region) rows.set(s.template_id, (rows.get(s.template_id) ?? 0) + 1);
+  for (const line of v.shown) out.push(`  ${name(line)}: ${alive.get(line) ?? 0} of ${rows.get(line) ?? 0}`);
+  const killed = Object.entries(tally(z, now)[v.kills] ?? {})
     .map(([line, by]) => ({ line, by, total: Object.values(by).reduce((a, b) => a + b, 0) }))
     .sort((a, b) => b.total - a.total);
   if (killed.length) out.push("", `Killed in ${hoursAgo(now, tally(z, now).since)}, and by what:`);

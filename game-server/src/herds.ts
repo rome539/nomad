@@ -174,7 +174,7 @@ export function tick(z: ZoneDO, now: number, silent: boolean): void {
           if (ground.length) homes = ground;
         }
         // ...and a living region's line goes where chance and food send it, or to its group.
-        const plan = roamsIn(line) === band ? groups.plan(z, line, now) : undefined;
+        const plan = roamsIn(line, band) ? groups.plan(z, line, now, band) : undefined;
         if (plan) homes = [plan.home];
         if (!homes.length) break;
         const home = homes[randInt(0, homes.length - 1)];

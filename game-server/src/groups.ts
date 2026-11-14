@@ -23,7 +23,7 @@ import {
   BODY_HOLDERS, MOBBERS, MOB_AT, BODY_CHASE_ODDS, MOB_ODDS, BODY_AVOID_MS, BODY_REST_MS,
 } from "./zone-data";
 
-export interface Group { line: string; home: string; size: number; peak: number; leanSince?: number; leanMovedAt?: number; moveAt?: number; kept?: boolean; quarry?: string; quarryAt?: number }
+export interface Group { line: string; region?: string; home: string; size: number; peak: number; leanSince?: number; leanMovedAt?: number; moveAt?: number; kept?: boolean; quarry?: string; quarryAt?: number }
 export interface GroupsState { at: number; flownAt?: number; packs: Record<string, Group>; gone: Record<string, number>; tally?: beasts.Tally; lastTally?: beasts.Tally }
 export interface Plan { home: string; group?: string; lone?: boolean }
 
@@ -31,10 +31,15 @@ function lineOf(z: ZoneDO, templateId: string): string {
   return roamsIn(templateId) ? templateId : (z.variantBase.get(templateId) ?? templateId);
 }
 
+/** The living region a group belongs to. Groups made before the road joined carry no
+ *  region; theirs is the one region their line roamed in then. */
+export function groupRegion(g: Group): string {
+  return g.region ?? roamsIn(g.line) ?? "mountain";
+}
+
 /** Where this line's food is in its own region, as room -> how much of it. */
-function foodRooms(z: ZoneDO, line: string, now: number): Map<string, number> {
+function foodRooms(z: ZoneDO, line: string, now: number, region: string): Map<string, number> {
   const food = new Map<string, number>();
-  const region = roamsIn(line) ?? "mountain";
   const eats = new Set<string>([...(PREYS_ON.get(line) ?? []), ...(PACK_PREY.get(line)?.keys() ?? [])]);
   if (eats.size) {
     for (const c of z.creatures.values()) {
@@ -74,9 +79,11 @@ export function keepsOff(z: ZoneDO, owner: string, other: string): boolean {
 }
 
 /** A home drawn at random across every fit room, each counting for more the more food is in reach of it. */
-export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string): string | undefined {
+export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string, inRegion?: string): string | undefined {
   const state = z.groups;
-  const region = roamsIn(line) ?? "mountain";
+  // A LINE MAY LIVE IN MORE THAN ONE REGION (2026-11-13: the goat and the raven on
+  // the road as well as the mountain). The caller says which; with none, the first.
+  const region = inRegion ?? roamsIn(line) ?? "mountain";
   const barred = new Set<string>();
   // Land already held by its own kind or a bigger hunter after its food (LAND_HOLDERS):
   // how many hold each room, its own kind counting three times over.
@@ -104,15 +111,15 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
     for (const r of z.nearby(room, TERRITORY_RADIUS).keys()) barred.add(r);
   }
   if (leaving) for (const r of z.nearby(leaving, TERRITORY_RADIUS).keys()) barred.add(r);
-  const all = livingHomes(z, line);
+  const all = livingHomes(z, line, region);
   // HERDS KEEP APART (rome, 2026-11-08: every herd of a line ended up packed into
   // two or three homes at the foot). A group's home is drawn at least 4 rooms from
   // every other group of its line, as hunters keep their land, while there is
   // such ground; with none, anywhere it fits.
   const apart = new Set<string>();
-  const herd = !!groupOf(line) && (!PREYS_ON.has(line) || FLOCKS.has(line)); // herds and flocks, not the packs
+  const herd = !!groupOf(line, region) && (!PREYS_ON.has(line) || FLOCKS.has(line)); // herds and flocks, not the packs
   if (herd) for (const g of Object.values(state.packs)) {
-    if (g.line === line) for (const r of z.nearby(g.home, TERRITORY_RADIUS).keys()) apart.add(r);
+    if (g.line === line && groupRegion(g) === region) for (const r of z.nearby(g.home, TERRITORY_RADIUS).keys()) apart.add(r);
   }
   const spaced = all.filter((r) => !barred.has(r) && !apart.has(r));
   const unbarred = spaced.length ? spaced : all.filter((r) => !barred.has(r));
@@ -130,7 +137,7 @@ export function pickHome(z: ZoneDO, line: string, now: number, leaving?: string)
   // room with food in reach counts for FOOD_PULL more at the most, however much
   // food it is; grass half eaten still pulls by what is left of it.
   const reach = new Map<string, number>();
-  for (const [room, n] of foodRooms(z, line, now)) {
+  for (const [room, n] of foodRooms(z, line, now, region)) {
     for (const r of z.nearby(room, TERRITORY_RADIUS).keys()) reach.set(r, (reach.get(r) ?? 0) + n);
   }
   const weight = new Map<string, number>(pool.map((r) => [r, 1 + Math.min(FOOD_PULL, reach.get(r) ?? 0)]));
@@ -152,25 +159,26 @@ function memberCounts(z: ZoneDO): Map<string, number> {
 }
 
 /** Decide where a new animal of this line goes: alone, into a group with room, or starting one. */
-export function plan(z: ZoneDO, line: string, now: number): Plan | undefined {
-  const cfg = groupOf(line);
+export function plan(z: ZoneDO, line: string, now: number, inRegion?: string): Plan | undefined {
+  const region = inRegion ?? roamsIn(line) ?? "mountain";
+  const cfg = groupOf(line, region);
   if (cfg && !chance(cfg.lone)) {
     const counts = memberCounts(z);
     // A herd with one place left takes no more newcomers: the next starts a herd of
     // its own on fresh ground (rome, 2026-11-08). A pack still fills to its size.
     const spare = PREYS_ON.has(line) && !FLOCKS.has(line) ? 0 : 1;
-    const open = Object.entries(z.groups.packs).filter(([id, g]) => g.line === line && (counts.get(id) ?? 0) < g.size - spare);
+    const open = Object.entries(z.groups.packs).filter(([id, g]) => g.line === line && groupRegion(g) === region && (counts.get(id) ?? 0) < g.size - spare);
     if (open.length) {
       const [id, g] = open[randInt(0, open.length - 1)];
       return { home: g.home, group: id };
     }
-    const home = pickHome(z, line, now);
+    const home = pickHome(z, line, now, undefined, region);
     if (!home) return undefined;
     const id = uuid();
-    z.groups.packs[id] = { line, home, size: randInt(cfg.min, cfg.max), peak: 0 };
+    z.groups.packs[id] = { line, region, home, size: randInt(cfg.min, cfg.max), peak: 0 };
     return { home, group: id };
   }
-  const home = pickHome(z, line, now);
+  const home = pickHome(z, line, now, undefined, region);
   return home ? { home, lone: cfg ? true : undefined } : undefined;
 }
 
@@ -190,9 +198,10 @@ export function tick(z: ZoneDO, now: number): void {
   let undecided: Creature | undefined;
   for (const c of z.creatures.values()) {
     const line = lineOf(z, c.templateId);
-    const region = roamsIn(line);
-    if (!region || c.drift !== undefined) continue;
-    if (z.regionOf(c.home ?? c.roomId) !== region) {
+    if (!roamsIn(line) || c.drift !== undefined) continue;
+    // each animal answers to the region its home is in, if its line lives there
+    const region = roamsIn(line, z.regionOf(c.home ?? c.roomId));
+    if (!region || (c.group && z.groups.packs[c.group] && groupRegion(z.groups.packs[c.group]) !== region)) {
       if (c.group) { c.group = undefined; c.lone = true; } // it has left its region, and the group
       continue;
     }
@@ -200,12 +209,12 @@ export function tick(z: ZoneDO, now: number): void {
       const list = members.get(c.group) ?? [];
       list.push(c);
       members.set(c.group, list);
-    } else if (groupOf(line) && !c.lone) {
+    } else if (groupOf(line, region) && !c.lone) {
       if (!undecided && !c.target) undecided = c;
     } else {
       const move = (home: string): void => { c.home = home; c.moveAt = undefined; c.kept = undefined; };
-      moveIfLean(z, [c], line, now, c, move);
-      moveIfDue(z, [c], line, now, c, move);
+      moveIfLean(z, [c], line, region, now, c, move);
+      moveIfDue(z, [c], line, region, now, c, move);
     }
   }
   for (const [id, g] of Object.entries(state.packs)) {
@@ -225,21 +234,21 @@ export function tick(z: ZoneDO, now: number): void {
         g.kept = undefined;
         for (const c of list) c.home = home;
       };
-      moveIfLean(z, list, g.line, now, g, move);
-      moveIfDue(z, list, g.line, now, g, move);
+      moveIfLean(z, list, g.line, groupRegion(g), now, g, move);
+      moveIfDue(z, list, g.line, groupRegion(g), now, g, move);
     }
   }
   // Animals alive from before there were groups take their place one at a time,
   // so the mountain does not get up and walk all at once.
   if (undecided) {
-    const p = plan(z, lineOf(z, undecided.templateId), now);
+    const p = plan(z, lineOf(z, undecided.templateId), now, z.regionOf(undecided.home ?? undecided.roomId));
     if (p) join(undecided, p);
   }
 }
 
 /** Time up on this home: draws a new one, once a well-fed one has had its extra game day. */
 function moveIfDue(
-  z: ZoneDO, animals: Creature[], line: string, now: number,
+  z: ZoneDO, animals: Creature[], line: string, region: string, now: number,
   clock: { moveAt?: number; kept?: boolean }, move: (home: string) => void,
 ): void {
   if (clock.moveAt === undefined) {
@@ -253,14 +262,14 @@ function moveIfDue(
     clock.moveAt = now + HOME_FED_EXTRA_DAYS * DAY_CYCLE_MS;
     return;
   }
-  const home = pickHome(z, line, now, animals[0].home ?? animals[0].roomId);
+  const home = pickHome(z, line, now, animals[0].home ?? animals[0].roomId, region);
   if (!home) return;
   move(home);
   beasts.note(z, "moved", now);
 }
 
 function moveIfLean(
-  z: ZoneDO, animals: Creature[], line: string, now: number,
+  z: ZoneDO, animals: Creature[], line: string, region: string, now: number,
   clock: { leanSince?: number; leanMovedAt?: number }, move: (home: string) => void,
 ): void {
   const hungry = animals.filter((c) => hungers(c.templateId) && c.hunger >= HUNGRY_AT).length;
@@ -272,7 +281,7 @@ function moveIfLean(
   // new home every two hours, about 640 homes given up a day, and no home lasted
   // its 2-5 game days). Still hungry, it goes again a game day after the last.
   if (clock.leanMovedAt !== undefined && now - clock.leanMovedAt < LEAN_AGAIN_MS) return;
-  const home = pickHome(z, line, now, animals[0].home ?? animals[0].roomId);
+  const home = pickHome(z, line, now, animals[0].home ?? animals[0].roomId, region);
   if (!home) return;
   clock.leanSince = undefined;
   clock.leanMovedAt = now;
@@ -328,7 +337,7 @@ export async function holdGround(
   rival.huntFor = undefined;
   if (onGround && (rival.drivenOff = (rival.drivenOff ?? 0) + 1) >= GROUND_DRIVEN_LEAVES) {
     rival.drivenOff = undefined;
-    const home = pickHome(z, lineOf(z, rival.templateId), now, group!.home);
+    const home = pickHome(z, lineOf(z, rival.templateId), now, group!.home, z.regionOf(rival.home ?? rival.roomId));
     if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; beasts.note(z, "moved", now); }
   }
   await flee(rival);
@@ -498,7 +507,7 @@ export async function holdLand(
   const livesHere = !!rival.home && z.withinRadius(rival.home, holder.home, TERRITORY_RADIUS);
   if (livesHere && (rival.drivenOff = (rival.drivenOff ?? 0) + 1) >= GROUND_DRIVEN_LEAVES) {
     rival.drivenOff = undefined;
-    const home = pickHome(z, lineOf(z, rival.templateId), now, holder.home);
+    const home = pickHome(z, lineOf(z, rival.templateId), now, holder.home, z.regionOf(rival.home ?? rival.roomId));
     if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; beasts.note(z, "moved", now); }
   }
   await flee(rival);

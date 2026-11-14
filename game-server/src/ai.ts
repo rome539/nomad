@@ -27,6 +27,7 @@ import * as events from "./events";
 import * as styles from "./styles";
 import * as whiteroe from "./whiteroe";
 import * as groups from "./groups";
+import * as squads from "./squads";
 import { underCover, MAP_QUARTERS } from "./detail";
 import {
   FORGET_MS, FORGET_DEFAULT, GRUDGE_MAX, SCAVENGERS, DRINKERS, AGGRO_SCAVENGERS, SCAVENGER_BOLD_AT, SCAVENGER_CARRY_CAP, SCOOP_GRACE_MS, SCOOP_NOSE_MS, SCENT_FRESH_MS, SCENT_HEED_ODDS,
@@ -1354,6 +1355,15 @@ export function winded(creature: Creature, now: number): boolean {
 }
 
 export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean, chased = false, fromFire = false): Promise<void> {
+  // A SQUAD WALKS TOGETHER (squads.ts): a skeleton with its captain waits for him to
+  // step, and when the captain steps, the ones that were with him come after.
+  if (mode === "wander" && squads.staysWithCaptain(z, creature)) return;
+  const from = creature.roomId;
+  await stepOnce(z, creature, now, mode, silent, chased, fromFire);
+  if (mode === "wander") await squads.fallIn(z, creature, from, creature.roomId, (c) => stepOnce(z, c, now, "wander", silent));
+}
+
+async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean, chased = false, fromFire = false): Promise<void> {
     // HELD MEANS HELD (rome, 2026-11-06). A grip only pushed the wander clock back
     // a minute, so big prey, which takes longer to kill, strolled out of it most of
     // the time. It leaves by breaking the grip (worryPrey) or being driven off.
@@ -1422,7 +1432,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // die in the game (MIGRATE_ODDS): under one an hour across the whole
     // surface, so nobody ever watches it happen, and the thing you notice is
     // that there are wolves on the road this month and there were not before.
-    if (mode === "wander" && creature.home && !tmpl.is_boss && !PATROLS[tmpl.id]
+    if (mode === "wander" && creature.home && !tmpl.is_boss && !patrolRoute(tmpl.id, creature.home)
         && MIGRANTS.has(tmpl.id) && !PITS_ROOMS.has(creature.home) && creature.drift === undefined && chance(MIGRATE_ODDS)) {
       beginDrift(z, creature, tmpl.id);
     }
@@ -1463,7 +1473,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // carries a migrant from the mouth to its range. Fleeing ignores the edge
     // (survival first; the next calm step starts the walk back). Patrollers
     // are exempt — their route is their territory. Never strands.
-    if (mode === "wander" && !whiteroe.roams(creature) && creature.home && !bossStands(tmpl) && !PATROLS[tmpl.id] && creature.drift === undefined && !chaseTo) {
+    if (mode === "wander" && !whiteroe.roams(creature) && creature.home && !bossStands(tmpl) && !patrolRoute(tmpl.id, creature.home) && creature.drift === undefined && !chaseTo) {
       // A HUNGRY THING LEAVES. Where the territory pull is anchored: normally
       // the den, but a hunter whose own ground has nothing left to eat walks to
       // where the food is instead (huntGround). Everything below is unchanged —
@@ -1532,7 +1542,7 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     // down into the keep (rome, 2026-07-14: the last watchman in the Vaulted
     // Hall). Off its route, every idle step now closes on the nearest post —
     // the rounds always find the wall again. Never strands.
-    if (mode === "wander" && PATROLS[tmpl.id]) {
+    if (mode === "wander" && patrolRoute(tmpl.id, creature.home) && !squads.ledBy(z, creature)) {
       const route = patrolRoute(tmpl.id, creature.home)!;
       if (!route.includes(creature.roomId)) {
         let best = Infinity, near = route[0];
@@ -1674,10 +1684,20 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
 
     let exit = exits[randInt(0, exits.length - 1)];
     let investigating = false;
+    // A ROAD SQUAD CROSSES ITS GATE IN ONE STEP (2026-11-13): each road's round runs
+    // through a gate no creature stands in, so the step to the room beyond it is
+    // taken through it, as a walled-in animal goes home (thresholdStep). Squads only.
+    const squadCross = (mark: string): typeof exits[number] | undefined => {
+      if (!squads.captainOf(z, creature)) return undefined;
+      const t = thresholdStep(z, creature, creature.roomId, mark, allWays);
+      if (!t) return undefined;
+      through = t.through;
+      return { dir: t.dir, to_room: t.to_room } as typeof exits[number];
+    };
     if (mode === "flee") {
       creature.curious = null;
     } else if (creature.curious && creature.curious !== creature.roomId) {
-      const toward = exits.find((e) => e.to_room === creature.curious);
+      const toward = exits.find((e) => e.to_room === creature.curious) ?? (squads.ledBy(z, creature) ? squadCross(creature.curious) : undefined);
       if (toward) { exit = toward; investigating = true; }
       creature.curious = null; // one look is all it owes the noise
     } else if (SCAVENGERS.has(tmpl.id)) {
@@ -1731,11 +1751,14 @@ export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, 
     } else {
       creature.curious = null;
       const route = patrolRoute(tmpl.id, creature.home);
-      if (route) {
+      const lead = squads.ledBy(z, creature);
+      const toLead = squads.towardCaptain(z, creature, exits) ?? (lead && lead.roomId !== creature.roomId ? squadCross(lead.roomId) : undefined);
+      if (toLead) exit = toLead; // fallen behind its captain: back to him first
+      else if (route && !squads.ledBy(z, creature)) {
         let idx = creature.patrolIdx ?? 0;
         if (route[idx % route.length] === creature.roomId) idx++;
         const targetRoom = route[idx % route.length];
-        const toward = exits.find((e) => e.to_room === targetRoom);
+        const toward = exits.find((e) => e.to_room === targetRoom) ?? squadCross(targetRoom);
         if (toward) { exit = toward; creature.patrolIdx = idx + 1; }
         // off-route: random steps until the rounds find it again
       }
@@ -2600,7 +2623,7 @@ export function crouchHolds(z: ZoneDO, creature: Creature): void {
 // already filters every step to the ones that close on home. On its ground it
 // holds its ground, as before.
 export function walksAnyway(creature: Creature): boolean {
-  if (PATROLS[creature.templateId]) return true;                                  // its route is its ground
+  if (patrolRoute(creature.templateId, creature.home)) return true;              // its route is its ground (the road squads walk theirs by home)
   // THE CAVE LION WALKS ITS GROUND (rome, 2026-11-12), lurking or not: aggressive
   // and at home, it stood in the Dry Bones for good (lurkerDrifts).
   if (OPEN_LURKERS.has(creature.templateId)) return true;
@@ -4137,8 +4160,9 @@ function stepsFromGates(world: NonNullable<ZoneDO["world"]>): Map<string, number
 // within the reach of its own rows, off the gates, the hideaways and, on the
 // mountain, the drake's ground, on the kind of ground it belongs on
 // (mountain-ground.ts, crossing-ground.ts).
-export function livingHomes(z: ZoneDO, templateId: string): string[] {
-  const region = roamsIn(templateId) ?? "mountain";
+export function livingHomes(z: ZoneDO, templateId: string, inRegion?: string): string[] {
+  // the region asked for: a line can live in more than one (the goat, mountain and road)
+  const region = inRegion ?? roamsIn(templateId) ?? "mountain";
   const world = z.world!;
   const dist = stepsFromGates(world);
   let near = Infinity;
@@ -4148,7 +4172,7 @@ export function livingHomes(z: ZoneDO, templateId: string): string[] {
     if (d === undefined) continue;
     if (d < near) near = d;
   }
-  near = Math.min(near, groupOf(templateId)?.near ?? near);
+  near = Math.min(near, groupOf(templateId, region)?.near ?? near);
   // THE TERRITORY IS OPEN (rome, 2026-11-09: everything gathered on the high bone
   // ground and the top stood empty). Tier five took no homes, so the crag and bone
   // animals were squeezed onto the five bone rooms below it; only the summit is shut.
@@ -4188,8 +4212,8 @@ export function rollDen(z: ZoneDO, templateId: string, fallback: string): string
     const anywhere = [...world.rooms.keys()].filter((r) => ok(r) && z.regionOf(r) === band);
     if (anywhere.length) return anywhere[randInt(0, anywhere.length - 1)];
   }
-  if (roamsIn(templateId) && z.regionOf(fallback) === roamsIn(templateId)) {
-    const pool = livingHomes(z, templateId);
+  if (roamsIn(templateId, z.regionOf(fallback))) {
+    const pool = livingHomes(z, templateId, z.regionOf(fallback));
     return pool.length ? pool[randInt(0, pool.length - 1)] : fallback;
   }
   if (!ROAMING_DENS.has(templateId)) return fallback;

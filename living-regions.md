@@ -1,8 +1,8 @@
 # Living regions
 
-How a region's animals stop being fixed furniture and start deciding where to live. The mountain is the first region built this way (November 2026) and the crossing the second. Use this as the standard for the others.
+How a region's animals stop being fixed furniture and start deciding where to live. The mountain is the first region built this way (November 2026), the crossing the second and the road the third. Use this as the standard for the others.
 
-**Status:** live on the mountain since November 6, 2026; built for the crossing November 12, 2026. The numbers are first settings from simulation; update this file when real play changes them.
+**Status:** live on the mountain since November 6, 2026; built for the crossing November 12, 2026, and for the road November 13, 2026. The numbers are first settings from simulation; update this file when real play changes them.
 
 ## The goal
 
@@ -40,6 +40,7 @@ Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a n
 |---|---|---|
 | Wolf pack size / goes alone | 3-5 / 1 in 5 | `MOUNTAIN_GROUPS` |
 | Crossing: marsh hound packs, seals, gulls, oystercatchers, wrack crabs | 2-4, 2-4, 3-6, 3-6, 3-6 / alone 1 in 5, about 1 in 7, 1 in 10, 1 in 10, 1 in 10 | `CROSSING_GROUPS` |
+| Road: masterless dog packs, drove dog packs, goat herds | 2-4, 2-4, 4-8 / alone 1 in 5, 1 in 5, 1 in 10 | `ROAD_GROUPS` |
 | Hill wolves on the mountain | 12, room for two full packs and sometimes three | spawn rows |
 | Goats, hinds, choughs, ptarmigan | 4-8, 3-6, 3-6, 3-6 / 1 in 10, ptarmigan about 1 in 7 | `MOUNTAIN_GROUPS` |
 | Nearest a wolf settles to a gate | 10 steps | `MOUNTAIN_GROUPS` |
@@ -76,12 +77,13 @@ The numbers are first guesses tested in simulation. A new region can start from 
 - `game-server/src/zone-data.ts`, `LIVING_REGIONS`: each living region's roamers and groups (`MOUNTAIN_*`, `CROSSING_*`); `roamsIn` and `groupOf` read them
 - `game-server/src/mountain-ground.ts`: each room's kind of ground, and what each animal settles on, for every living region
 - `game-server/src/crossing-ground.ts`: the crossing's ground and what its animals settle on
+- `game-server/src/road-ground.ts`: the road's ground and what its animals settle on
 - `game-server/src/zone-data.ts`: the lists and numbers above
 - `game-server/src/ai.ts`, `livingHomes`: which rooms an animal may call home, in its own region
 - `game-server/src/herds.ts`: births and strays go through the plan
-- `game-server/scripts/sim-mountain.mjs` and `sim-crossing.mjs`: the simulators (`sim-crossing.mjs measure` prints each line's homes, and for a hunter the homes with prey in reach)
+- `game-server/scripts/sim-mountain.mjs`, `sim-crossing.mjs` and `sim-road.mjs`: the simulators (`sim-crossing.mjs measure` prints each line's homes, and for a hunter the homes with prey in reach)
 
-Since the crossing, the rules read per-region tables (`LIVING_REGIONS`) rather than the mountain by name. A new region adds its roamers and groups there, its ground file, and its section in `beasts`. The grass that is eaten down is still the mountain's alone; everywhere else the ground never runs dry.
+Since the crossing, the rules read per-region tables (`LIVING_REGIONS`) rather than the mountain by name. Since the road, a line may live in more than one region (the goat and the scarp raven live on the mountain and the road): each animal answers to the region its home is in, `roamsIn(line, region)` and `groupOf(line, region)` take the region, and every group carries its region, so a road goat never joins a mountain herd. A group made before the road carries none and counts as its line's first region. A new region adds its roamers and groups there, its ground file, and its section in `beasts`. The grass that is eaten down is still the mountain's alone; everywhere else the ground never runs dry.
 
 ## Doing another region
 
@@ -141,6 +143,14 @@ Built November 12, 2026, the second region, by the steps above.
   - **Small hunters.** The bittern is one, so a vole or an eel fills it.
   - **Fights.** The wrack crab and the ford eel keep out of a fight's noise.
   - **Seals and congers are hunted.** Three marsh hounds of one pack bring down either one.
+
+## The road
+
+Built November 13, 2026, the third region, by the steps above.
+
+- **Ground.** All 249 rooms sorted from their whole text into road (the paving and the made track), lane, green (grass, heath, heather, the drove's grazing and the folds), crag (the scarp, the cuttings, the quarry, the gill walls), water, wet (fen, reed, rush, peat, carr), wood, built and graves. Nothing settles on road, built or graves. The road names its grass and rock as the mountain does (`green`, `crag`), so the goat's and the raven's mountain rules hold on it unchanged.
+- **Who roams.** Feral goats (herds of 4-8), masterless dogs and drove dogs (packs of 2-4, which close on a goat together as the hounds do a seal) live in company; roe deer, otters, grey herons, gill adders and scarp ravens alone, the otters, herons and adders holding land. The otter settles only near its rats. The rats stay where their rows are; the footpads and the other people, the barrow-wights, the mire-walkers (drowners), the toll clerks, the wardens, the miller, the carrier and the baited bear stay where they are.
+- **What it measured.** Every line has 24-97 homes against 3-9 rows. The gill adder eats only rats, and every road rat is nearer a gate than an adder's rows let it live, so only 2 of its homes have a rat in reach; it is left off `SETTLES_BY_PREY` so it does not pile up there. The otter has 6 of 24, the heron (which eats only adders) 11 of 65, the masterless dogs 15 of 92 by their rows (they also take goats as a pack). That was true before this work too.
 
 ## What the mountain taught us
 
