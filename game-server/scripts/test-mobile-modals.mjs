@@ -364,5 +364,23 @@ try {
   assert.equal(await page.$eval('#bench .bbox',e=>getComputedStyle(e,'::after').content),'none','ornaments can still be disabled');
   console.log('PASS all palette ornament masks, both layouts, theme design on/off, Charcoal background and safe unknown-theme fallback');
 
+  // CLOSING THE MAP GIVES THE TYPING BACK (2026-11-14): on a computer the command line has the
+  // cursor again after the map closes, by Escape or by its button, though the tap guard dropped it on open.
+  await page.setViewport({width:1280,height:900,isMobile:false,hasTouch:false});
+  for (const how of ['escape','button']) {
+    const where = await page.evaluate(async (how)=>{
+      const wait=()=>new Promise(r=>setTimeout(r,20));
+      const map=document.getElementById('mapm');
+      cmd.focus(); await wait();
+      map.classList.add('open'); await wait();
+      if (how==='escape') map.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+      else map.classList.remove('open');
+      map.classList.remove('open'); await wait();
+      return document.activeElement && document.activeElement.id;
+    }, how);
+    assert.equal(where,'cmd',`closing the map by ${how} puts the cursor back in the command line`);
+  }
+  console.log('PASS closing the map on a computer gives the cursor back to the command line');
+
 
 } finally {await browser.close();}

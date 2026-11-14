@@ -6982,7 +6982,7 @@ installListView("forge", [["frecipes", "Recipes"], ["fread", "Inspect & mend"]],
     // focus was left (a phone keeps its keyboard down; the journal it opened into keeps it).
     var lost = !document.activeElement || document.activeElement === document.body;
     if (!open && wasOpen && entry[0] === "mapm" && (lost || root.contains(document.activeElement))
-        && !phoneControls() && !document.getElementById("jrnl")?.classList.contains("open") && (!prior || prior === cmd || !prior.isConnected)) {
+        && !phoneControls() && !document.getElementById("jrnl")?.classList.contains("open") && (!prior || prior === cmd || prior === document.body || !prior.isConnected)) {
       cmd.focus({ preventScroll: true });
     } else if (!open && wasOpen && root.contains(document.activeElement)) {
       if (prior && prior.isConnected && prior !== cmd) prior.focus({ preventScroll: true });
