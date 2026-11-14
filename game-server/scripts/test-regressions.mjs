@@ -7729,6 +7729,12 @@ try {
     assert.equal((zsrc.match(/manhunter\.packFollows\(this, creature, prey\);/g) ?? []).length, 2, 'on both the hungry lunge and the wounded one');
   });
 
+  check('the road section of beasts shows every animal that lives on the road, the hares too (2026-11-14)', () => {
+    const src = readFileSync(new URL('../src/beasts.ts', import.meta.url), 'utf8');
+    const shown = src.match(/const ROAD_SHOWN = \[([^\]]*)\]/)[1];
+    for (const line of ROAD_ROAMERS) assert.ok(shown.includes(`"${line}"`), `${line} lives on the road and must be in its section`);
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

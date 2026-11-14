@@ -20,7 +20,7 @@ const CROSSING_SHOWN = [
 ];
 // THE ROAD'S SECTION (2026-11-13): the third living region, read the same way.
 const ROAD_SHOWN = [
-  "rat", "roe-deer", "feral-goat", "otter", "gill-adder", "grey-heron", "scarp-raven", "masterless-dog", "drove-dog", "the-baited-bear",
+  "rat", "mountain-hare", "roe-deer", "feral-goat", "otter", "gill-adder", "grey-heron", "scarp-raven", "masterless-dog", "drove-dog", "the-baited-bear",
 ];
 const lineOf = (z: ZoneDO, id: string): string => SHOWN.includes(id) || CROSSING_SHOWN.includes(id) || ROAD_SHOWN.includes(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
 const onMountain = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "mountain";
