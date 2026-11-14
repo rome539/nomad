@@ -4424,6 +4424,23 @@ try {
     assert.match(zs, /for \(const v of world\.mobVariants\) this\.variantBase\.set\(v\.variantId, v\.baseId\);\n\s+huntRareBloodsAsBase\(world\.mobVariants\);/, 'on every world load');
   });
 
+  check('the road has hares, and its drove dogs keep to goats and hares (2026-11-13)', () => {
+    const mig = readFileSync(new URL('../migrations/397_hares_on_the_road.sql', import.meta.url), 'utf8');
+    const rows = [...mig.matchAll(/VALUES \('spawn-mountain-hare@([a-z-]+)(?:#\d)?', 'mountain-hare', '([a-z-]+)'\)/g)];
+    assert.equal(rows.length, 10, 'ten hares, each row with its id');
+    for (const [, idRoom, room] of rows) {
+      assert.equal(idRoom, room);
+      assert.ok(ROAD_GROUND.green.includes(room), room + ' is the road\'s grass');
+      assert.ok(settlesOn('mountain-hare', room), room + ' is hare ground');
+    }
+    assert.equal(roamsIn('mountain-hare', 'road'), 'road', 'the hare roams the road');
+    assert.equal(roamsIn('mountain-hare', 'mountain'), 'mountain', 'and still the mountain');
+    for (const h of ['masterless-dog', 'lead-dog', 'drove-dog', 'the-drove-master', 'the-baited-bear', 'gill-adder']) assert.ok(PREYS_ON.get(h).has('mountain-hare'), h + ' takes a hare');
+    for (const p of ['otter', 'dog-otter', 'roe-deer']) assert.ok(!PREYS_ON.get('drove-dog').has(p), 'a drove dog leaves the ' + p);
+    assert.ok(PREYS_ON.get('drove-dog').has('feral-goat'), 'and keeps to the goats');
+    assert.ok(PREYS_ON.get('masterless-dog').has('otter') && PREYS_ON.get('masterless-dog').has('roe-deer'), 'the masterless dogs still take them');
+  });
+
   check('no hunter eats its own pack: a lead dog born into a masterless pack leaves its packmates alone (2026-11-13)', () => {
     // the road sim had masterless dogs killed by "masterless dogs" 8 to 15 a day: the lead dog, their rare blood, eats them
     assert.ok(PREYS_ON.get('lead-dog').has('masterless-dog'), 'the lead dog still eats a stray masterless dog');
@@ -7576,11 +7593,11 @@ try {
     assert.match(ms, /lastSweep\.set\(z, now\);\n\s+armFoodRot\(z, now\);/, 'every sweep runs it');
   });
 
-  check('the full moons have kinds: the page draws the moon the words name, and each sets its own thing going (2026-11-13)', () => {
+  check('the full moons have kinds, four of them drawn at even odds: the page draws the moon the words name, and each sets its own thing going (2026-11-14)', () => {
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
-    const KINDS = ['plain', 'great', 'harvest', 'pale', 'ash', 'micro'];
+    const KINDS = ['great', 'harvest', 'ash', 'pale'];
     const D = DAY_CYCLE_MS, M = 11 * D;
     // the page's own pick, run as it is served, against the server's, month by month
     const hashSrc = pub.slice(pub.indexOf('function skyDayHash(d)'), pub.indexOf('// THE NIGHT\'S EXTRAS ON THEIR NIGHTS'));
@@ -7598,18 +7615,20 @@ try {
       assert.equal(fullMoonTonight(m * M + 5 * D + D * 0.75), null, 'nor on a half-moon night');
     }
     for (const k of KINDS) assert.ok(seen.has(k), k + ' comes round');
-    const TURN = ['great', 'harvest', 'pale', 'ash', 'micro', 'plain'];
-    order.forEach((k, i) => assert.equal(k, TURN[i % 6], 'the other moons come in turn, in order (moon ' + i + ')'));
+    // a draw, not a turn: no fixed order, each about a quarter of the time (rome, 2026-11-14)
+    const cnt = (k) => order.filter((x) => x === k).length;
+    for (const k of KINDS) assert.ok(cnt(k) > order.length * 0.18 && cnt(k) < order.length * 0.32, k + ' about a quarter: ' + cnt(k) + ' of ' + order.length);
+    assert.ok(order.some((k, i) => i > 0 && k === order[i - 1]), 'the same moon can come twice running, as a draw does');
+    assert.ok(!seen.has('plain') && !seen.has('micro'), 'the plain moon and the micro moon are gone');
     const at = (kind) => { for (let m = 1; ; m++) if (moonKind(m * M) === kind) return m * M + D * 0.75; };
     // its words: the moonrise and the look
-    for (const k of ['great', 'harvest', 'pale', 'ash', 'micro']) {
+    for (const k of KINDS) {
       assert.match(zd, new RegExp('MOON_KIND_RISE[\\s\\S]*?\\n  ' + k + ': "'), k + ' has a moonrise');
       assert.match(zd, new RegExp('MOON_KIND_SKY[\\s\\S]*?\\n  ' + k + ': "'), k + ' has a look');
       assert.match(pub, new RegExp('\\n  ' + k + ': +\\{ size: '), k + ' has a look in the picture');
       assert.match(zd, new RegExp('MOON_KIND_ROOM[\\s\\S]*?\\n  ' + k + ': \\["'), k + ' has its line in every outdoor room');
     }
     assert.match(moonriseLine(at('great')), /enormous/, 'the great moon rises as itself');
-    assert.match(moonriseLine(at('plain')), /huge and white/, 'the plain moon rises as it always did');
     assert.match(moonriseLine(at('great') + 5 * D), /moon|light/, 'and other nights are the month as ever');
     assert.equal((ev.match(/fullMoonSky\(/g) || []).length, 3, 'look moon and look sky both read the full moon by its kind');
     const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
@@ -7631,22 +7650,18 @@ try {
     tickMoon(z, now);
     for (const g of Object.keys(FEVER_GRAVES)) assert.equal(z.events.get(FEVER_GRAVES[g].key).until, now, 'the ash moon brings the fever up at ' + g);
     z = mkz(); now = at('pale');
-    z.events.set('cold', { phase: 'active', until: now + 1 });
     tickMoon(z, now);
-    assert.equal(z.events.get('cold').data, 'hard frost', 'the pale moon turns a cold already on into the hard frost');
-    assert.match(ev, /st\.data = st\.data === PALE_FROST \|\| chance\(HARD_FROST_ODDS\)/, 'and a cold it brings sets in hard');
-    z = mkz(); now = at('plain');
-    tickMoon(z, now);
-    assert.equal(z.events.size, 0, 'the plain moon sets nothing going');
-    // the micro moon: the rare blood comes far more often
+    assert.ok(!z.events.has('cold'), 'the pale moon brings no frost now');
+    assert.ok(!/PALE_FROST/.test(ev), 'nor does any cold remember one');
+    // the pale moon: the rare blood comes far more often (it took the micro moon's)
     const roeT = { id: 'roe-deer' }, whiteT = { id: 'white-roe', name: 'a white roe', max_hp: 20 };
     const rooms = new Map([['ride', { id: 'ride', region: 'wood' }]]);
     const zr = { world: { rooms, mobVariants: [{ baseId: 'roe-deer', variantId: 'white-roe', chance: 0.25 }], mobTemplates: new Map([['roe-deer', roeT], ['white-roe', whiteT]]), mobSpawns: [] }, creatures: new Map(), regionOf: (r) => rooms.get(r)?.region };
     const realNow = Date.now;
     try {
       const rolls = (t) => { Date.now = () => t; let n = 0; for (let i = 0; i < 200; i++) if (rollBloodline(zr, roeT, 'ride').id === 'white-roe') n++; return n; };
-      assert.equal(rolls(at('micro')), 200, 'under the micro moon a quarter chance is a sure one');
-      assert.ok(rolls(at('plain')) < 200, 'under any other moon it is a quarter');
+      assert.equal(rolls(at('pale')), 200, 'under the pale moon a quarter chance is a sure one');
+      assert.ok(rolls(at('great')) < 200, 'under any other moon it is a quarter');
       // and the harvest moon's meals
       assert.match(readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8'), /MEAL_GRAZE \* \(harvest \? HARVEST_MEAL_MULT : 1\)/, 'a grazing meal is bigger under the harvest moon');
     } finally { Date.now = realNow; }

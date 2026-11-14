@@ -2571,6 +2571,7 @@ export const WALKING_DEAD = new Set([
 // the rest do, so where it lies up is never the same twice.
 export const ROAD_ROAMERS = new Set([
   "feral-goat", "roe-deer", "masterless-dog", "drove-dog", "otter", "grey-heron", "gill-adder", "scarp-raven", "the-baited-bear",
+  "mountain-hare", // the road's prey base, on its grass (mig 397)
 ]);
 export const ROAD_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
   ["feral-goat", { min: 4, max: 8, lone: 0.1 }],
@@ -5278,7 +5279,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // adder, the stone adder's rare blood, had no way to eat whatsoever. Each
   // outstats a rat alone, the gill adder only just (14hp/1-4 against 11/2-3).
   ["the-gravid-adder", new Set(["mountain-chough", "ptarmigan", "ermine", "rat"])],
-  ["gill-adder", new Set(["rat"])],
+  ["gill-adder", new Set(["rat", "mountain-hare"])], // a leveret too, on the road's commons (2026-11-13)
   // THE SNAKES ARE HUNTED (rome, 2026-11-08: only the roaming coyote took one).
   // Added to the rows of the eagle, the eagle owl, the lynx, the glutton, the
   // hill fox, the wildcat and the marsh hound, each of which outstats the snake
@@ -5334,8 +5335,11 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // arrives as a monoculture is a band nothing can ever walk into. The drove
   // eats the goat; the otter takes the beck's own; and that is enough of a
   // chain that the ground holds its own animals instead of borrowing them.
-  ["drove-dog", new Set(["feral-goat", "old-billy", "roe-deer", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])],           // a drove road ends at a market and a market ends at water; the shore's small stuff is well within it (30hp/3-7)
-  ["the-drove-master", new Set(["feral-goat", "old-billy", "roe-deer", "drove-dog", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // it puts the line where it wants it, including through one of its own — and at 46hp/5-9 the gull is not an argument it loses
+  // THE DROVE DOGS KEEP TO THE DROVE (rome, 2026-11-13): they were half of all the road's
+  // killing, otters and roe deer with the goats, so they no longer take an otter or a deer;
+  // the hares on the road's grass feed them instead.
+  ["drove-dog", new Set(["feral-goat", "old-billy", "mountain-hare", "wrack-crab", "devil-crab", "oystercatcher"])],           // a drove road ends at a market and a market ends at water; the shore's small stuff is well within it (30hp/3-7)
+  ["the-drove-master", new Set(["feral-goat", "old-billy", "mountain-hare", "roe-deer", "drove-dog", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // it puts the line where it wants it, including through one of its own — and at 46hp/5-9 the gull is not an argument it loses
   ["otter", new Set(["rat", "fleet-rat"])],                              // it eats fish, and a rat that comes to water is a fish with legs
   ["three-hound", new Set(["rat", "fleet-rat", "grave-hyena", "dire-hyena"])], // apex at the threshold — bullies all comers
   // THE BEAR (mig 215) is the apex that WALKS, so its list is the widest in the
@@ -5347,7 +5351,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // THE WOOD'S OWN BEAR (mig 319) takes what the wood has at its size: a roe
   // when it can catch one, a boar when it is hungry enough to argue with tusks.
   ["brown-bear", new Set(["roe-deer", "white-roe", "wild-boar"])],
-  ["the-baited-bear", new Set(["roe-deer", "white-roe", "wild-boar", "wood-stag", "old-boar", "feral-goat", "old-billy",
+  ["the-baited-bear", new Set(["mountain-hare", "roe-deer", "white-roe", "wild-boar", "wood-stag", "old-boar", "feral-goat", "old-billy",
     "drove-dog", "the-drove-master", "masterless-dog", "lead-dog", "grey-wolf", "grave-hyena",
     "rat", "fleet-rat", "otter", "dog-otter"])],
   ["the-chain-breaker", new Set(["roe-deer", "white-roe", "wild-boar", "wood-stag", "old-boar", "feral-goat", "old-billy",
@@ -5429,8 +5433,8 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // a stray is 24hp/3-5 against the roe's 16hp/1-2, which is a clean solo take;
   // it is UNDER the goat's 26hp, so the goat needs the pack (PACK_PREY). The
   // lead dog is 36hp/4-7 and needs nobody's help for either.
-  ["masterless-dog", new Set(["rat", "roe-deer", "white-roe", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])],
-  ["lead-dog", new Set(["rat", "masterless-dog", "roe-deer", "white-roe", "feral-goat", "old-billy", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat and the gull the pack needs numbers for
+  ["masterless-dog", new Set(["rat", "mountain-hare", "roe-deer", "white-roe", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter"])],
+  ["lead-dog", new Set(["rat", "mountain-hare", "masterless-dog", "roe-deer", "white-roe", "feral-goat", "old-billy", "wrack-crab", "devil-crab", "oystercatcher", "otter", "dog-otter", "great-gull", "black-backed-gull"])], // the mean cousin drives off the plain one (same law as dire-hyena over grave-hyena) — and it is big enough to take the goat and the gull the pack needs numbers for
   // The pale hunters are the DEEP's rat-catchers: hungry, they leave their lurk
   // and range toward the rat-runs (lurkerDrifts), run one down (predation), and
   // go quiet again. A stretch of dark with no rats left is what starves one onto
@@ -8036,6 +8040,8 @@ export const SURFACE_FORAGE = new Set([
   "the-ash-verge", "the-high-verge", "the-green-lane", "the-drove-green",
   "the-high-common", "the-open-heath", "the-first-fold", "the-sheep-fold",
   "the-broken-fold", "the-hanging-fold", "the-cut-bank", "the-common-boundary",
+  // ...and the cropped grass the hares live on (2026-11-13, mig 397)
+  "the-hare-ground", "the-sheepwalk", "the-tops", "the-wether-slope", "the-stony-rise", "the-spoil-banks",
   // THE WOOD. Glades and coppice where light reaches the floor, the flood
   // meadow, and the mast under the beeches and the oaks.
   "the-first-clearing", "the-long-glade", "the-nettle-glade", "the-flood-meadow",
@@ -9330,18 +9336,19 @@ export const MOON_SKY = [
   "The moon is very nearly whole — one clean edge of it left to fill. One more night of this.",
 ];
 // THE FULL MOONS HAVE KINDS (rome, 2026-11-13). Every full moon but the red one
-// wears one of these for its night, each in its turn (rome: in order, not
-// drawn), so the whole world sees the same moon (zone-util moonKind; public.ts
-// skyMoonKind makes the same pick). Each is the one disc recoloured and resized, and each sets one
-// thing in the world going (events.tickMoon):
+// is one of these for its night, drawn at random by the moon's month with even
+// odds, the same draw everywhere, so the whole world sees the same moon (zone-util
+// moonKind; public.ts skyMoonKind makes the same pick). They took turns in order at
+// first, six of them, and that was a calendar anyone could count; rome cut them to
+// four and made the turn a draw (2026-11-14). Each is the one disc recoloured and
+// resized, and each sets one thing in the world going (events.tickMoon):
 //   great   - the biggest tide of the month comes in, and holds
 //   harvest - the mast falls, the eaten-down grass is back, and grazing feeds more
-//   pale    - a hard frost
 //   ash     - the fever comes up out of the graves
-//   micro   - the rare blood is born and comes in far more often
-//   plain   - the full moon as it always was
+//   pale    - the rare blood is born and comes in far more often (the micro moon's,
+//             which went, as did its hard frost and the plain moon that did nothing)
 // Every kind is a full moon to everything else: the lit ground, the moon door.
-export const MOON_KINDS = ["great", "harvest", "pale", "ash", "micro", "plain"] as const; // in turn, in this order (rome)
+export const MOON_KINDS = ["great", "harvest", "ash", "pale"] as const; // drawn, even odds (rome)
 export type MoonKind = typeof MOON_KINDS[number] | "blood";
 // What rises (the moonrise line; plain is MOON_NIGHTS[0])...
 export const MOON_KIND_RISE: Record<string, string> = {
@@ -9349,7 +9356,6 @@ export const MOON_KIND_RISE: Record<string, string> = {
   harvest: "A full moon rises over the grounds deep amber and heavy, hanging low as if the weight of it held it down, and the air smells of everything the ground is giving.",
   pale: "A full moon rises over the grounds small and hard and white, and the sky round it is as clear as glass.",
   ash: "A full moon rises over the grounds the colour of old ash, dull and yellowed, as if seen through a smoke there is no fire for.",
-  micro: "The moon comes up full but small, a far-off coin of light, and the dark round it is very wide.",
 };
 // ...and what looking up at it says (`look moon`, `look sky`; plain is MOON_SKY[0]).
 export const MOON_KIND_SKY: Record<string, string> = {
@@ -9357,7 +9363,6 @@ export const MOON_KIND_SKY: Record<string, string> = {
   harvest: "The moon is full and the deep amber of late fruit, heavy and low over the ground. There is light enough out here tonight to do without a torch.",
   pale: "The moon is full but small and hard and white, a cold coin with a clear sky all round it. It lights the ground as well as any full moon, and warms none of it.",
   ash: "The moon is full, but the colour of old ash, dull and yellowed as if through smoke. It lights the ground all the same, the way a sickroom candle does.",
-  micro: "The moon is full, but small and far off, a bright coin with a great width of dark round it. It lights the ground, just.",
 };
 // ...and the line every outdoor room says under it at night: the moon, then the
 // ground it lights, with the turning stars between when the sky shows them
@@ -9366,14 +9371,12 @@ export const MOON_KIND_ROOM: Record<string, [string, string]> = {
   plain: ["A full moon rides high and white", "the grounds lie almost as bright as day."],
   great: ["An enormous full moon hangs low and white", "the grounds lie as bright as day."],
   harvest: ["A full moon hangs low and amber", "the grounds lie warm-lit, almost as bright as day."],
-  pale: ["A small, hard, white full moon rides high", "the grounds lie bright and cold."],
+  pale: ["A small, hard, white full moon rides high", "the grounds lie bright and white."],
   ash: ["A full moon the colour of old ash rides high", "the grounds lie in a dull, yellowed light."],
-  micro: ["A small, far-off full moon rides high", "the grounds lie lit, but only just."],
 };
 export const GREAT_TIDE_CREST_MULT = 2;  // the great moon's tide holds at the crest twice as long
 export const HARVEST_MEAL_MULT = 1.6;    // a grazing meal under the harvest moon, in hunger off and in healing
-export const MICRO_RARE_MULT = 4;        // every rare blood's chance at a birth or an arrival under the micro moon
-export const PALE_FROST = "pale-moon";   // a cold the pale moon brought: it sets in as a hard frost
+export const PALE_RARE_MULT = 4;         // every rare blood's chance at a birth or an arrival under the pale moon
 // ...and what the sky says when somebody asks after the moon in broad daylight.
 export const MOON_DAY = "You look for the moon and get the day instead. Whatever it is doing, it is doing it on the other side of that.";
 // ...AND THE SUN, WHICH HAD NO ANSWER AT ALL OUTSIDE AN ECLIPSE (rome,

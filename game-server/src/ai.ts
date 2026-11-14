@@ -71,7 +71,7 @@ import {
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING, WHITE_ROE, FEVER_RAT, bossStands, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
   EAT_SHOW_MS, MEAL_MIN_MS, EAT_SAY_MIN_MS, EAT_SAY_MAX_MS, EAT_WORDS,
-  RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS, HARVEST_MEAL_MULT, MICRO_RARE_MULT,
+  RIVAL_LINES, DROWNED_GOD, KING_WORDS, GOD_REMEMBERS_MS, HARVEST_MEAL_MULT, PALE_RARE_MULT,
 } from "./zone-data";
 
   // Roll a spawn's bloodline: usually the ordinary version, rarely the mean
@@ -79,8 +79,8 @@ import {
 export function rollBloodline(z: ZoneDO, tmpl: MobTemplate, room?: string): MobTemplate {
     const world = z.world!;
     for (const v of world.mobVariants) {
-      // Under the micro moon the rare blood comes far more often (zone-data MOON_KINDS).
-      if (v.baseId !== tmpl.id || !chance(v.chance * (fullMoonTonight() === "micro" ? MICRO_RARE_MULT : 1))) continue;
+      // Under the pale moon the rare blood comes far more often (zone-data MOON_KINDS).
+      if (v.baseId !== tmpl.id || !chance(v.chance * (fullMoonTonight() === "pale" ? PALE_RARE_MULT : 1))) continue;
       // The white roe is the wood's: a roe born anywhere else stays a plain roe.
       if (v.variantId === WHITE_ROE && (!room || z.regionOf(room) !== "wood")) continue;
       // A nester is immortal and sessile, so every extra mother is forever.

@@ -12564,11 +12564,11 @@ function skyCometNight(d) { return d % SKY_COMET_EVERY < SKY_COMET_NIGHTS; }
 // a moon's month is SKY_MOON_EVERY of them). Only the moon sky reads it; the red
 // moon has a sky of its own.
 var SKY_MOON_EVERY = 11, SKY_BLOOD_EVERY = 5; // zone-data MOON_FULL_EVERY, BLOOD_MOON_EVERY
-var SKY_MOON_KINDS = ["great", "harvest", "pale", "ash", "micro", "plain"]; // zone-data MOON_KINDS, in turn
+var SKY_MOON_KINDS = ["great", "harvest", "ash", "pale"]; // zone-data MOON_KINDS, drawn at even odds
 function skyMoonKind(d) {
   var m = Math.floor(d / SKY_MOON_EVERY);
   if (m % SKY_BLOOD_EVERY === 0) return "blood";
-  return SKY_MOON_KINDS[(m - Math.floor(m / SKY_BLOOD_EVERY) - 1) % SKY_MOON_KINDS.length];
+  return SKY_MOON_KINDS[skyDayHash(m ^ 0x6d00) % SKY_MOON_KINDS.length];
 }
 // Each kind is the one disc recoloured and resized (rome, 2026-11-13): size is a
 // share of the sky's height (the plain moon's .16), hue recolours the disc and
@@ -12577,8 +12577,7 @@ var SKY_MOON_LOOK = {
   great:   { size: .25, glow: "246,240,222" },
   harvest: { size: .19, hue: "rgb(222,132,44)", glow: "232,150,72" },
   pale:    { size: .115, hue: "rgb(214,228,255)", glow: "214,230,255" },
-  ash:     { size: .16, hue: "rgb(176,156,104)", dim: .28, glow: "150,134,98" },
-  micro:   { size: .085 }
+  ash:     { size: .16, hue: "rgb(176,156,104)", dim: .28, glow: "150,134,98" }
 };
 var skyMoonDiscs = {};
 function skyMoonDisc(kind, im) {

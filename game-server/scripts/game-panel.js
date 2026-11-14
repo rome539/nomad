@@ -78,7 +78,7 @@
   var hNext = mk("button", stepCss, "\u203a");
   // "moon" is the moon the calendar gives; "moon great" and the rest force a full
   // moon's kind (zone-data MOON_KINDS) to be looked at, in the hours, not a control of their own.
-  ["day", "dawn", "dusk", "night", "moon", "moon plain", "moon great", "moon harvest", "moon pale", "moon ash", "moon micro", "blood", "eclipse", "fog", "rain", "snow", "after-rain", "wet-dawn", "wet-dusk", "wet-night"].forEach(function (h) {
+  ["day", "dawn", "dusk", "night", "moon", "moon great", "moon harvest", "moon ash", "moon pale", "blood", "eclipse", "fog", "rain", "snow", "after-rain", "wet-dawn", "wet-dusk", "wet-night"].forEach(function (h) {
     var o = document.createElement("option"); o.value = h; o.textContent = h; hour.appendChild(o); });
   // THE TIME OF DAY UNDER THE WEATHER. The server sends fog, rain and snow at
   // any hour, with the night flag and the low light (dawn, dusk) beside them, so

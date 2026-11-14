@@ -31,14 +31,14 @@ export function moonMonth(now = Date.now()): number {
   return Math.floor(now / (DAY_CYCLE_MS * MOON_FULL_EVERY));
 }
 // WHICH KIND OF FULL MOON THIS MONTH'S IS (zone-data MOON_KINDS): the red one on
-// its months, and the six taking turns on the rest, in order, so each comes
-// round once in every six of the others (rome, 2026-11-13: in order, not drawn). public.ts skyMoonKind is this line for line, from the
-// world day the page is sent (a month is MOON_FULL_EVERY of those).
+// its months, and on the rest one of the four drawn at even odds by the month
+// (rome, 2026-11-14: a draw, not a turn anyone can count). public.ts skyMoonKind is
+// this line for line, from the world day the page is sent (a month is
+// MOON_FULL_EVERY of those), on the same hash the night's extras use.
 export function moonKind(now = Date.now()): MoonKind {
   const m = moonMonth(now);
   if (m % BLOOD_MOON_EVERY === 0) return "blood";
-  // how many of the other moons came before this one: every month less the red ones
-  return MOON_KINDS[(m - Math.floor(m / BLOOD_MOON_EVERY) - 1) % MOON_KINDS.length]!;
+  return MOON_KINDS[skyDayHash(m ^ 0x6d00) % MOON_KINDS.length]!;
 }
 // The full moon up over the world right now, by kind, or null when it is not.
 export function fullMoonTonight(now = Date.now()): MoonKind | null {

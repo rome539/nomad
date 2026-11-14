@@ -76,7 +76,7 @@ import {
   QUIET_TELEGRAPH_MS, QUIET_ACTIVE_MIN_MS, QUIET_ACTIVE_MAX_MS, QUIET_AFTERMATH_MS,
   SHADOW_TELEGRAPH_MS, SHADOW_ACTIVE_MIN_MS, SHADOW_ACTIVE_MAX_MS, SHADOW_AFTERMATH_MS,
   ECLIPSE_TELL_LINES, ECLIPSE_TOTAL_LINES, ECLIPSE_AFTER_LINES, ECLIPSE_MOUNTAIN_LINES, ECLIPSE_SUN_LINES, ECLIPSE_AMBIENT,
-  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_KIND_SKY, GREAT_TIDE_CREST_MULT, PALE_FROST, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, NIGHT_STARS_TURN, NIGHT_AURORA, NIGHT_COMET, DAY_SKY, WEATHER_DAY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
+  BLOOD_MOON_LINES, BLOOD_MOON_AMBIENT, BLOOD_MOON_SKY, BLOOD_MOON_CLOUDS, BLOOD_MOON_STARS, MOON_SKY, MOON_KIND_SKY, GREAT_TIDE_CREST_MULT, MOON_DAY, MOON_ARC, SUN_LOW, SUN_LOW_NIGHT, SUN_HILL, SUN_HILL_NIGHT, STARS_NIGHT, STARS_DAY, SKY_VEILED, SKY_CLEAR, SUN_CLEAR, STARS_CLEAR, SKY_HOURS, SKY_NIGHT, SKY_COVERED, NIGHT_STARS_TURN, NIGHT_AURORA, NIGHT_COMET, DAY_SKY, WEATHER_DAY, ECLIPSE_STARS, ECLIPSE_MOON, ECLIPSE_CLOUDS, STARS_HILL,
   CLOUDDOWN_TELEGRAPH_MS, CLOUDDOWN_END_ODDS, CLOUDDOWN_AFTERMATH_MS, CLOUDDOWN_AMBIENT,
   EEL_RUN_NIGHT, EEL_RUN_AMBIENT,
   MAST_TELEGRAPH_MS, MAST_ACTIVE_MIN_MS, MAST_ACTIVE_MAX_MS, MAST_AFTERMATH_MS, MAST_FORAGE_MULT, MAST_SPAWN_ROOMS, MAST_GROUND_CAP, MAST_AMBIENT,
@@ -2154,11 +2154,11 @@ async function tickClouddown(z: ZoneDO, now: number): Promise<void> {
 // thing going. Kept on the events (data = the month) so a restart or a world
 // asleep at moonrise still gets it the first beat it is awake under that moon.
 // Each one starts an arc that already exists; none is a new kind of weather.
-// The micro moon's rare blood and the harvest moon's bigger meals are read
+// The pale moon's rare blood and the harvest moon's bigger meals are read
 // where they happen (ai.rollBloodline, ai's grazing), all night long.
 export function tickMoon(z: ZoneDO, now: number): void {
   const kind = fullMoonTonight(now);
-  if (!kind || kind === "blood" || kind === "plain") return;
+  if (!kind || kind === "blood") return;
   const month = String(moonMonth(now));
   const st = z.events.get("moonkind") ?? { phase: "idle" as const, until: NEVER };
   if (st.data === month) return;
@@ -2175,17 +2175,10 @@ export function tickMoon(z: ZoneDO, now: number): void {
   switch (kind) {
     case "great": bring("tide"); break;
     case "harvest": bring("mast"); grass.regrowAll(z); break;
-    case "pale": {
-      const cold = z.events.get("cold");
-      if (cold && cold.phase !== "idle") { cold.data = HARD_FROST; break; } // the cold already on turns hard
-      const bands = wxPlace(z);
-      if (bands.length) bring("cold", { bands, data: PALE_FROST });
-      break;
-    }
     case "ash":
       for (const graves of Object.keys(FEVER_GRAVES)) bring(FEVER_GRAVES[graves]!.key);
       break;
-    case "micro": break;
+    case "pale": break;
   }
 }
 
@@ -3890,8 +3883,7 @@ async function tickCold(z: ZoneDO, now: number): Promise<void> {
       st.until = now + COLD_TELEGRAPH_MS;
       // Which cold this is, decided as it comes (HARD_FROST_ODDS) and kept on
       // the state, so a restart mid-frost is still a frost.
-      // A cold the pale moon brought is always the hard frost (tickMoon).
-      st.data = st.data === PALE_FROST || chance(HARD_FROST_ODDS) ? HARD_FROST : undefined;
+      st.data = chance(HARD_FROST_ODDS) ? HARD_FROST : undefined;
       feedSky(z, inCold, "The air goes glass-clear and bitter, sharpening by the breath.");
       // The living feel it first and head for cover (coldDrives in ai.ts);
       // the hollow don't so much as pause.
