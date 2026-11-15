@@ -76,7 +76,7 @@ import {
 import * as invites from "./invites";
 import { parse, HELP_TEXT, type Command } from "./parser";
 import { randInt, chance, uuid, pick } from "./rng";
-import { saveMark, cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, hashSeed, skyCovered, cometNight, moonKind } from "./zone-util";
+import { saveMark, cap, dirPhrase, nameMatches, parseOrdinal, rollGearCondition, shortName, isNight, isFullMoon, isDusk, isDawn, terrainOf, moonPhase, moonriseLine, worldDay, nightHuntMult, eclipsePhase, isBloodMoon, fullMoonTonight, hashSeed, skyCovered, cometNight, moonKind } from "./zone-util";
 import type { Stance, Session, Creature, Regrow, Trace, RotEntry, GroundInstance, SimState, EventState } from "./zone-types";
 import { isGameKeyConfigured, signLootEvent, signSheetEvent, signFeedEvent, signScoreEvent, gamePubkey } from "./signing";
 import { publishEvent, publishScore, relayList } from "./relay";
@@ -3826,6 +3826,8 @@ export class ZoneDO implements DurableObject {
     boards: { legend: { name: string; score: number }[]; trophies: { name: string; score: number }[] };
     fell: { name: string; ago: number } | null;
     arc: string | null;
+    ledger: { name: string; cause: string; ago: number } | null;
+    sky: { night: boolean; moon: string | null };
   }> {
     const opts = this.lbOpts();
     const [legend, trophies] = await Promise.all([
@@ -3849,6 +3851,11 @@ export class ZoneDO implements DurableObject {
       boards: { legend: strip(legend), trophies: strip(trophies) },
       fell: this.lastBossFall ? { name: this.lastBossFall.name, ago: Date.now() - this.lastBossFall.at } : null,
       arc,
+      // THE DOOR CONTROLLER'S LEDGER AND SKY (rome, 2026-11-15): the last wanderer to
+      // die (only one seen in the arena feed, which already told the world) and what
+      // is over the grounds now, which anyone stepping inside sees at once.
+      ledger: this.lastDeath ? { name: this.lastDeath.name, cause: this.lastDeath.cause, ago: Date.now() - this.lastDeath.at } : null,
+      sky: { night: isNight(), moon: fullMoonTonight() },
     };
   }
 
@@ -3857,6 +3864,7 @@ export class ZoneDO implements DurableObject {
   // it rather than carrying a stale one — "the woodward fell" is only news if it
   // is news.
   public lastBossFall: { name: string; at: number } | null = null;
+  public lastDeath: { name: string; cause: string; at: number } | null = null; // the door controller's ledger (worldSnapshot)
 
   // What the boards need to compute a score in SQL: the two weights, and the
   // set of item ids that count as trophies. One place, so the in-game board,
@@ -7615,6 +7623,8 @@ export class ZoneDO implements DurableObject {
     chronicle.died(this, victim, tmpl, slayerName); // every death goes on the record where it fell, before the body is moved
     trail.wipe(this, victim.pubkey); // the dead do not remember the way
     if (!slayerName) manhunter.learned(this, victim, tmpl?.id); // the animal that took them has the taste now (manhunter.ts)
+    // the door's ledger: never one who keeps off the arena feed, and never naming the wanderer who did it
+    if (!victim.arenaOff) this.lastDeath = { name: victim.name, cause: slayerName ? "another wanderer" : slayer, at: Date.now() };
     for (const c of this.creatures.values()) {
       if (c.target === victim.pubkey) c.target = null;
     }

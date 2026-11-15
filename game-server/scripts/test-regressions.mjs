@@ -7870,6 +7870,22 @@ try {
     assert.match(m, /^UPDATE mob_spawns SET template_id = 'rat' WHERE template_id = 'fleet-rat';$/m, 'the scary rat rows become scabby rats');
   });
 
+  check('coming through the door plays the door controller\'s readout, then hands the cursor back (2026-11-15)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /<div id="boot" aria-live="polite"><div id="bootscr"><\/div><div id="bootskip">TAP OR ANY KEY<\/div><\/div>/, 'the screen is on the page');
+    assert.match(pub, /if \(!guideActive\(\)\) connect\(\);\n(?:\s*\/\/[^\n]*\n)*\s*bootReadout\(function \(\) \{ if \(!phoneControls\(\)\) cmd\.focus\(\); \}\);/, 'it plays while the connection opens, and the cursor comes back after');
+    assert.match(pub, /if \(w\) thrWorldData = w;/, 'it reads the live world the front door already fetched');
+    assert.match(pub, /document\.addEventListener\("keydown", skipKey, true\);[\s\S]{0,200}boot\.onclick = finish;|boot\.onclick = finish;\n\s+document\.addEventListener\("keydown", skipKey, true\);/, 'a tap or any key ends it');
+  });
+
+  check('the door controller reads the sky and the ledger, and the ledger keeps the arena\'s promise (2026-11-15)', () => {
+    const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(zs, /if \(!victim\.arenaOff\) this\.lastDeath = \{ name: victim\.name, cause: slayerName \? "another wanderer" : slayer, at: Date\.now\(\) \};/, 'one who keeps off the arena feed is never on the ledger, and a killer wanderer is never named');
+    assert.match(zs, /sky: \{ night: isNight\(\), moon: fullMoonTonight\(\) \},/, 'the sky as it is now');
+    assert.match(pub, /if \(w\.ledger\) add\("", row\("ledger"/, 'the ledger line');
+    assert.match(pub, /add\("dim", "rules\.txt \(complete\):", 420\);/, 'a new key gets the rules');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

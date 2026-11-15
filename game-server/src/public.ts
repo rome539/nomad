@@ -1885,6 +1885,26 @@ export const PAGE = `<!doctype html>
     gap: 14px; text-align: center; padding: 24px; padding-bottom: 18vh; transition: opacity .9s ease;
   }
   #threshold.gone { opacity: 0; pointer-events: none; }
+  /* THE DOOR CONTROLLER (rome, 2026-11-15): after "enter", the door's own status
+     page prints what it knows while the connection opens, in the promos' green
+     terminal voice, then gives way to the game. Its own visual world on purpose:
+     a machine's screen, whatever theme the game wears. */
+  #boot { position: fixed; inset: 0; z-index: 9001; background: #010402; display: none;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; cursor: pointer; transition: opacity .45s ease; }
+  #boot.on { display: block; }
+  #boot.gone { opacity: 0; pointer-events: none; }
+  #boot::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.30) 0 1px, transparent 1px 3px); }
+  #boot::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+    background: radial-gradient(ellipse 80% 70% at 50% 52%, rgba(24,90,52,0.16), transparent 62%),
+                radial-gradient(ellipse 92% 88% at 50% 50%, transparent 46%, rgba(0,0,0,0.72) 100%); }
+  #bootscr { position: absolute; left: max(16px, 12%); right: max(16px, 12%); top: 8%; bottom: 10%; z-index: 1;
+    overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+  #bootscr .bl { color: #3BE07C; font-size: clamp(11px, 1.15vw, 17px); line-height: 1.62; white-space: pre-wrap; letter-spacing: .01em; }
+  #bootscr .bl.dim { color: #1F7A45; }
+  #bootscr .bl.gap { height: .85em; }
+  #bootskip { position: absolute; right: max(16px, 2.2%); bottom: 2.6%; z-index: 4; color: #1F7A45;
+    font-size: clamp(9px, 1vw, 13px); letter-spacing: .15em; }
   /* A real heading (2026-10-27: the page had none for search to read), dressed
      exactly as the div it replaced. */
   #thr-title { color: var(--gold); font-size: clamp(48px, 5.5vw, 68px); letter-spacing: .16em; font-weight: 700; line-height: 1; margin: 0; font-family: inherit; }
@@ -2445,6 +2465,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <button id="thr-reck" type="button">the reckoning</button>
     <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser. The creatures hunt, sleep and remember you, wounds do not heal on their own, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a></div>
   </div>
+  <div id="boot" aria-live="polite"><div id="bootscr"></div><div id="bootskip">TAP OR ANY KEY</div></div>
   <div id="reckm" role="dialog" aria-modal="true" aria-labelledby="recktitle">
     <div class="lbox">
       <div class="lhead">
@@ -17685,6 +17706,7 @@ function thrWorld() {
   fetch("/world.json", { cache: "no-store" }).then(function (r) {
     return r.ok ? r.json() : null;
   }).then(function (w) {
+    if (w) thrWorldData = w;   // the door controller reads it after "enter" (bootReadout)
     if (!w || crossed) return;
     var lg = (w.boards && w.boards.legend) || [], tr = (w.boards && w.boards.trophies) || [];
     if (!lg.length && !tr.length) return; // nobody has entered: no button, no empty modal
@@ -17706,6 +17728,97 @@ document.addEventListener("keydown", function (e) {
 // somebody wants to know how any of this works.
 thrWorld();
 
+var thrWorldData = null;
+// THE DOOR CONTROLLER'S READOUT (rome, 2026-11-15: loading in like the door
+// controller promos). About five seconds of the door's status page, every time
+// someone comes through: live facts the front door already shows (the legend
+// board's first name, the weather arc, the last king to fall) and the key coming in, in the promos'
+// flat voice. The connection opens underneath it. A tap or any key ends it.
+var BOOT_TICK = function (t) { SND._burst(t, { type: "bandpass", freq: 2600, q: 8, dur: 0.016, gain: 0.07 }); };
+function bootAgo(ms) {
+  var m = Math.round(ms / 60000);
+  if (m < 60) return (m <= 1 ? "a minute" : m + " minutes") + " ago";
+  var h = Math.round(m / 60);
+  if (h < 36) return (h === 1 ? "an hour" : h + " hours") + " ago";
+  var d = Math.round(h / 24);
+  return (d === 1 ? "a day" : d + " days") + " ago";
+}
+function bootReadout(done) {
+  var boot = document.getElementById("boot"), scr = document.getElementById("bootscr");
+  var w = thrWorldData, timers = [], over = false;
+  var pad = function (v, n) { v = String(v); return v + " ".repeat(Math.max(0, n - v.length)); };
+  var row = function (k, v, note) { return pad(k + " " + ".".repeat(Math.max(1, 13 - k.length)), 16) + " " + pad(v, 10) + (String(v).length >= 10 ? " " : "") + (note || ""); }; // a long name never runs into its note
+  var lines = [];
+  var add = function (cls, text, ms, ticks) { lines.push({ cls: cls, text: text, ms: ms, ticks: ticks || 0 }); };
+  add("dim", "NOMAD/0 \u00b7 door controller \u00b7 rev " + (BUILD.indexOf("__") === 0 ? "local" : BUILD), 380);
+  add("dim", "booting \u2026", 380);
+  add("gap", "", 120);
+  add("", row("world", "RUNNING", "(it does not boot. it was never off.)"), 430, 5);
+  if (w) {
+    // the boards' first name, as the reckoning already shows it at the door (rome, 2026-11-15: not who is awake)
+    var top = w.boards && w.boards.legend && w.boards.legend[0];
+    add("", top ? row("legend", String(top.name).toUpperCase(), "(the name the boards know best. for now.)")
+      : row("clock", "SYNCED", "(uptime: longer than you)"), 430, 4);
+    add("", row("outside", w.arc ? "NOTED" : "QUIET", w.arc ? "(" + String(w.arc).replace(/\.$/, "").toLowerCase() + ".)" : "(nothing out there worth a line.)"), 430, 5);
+    add("", row("kings", w.fell ? "ONE DOWN" : "STANDING", w.fell ? "(" + w.fell.name.replace(/^the /i, "the ") + ", " + bootAgo(+w.fell.ago || 0) + ".)" : "(all of them. for now.)"), 430, 5);
+    // what is over the grounds now: the hour, and a full moon by its kind (rome, 2026-11-15)
+    var sky = w.sky, MOON_NOTE = { blood: "(full and red. the hollow things stir.)", great: "(low and white and far too near.)",
+      harvest: "(deep amber, hanging low.)", pale: "(small and hard and white.)", ash: "(the colour of old ash.)" };
+    if (sky) add("", sky.moon ? row("moon", String(sky.moon).toUpperCase(), MOON_NOTE[sky.moon] || "(full.)")
+      : sky.night ? row("sky", "NIGHT", "(no full moon. the grounds go dark.)") : row("sky", "DAY", "(it does not last.)"), 430, 4);
+    // the ledger: the last wanderer down, as the arena feed already told it (rome, 2026-11-15)
+    if (w.ledger) add("", row("ledger", String(w.ledger.name).toUpperCase(), "(cause: " + w.ledger.cause + ", " + bootAgo(+w.ledger.ago || 0) + ". dropped: everything.)"), 520, 6);
+  }
+  add("", row("door", "OPEN", ""), 420, 4);
+  add("gap", "", 120);
+  if (thrKnown) {
+    add("", "> key detected \u2026 " + thrKnown + ".", 480, 7);
+    add("", "> account lookup \u2026 none needed. the key is the account.", 520, 8);
+  } else {
+    add("", "> new key detected.", 480, 6);
+    add("", "> minting visitor \u2026 done. it is you.", 520, 7);
+    // a new key gets the rules, as the promo gave them (rome, 2026-11-15)
+    add("gap", "", 120);
+    add("dim", "rules.txt (complete):", 420);
+    add("", "  1. sealed at the gate = yours.", 380, 5);
+    add("", "  2. carried = a bet.", 380, 4);
+    add("", "  3. weight is not free.", 380, 4);
+    add("", "  4. the door does not care.", 520, 5);
+    add("gap", "", 120);
+  }
+  add("", "> the world will not pause for you.", 900, 7);
+  function finish() {
+    if (over) return;
+    over = true;
+    timers.forEach(clearTimeout);
+    document.removeEventListener("keydown", skipKey, true);
+    boot.classList.add("gone");
+    setTimeout(function () { boot.classList.remove("on", "gone"); scr.textContent = ""; }, 500);
+    done();
+  }
+  function skipKey(e) { e.preventDefault(); e.stopPropagation(); finish(); }
+  scr.textContent = "";
+  boot.classList.add("on");
+  boot.onclick = finish;
+  document.addEventListener("keydown", skipKey, true);
+  if (soundOn) { try { sndInit(); } catch (e) {} }
+  var at = 0;
+  lines.forEach(function (l) {
+    timers.push(setTimeout(function () {
+      var d = document.createElement("div");
+      d.className = "bl " + l.cls;
+      d.textContent = l.text;
+      scr.appendChild(d);
+      if (l.ticks && soundOn && actx) {
+        var t = actx.currentTime + 0.01;
+        for (var i = 0; i < l.ticks; i++) { try { BOOT_TICK(t + i * 0.021 + Math.random() * 0.008); } catch (e) {} }
+      }
+    }, at));
+    at += l.ms;
+  });
+  timers.push(setTimeout(finish, at));
+}
+
 var crossed = false;
 function crossThreshold() {
   if (crossed) return;
@@ -17719,7 +17832,8 @@ function crossThreshold() {
   if (guideFresh) guideStart();
   print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
   if (!guideActive()) connect();
-  if (!phoneControls()) cmd.focus();
+  // the door controller prints while the connection opens; the cursor comes back after
+  bootReadout(function () { if (!phoneControls()) cmd.focus(); });
   // Start before connecting so new players never see a burst of welcome text.
 }
 thrEnter.addEventListener("click", crossThreshold);
