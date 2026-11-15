@@ -1,8 +1,8 @@
 # Living regions
 
-How a region's animals stop being fixed furniture and start deciding where to live. The mountain is the first region built this way (November 2026), the crossing the second and the road the third. Use this as the standard for the others.
+How a region's animals stop being fixed furniture and start deciding where to live. The mountain is the first region built this way (November 2026), the crossing the second, the road the third, and the fortress with its open ground the fourth. Use this as the standard for the others.
 
-**Status:** live on the mountain since November 6, 2026; built for the crossing November 12, 2026, and for the road November 13, 2026. The numbers are first settings from simulation; update this file when real play changes them.
+**Status:** live on the mountain since November 6, 2026; built for the crossing November 12, 2026, for the road November 13, 2026, and for the fortress November 14, 2026. The numbers are first settings from simulation; update this file when real play changes them.
 
 ## The goal
 
@@ -41,6 +41,7 @@ Sentinels, nesting mothers, the rooted, patrols, bosses and anything tied to a n
 | Wolf pack size / goes alone | 3-5 / 1 in 5 | `MOUNTAIN_GROUPS` |
 | Crossing: marsh hound packs, seals, gulls, oystercatchers, wrack crabs | 2-4, 2-4, 3-6, 3-6, 3-6 / alone 1 in 5, about 1 in 7, 1 in 10, 1 in 10, 1 in 10 | `CROSSING_GROUPS` |
 | Road: masterless dog packs, drove dog packs, goat herds | 2-4, 2-4, 4-8 / alone 1 in 5, 1 in 5, 1 in 10 | `ROAD_GROUPS` |
+| Fortress: grave hyena packs (open ground and warrens), goat herds (open ground) | 2-4, 4-8 / alone 1 in 5, 1 in 10 | `OUT_GROUPS`, `UPPER_GROUPS` |
 | Hill wolves on the mountain | 12, room for two full packs and sometimes three | spawn rows |
 | Goats, hinds, choughs, ptarmigan | 4-8, 3-6, 3-6, 3-6 / 1 in 10, ptarmigan about 1 in 7 | `MOUNTAIN_GROUPS` |
 | Nearest a wolf settles to a gate | 10 steps | `MOUNTAIN_GROUPS` |
@@ -74,14 +75,15 @@ The numbers are first guesses tested in simulation. A new region can start from 
 - `game-server/src/flight.ts`: birds flying out to feed, in every region
 - `game-server/src/grass.ts`: the mountain's grass, eaten down and growing back
 - `game-server/src/beasts.ts`: the `beasts` command and its daily count
-- `game-server/src/zone-data.ts`, `LIVING_REGIONS`: each living region's roamers and groups (`MOUNTAIN_*`, `CROSSING_*`); `roamsIn` and `groupOf` read them
+- `game-server/src/zone-data.ts`, `LIVING_REGIONS`: each living region's roamers and groups (`MOUNTAIN_*`, `CROSSING_*`, `ROAD_*`, `OUT_*`, `UPPER_*`, `DEEP_*`), and the warren rats' tie (`tiedHome`); `roamsIn` and `groupOf` read them
 - `game-server/src/mountain-ground.ts`: each room's kind of ground, and what each animal settles on, for every living region
 - `game-server/src/crossing-ground.ts`: the crossing's ground and what its animals settle on
 - `game-server/src/road-ground.ts`: the road's ground and what its animals settle on
+- `game-server/src/fortress-ground.ts`: the open ground's, the keep's and the deep's ground, and what their animals settle on
 - `game-server/src/zone-data.ts`: the lists and numbers above
 - `game-server/src/ai.ts`, `livingHomes`: which rooms an animal may call home, in its own region
-- `game-server/src/herds.ts`: births and strays go through the plan
-- `game-server/scripts/sim-mountain.mjs`, `sim-crossing.mjs` and `sim-road.mjs`: the simulators (`sim-crossing.mjs measure` prints each line's homes, and for a hunter the homes with prey in reach)
+- `game-server/src/herds.ts`: births and strays go through the plan; a warren row refills in the warrens first
+- `game-server/scripts/sim-mountain.mjs`, `sim-crossing.mjs` and `sim-road.mjs`: the simulators (`sim-crossing.mjs measure` prints each line's homes, and for a hunter the homes with prey in reach); the fortress has none of its own yet
 
 Since the crossing, the rules read per-region tables (`LIVING_REGIONS`) rather than the mountain by name. Since the road, a line may live in more than one region (the goat and the scarp raven live on the mountain and the road): each animal answers to the region its home is in, `roamsIn(line, region)` and `groupOf(line, region)` take the region, and every group carries its region, so a road goat never joins a mountain herd. A group made before the road carries none and counts as its line's first region. A new region adds its roamers and groups there, its ground file, and its section in `beasts`. The grass that is eaten down is still the mountain's alone; everywhere else the ground never runs dry.
 
@@ -119,7 +121,7 @@ Its limits: it starts from a freshly placed world, not the live one; its "player
 
 ## Checking it live
 
-`beasts` (keeper's key only, kept out of `census`) shows the mountain as it stands: wolf packs and where they live, loners, wolves in the hamlet, each animal alive against its limit, birds in the air and the busiest bird room, and in the last 24 hours homes given up (time run out, hunger, or run off twice), flights, chases, small hunters caught, kills stolen and who killed what. Hunger is left out on purpose. The next region should add its own section here, not a new command.
+`beasts` (keeper's key only, kept out of `census`) shows the mountain as it stands: wolf packs and where they live, loners, wolves in the hamlet, each animal alive against its limit, birds in the air and the busiest bird room, and in the last 24 hours homes given up (time run out, hunger, or run off twice), flights, chases, small hunters caught, kills stolen and who killed what. Hunger is left out on purpose. Each region since has its own section in it: the crossing, the road, the open ground, the keep and the warrens, and the deep. The next region adds its own section here, not a new command.
 
 ## The crossing
 
@@ -152,6 +154,19 @@ Built November 13, 2026, the third region, by the steps above.
 - **Who roams.** Feral goats (herds of 4-8), masterless dogs and drove dogs (packs of 2-4, which close on a goat together as the hounds do a seal) live in company; roe deer, otters, grey herons, gill adders and scarp ravens alone, the otters, herons and adders holding land. The otter settles only near its rats. The rats stay where their rows are; the footpads and the other people, the barrow-wights, the mire-walkers (drowners), the toll clerks, the wardens, the miller, the carrier and the baited bear stay where they are.
 - **Hares, and the drove dogs keep to the drove** (November 13, 2026, mig 397). The road had 16 animals to eat against 22 hunters, and live the drove dogs did half its killing, otters and roe deer with the goats. Ten mountain hares were put on the road's grass (the Hare Ground, the Spoil Banks, the commons, the sheepwalks); they roam the road, and every dog, the bear and the gill adders can take one. The drove dogs no longer take an otter or a deer. The baited bear roams the road too.
 - **What it measured.** Every line has 24-97 homes against 3-9 rows. The gill adder eats only rats, and every road rat is nearer a gate than an adder's rows let it live, so only 2 of its homes have a rat in reach; it is left off `SETTLES_BY_PREY` so it does not pile up there. The otter has 6 of 24, the heron (which eats only adders) 11 of 65, the masterless dogs 15 of 92 by their rows (they also take goats as a pack). That was true before this work too.
+
+## The fortress
+
+Built November 14, 2026, the fourth, by the steps above. The game already divides the place in three, and each is its own living region: the open ground round the walls (`out`), the keep and the warrens (`upper`), and everything under the hatch (`deep`, both slabs: the second slab is region `deep` in its rooms and the old deep is `deep` by `DEEP_ROOMS`, so they are one).
+
+- **Ground.** All 83 rooms of the open ground sorted from their text into road, green, thorn, earth (the siege works and the dug, trodden and gnawed ground), graves (the pits, the mass graves, the bone heaps, the gibbet ground), rubble, wet, built and mine. The keep's 74 into halls, walls (the open-air walk and towers), warrens, water, gate and hideaway; the deep's 89 into dark, water and hideaway. Nothing settles on road, built, mine, gate or hideaway. The open ground names its grass `green`, so the goat's rule holds unchanged. The first fortress rooms are not in region files, so the test pins each table's size as well as checking every room the region files add.
+- **Who roams.** On the open ground the goats live in a herd (4-8) and the grave hyenas in packs of 2-4 that close on a goat together (`PACK_HUNTERS`; two take a goat, three the old billy); the dire hyena, the gibbet crows, the rats and the scary rats alone. In the keep and the warrens the hyenas keep their pack and the rats roam the keep. In the deep the pale crawlers live alone on the dark, wet or dry, still holding their rooms by the rival fights they always had, and the rats roam. The hollow walk too (below). The road squads' skeletons and bone knights, the sapper, the bellfounder, the cutpurses, the cook, the rag-and-bone man, the drowned, the verdigris things, the patrols, the last watchman, the three-headed hound and the kings stay where they are, as does the crawler in the keep.
+- **The warren rats are the rat king's** (`tiedHome`, `TIED_TO_WARRENS`). A rat or scary rat whose home is in the warrens keeps it and draws no new one, its row refills in the warrens first, and it wakes there. A rat born to a row anywhere else roams. A brood mother is the rat's rare blood but nest-bound, so no rule moves her.
+- **What it measured** (prod's rows). The goats have 21 homes for 7 rows, all with grazing in reach. The open ground's grave hyenas have 47 homes for 12 rows, 25 with prey within 3 rooms; the deep's crawlers 87 for 13, 54 with prey in reach. The rats have 69 homes on the open ground, 45 in the keep and 82 in the deep. The skeletons have 45 homes for 9 rows, the wardens 45 for 3, the twice-dead 87 for 12, the cantors 62 for 6. The open ground's hyenas live on its rats, which come back within minutes; its 7 goats come back at about 2½ hours a row and could not feed 13 hyenas alone, which rome ruled does not matter.
+- **Rats live by their scraps** (`SETTLES_BY_SCRAPS`). A rat eats only the muck of the warrens, the carrion ground and the open ground's middens (`FORAGE_ROOMS`), and the deep has two such rooms in 89, so a roaming rat settles only with scraps within its round (5 rooms). Fifteen rooms whose own words leave food lying (dropped and gnawed bones, a midden, muck, a pantry's leavings, the charnel chute) were made scrap ground (`FORTRESS_SCRAPS`), 4 in the keep and 11 in the deep; rooms whose bone is built in (the organ, the font, the pews) or whose "dead" is the King were left out. With them every keep rat home and 82 of the deep's 87 have food in reach; with the scraps rule and without the rooms, the deep's rats would all have lived round its 2 scrap rooms.
+- **The hollow draw their homes too** (rome, 2026-11-14). The keep's skeletons and wardens and the deep's twice-dead and marrow cantors roam as the animals do, each alone, and walk the ground round their homes (`WALKING_DEAD`). They never eat, so no food pulls them and their draw is fair over their ground: the skeletons and wardens on the halls and walls, the twice-dead on the dark, wet or dry, the cantors on the dark. They show in `beasts`.
+- **Meals by size** (rule 12, unchanged here). A grave hyena (30) is fed about 45 minutes by a rat and 1¾ hours by a goat, which its killer eats whole; the dire hyena (45) about half an hour by a rat and 70 minutes by a goat; a crawler (30) 45 minutes by a rat and just over 1½ hours by a brood mother; a crow or a rat at a body takes half its own size, an hour fed. A goat's graze and a rat's scraps take 25 off, about 50 minutes, and never eat into a banked meal. The open ground's grass never runs out; only the mountain's is eaten down.
+- **Not simulated yet.** The local database is behind prod (it lacks the open ground's goats, mig 351), so a run needs it brought up first, and there is no fortress simulator. Run one, with rome's yes, before trusting the numbers above as more than room counts.
 
 ## What the mountain taught us
 

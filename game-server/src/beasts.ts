@@ -7,7 +7,8 @@ import type { Creature } from "./zone-types";
 import { FOOD_FLIERS, SALT_HAMLET_ROOMS, SHIELING_HAMLET_ROOMS, roamsIn } from "./zone-data";
 
 const DAY_MS = 24 * 3_600_000;
-export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Record<string, Record<string, number>>; crossingKills?: Record<string, Record<string, number>>; roadKills?: Record<string, Record<string, number>> }
+type Kills = Record<string, Record<string, number>>;
+export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Kills; crossingKills?: Kills; roadKills?: Kills; outKills?: Kills; upperKills?: Kills; deepKills?: Kills }
 type Event = "moved" | "flights" | "chases" | "caught" | "stolen";
 
 const SHOWN = [
@@ -22,10 +23,13 @@ const CROSSING_SHOWN = [
 const ROAD_SHOWN = [
   "rat", "mountain-hare", "roe-deer", "feral-goat", "otter", "gill-adder", "grey-heron", "scarp-raven", "masterless-dog", "drove-dog", "the-baited-bear",
 ];
-const lineOf = (z: ZoneDO, id: string): string => SHOWN.includes(id) || CROSSING_SHOWN.includes(id) || ROAD_SHOWN.includes(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
+// THE FORTRESS'S SECTIONS (2026-11-14): the open ground, the keep and the warrens, the deep.
+const OUT_SHOWN = ["rat", "fleet-rat", "feral-goat", "gibbet-crow", "grave-hyena", "dire-hyena"];
+const UPPER_SHOWN = ["rat", "fleet-rat", "grave-hyena", "skeleton", "warden"];
+const DEEP_SHOWN = ["rat", "fleet-rat", "pale-crawler", "twice-dead", "marrow-cantor"];
+const ALL_SHOWN = new Set([...SHOWN, ...CROSSING_SHOWN, ...ROAD_SHOWN, ...OUT_SHOWN, ...UPPER_SHOWN, ...DEEP_SHOWN]);
+const lineOf = (z: ZoneDO, id: string): string => ALL_SHOWN.has(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
 const onMountain = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "mountain";
-const onCrossing = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "crossing";
-const onRoad = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "road";
 
 function tally(z: ZoneDO, now: number): Tally {
   const state = z.groups;
@@ -44,15 +48,17 @@ export function note(z: ZoneDO, what: Event, now = Date.now()): void {
 /** A living region's animal has died. `by` is what killed it: a creature's template, or "wanderers". */
 export function noteKill(z: ZoneDO, victim: Creature, by: string, now = Date.now()): void {
   const line = lineOf(z, victim.templateId);
-  if (!(onMountain(z, victim) && SHOWN.includes(line)) && !(onCrossing(z, victim) && CROSSING_SHOWN.includes(line))
-    && !(onRoad(z, victim) && ROAD_SHOWN.includes(line))) return;
-  if (onCrossing(z, victim) || onRoad(z, victim)) {
+  const region = z.regionOf(victim.home ?? victim.roomId);
+  const view = VIEWS.find((v) => v.region === region);
+  if (view) {
+    if (!view.shown.includes(line)) return;
     const t = tally(z, now);
-    const row = ((onRoad(z, victim) ? (t.roadKills ??= {}) : (t.crossingKills ??= {}))[line] ??= {});
+    const row = ((t[view.kills] ??= {})[line] ??= {});
     const who = by === "wanderers" ? by : lineOf(z, by);
     row[who] = (row[who] ?? 0) + 1;
     return;
   }
+  if (!(onMountain(z, victim) && SHOWN.includes(line))) return;
   const row = (tally(z, now).kills[line] ??= {});
   const who = by === "wanderers" ? by : lineOf(z, by);
   row[who] = (row[who] ?? 0) + 1;
@@ -113,14 +119,13 @@ export function lines(z: ZoneDO, now: number): string[] {
       .map(([k, n]) => `${k === "wanderers" ? k : name(k)} ${n}`).join(", ");
     out.push(`  ${name(line)} ${total}: ${who}`);
   }
-  out.push("", ...regionLines(z, now, CROSSING_VIEW));
-  out.push("", ...regionLines(z, now, ROAD_VIEW));
+  for (const v of VIEWS) out.push("", ...regionLines(z, now, v));
   return out;
 }
 
 // What a living region's section shows: its packs, its herds, its lines against
 // their limit, and what was killed and by what.
-interface RegionView { title: string; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" }
+interface RegionView { title: string; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" | "outKills" | "upperKills" | "deepKills" }
 const CROSSING_VIEW: RegionView = {
   title: "THE CROSSING", region: "crossing", shown: CROSSING_SHOWN, kills: "crossingKills",
   packs: [{ line: "marsh-hound", label: "Marsh hounds", hamlet: SALT_HAMLET_ROOMS }],
@@ -131,6 +136,22 @@ const ROAD_VIEW: RegionView = {
   packs: [{ line: "masterless-dog", label: "Masterless dogs" }, { line: "drove-dog", label: "Drove dogs" }],
   herds: ["feral-goat"],
 };
+const OUT_VIEW: RegionView = {
+  title: "THE OPEN GROUND", region: "out", shown: OUT_SHOWN, kills: "outKills",
+  packs: [{ line: "grave-hyena", label: "Grave hyenas" }],
+  herds: ["feral-goat"],
+};
+const UPPER_VIEW: RegionView = {
+  title: "THE KEEP AND THE WARRENS", region: "upper", shown: UPPER_SHOWN, kills: "upperKills",
+  packs: [{ line: "grave-hyena", label: "Grave hyenas" }],
+  herds: [],
+};
+const DEEP_VIEW: RegionView = {
+  title: "THE DEEP", region: "deep", shown: DEEP_SHOWN, kills: "deepKills",
+  packs: [],
+  herds: [],
+};
+const VIEWS = [CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW];
 
 function regionLines(z: ZoneDO, now: number, v: RegionView): string[] {
   const world = z.world!;

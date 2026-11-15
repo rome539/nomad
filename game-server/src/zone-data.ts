@@ -2559,6 +2559,9 @@ export const CROSSING_GROUPS = new Map<string, { min: number; max: number; lone:
 export const WALKING_DEAD = new Set([
   "the-fowler", "the-eel-cutter", "the-reed-walker", "the-salt-widow", "the-drover", "the-tide-warden",
   "the-pilot", "the-refuge-man", "the-scaffold-hand", "the-bridge-mason", "twice-dead",
+  // ...and the keep's and the deep's hollow (2026-11-14), which draw their homes now and
+  // walk the ground round them; every other skeleton is in a road squad and walks its round
+  "skeleton", "warden", "marrow-cantor",
 ]);
 // THE ROAD LIVES TOO (2026-11-13): the third living region. The goat and the scarp
 // raven are the mountain's lines as well, so a line may now live in more than one
@@ -2578,6 +2581,38 @@ export const ROAD_GROUPS = new Map<string, { min: number; max: number; lone: num
   ["masterless-dog", { min: 2, max: 4, lone: 0.2 }],
   ["drove-dog", { min: 2, max: 4, lone: 0.2 }],
 ]);
+// THE FORTRESS AND ITS OPEN GROUND (2026-11-14), the fourth living regions. Three of
+// them, as the game already divides the place: the open ground round the walls ("out"),
+// the keep and the warrens ("upper") and everything under the hatch ("deep", both slabs).
+// On the open ground the goats live in a herd and the grave-hyenas in packs that close
+// on a goat together; the dire hyena, the gibbet crows and the rats live alone. In the
+// keep and the warrens the hyenas keep their pack and the rats roam the keep; the warren
+// rats stay as the rat king's (TIED_TO_WARRENS). In the deep the pale crawlers live alone,
+// each holding its own dark by the rival fights it always had, and the rats roam.
+// Everything else stays: the dead, the patrols, the people, the hound and the kings.
+export const OUT_ROAMERS = new Set(["feral-goat", "grave-hyena", "dire-hyena", "gibbet-crow", "rat", "fleet-rat"]);
+export const OUT_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
+  ["feral-goat", { min: 4, max: 8, lone: 0.1 }],
+  ["grave-hyena", { min: 2, max: 4, lone: 0.2 }],
+]);
+export const UPPER_ROAMERS = new Set(["grave-hyena", "rat", "fleet-rat", "skeleton", "warden"]);
+export const UPPER_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
+  ["grave-hyena", { min: 2, max: 4, lone: 0.2 }],
+]);
+// THE HOLLOW WALK TOO (rome, 2026-11-14): the keep's skeletons and wardens and the
+// deep's twice-dead and cantors draw their homes as the animals do, each alone. They
+// never eat, so no food pulls them: where they stand is a fair draw over their ground.
+// The road squads' skeletons and bone-knights, the patrols, the watchman, the cook and
+// the kings stay where they are.
+export const DEEP_ROAMERS = new Set(["pale-crawler", "rat", "fleet-rat", "twice-dead", "marrow-cantor"]);
+export const DEEP_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>();
+// A HOME THAT IS NOT GIVEN UP. A roaming line whose home is one of these rooms stays
+// there and draws no new one: the warren rats are the rat king's (ratking.ts), as the
+// hamlet rats are the fever rat's. A rat born to a row out there still roams.
+export const TIED_TO_WARRENS = new Set(["rat", "fleet-rat"]); // WARRENS_ROOMS is set further down, so read at call time
+export function tiedHome(line: string, room: string | undefined): boolean {
+  return !!room && TIED_TO_WARRENS.has(line) && WARRENS_ROOMS.has(room);
+}
 // EVERY LIVING REGION'S TABLES, ONE PLACE (living-regions.md: the first region after
 // the mountain turns its code into per-region tables). The rules in groups.ts read
 // these; a line lives in exactly one region.
@@ -2585,6 +2620,9 @@ export const LIVING_REGIONS: Record<string, { roamers: Set<string>; groups: Map<
   mountain: { roamers: MOUNTAIN_ROAMERS, groups: MOUNTAIN_GROUPS },
   crossing: { roamers: CROSSING_ROAMERS, groups: CROSSING_GROUPS },
   road: { roamers: ROAD_ROAMERS, groups: ROAD_GROUPS },
+  out: { roamers: OUT_ROAMERS, groups: OUT_GROUPS },
+  upper: { roamers: UPPER_ROAMERS, groups: UPPER_GROUPS },
+  deep: { roamers: DEEP_ROAMERS, groups: DEEP_GROUPS },
 };
 /** With a region: that region if the line roams there. Without one: the first living
  *  region the line roams in (a line may roam in more than one, as the goat does). */
@@ -2630,7 +2668,7 @@ export const PACK_QUARRY = new Set(["red-stag", "red-hind", "feral-goat",
   "grey-seal", "conger"]); // the marsh hounds' big game (rome, 2026-11-12), as the stag is the wolves'
 // WHO HUNTS AS A PACK. The hill wolves, and the marsh hounds, which gang up on a
 // seal or a conger as the wolves do on a stag; the hounds still hold no ground.
-export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog", "drove-dog"]); // the road dog packs close on a goat together (2026-11-13)
+export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog", "drove-dog", "grave-hyena"]); // the road dog packs close on a goat together (2026-11-13), and the open ground's hyena packs (2026-11-14)
 // ...AND THE STAG, MORE OFTEN THE BIGGER THE PACK (rome, 2026-11-11: nothing ever
 // set out after a stag, which died only when three wolves happened into its
 // room; a pack of five should mostly go after the big game). A pack picking its
@@ -2693,6 +2731,11 @@ export const FLIGHT_LOOK_MS = 60_000; // a hungry bird that found nothing looks 
 // homes have one in reach, and making it settle by them would pile the adders there.
 export const SETTLES_BY_PREY = new Set(["lynx", "fen-viper", "otter"]);
 export const SETTLES_BY_GRAZING = new Set(["mountain-hare", "ptarmigan"]);
+// THE FORTRESS RATS LIVE BY THEIR SCRAPS (2026-11-14). A rat eats the muck of the
+// warrens, the carrion ground and the open ground's middens (FORAGE_ROOMS), and the
+// deep has two such rooms in eighty-nine, so a roaming rat settles only with scraps
+// inside its round, or it would starve where it landed.
+export const SETTLES_BY_SCRAPS = new Set(["rat", "fleet-rat"]);
 // NOTHING STAYS FOR GOOD (rome, 2026-11-06). A mountain animal or group holds a home
 // for 2-5 game days (DAY_CYCLE_MS each), then draws a new one. One that is well fed
 // when its time comes gets a single game day more, so good ground is worth holding.
@@ -8210,7 +8253,18 @@ export const GRASS_REGROW_MS = 20 * 60_000;
 export const ROUND_BASKERS = new Set<string>(["stone-adder", "the-gravid-adder"]);
 export const WARM_GROUND = new Set<string>(["the-ramp-head", "the-warm-gutter", "the-lower-warm", "the-lower-flags"]);
 // The mountain's bone ground feeds no grazer (rome, 2026-11-08): it is bones.
-export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...[...CARRION_ROOMS].filter((r) => !MOUNTAIN_GROUND.bones.includes(r)), ...SURFACE_FORAGE]);
+// THE KEEP'S AND THE DEEP'S SCRAPS (2026-11-14). Rats roam the keep and the deep now,
+// and the deep had two scrap rooms in eighty-nine, so the rats would all have lived
+// round them. These are the rooms whose own words leave food lying: bones dropped and
+// gnawed, a midden, muck, a pantry's leavings, the chute the garrison's dead went down.
+// A room whose bone is built into it (the organ, the font, the pews, the processional)
+// or whose "dead" is a King or a furnace is not here.
+export const FORTRESS_SCRAPS = [
+  "armory", "cells", "kennels", "the-issue-room",                                  // the keep
+  "silted-stair", "the-charnel-chute", "the-chute-foot", "the-cold-hearth", "the-cold-pantry", "the-crawlway",
+  "the-eel-run", "the-scavengers-shelf", "the-silt-fall", "the-still-cradle", "the-undertow", // the deep
+];
+export const FORAGE_ROOMS = new Set([...WARRENS_ROOMS, ...[...CARRION_ROOMS].filter((r) => !MOUNTAIN_GROUND.bones.includes(r)), ...SURFACE_FORAGE, ...FORTRESS_SCRAPS]);
 // GOATS BROWSE THE CRAGS (rome, 2026-11-08): lichen, moss and whatever roots in a
 // ledge, as a feral goat lives, so a goat feeds on crag ground as well as grass
 // and lives up the mountain where the crags are (ai.forageGround, herds, groups).

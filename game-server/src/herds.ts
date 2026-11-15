@@ -37,8 +37,7 @@ import {
   HERD_PACE_SECS, HERD_BIRTH_PER_H, HERD_BIRTH_MIN, HERD_BIRTH_MAX, HERD_STRAY_FRAC,
   HERD_FLOOR_FRAC, HERD_FLOOR_PER_HUNTER_PER_H, HERD_NO_PREY_SHARE,
   ROOTED, NOCTURNAL, SURFACE_FORAGE, ROUND_REGIONS, ROUND_RANGE, HUNT_RECHECK_MS,
-  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS, HUNTS_NOT_CARRION, WARY_STAYS_IN, BROWSERS, CRAG_ROOMS,
-} from "./zone-data";
+  ROUND_BASKERS, WARM_GROUND, SCAVENGERS, CARRION_ROOMS, HUNTS_NOT_CARRION, WARY_STAYS_IN, BROWSERS, CRAG_ROOMS, tiedHome } from "./zone-data";
 
 const AT = "_at"; // the clock, kept in the same saved map as what each herd is owed
 
@@ -174,8 +173,11 @@ export function tick(z: ZoneDO, now: number, silent: boolean): void {
           if (ground.length) homes = ground;
         }
         // ...and a living region's line goes where chance and food send it, or to its group.
-        const plan = roamsIn(line, band) ? groups.plan(z, line, now, band) : undefined;
-        if (plan) homes = [plan.home];
+        // A warren rat's row fills in the warrens first: those rats are the rat king's (tiedHome).
+        const tiedOpen = open.filter((r) => tiedHome(line, r));
+        const plan = roamsIn(line, band) && !tiedOpen.length ? groups.plan(z, line, now, band) : undefined;
+        if (tiedOpen.length) homes = tiedOpen;
+        else if (plan) homes = [plan.home];
         if (!homes.length) break;
         const home = homes[randInt(0, homes.length - 1)];
         // Born or walked in, in proportion to what was owed. A birth needs a
