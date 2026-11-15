@@ -2590,12 +2590,15 @@ export const ROAD_GROUPS = new Map<string, { min: number; max: number; lone: num
 // rats stay as the rat king's (TIED_TO_WARRENS). In the deep the pale crawlers live alone,
 // each holding its own dark by the rival fights it always had, and the rats roam.
 // Everything else stays: the dead, the patrols, the people, the hound and the kings.
-export const OUT_ROAMERS = new Set(["feral-goat", "grave-hyena", "dire-hyena", "gibbet-crow", "rat", "fleet-rat"]);
+// The scary rat is the rat's rare blood and lives as a rat (rome, 2026-11-14), so it is
+// not listed. The dire hyena is listed: it is born to the grave hyenas but is its own
+// animal, a loner that runs the plain ones off (rome, 2026-11-14), so it lives alone.
+export const OUT_ROAMERS = new Set(["feral-goat", "grave-hyena", "dire-hyena", "gibbet-crow", "rat"]);
 export const OUT_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
   ["feral-goat", { min: 4, max: 8, lone: 0.1 }],
   ["grave-hyena", { min: 2, max: 4, lone: 0.2 }],
 ]);
-export const UPPER_ROAMERS = new Set(["grave-hyena", "rat", "fleet-rat", "skeleton", "warden"]);
+export const UPPER_ROAMERS = new Set(["grave-hyena", "rat", "skeleton", "warden"]);
 export const UPPER_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
   ["grave-hyena", { min: 2, max: 4, lone: 0.2 }],
 ]);
@@ -2604,12 +2607,12 @@ export const UPPER_GROUPS = new Map<string, { min: number; max: number; lone: nu
 // never eat, so no food pulls them: where they stand is a fair draw over their ground.
 // The road squads' skeletons and bone-knights, the patrols, the watchman, the cook and
 // the kings stay where they are.
-export const DEEP_ROAMERS = new Set(["pale-crawler", "rat", "fleet-rat", "twice-dead", "marrow-cantor"]);
+export const DEEP_ROAMERS = new Set(["pale-crawler", "rat", "twice-dead", "marrow-cantor"]);
 export const DEEP_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>();
 // A HOME THAT IS NOT GIVEN UP. A roaming line whose home is one of these rooms stays
 // there and draws no new one: the warren rats are the rat king's (ratking.ts), as the
 // hamlet rats are the fever rat's. A rat born to a row out there still roams.
-export const TIED_TO_WARRENS = new Set(["rat", "fleet-rat"]); // WARRENS_ROOMS is set further down, so read at call time
+export const TIED_TO_WARRENS = new Set(["rat"]); // WARRENS_ROOMS is set further down, so read at call time
 export function tiedHome(line: string, room: string | undefined): boolean {
   return !!room && TIED_TO_WARRENS.has(line) && WARRENS_ROOMS.has(room);
 }
@@ -2735,7 +2738,7 @@ export const SETTLES_BY_GRAZING = new Set(["mountain-hare", "ptarmigan"]);
 // warrens, the carrion ground and the open ground's middens (FORAGE_ROOMS), and the
 // deep has two such rooms in eighty-nine, so a roaming rat settles only with scraps
 // inside its round, or it would starve where it landed.
-export const SETTLES_BY_SCRAPS = new Set(["rat", "fleet-rat"]);
+export const SETTLES_BY_SCRAPS = new Set(["rat"]);
 // NOTHING STAYS FOR GOOD (rome, 2026-11-06). A mountain animal or group holds a home
 // for 2-5 game days (DAY_CYCLE_MS each), then draws a new one. One that is well fed
 // when its time comes gets a single game day more, so good ground is worth holding.

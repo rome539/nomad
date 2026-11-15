@@ -131,7 +131,6 @@ export const FORTRESS_SETTLES: [string, string[]][] = [
   ["dire-hyena", ["graves", "earth", "thorn"]],
   ["gibbet-crow", ["graves", "thorn"]],                     // the iron over the graves, and the dead thorn
   ["rat", ["green", "thorn", "earth", "graves", "wet", "rubble", "halls", "water", "dark"]],
-  ["fleet-rat", ["green", "thorn", "earth", "graves", "wet", "rubble", "halls", "water", "dark"]],
   ["pale-crawler", ["dark", "water"]],                      // the deep's own dark, wet or dry
   ["skeleton", ["halls", "walls"]],                         // the keep's dead garrison, anywhere it kept
   ["warden", ["halls", "walls"]],

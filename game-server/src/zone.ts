@@ -8657,15 +8657,22 @@ export class ZoneDO implements DurableObject {
       const rest = n - top.length;
       return `, ${heft} ${top.join(" and ")}${rest > 0 ? ` and ${rest} more dead men's things` : ""}`;
     }
-    const clauses: string[] = [];
+    // ONE VERB, AND A PAIR IS A PAIR (rome, 2026-11-14: a dire hyena was "dragging a
+    // tattered cloak and dragging a tattered cloak"). Each verb is said once with all it
+    // covers, and two of the same thing are counted, not named twice.
+    const byVerb = new Map<string, Map<string, number>>();
     for (const id of creature.carries) {
       const t = this.world!.itemTemplates.get(id);
       if (!t) continue;
       // A beast drags everything in its jaws; only something with hands wields or wears.
       const verb = SCAVENGERS.has(creature.templateId) ? "dragging"
         : t.slot === "weapon" ? "wielding" : t.slot === "" ? "dragging" : "clad in";
-      clauses.push(`${verb} ${t.name}`);
+      const names = byVerb.get(verb) ?? new Map<string, number>();
+      names.set(t.name, (names.get(t.name) ?? 0) + 1);
+      byVerb.set(verb, names);
     }
+    const clauses = [...byVerb].map(([verb, names]) =>
+      `${verb} ${[...names].map(([name, n]) => countedName(name, n)).join(" and ")}`);
     return clauses.length ? `, ${clauses.join(" and ")}` : "";
   }
 
@@ -9997,4 +10004,19 @@ export class ZoneDO implements DurableObject {
   // clear so the world can be watched from outside — a wanderer's own deeds under
   // their own key (actorFeed), the world's lines under the dungeon's. The trade
   // is deliberate; see the arena-broadcast notes in actorFeed and public.ts.)
+}
+
+const COUNT_WORDS = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+/** "a tattered cloak" x2 -> "two tattered cloaks"; "a pair of boots" x2 -> "two pairs of boots". */
+export function countedName(name: string, n: number): string {
+  if (n <= 1) return name;
+  const bare = name.replace(/^(?:a|an|the|some)\s+/i, "");
+  const plural = (w: string): string => /(?:s|x|z|ch|sh)$/i.test(w) ? w + "es"
+    : /[^aeiou]y$/i.test(w) ? w.slice(0, -1) + "ies"
+    : /fe$/i.test(w) ? w.slice(0, -2) + "ves" : w + "s";
+  const of = bare.indexOf(" of ");
+  const head = of > 0 ? bare.slice(0, of) : bare, tail = of > 0 ? bare.slice(of) : "";
+  const words = head.split(" ");
+  words[words.length - 1] = plural(words[words.length - 1]);
+  return `${COUNT_WORDS[n] ?? String(n)} ${words.join(" ")}${tail}`;
 }

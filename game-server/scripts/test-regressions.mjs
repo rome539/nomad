@@ -7781,7 +7781,11 @@ try {
     assert.equal(new Set(Object.values(UPPER_GROUND).flat()).size, 74, 'all 74 of the keep and the warrens');
     assert.equal(new Set(Object.values(DEEP_GROUND).flat()).size, 89, 'all 89 of the deep, both slabs');
     // who lives where, and in what company
-    for (const [reg, lines] of [['out', ['feral-goat', 'grave-hyena', 'dire-hyena', 'gibbet-crow', 'rat', 'fleet-rat']], ['upper', ['grave-hyena', 'rat', 'fleet-rat']], ['deep', ['pale-crawler', 'rat', 'fleet-rat']]])
+    // the scary rat is the rat's rare blood and lives as a rat; the dire hyena is its own animal and lives alone (rome, 2026-11-14)
+    for (const v of ['fleet-rat', 'brood-rat', 'albino-rat']) for (const reg of ['out', 'upper', 'deep']) assert.equal(roamsIn(v, reg), undefined, v + ' lives as a rat does, not as a line');
+    assert.ok(!FORTRESS_SETTLES.some(([l]) => l === 'fleet-rat'), 'the scary rat has no fortress ground of its own');
+    assert.equal(groupOf('dire-hyena', 'out'), undefined, 'the dire hyena lives alone, never in a grave hyena pack');
+    for (const [reg, lines] of [['out', ['feral-goat', 'grave-hyena', 'dire-hyena', 'gibbet-crow', 'rat']], ['upper', ['grave-hyena', 'rat']], ['deep', ['pale-crawler', 'rat']]])
       for (const l of lines) { assert.equal(roamsIn(l, reg), reg, l + ' lives in ' + reg); assert.ok(SETTLES_ON.has(l), l + ' has its ground named'); }
     // the keep's and the deep's hollow draw their homes too, and walk their ground; the road squads' do not
     for (const [reg, lines] of [['upper', ['skeleton', 'warden']], ['deep', ['twice-dead', 'marrow-cantor']]])
@@ -7804,7 +7808,7 @@ try {
     assert.ok(settlesOn('rat', 'library') && settlesOn('rat', 'the-lightless-march') && !settlesOn('rat', 'the-rat-warren'), 'a roaming rat never settles into the warrens');
     assert.ok(settlesOn('gibbet-crow', 'the-hanging-hill') && !settlesOn('gibbet-crow', 'the-green'), 'the crow over the graves');
     // the warren rats are the rat king's: they keep their homes, and their rows fill in place
-    assert.ok(tiedHome('rat', 'the-rat-warren') && tiedHome('fleet-rat', 'the-side-run'), 'a warren rat stays');
+    assert.ok(tiedHome('rat', 'the-rat-warren') && tiedHome('rat', 'the-side-run'), 'a warren rat stays');
     assert.ok(!tiedHome('rat', 'library') && !tiedHome('grave-hyena', 'the-hyena-den'), 'a keep rat roams, and a hyena is not tied');
     const g = readFileSync(new URL('../src/groups.ts', import.meta.url), 'utf8');
     assert.match(g, /if \(BROODERS\.has\(c\.templateId\) \|\| tiedHome\(line, c\.home \?\? c\.roomId\)\) continue;/, 'a brood mother and a warren rat draw no new home');
@@ -7813,7 +7817,7 @@ try {
     const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
     assert.match(ai, /if \(roamsIn\(templateId, z\.regionOf\(fallback\)\) && !tiedHome\(templateId, fallback\) && !BROODERS\.has\(templateId\)\)/, 'and a warren rat wakes in its warren');
     // a roaming rat settles only with scraps in its round: the deep has two scrap rooms in 89
-    assert.ok(SETTLES_BY_SCRAPS.has('rat') && SETTLES_BY_SCRAPS.has('fleet-rat'), 'the rats settle by their scraps');
+    assert.ok(SETTLES_BY_SCRAPS.has('rat') && !SETTLES_BY_SCRAPS.has('fleet-rat'), 'the rats settle by their scraps');
     for (const r of ['armory', 'kennels', 'the-cold-pantry', 'the-scavengers-shelf', 'the-still-cradle', 'the-undertow']) assert.ok(FORAGE_ROOMS.has(r), r + ' leaves scraps lying');
     for (const r of ['the-bone-organ', 'kings-oratory', 'forge', 'the-long-pews']) assert.ok(!FORAGE_ROOMS.has(r), r + ' has its bone built in, or its dead is a King');
     assert.match(ai, /&& \(!SETTLES_BY_SCRAPS\.has\(templateId\) \|\| \[\.\.\.z\.nearby\(r, ROUND_RANGE\)\.keys\(\)\]\.some\(\(n\) => FORAGE_ROOMS\.has\(n\)\)\)/, 'a home needs scraps within its round');
@@ -7849,6 +7853,21 @@ try {
     const v = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8'), pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(v, /\["IN THE PACK", items\.filter\(\(c\) => !c\.equipped && !edible\(c\) && !z\.isTrophy\(c\.itemId\)\)\],\n\s+\["FOOD"[^\n]*\n(?:\s+\/\/[^\n]*\n)?\s+\["TROPHIES", items\.filter\(\(c\) => !c\.equipped && !edible\(c\) && z\.isTrophy\(c\.itemId\)\)\],/, 'the typed pack');
     assert.match(pub, /\["IN THE PACK", items\.filter\(function \(it\) \{ return !it\.equipped && !it\.food && !it\.trophy; \}\)\],\n\s+\["FOOD"[^\n]*\n\s+\["TROPHIES", items\.filter\(function \(it\) \{ return !it\.equipped && !it\.food && it\.trophy; \}\)\]\];/, 'the pack window');
+  });
+
+  check('a creature carrying two of a thing says so once: not "dragging a tattered cloak and dragging a tattered cloak" (2026-11-14)', () => {
+    const tm = new Map([['tattered-cloak', { name: 'a tattered cloak', slot: 'cloak' }], ['bone-shiv', { name: 'a bone shiv', slot: 'weapon' }], ['worn-boots', { name: 'a pair of worn boots', slot: 'feet' }]]);
+    const z = { world: { itemTemplates: tm } }; z.bearsClause = ZoneDO.prototype.bearsClause.bind(z);
+    assert.equal(z.bearsClause({ templateId: 'dire-hyena', carries: ['tattered-cloak', 'tattered-cloak'] }), ', dragging two tattered cloaks');
+    assert.equal(z.bearsClause({ templateId: 'dire-hyena', carries: ['tattered-cloak', 'bone-shiv', 'worn-boots', 'worn-boots'] }), ', dragging a tattered cloak and a bone shiv and two pairs of worn boots', 'a beast drags it all, one verb');
+    assert.equal(z.bearsClause({ templateId: 'skeleton', carries: ['bone-shiv', 'tattered-cloak'] }), ', wielding a bone shiv and clad in a tattered cloak', 'hands wield and wear');
+  });
+
+  check('rare blood is born, never placed: the dire hyena\'s row is gone and the scary rat rows are scabby rats\' (2026-11-14)', () => {
+    const m = readFileSync(new URL('../migrations/399_rare_blood_is_born.sql', import.meta.url), 'utf8');
+    assert.match(m, /^DELETE FROM mob_spawns WHERE id = 'dire-hyena-g1';$/m, 'the dire hyena row is removed');
+    assert.doesNotMatch(m, /UPDATE mob_spawns SET template_id = 'grave-hyena'/, 'not switched to a grave hyena');
+    assert.match(m, /^UPDATE mob_spawns SET template_id = 'rat' WHERE template_id = 'fleet-rat';$/m, 'the scary rat rows become scabby rats');
   });
 
   console.log(`\n${passed} regression checks pass`);

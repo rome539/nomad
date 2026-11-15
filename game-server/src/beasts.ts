@@ -24,9 +24,9 @@ const ROAD_SHOWN = [
   "rat", "mountain-hare", "roe-deer", "feral-goat", "otter", "gill-adder", "grey-heron", "scarp-raven", "masterless-dog", "drove-dog", "the-baited-bear",
 ];
 // THE FORTRESS'S SECTIONS (2026-11-14): the open ground, the keep and the warrens, the deep.
-const OUT_SHOWN = ["rat", "fleet-rat", "feral-goat", "gibbet-crow", "grave-hyena", "dire-hyena"];
-const UPPER_SHOWN = ["rat", "fleet-rat", "grave-hyena", "skeleton", "warden"];
-const DEEP_SHOWN = ["rat", "fleet-rat", "pale-crawler", "twice-dead", "marrow-cantor"];
+const OUT_SHOWN = ["rat", "feral-goat", "gibbet-crow", "grave-hyena", "dire-hyena"]; // the scary rat counts with the rat; the dire hyena is its own
+const UPPER_SHOWN = ["rat", "grave-hyena", "skeleton", "warden"];
+const DEEP_SHOWN = ["rat", "pale-crawler", "twice-dead", "marrow-cantor"];
 const ALL_SHOWN = new Set([...SHOWN, ...CROSSING_SHOWN, ...ROAD_SHOWN, ...OUT_SHOWN, ...UPPER_SHOWN, ...DEEP_SHOWN]);
 const lineOf = (z: ZoneDO, id: string): string => ALL_SHOWN.has(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
 const onMountain = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "mountain";
