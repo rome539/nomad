@@ -7,7 +7,7 @@ const requireCapture=createRequire(new URL('../../promo/capture/package.json',im
 const {default:puppeteer}=await import(requireCapture.resolve('puppeteer-core'));
 const {code}=await transform(fs.readFileSync(new URL('../src/public.ts',import.meta.url),'utf8'),{loader:'ts',format:'esm'});
 const {PAGE}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
-const hook=`window.practice={crossThreshold,sendCmd,guideStart,guideOff,connect,wakeReconnect,at:()=>guideAt,wire:[],disconnect(){ws=null;},live(){ws={readyState:1,send:m=>this.wire.push(m)};},print};`;
+const hook=`window.practice={crossThreshold,sendCmd,guideStart,guideOff,connect,wakeReconnect,at:()=>guideAt,wire:[],disconnect(){ws=null;},live(){ws={readyState:1,send:m=>this.wire.push(m)};},print,skipBoot(){bootCut();}};`;
 const html=PAGE.replace('</script>\n</body>',hook+'</script>\n</body>');
 const browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
 try {
@@ -28,7 +28,7 @@ try {
   });
   await page.evaluateOnNewDocument(()=>localStorage.setItem('nomad_sound','off'));
   await page.goto('http://nomad.test');await page.waitForFunction(()=>window.practice);
-  await page.evaluate(async()=>{practice.crossThreshold();await practice.connect();practice.wakeReconnect();});
+  await page.evaluate(async()=>{practice.crossThreshold();practice.skipBoot();await practice.connect();practice.wakeReconnect();});
   assert.equal(auth,0,'first-time practice never authenticates into the live world');
   await page.evaluate(()=>practice.live());
   for(const command of ['look','go north','go north','attack keeper','inventory','stance guarded','keys'])await page.evaluate(c=>practice.sendCmd(c),command);

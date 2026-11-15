@@ -22,7 +22,7 @@ var hist=[],histAt=-1,viewMode='text',MODAL_SURFACES='#bench, #trade, #mapm, #jr
 var soundOn=false,actx=null;
 function sendCmd(s){sent.push(s)} function benchSend(s){sent.push('bench:'+s)} function tradeSend(){} function forgeSend(){} function bountySend(){}
 function maybeReload(){} function fitMobRow(){} function fitSky(){} function playSounds(){} function classify(){return ''}
-function paintVoice(el,t){el.textContent=t} function modalChatPush(){}
+function paintVoice(el,t){el.textContent=t} function modalChatPush(){} var bootHeld=null,bootOwn=false,BOOT_CUT=/^$/,bootCut=function(){};
 ${['chipLabel','chipKind','chipButton','renderChips','installModalTapGuard','fitPicture','print'].map(fn).join('\n')}
 installModalTapGuard(chipsEl,false);
 ${controls}

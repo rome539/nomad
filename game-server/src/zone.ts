@@ -3828,6 +3828,7 @@ export class ZoneDO implements DurableObject {
     arc: string | null;
     ledger: { name: string; cause: string; ago: number } | null;
     sky: { night: boolean; moon: string | null };
+    king: { name: string; standing: boolean } | null;
   }> {
     const opts = this.lbOpts();
     const [legend, trophies] = await Promise.all([
@@ -3856,6 +3857,7 @@ export class ZoneDO implements DurableObject {
       // is over the grounds now, which anyone stepping inside sees at once.
       ledger: this.lastDeath ? { name: this.lastDeath.name, cause: this.lastDeath.cause, ago: Date.now() - this.lastDeath.at } : null,
       sky: { night: isNight(), moon: fullMoonTonight() },
+      king: this.doorKing(),
     };
   }
 
@@ -3865,6 +3867,16 @@ export class ZoneDO implements DurableObject {
   // is news.
   public lastBossFall: { name: string; at: number } | null = null;
   public lastDeath: { name: string; cause: string; at: number } | null = null; // the door controller's ledger (worldSnapshot)
+  // ONE KING, DRAWN AT RANDOM, for the door controller (rome, 2026-11-15): any boss
+  // with a place in the world, and whether it stands right now.
+  private doorKing(): { name: string; standing: boolean } | null {
+    const world = this.world;
+    if (!world) return null;
+    const ids = [...new Set(world.mobSpawns.map((s) => s.template_id))].filter((id) => world.mobTemplates.get(id)?.is_boss);
+    if (!ids.length) return null;
+    const id = ids[randInt(0, ids.length - 1)]!;
+    return { name: world.mobTemplates.get(id)!.name, standing: [...this.creatures.values()].some((c) => c.templateId === id && c.hp > 0) };
+  }
 
   // What the boards need to compute a score in SQL: the two weights, and the
   // set of item ids that count as trophies. One place, so the in-game board,

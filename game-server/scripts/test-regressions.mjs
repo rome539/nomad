@@ -7870,12 +7870,13 @@ try {
     assert.match(m, /^UPDATE mob_spawns SET template_id = 'rat' WHERE template_id = 'fleet-rat';$/m, 'the scary rat rows become scabby rats');
   });
 
-  check('coming through the door prints the door controller\'s readout in the log, then opens the door (2026-11-15)', () => {
+  check('coming through the door prints the door controller\'s readout in the log; the door opens at once and a fight cuts it short (2026-11-15)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.doesNotMatch(pub, /id="boot"|#bootscr/, 'no screen of its own: it is the game\'s text box');
-    assert.match(pub, /print\(l\.cls === "gap" \? " " : l\.text, /, 'each line goes into the log');
-    assert.match(pub, /bootReadout\(function \(\) \{ if \(!guideActive\(\)\) connect\(\); \}\);/, 'the door opens after it, so the room never lands in the middle of it');
-    assert.match(pub, /if \(w\) thrWorldData = w;/, 'it reads the live world the front door already fetched');
+    assert.match(pub, /bootReadout\(function \(\) \{\n\s+print\("— you feel keys in your pocket[^\n]*\n\s+if \(guideFresh\) guideStart\(\);\n\s+\}\);\n\s+if \(!phoneControls\(\)\) cmd\.focus\(\);\n\s+if \(!guideFresh && !guideActive\(\)\) connect\(\);/, 'the keys line and a new key\'s walk after it, and the door opens at once underneath');
+    assert.match(pub, /if \(bootHeld && !bootOwn\) \{\n\s+bootHeld\.push\(\[text, cls, who, pk, voiced\]\);\n\s+if \(BOOT_CUT\.test\(cls \|\| classify\(String\(text\)\) \|\| ""\)\) bootCut\(\);/, 'the world waits behind it, and a fight ends it');
+    assert.match(pub, /var BOOT_CUT = \/\^\(dmgin\|death\|seize\|stun\|fumble\|block\|dodge\)\$\/;/);
+    assert.match(pub, /if \(w\.king\) add\("", row\("kings", w\.king\.standing \? "STANDING" : "DOWN"/, 'one king, drawn at random');
   });
 
   check('the door controller reads the sky and the ledger, and the ledger keeps the arena\'s promise (2026-11-15)', () => {

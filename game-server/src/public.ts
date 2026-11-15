@@ -4908,6 +4908,14 @@ function modalChatPush(text, cls, who, pk) {
 }
 
 function print(text, cls, who, pk, voiced) {
+  // WHILE THE DOOR CONTROLLER PRINTS, the world's lines wait behind it (bootReadout),
+  // and a fight among them ends the readout at once: a body still standing from a
+  // dropped connection is never left unwatched for the sake of a status page.
+  if (bootHeld && !bootOwn) {
+    bootHeld.push([text, cls, who, pk, voiced]);
+    if (BOOT_CUT.test(cls || classify(String(text)) || "")) bootCut();
+    return;
+  }
   // Explicit classes (sys/feed/echo) keep the whole block; everything else is
   // split per line so each event wears its own color.
   var lines = cls ? [text] : String(text).split("\\n");
@@ -17712,7 +17720,7 @@ var thrWorldData = null;
 // controller promos). About five seconds of the door's status page, printed in
 // the log every time someone comes through: live facts the front door already shows (the legend
 // board's first name, the weather arc, the last king to fall) and the key coming in, in the promos'
-// flat voice. The connection opens when it is done.
+// flat voice. The connection opens at once; the room waits behind it.
 var BOOT_TICK = function (t) { SND._burst(t, { type: "bandpass", freq: 2600, q: 8, dur: 0.016, gain: 0.07 }); };
 function bootAgo(ms) {
   var m = Math.round(ms / 60000);
@@ -17722,6 +17730,8 @@ function bootAgo(ms) {
   var d = Math.round(h / 24);
   return (d === 1 ? "a day" : d + " days") + " ago";
 }
+var bootHeld = null, bootOwn = false, bootCut = function () {};
+var BOOT_CUT = /^(dmgin|death|seize|stun|fumble|block|dodge)$/;
 function bootReadout(done) {
   var w = thrWorldData;
   var pad = function (v, n) { v = String(v); return v + " ".repeat(Math.max(0, n - v.length)); };
@@ -17738,7 +17748,9 @@ function bootReadout(done) {
     add("", top ? row("legend", String(top.name).toUpperCase(), "(the name the boards know best. for now.)")
       : row("clock", "SYNCED", "(uptime: longer than you)"), 430, 4);
     add("", row("outside", w.arc ? "NOTED" : "QUIET", w.arc ? "(" + String(w.arc).replace(/\.$/, "").toLowerCase() + ".)" : "(nothing out there worth a line.)"), 430, 5);
-    add("", row("kings", w.fell ? "ONE DOWN" : "STANDING", w.fell ? "(" + w.fell.name.replace(/^the /i, "the ") + ", " + bootAgo(+w.fell.ago || 0) + ".)" : "(all of them. for now.)"), 430, 5);
+    // one king drawn at random, standing or down (rome, 2026-11-15)
+    if (w.king) add("", row("kings", w.king.standing ? "STANDING" : "DOWN",
+      "(" + w.king.name + (w.king.standing ? ". for now.)" : ". not for long.)")), 430, 5);
     // what is over the grounds now: the hour, and a full moon by its kind (rome, 2026-11-15)
     var sky = w.sky, MOON_NOTE = { blood: "(full and red. the hollow things stir.)", great: "(low and white and far too near.)",
       harvest: "(deep amber, hanging low.)", pale: "(small and hard and white.)", ash: "(the colour of old ash.)" };
@@ -17766,21 +17778,35 @@ function bootReadout(done) {
   }
   add("", "> the world will not pause for you.", 900, 7);
   // INTO THE LOG, NOT A SCREEN OF ITS OWN (rome, 2026-11-15): the readout prints in the
-  // game's own text box, a line at a time, and the connection opens when it is done,
-  // so the room comes in after it rather than through the middle of it.
+  // game's own text box, a line at a time. The connection opens at once underneath it;
+  // the world's lines wait behind the readout (print) and come in after it, and a
+  // fight among them ends the readout there and then.
   if (soundOn) { try { sndInit(); } catch (e) {} }
-  var at = 0;
+  var at = 0, timers = [], over = false;
+  bootHeld = [];
+  // the end, whether it ran out or a fight cut it: what waited prints, in order
+  var finish = function () {
+    if (over) return;
+    over = true;
+    timers.forEach(clearTimeout);
+    bootOwn = true; done(); bootOwn = false;
+    var q = bootHeld; bootHeld = null; bootCut = function () {};
+    q.forEach(function (a) { print(a[0], a[1], a[2], a[3], a[4]); });
+  };
+  bootCut = finish;
   lines.forEach(function (l) {
-    setTimeout(function () {
+    timers.push(setTimeout(function () {
+      bootOwn = true;
       print(l.cls === "gap" ? " " : l.text, l.cls === "dim" || l.cls === "gap" ? "dim" : "sys");
+      bootOwn = false;
       if (l.ticks && soundOn && actx) {
         var t = actx.currentTime + 0.01;
         for (var i = 0; i < l.ticks; i++) { try { BOOT_TICK(t + i * 0.021 + Math.random() * 0.008); } catch (e) {} }
       }
-    }, at);
+    }, at));
     at += l.ms;
   });
-  setTimeout(done, at);
+  timers.push(setTimeout(finish, at));
 }
 
 var crossed = false;
@@ -17793,11 +17819,16 @@ function crossThreshold() {
   if (localStorage.getItem("nomad_sound") === null) setSound(2);
   threshold.classList.add("gone");
   setTimeout(function () { threshold.remove(); }, 1000);
-  if (guideFresh) guideStart();
-  print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
-  // the door controller prints in the log first, then the door opens (bootReadout)
+  // the door controller prints in the log first; the keys line and the room wait behind
+  // it, and a new key's first walk starts when it is done (its lesson reads the line it
+  // has just printed, so it cannot print into the wait). A new key does not connect: the
+  // walk is practice, and it opens the door itself when it ends.
+  bootReadout(function () {
+    print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
+    if (guideFresh) guideStart();
+  });
   if (!phoneControls()) cmd.focus();
-  bootReadout(function () { if (!guideActive()) connect(); });
+  if (!guideFresh && !guideActive()) connect();
   // Start before connecting so new players never see a burst of welcome text.
 }
 thrEnter.addEventListener("click", crossThreshold);
