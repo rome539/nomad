@@ -3829,6 +3829,7 @@ export class ZoneDO implements DurableObject {
     ledger: { name: string; cause: string; ago: number } | null;
     sky: { night: boolean; moon: string | null };
     king: { name: string; standing: boolean } | null;
+    alive: number;
   }> {
     const opts = this.lbOpts();
     const [legend, trophies] = await Promise.all([
@@ -3858,6 +3859,8 @@ export class ZoneDO implements DurableObject {
       ledger: this.lastDeath ? { name: this.lastDeath.name, cause: this.lastDeath.cause, ago: Date.now() - this.lastDeath.at } : null,
       sky: { night: isNight(), moon: fullMoonTonight() },
       king: this.doorKing(),
+      // every creature alive in the world right now, for the door controller (rome, 2026-11-15)
+      alive: [...this.creatures.values()].filter((c) => c.hp > 0).length,
     };
   }
 

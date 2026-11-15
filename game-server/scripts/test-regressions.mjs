@@ -7876,11 +7876,16 @@ try {
     assert.match(pub, /bootReadout\(function \(\) \{\n\s+print\("— you feel keys in your pocket[^\n]*\n\s+if \(guideFresh\) guideStart\(\);\n\s+\}, !guideFresh\);\n\s+if \(!phoneControls\(\)\) cmd\.focus\(\);\n\s+if \(!guideFresh && !guideActive\(\)\) connect\(\);/, 'the keys line and a new key\'s walk after it, and the door opens at once underneath');
     assert.match(pub, /if \(bootHeld && !bootOwn\) \{\n\s+bootHeld\.push\(\[text, cls, who, pk, voiced\]\);\n\s+if \(BOOT_CUT\.test\(cls \|\| classify\(String\(text\)\) \|\| ""\)\) bootCut\(\);/, 'the world waits behind it, and a fight ends it');
     assert.match(pub, /var BOOT_CUT = \/\^\(dmgin\|death\|seize\|stun\|fumble\|block\|dodge\)\$\/;/);
-    assert.match(pub, /if \(w\.king\) add\("", row\("kings", w\.king\.standing \? "STANDING" : "DOWN"/, 'one king, drawn at random');
+    assert.match(pub, /if \(w\.king\) add\("", row\("boss", w\.king\.standing \? "STANDING" : "DOWN"/, 'one boss, drawn at random, under a label that says boss');
+    assert.match(pub, /if \(typeof w\.alive === "number"\) add\("", row\("alive", String\(w\.alive\)/, 'the live count of creatures alive');
+    assert.match(readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8'), /alive: \[\.\.\.this\.creatures\.values\(\)\]\.filter\(\(c\) => c\.hp > 0\)\.length,/, 'the world feed counts only the living');
     // in a fight, no readout at all (rome, 2026-11-15)
     assert.match(pub, /if \(bootWait\) bootWait\(!!f\.combat\);/, 'it waits on the world\'s first word on you');
     assert.match(pub, /if \(fighting\) \{ finish\(\); return; \}/, 'and one in a fight gets none of it');
     assert.match(pub, /\}, !guideFresh\);/, 'a returning key waits for the world; a new key in practice does not');
+    // the lines are written when it starts, and a world feed not back yet is asked for again (rome, 2026-11-15)
+    assert.match(pub, /var worldAsk = thrWorldData \? null : thrWorld\(\);\n\s+var build = function \(\) \{\n\s+var w = thrWorldData;/, 'read when it starts, not at the click');
+    assert.match(pub, /if \(!thrWorldData && worldAsk\) \{/, 'and it waits a moment for a feed still on its way');
   });
 
   check('the door controller reads the sky and the ledger, and the ledger keeps the arena\'s promise (2026-11-15)', () => {

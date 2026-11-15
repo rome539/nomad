@@ -17691,7 +17691,7 @@ function thrPageBtn(key, delta, label, disabled) {
   return b;
 }
 function thrWorld() {
-  fetch("/world.json", { cache: "no-store" }).then(function (r) {
+  return fetch("/world.json", { cache: "no-store" }).then(function (r) {
     return r.ok ? r.json() : null;
   }).then(function (w) {
     if (w) thrWorldData = w;   // the door controller reads it after "enter" (bootReadout)
@@ -17734,51 +17734,61 @@ function bootAgo(ms) {
 var bootHeld = null, bootOwn = false, bootCut = function () {}, bootWait = null;
 var BOOT_CUT = /^(dmgin|death|seize|stun|fumble|block|dodge)$/;
 var BOOT_WAIT_MS = 2500;
+var BOOT_WORLD_MS = 1500; // how long the readout waits for a world feed it still lacks
 function bootReadout(done, waitForWorld) {
-  var w = thrWorldData;
   var pad = function (v, n) { v = String(v); return v + " ".repeat(Math.max(0, n - v.length)); };
   var row = function (k, v, note) { return pad(k + " " + ".".repeat(Math.max(1, 13 - k.length)), 16) + " " + pad(v, 10) + (String(v).length >= 10 ? " " : "") + (note || ""); }; // a long name never runs into its note
-  var lines = [];
-  var add = function (cls, text, ms, ticks) { lines.push({ cls: cls, text: text, ms: ms, ticks: ticks || 0 }); };
-  add("dim", "NOMAD/0 \u00b7 door controller \u00b7 rev " + (BUILD.indexOf("__") === 0 ? "local" : BUILD), 380);
-  add("dim", "booting \u2026", 380);
-  add("gap", "", 120);
-  add("", row("world", "RUNNING", "(it does not boot. it was never off.)"), 430, 5);
-  if (w) {
-    // the boards' first name, as the reckoning already shows it at the door (rome, 2026-11-15: not who is awake)
-    var top = w.boards && w.boards.legend && w.boards.legend[0];
-    add("", top ? row("legend", String(top.name).toUpperCase(), "(the name the boards know best. for now.)")
-      : row("clock", "SYNCED", "(uptime: longer than you)"), 430, 4);
-    add("", row("outside", w.arc ? "NOTED" : "QUIET", w.arc ? "(" + String(w.arc).replace(/\.$/, "").toLowerCase() + ".)" : "(nothing out there worth a line.)"), 430, 5);
-    // one king drawn at random, standing or down (rome, 2026-11-15)
-    if (w.king) add("", row("kings", w.king.standing ? "STANDING" : "DOWN",
-      "(" + w.king.name + (w.king.standing ? ". for now.)" : ". not for long.)")), 430, 5);
-    // what is over the grounds now: the hour, and a full moon by its kind (rome, 2026-11-15)
-    var sky = w.sky, MOON_NOTE = { blood: "(full and red. the hollow things stir.)", great: "(low and white and far too near.)",
-      harvest: "(deep amber, hanging low.)", pale: "(small and hard and white.)", ash: "(the colour of old ash.)" };
-    if (sky) add("", sky.moon ? row("moon", String(sky.moon).toUpperCase(), MOON_NOTE[sky.moon] || "(full.)")
-      : sky.night ? row("sky", "NIGHT", "(no full moon. the grounds go dark.)") : row("sky", "DAY", "(it does not last.)"), 430, 4);
-    // the ledger: the last wanderer down, as the arena feed already told it (rome, 2026-11-15)
-    if (w.ledger) add("", row("ledger", String(w.ledger.name).toUpperCase(), "(cause: " + w.ledger.cause + ", " + bootAgo(+w.ledger.ago || 0) + ". dropped: everything.)"), 520, 6);
-  }
-  add("", row("door", "OPEN", ""), 420, 4);
-  add("gap", "", 120);
-  if (thrKnown) {
-    add("", "> key detected \u2026 " + thrKnown + ".", 480, 7);
-    add("", "> account lookup \u2026 none needed. the key is the account.", 520, 8);
-  } else {
-    add("", "> new key detected.", 480, 6);
-    add("", "> minting visitor \u2026 done. it is you.", 520, 7);
-    // a new key gets the rules, as the promo gave them (rome, 2026-11-15)
+  // THE LINES ARE WRITTEN WHEN THE READOUT STARTS, not when "enter" is pressed
+  // (rome, 2026-11-15: a readout with only the world and the door, the world feed not
+  // back yet). If it is still not here, it is asked for again and given a moment.
+  var worldAsk = thrWorldData ? null : thrWorld();
+  var build = function () {
+    var w = thrWorldData;
+    var lines = [];
+    var add = function (cls, text, ms, ticks) { lines.push({ cls: cls, text: text, ms: ms, ticks: ticks || 0 }); };
+    add("dim", "NOMAD/0 \u00b7 door controller \u00b7 rev " + (BUILD.indexOf("__") === 0 ? "local" : BUILD), 380);
+    add("dim", "booting \u2026", 380);
     add("gap", "", 120);
-    add("dim", "rules.txt (complete):", 420);
-    add("", "  1. sealed at the gate = yours.", 380, 5);
-    add("", "  2. carried = a bet.", 380, 4);
-    add("", "  3. weight is not free.", 380, 4);
-    add("", "  4. the door does not care.", 520, 5);
+    add("", row("world", "RUNNING", "(it does not boot. it was never off.)"), 430, 5);
+    if (w) {
+      // the boards' first name, as the reckoning already shows it at the door (rome, 2026-11-15: not who is awake)
+      var top = w.boards && w.boards.legend && w.boards.legend[0];
+      add("", top ? row("legend", String(top.name).toUpperCase(), "(the name the boards know best. for now.)")
+        : row("clock", "SYNCED", "(uptime: longer than you)"), 430, 4);
+      add("", row("outside", w.arc ? "NOTED" : "QUIET", w.arc ? "(" + String(w.arc).replace(/\.$/, "").toLowerCase() + ".)" : "(nothing out there worth a line.)"), 430, 5);
+      // how many creatures are alive in the world right now (rome, 2026-11-15)
+      if (typeof w.alive === "number") add("", row("alive", String(w.alive), "(creatures in the world, right now.)"), 430, 5);
+      // one boss drawn at random, standing or down (rome, 2026-11-15: the line said kings but showed bosses)
+      if (w.king) add("", row("boss", w.king.standing ? "STANDING" : "DOWN",
+        "(" + w.king.name + (w.king.standing ? ". for now.)" : ". not for long.)")), 430, 5);
+      // what is over the grounds now: the hour, and a full moon by its kind (rome, 2026-11-15)
+      var sky = w.sky, MOON_NOTE = { blood: "(full and red. the hollow things stir.)", great: "(low and white and far too near.)",
+        harvest: "(deep amber, hanging low.)", pale: "(small and hard and white.)", ash: "(the colour of old ash.)" };
+      if (sky) add("", sky.moon ? row("moon", String(sky.moon).toUpperCase(), MOON_NOTE[sky.moon] || "(full.)")
+        : sky.night ? row("sky", "NIGHT", "(no full moon. the grounds go dark.)") : row("sky", "DAY", "(it does not last.)"), 430, 4);
+      // the ledger: the last wanderer down, as the arena feed already told it (rome, 2026-11-15)
+      if (w.ledger) add("", row("ledger", String(w.ledger.name).toUpperCase(), "(cause: " + w.ledger.cause + ", " + bootAgo(+w.ledger.ago || 0) + ". dropped: everything.)"), 520, 6);
+    }
+    add("", row("door", "OPEN", ""), 420, 4);
     add("gap", "", 120);
-  }
-  add("", "> the world will not pause for you.", 900, 7);
+    if (thrKnown) {
+      add("", "> key detected \u2026 " + thrKnown + ".", 480, 7);
+      add("", "> account lookup \u2026 none needed. the key is the account.", 520, 8);
+    } else {
+      add("", "> new key detected.", 480, 6);
+      add("", "> minting visitor \u2026 done. it is you.", 520, 7);
+      // a new key gets the rules, as the promo gave them (rome, 2026-11-15)
+      add("gap", "", 120);
+      add("dim", "rules.txt (complete):", 420);
+      add("", "  1. sealed at the gate = yours.", 380, 5);
+      add("", "  2. carried = a bet.", 380, 4);
+      add("", "  3. weight is not free.", 380, 4);
+      add("", "  4. the door does not care.", 520, 5);
+      add("gap", "", 120);
+    }
+    add("", "> the world will not pause for you.", 900, 7);
+    return lines;
+  };
   // INTO THE LOG, NOT A SCREEN OF ITS OWN (rome, 2026-11-15): the readout prints in the
   // game's own text box, a line at a time. The connection opens at once underneath it;
   // the world's lines wait behind the readout (print) and come in after it, and a
@@ -17807,6 +17817,20 @@ function bootReadout(done, waitForWorld) {
     started = true;
     bootWait = null;
     if (fighting) { finish(); return; }
+    if (!thrWorldData && worldAsk) {
+      var ask = worldAsk; worldAsk = null;
+      var late = setTimeout(function () { play(); }, BOOT_WORLD_MS);
+      timers.push(late);
+      ask.then(function () { clearTimeout(late); play(); });
+      return;
+    }
+    play();
+  };
+  var played = false;
+  var play = function () {
+    if (played || over) return;
+    played = true;
+    var lines = build();
     lines.forEach(function (l) {
       timers.push(setTimeout(function () {
         bootOwn = true;
