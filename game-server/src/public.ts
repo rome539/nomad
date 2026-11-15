@@ -15360,9 +15360,9 @@ applyView();
 // written and this multiplies them at paint time. Change this line, not the
 // table; the table is the drawing, this is how close you are standing.
 //
-// WHAT SETS THE CEILING: a room paints four at most (chips.ts), and the row
-// gives way rather than clipping now (see #mobs img), so this is chosen for the
-// COMMON case — one or two creatures — instead of the worst one. A crowd on a
+// WHAT SETS THE CEILING: a room paints everything in it (chips.ts, ROOM_DRAWN), and
+// the row gives way rather than clipping now (see #mobs img), so this is chosen for
+// the COMMON case — one or two creatures — instead of the worst one. A crowd on a
 // narrow screen scales itself down from here.
 // HOW BIG A CREATURE IS ON SCREEN.
 //
@@ -16520,6 +16520,11 @@ function paintMobs(ids, doing, dead) {
   }
   applyState(doing);
   fitMobRow();
+  // DRAWN AS IT IS FROM THE FIRST FRAME (rome, 2026-11-14: a skeleton killed beside a
+  // lurking crawler, and the crawler stood up plain in its idle frame before it sank
+  // back). A rebuilt sprite starts on frame 0 at full strength, and its pose, its
+  // lurker's fade and its place only came on the clock's next tick; one step now.
+  stepAnims();
   runAnims();
 }
 // Keep normal creature sizes. Fit more creatures by staggering ranks on the

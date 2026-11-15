@@ -41,6 +41,13 @@ import {
 // which is what tells the room to redraw.
 const EMOTE_MS = 3000;
 const EMOTE_FRAME: Record<string, string> = { wave: "wave", nod: "nod", brow: "nod", beckon: "beckon", keen: "keen", dance: "dance" };
+// EVERYTHING IN THE ROOM IS DRAWN (rome, 2026-11-14: five in the Carrion Gallery and
+// the picture showed four). A room used to paint four at most, which was rare when
+// the dead and the crawlers kept their rooms; now that they walk, a crowd of five or
+// more is ordinary, and the words named one the picture left out. The row stands
+// them in ranks of four and steps each further rank forward (fitMobRow).
+const ROOM_DRAWN = Infinity;
+
 export function folkState(z: ZoneDO, s: Session): string {
   // ...and "+torch" on the end while a lit torch is in the hand. The torch
   // frames are off the strip until they are redrawn (2026-10-20), so the page
@@ -243,7 +250,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (z.mossUnseen(creature, session)) continue;
     const lurking = LURKERS.has(creature.templateId) && creature.hidden && !creature.joinedOpenly;
     if (lurking && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) {
-      if (seen.length < 4) { seen.push(creature.templateId); who.push(creature.id); doing.push("lurk"); eyes.push(""); }
+      if (seen.length < ROOM_DRAWN) { seen.push(creature.templateId); who.push(creature.id); doing.push("lurk"); eyes.push(""); }
       continue;
     }
     creatureHere = true;
@@ -252,8 +259,8 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     chipNamesSeen.push(tmpl.name);
     const n = chipNamesSeen.filter((nm) => nameMatches(nm, label)).length;
     suggest.push(`attack ${label}${n > 1 ? ` ${n}` : ""}`);
-    if (seen.length < 4) {
-      seen.push(creature.templateId);   // a room paints four at most
+    if (seen.length < ROOM_DRAWN) {
+      seen.push(creature.templateId);   // everything in the room is drawn (ROOM_DRAWN)
       who.push(creature.id);
       // First true thing wins, worst first: a thing running is running whatever
       // else is true of it, and a thing that has YOU is the one you must read.
@@ -291,13 +298,13 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   // ...and the other wanderers standing here, after the creatures, in what is
   // left of the four places.
   for (const o of z.sessions.values()) {
-    if (seen.length >= 4) break;
+    if (seen.length >= ROOM_DRAWN) break;
     if (o === session || o.roomId !== session.roomId || z.outOfWorld(o) || o.hp <= 0) continue;
     seen.push("nomad"); who.push("");
     doing.push(folkState(z, o)); eyes.push("");
   }
   // ...and the one that walks on its own (wanderer.ts), last of all.
-  if (seen.length < 4 && wanderer.isHere(z, session.roomId)) {
+  if (seen.length < ROOM_DRAWN && wanderer.isHere(z, session.roomId)) {
     seen.push("nomad"); who.push("");
     doing.push(wanderer.folkState(z)); eyes.push("");
   }

@@ -3607,7 +3607,7 @@ try {
     assert.match(zs, /\(kind === "swung" \? e\.sw : e\.st\)\.push\(creature\.id\);/, 'the round says which');
     assert.match(zs, /swung: e\.swung, struck: e\.struck, sw: e\.sw, st: e\.st/, 'and sends it');
     const cs = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
-    assert.match(cs, /seen\.push\(creature\.templateId\);   \/\/ a room paints four at most\n\s+who\.push\(creature\.id\);/, 'and the room says who stands in each slot');
+    assert.match(cs, /seen\.push\(creature\.templateId\);   \/\/ everything in the room is drawn \(ROOM_DRAWN\)\n\s+who\.push\(creature\.id\);/, 'and the room says who stands in each slot');
   });
   // 2026-11-07: the study chip offered a bird that had flown off: it read every
   // creature whose roomId was here, and one in the air keeps its roomId.
@@ -7820,6 +7820,18 @@ try {
     // the keeper's count has a section for each
     const b = readFileSync(new URL('../src/beasts.ts', import.meta.url), 'utf8');
     assert.match(b, /const VIEWS = \[CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW\];/, 'beasts shows all three');
+  });
+
+  check('a rebuilt room draws each creature as it is at once: a lurker stays faint when something beside it dies (2026-11-14)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /applyState\(doing\);\n  fitMobRow\(\);\n(?:  \/\/.*\n)*  stepAnims\(\);\n  runAnims\(\);\n\}/, 'the pose, the fade and the place are drawn before the clock ticks');
+    assert.match(pub, /a\.el\.style\.opacity = a\.state === "lurk" && a\.phase !== "attack" && a\.phase !== "death" \? String\(LURK_FADE\) : "";/, 'and that step is what fades a lurker');
+  });
+
+  check('everything in a room is drawn: five in the Carrion Gallery showed four (2026-11-14)', () => {
+    const cs = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    assert.match(cs, /const ROOM_DRAWN = Infinity;/, 'no cap on what the picture is sent');
+    assert.doesNotMatch(cs, /seen\.length (?:<|>=) \d/, 'and no number left capping it');
   });
 
   console.log(`\n${passed} regression checks pass`);

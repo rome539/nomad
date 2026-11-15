@@ -38,6 +38,8 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +'ctx.setSky=function(s){ lastSky=s; lastRed = (s==="blood")?1:0; };\n'
   +'ctx.setRed=function(r){ lastRed = r?1:0; };\n'
   +'function runAnims(){}\n'
+  // the paint draws its first frame at once (2026-11-14); the frame itself is the clock's, not this test's
+  +'function stepAnims(){}\n'
   +fn("paintMobs")+"\n"+fn("applyState")+"\n"+fn("fitMobRow")+"\n"+fn("mobBeat")+"\n"
   +"mobsEl = _stub;   // the lifted block declares its own, which the stub must win\n"
   +"ctx.clearAnims=function(){ anims.length=0; mobHold=0; lastMobs=''; }; ctx.paintMobs=paintMobs; ctx.mobBeat=mobBeat; ctx.made=()=>made; ctx.anims=()=>anims; ctx.mobVh=mobVh;";
