@@ -2683,15 +2683,17 @@ export function keepingLines(z: ZoneDO, items: CarriedItem[], header: string, ho
   const inHand = kind === "pack" && holder && light.torchInHand(holder)
     ? [`  ${light.TORCH_IN_HAND_LINE} ('douse' to put it out)`] : [];
   // THE SAME SHELVES AS THE WINDOWS (rome, 2026-10-18): the pack reads Equipped /
-  // In the pack / Food and the deep keep Gear / Supplies / Keys / Food / Trophies,
+  // In the pack / Food / Trophies and the deep keep Gear / Supplies / Keys / Food / Trophies,
   // exactly as fillBenchCol in public.ts lays them out - change one, change both.
   // Headings only when more than one shelf has anything on it, the same rule,
   // except that what you have on always gets its heading.
   const edible = (c: CarriedItem) => !!world.itemTemplates.get(c.itemId)?.edible;
   const shelves: [string, CarriedItem[]][] | null = kind === "pack" ? [
     ["EQUIPPED", items.filter((c) => c.equipped)],
-    ["IN THE PACK", items.filter((c) => !c.equipped && !edible(c))],
+    ["IN THE PACK", items.filter((c) => !c.equipped && !edible(c) && !z.isTrophy(c.itemId))],
     ["FOOD", items.filter((c) => !c.equipped && edible(c))],
+    // trophies on their own shelf, as they take no slot (rome, 2026-11-14)
+    ["TROPHIES", items.filter((c) => !c.equipped && !edible(c) && z.isTrophy(c.itemId))],
   ] : kind === "vault" ? [
     ["GEAR", items.filter((c) => z.isGear(c.itemId) && !z.isKey(c.itemId) && !z.isTrophy(c.itemId))],
     ["SUPPLIES", items.filter((c) => !z.isGear(c.itemId) && !z.isTrophy(c.itemId) && !z.isKey(c.itemId) && !edible(c))],

@@ -7834,6 +7834,23 @@ try {
     assert.doesNotMatch(cs, /seen\.length (?:<|>=) \d/, 'and no number left capping it');
   });
 
+  check('trophies take no space in the pack, and still do in the lockbox (2026-11-14)', () => {
+    const tm = new Map([['wolf-pelt', { id: 'wolf-pelt', slot: '' }], ['scrap-iron', { id: 'scrap-iron', slot: '' }], ['knife', { id: 'knife', slot: 'weapon' }]]);
+    const z = { world: { itemTemplates: tm }, isTrophy: (id) => id === 'wolf-pelt', stackable: (id) => id !== 'knife' };
+    for (const k of ['slotsUsed', 'hasRoom']) z[k] = ZoneDO.prototype[k].bind(z);
+    const items = [{ itemId: 'wolf-pelt', serial: null }, { itemId: 'wolf-pelt', serial: null }, { itemId: 'scrap-iron', serial: null }, { itemId: 'knife', serial: null }];
+    assert.equal(z.slotsUsed(items, 'pack'), 2, 'the iron and the knife, not the pelts');
+    assert.equal(z.slotsUsed(items, 'lockbox'), 3, 'the box still charges the pelts a slot');
+    assert.equal(z.hasRoom(items, 'wolf-pelt', 2, 'pack'), true, 'a full pack still takes a trophy');
+    assert.equal(z.hasRoom([{ itemId: 'knife', serial: null }, { itemId: 'scrap-iron', serial: null }], 'wolf-pelt', 2, 'lockbox'), false, 'a full box does not');
+  });
+
+  check('the pack shelves its trophies on their own, in the window and the typed list alike (2026-11-14)', () => {
+    const v = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8'), pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(v, /\["IN THE PACK", items\.filter\(\(c\) => !c\.equipped && !edible\(c\) && !z\.isTrophy\(c\.itemId\)\)\],\n\s+\["FOOD"[^\n]*\n(?:\s+\/\/[^\n]*\n)?\s+\["TROPHIES", items\.filter\(\(c\) => !c\.equipped && !edible\(c\) && z\.isTrophy\(c\.itemId\)\)\],/, 'the typed pack');
+    assert.match(pub, /\["IN THE PACK", items\.filter\(function \(it\) \{ return !it\.equipped && !it\.food && !it\.trophy; \}\)\],\n\s+\["FOOD"[^\n]*\n\s+\["TROPHIES", items\.filter\(function \(it\) \{ return !it\.equipped && !it\.food && it\.trophy; \}\)\]\];/, 'the pack window');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

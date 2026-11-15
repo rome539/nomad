@@ -3896,7 +3896,7 @@ export class ZoneDO implements DurableObject {
   // rides on your body, so equipped gear costs no slot (arming up never eats your
   // carrying room, stripping down never strands you). Then:
   //   pack   — non-food stacks one slot per KIND; FOOD is free (a count cap of
-  //            its own governs it, PACK_FOOD_CAP); loose gear one each.
+  //            its own governs it, PACK_FOOD_CAP); TROPHIES are free; loose gear one each.
   //   lockbox— non-food stacks one slot per KIND; FOOD is one slot EACH (no
   //            fungible stacking), so the small box holds at most its cap in
   //            rations; loose gear one each.
@@ -3918,6 +3918,10 @@ export class ZoneDO implements DurableObject {
         if (store === "lockbox") foodByKind.set(c.itemId, (foodByKind.get(c.itemId) ?? 0) + 1);
         continue;
       }
+      // TROPHIES RIDE FREE IN THE PACK (rome, 2026-11-14): what you cut off a kill is
+      // carried for barter, not packed, and it took a slot a kind. (Trophies weigh nothing
+      // either: the load is worn gear and loose iron, loadOf.)
+      if (store === "pack" && this.isTrophy(c.itemId)) continue;
       if (this.stackable(c.itemId, c.serial, c.journalId)) {
         if (store !== "vault") kinds.add(c.itemId); // one slot per KIND; free in the deep keep
       } else loose++; // loose gear, maps, journals — and sealed gear in the vault
@@ -3942,6 +3946,7 @@ export class ZoneDO implements DurableObject {
       if (have % FOOD_LOCKBOX_STACK !== 0) return true; // room in the current stack
       return this.slotsUsed(items, store) < cap;
     }
+    if (store === "pack" && this.isTrophy(itemId)) return true; // a trophy takes no slot in the pack
     if (this.stackable(itemId, null)) {
       if (store === "vault") return true;
       if (items.some((c) => c.itemId === itemId && this.stackable(c.itemId, c.serial, c.journalId))) return true;

@@ -7253,14 +7253,15 @@ function fillBenchCol(el, title, items, cap, place, usedOverride, foodUsed, food
     el.appendChild(e); return;
   }
   // Separate equipped gear, loose items and food so each is easy to find.
-  //   PACK  \\u2014 equipped gear, pack items, then food.
+  //   PACK  \\u2014 equipped gear, pack items, food, then trophies (they take no slot).
   //   VAULT \\u2014 the sealed wealth that eats the 50 slots, and below it the
   //           trophies and sundries that ride free.
   var secs = null;
   if (place === "pack") {
     secs = [["EQUIPPED", items.filter(function (it) { return it.equipped; })],
-            ["IN THE PACK", items.filter(function (it) { return !it.equipped && !it.food; })],
-            ["FOOD", items.filter(function (it) { return !it.equipped && it.food; })]];
+            ["IN THE PACK", items.filter(function (it) { return !it.equipped && !it.food && !it.trophy; })],
+            ["FOOD", items.filter(function (it) { return !it.equipped && it.food; })],
+            ["TROPHIES", items.filter(function (it) { return !it.equipped && !it.food && it.trophy; })]];
   } else if (place === "vault") {
     // GEAR AND SUPPLIES APART (rome, 2026-10-18): "banked" was everything that
     // was not a key, food or a trophy, so the dressings, the iron and the maps
