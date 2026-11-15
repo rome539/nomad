@@ -1885,26 +1885,6 @@ export const PAGE = `<!doctype html>
     gap: 14px; text-align: center; padding: 24px; padding-bottom: 18vh; transition: opacity .9s ease;
   }
   #threshold.gone { opacity: 0; pointer-events: none; }
-  /* THE DOOR CONTROLLER (rome, 2026-11-15): after "enter", the door's own status
-     page prints what it knows while the connection opens, in the promos' green
-     terminal voice, then gives way to the game. Its own visual world on purpose:
-     a machine's screen, whatever theme the game wears. */
-  #boot { position: fixed; inset: 0; z-index: 9001; background: #010402; display: none;
-    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; cursor: pointer; transition: opacity .45s ease; }
-  #boot.on { display: block; }
-  #boot.gone { opacity: 0; pointer-events: none; }
-  #boot::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
-    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.30) 0 1px, transparent 1px 3px); }
-  #boot::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 3;
-    background: radial-gradient(ellipse 80% 70% at 50% 52%, rgba(24,90,52,0.16), transparent 62%),
-                radial-gradient(ellipse 92% 88% at 50% 50%, transparent 46%, rgba(0,0,0,0.72) 100%); }
-  #bootscr { position: absolute; left: max(16px, 12%); right: max(16px, 12%); top: 8%; bottom: 10%; z-index: 1;
-    overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
-  #bootscr .bl { color: #3BE07C; font-size: clamp(11px, 1.15vw, 17px); line-height: 1.62; white-space: pre-wrap; letter-spacing: .01em; }
-  #bootscr .bl.dim { color: #1F7A45; }
-  #bootscr .bl.gap { height: .85em; }
-  #bootskip { position: absolute; right: max(16px, 2.2%); bottom: 2.6%; z-index: 4; color: #1F7A45;
-    font-size: clamp(9px, 1vw, 13px); letter-spacing: .15em; }
   /* A real heading (2026-10-27: the page had none for search to read), dressed
      exactly as the div it replaced. */
   #thr-title { color: var(--gold); font-size: clamp(48px, 5.5vw, 68px); letter-spacing: .16em; font-weight: 700; line-height: 1; margin: 0; font-family: inherit; }
@@ -2465,7 +2445,6 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <button id="thr-reck" type="button">the reckoning</button>
     <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser. The creatures hunt, sleep and remember you, wounds do not heal on their own, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a></div>
   </div>
-  <div id="boot" aria-live="polite"><div id="bootscr"></div><div id="bootskip">TAP OR ANY KEY</div></div>
   <div id="reckm" role="dialog" aria-modal="true" aria-labelledby="recktitle">
     <div class="lbox">
       <div class="lhead">
@@ -17730,10 +17709,10 @@ thrWorld();
 
 var thrWorldData = null;
 // THE DOOR CONTROLLER'S READOUT (rome, 2026-11-15: loading in like the door
-// controller promos). About five seconds of the door's status page, every time
-// someone comes through: live facts the front door already shows (the legend
+// controller promos). About five seconds of the door's status page, printed in
+// the log every time someone comes through: live facts the front door already shows (the legend
 // board's first name, the weather arc, the last king to fall) and the key coming in, in the promos'
-// flat voice. The connection opens underneath it. A tap or any key ends it.
+// flat voice. The connection opens when it is done.
 var BOOT_TICK = function (t) { SND._burst(t, { type: "bandpass", freq: 2600, q: 8, dur: 0.016, gain: 0.07 }); };
 function bootAgo(ms) {
   var m = Math.round(ms / 60000);
@@ -17744,8 +17723,7 @@ function bootAgo(ms) {
   return (d === 1 ? "a day" : d + " days") + " ago";
 }
 function bootReadout(done) {
-  var boot = document.getElementById("boot"), scr = document.getElementById("bootscr");
-  var w = thrWorldData, timers = [], over = false;
+  var w = thrWorldData;
   var pad = function (v, n) { v = String(v); return v + " ".repeat(Math.max(0, n - v.length)); };
   var row = function (k, v, note) { return pad(k + " " + ".".repeat(Math.max(1, 13 - k.length)), 16) + " " + pad(v, 10) + (String(v).length >= 10 ? " " : "") + (note || ""); }; // a long name never runs into its note
   var lines = [];
@@ -17787,36 +17765,22 @@ function bootReadout(done) {
     add("gap", "", 120);
   }
   add("", "> the world will not pause for you.", 900, 7);
-  function finish() {
-    if (over) return;
-    over = true;
-    timers.forEach(clearTimeout);
-    document.removeEventListener("keydown", skipKey, true);
-    boot.classList.add("gone");
-    setTimeout(function () { boot.classList.remove("on", "gone"); scr.textContent = ""; }, 500);
-    done();
-  }
-  function skipKey(e) { e.preventDefault(); e.stopPropagation(); finish(); }
-  scr.textContent = "";
-  boot.classList.add("on");
-  boot.onclick = finish;
-  document.addEventListener("keydown", skipKey, true);
+  // INTO THE LOG, NOT A SCREEN OF ITS OWN (rome, 2026-11-15): the readout prints in the
+  // game's own text box, a line at a time, and the connection opens when it is done,
+  // so the room comes in after it rather than through the middle of it.
   if (soundOn) { try { sndInit(); } catch (e) {} }
   var at = 0;
   lines.forEach(function (l) {
-    timers.push(setTimeout(function () {
-      var d = document.createElement("div");
-      d.className = "bl " + l.cls;
-      d.textContent = l.text;
-      scr.appendChild(d);
+    setTimeout(function () {
+      print(l.cls === "gap" ? " " : l.text, l.cls === "dim" || l.cls === "gap" ? "dim" : "sys");
       if (l.ticks && soundOn && actx) {
         var t = actx.currentTime + 0.01;
         for (var i = 0; i < l.ticks; i++) { try { BOOT_TICK(t + i * 0.021 + Math.random() * 0.008); } catch (e) {} }
       }
-    }, at));
+    }, at);
     at += l.ms;
   });
-  timers.push(setTimeout(finish, at));
+  setTimeout(done, at);
 }
 
 var crossed = false;
@@ -17831,9 +17795,9 @@ function crossThreshold() {
   setTimeout(function () { threshold.remove(); }, 1000);
   if (guideFresh) guideStart();
   print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
-  if (!guideActive()) connect();
-  // the door controller prints while the connection opens; the cursor comes back after
-  bootReadout(function () { if (!phoneControls()) cmd.focus(); });
+  // the door controller prints in the log first, then the door opens (bootReadout)
+  if (!phoneControls()) cmd.focus();
+  bootReadout(function () { if (!guideActive()) connect(); });
   // Start before connecting so new players never see a burst of welcome text.
 }
 thrEnter.addEventListener("click", crossThreshold);

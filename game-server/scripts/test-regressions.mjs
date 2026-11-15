@@ -7870,12 +7870,12 @@ try {
     assert.match(m, /^UPDATE mob_spawns SET template_id = 'rat' WHERE template_id = 'fleet-rat';$/m, 'the scary rat rows become scabby rats');
   });
 
-  check('coming through the door plays the door controller\'s readout, then hands the cursor back (2026-11-15)', () => {
+  check('coming through the door prints the door controller\'s readout in the log, then opens the door (2026-11-15)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    assert.match(pub, /<div id="boot" aria-live="polite"><div id="bootscr"><\/div><div id="bootskip">TAP OR ANY KEY<\/div><\/div>/, 'the screen is on the page');
-    assert.match(pub, /if \(!guideActive\(\)\) connect\(\);\n(?:\s*\/\/[^\n]*\n)*\s*bootReadout\(function \(\) \{ if \(!phoneControls\(\)\) cmd\.focus\(\); \}\);/, 'it plays while the connection opens, and the cursor comes back after');
+    assert.doesNotMatch(pub, /id="boot"|#bootscr/, 'no screen of its own: it is the game\'s text box');
+    assert.match(pub, /print\(l\.cls === "gap" \? " " : l\.text, /, 'each line goes into the log');
+    assert.match(pub, /bootReadout\(function \(\) \{ if \(!guideActive\(\)\) connect\(\); \}\);/, 'the door opens after it, so the room never lands in the middle of it');
     assert.match(pub, /if \(w\) thrWorldData = w;/, 'it reads the live world the front door already fetched');
-    assert.match(pub, /document\.addEventListener\("keydown", skipKey, true\);[\s\S]{0,200}boot\.onclick = finish;|boot\.onclick = finish;\n\s+document\.addEventListener\("keydown", skipKey, true\);/, 'a tap or any key ends it');
   });
 
   check('the door controller reads the sky and the ledger, and the ledger keeps the arena\'s promise (2026-11-15)', () => {
