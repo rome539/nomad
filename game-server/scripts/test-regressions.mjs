@@ -7863,6 +7863,17 @@ try {
     assert.equal(z.bearsClause({ templateId: 'skeleton', carries: ['bone-shiv', 'tattered-cloak'] }), ', wielding a bone shiv and clad in a tattered cloak', 'hands wield and wear');
   });
 
+  check('the deep keeps ten rat rows, not sixteen (2026-11-15)', () => {
+    const add = readFileSync(new URL('../migrations/398_more_rats_in_the_deep.sql', import.meta.url), 'utf8');
+    const cut = readFileSync(new URL('../migrations/400_fewer_rats_in_the_deep.sql', import.meta.url), 'utf8');
+    const added = [...add.matchAll(/VALUES \('(rat-deep-\d+)', 'rat'/g)].map((m) => m[1]);
+    const gone = [...cut.matchAll(/'(rat-deep-\d+)'/g)].map((m) => m[1]);
+    assert.equal(added.length, 10);
+    assert.deepEqual(gone, ['rat-deep-11', 'rat-deep-12', 'rat-deep-13', 'rat-deep-14', 'rat-deep-15', 'rat-deep-16']);
+    assert.ok(gone.every((id) => added.includes(id)), 'only rows 398 added are taken');
+    assert.equal(6 + added.length - gone.length, 10, 'six of the deep\'s own, four of 398\'s');
+  });
+
   check('rare blood is born, never placed: the dire hyena\'s row is gone and the scary rat rows are scabby rats\' (2026-11-14)', () => {
     const m = readFileSync(new URL('../migrations/399_rare_blood_is_born.sql', import.meta.url), 'utf8');
     assert.match(m, /^DELETE FROM mob_spawns WHERE id = 'dire-hyena-g1';$/m, 'the dire hyena row is removed');
