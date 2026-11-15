@@ -5887,6 +5887,7 @@ async function connect() {
       wayHome = f.home || "";
       paintWayHome();
       renderChips(f.suggest, f.combat);
+      if (bootWait) bootWait(!!f.combat); // the door controller plays only for one not in a fight (bootReadout)
       updateGuideExits();
       // The world's own build is RECORDED here, and never alone decides
       // anything (rome, 2026-10-13: a page that had just reloaded onto the new
@@ -17730,9 +17731,10 @@ function bootAgo(ms) {
   var d = Math.round(h / 24);
   return (d === 1 ? "a day" : d + " days") + " ago";
 }
-var bootHeld = null, bootOwn = false, bootCut = function () {};
+var bootHeld = null, bootOwn = false, bootCut = function () {}, bootWait = null;
 var BOOT_CUT = /^(dmgin|death|seize|stun|fumble|block|dodge)$/;
-function bootReadout(done) {
+var BOOT_WAIT_MS = 2500;
+function bootReadout(done, waitForWorld) {
   var w = thrWorldData;
   var pad = function (v, n) { v = String(v); return v + " ".repeat(Math.max(0, n - v.length)); };
   var row = function (k, v, note) { return pad(k + " " + ".".repeat(Math.max(1, 13 - k.length)), 16) + " " + pad(v, 10) + (String(v).length >= 10 ? " " : "") + (note || ""); }; // a long name never runs into its note
@@ -17788,25 +17790,39 @@ function bootReadout(done) {
   var finish = function () {
     if (over) return;
     over = true;
+    bootWait = null;
     timers.forEach(clearTimeout);
     bootOwn = true; done(); bootOwn = false;
     var q = bootHeld; bootHeld = null; bootCut = function () {};
     q.forEach(function (a) { print(a[0], a[1], a[2], a[3], a[4]); });
   };
   bootCut = finish;
-  lines.forEach(function (l) {
-    timers.push(setTimeout(function () {
-      bootOwn = true;
-      print(l.cls === "gap" ? " " : l.text, l.cls === "dim" || l.cls === "gap" ? "dim" : "sys");
-      bootOwn = false;
-      if (l.ticks && soundOn && actx) {
-        var t = actx.currentTime + 0.01;
-        for (var i = 0; i < l.ticks; i++) { try { BOOT_TICK(t + i * 0.021 + Math.random() * 0.008); } catch (e) {} }
-      }
-    }, at));
-    at += l.ms;
-  });
-  timers.push(setTimeout(finish, at));
+  // IN A FIGHT, NO READOUT AT ALL (rome, 2026-11-15). It waits for the world's first
+  // word on you (the room frame's combat flag, ctx below); one that comes back into a
+  // fight skips the door controller whole and lands in it. A new key has no
+  // connection to wait on, and a slow line starts the readout after BOOT_WAIT_MS.
+  var started = false;
+  var go = function (fighting) {
+    if (started || over) return;
+    started = true;
+    bootWait = null;
+    if (fighting) { finish(); return; }
+    lines.forEach(function (l) {
+      timers.push(setTimeout(function () {
+        bootOwn = true;
+        print(l.cls === "gap" ? " " : l.text, l.cls === "dim" || l.cls === "gap" ? "dim" : "sys");
+        bootOwn = false;
+        if (l.ticks && soundOn && actx) {
+          var t = actx.currentTime + 0.01;
+          for (var i = 0; i < l.ticks; i++) { try { BOOT_TICK(t + i * 0.021 + Math.random() * 0.008); } catch (e) {} }
+        }
+      }, at));
+      at += l.ms;
+    });
+    timers.push(setTimeout(finish, at));
+  };
+  if (waitForWorld) { bootWait = go; timers.push(setTimeout(function () { go(false); }, BOOT_WAIT_MS)); }
+  else go(false);
 }
 
 var crossed = false;
@@ -17826,7 +17842,7 @@ function crossThreshold() {
   bootReadout(function () {
     print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
     if (guideFresh) guideStart();
-  });
+  }, !guideFresh);
   if (!phoneControls()) cmd.focus();
   if (!guideFresh && !guideActive()) connect();
   // Start before connecting so new players never see a burst of welcome text.

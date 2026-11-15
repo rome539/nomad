@@ -7873,10 +7873,14 @@ try {
   check('coming through the door prints the door controller\'s readout in the log; the door opens at once and a fight cuts it short (2026-11-15)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.doesNotMatch(pub, /id="boot"|#bootscr/, 'no screen of its own: it is the game\'s text box');
-    assert.match(pub, /bootReadout\(function \(\) \{\n\s+print\("— you feel keys in your pocket[^\n]*\n\s+if \(guideFresh\) guideStart\(\);\n\s+\}\);\n\s+if \(!phoneControls\(\)\) cmd\.focus\(\);\n\s+if \(!guideFresh && !guideActive\(\)\) connect\(\);/, 'the keys line and a new key\'s walk after it, and the door opens at once underneath');
+    assert.match(pub, /bootReadout\(function \(\) \{\n\s+print\("— you feel keys in your pocket[^\n]*\n\s+if \(guideFresh\) guideStart\(\);\n\s+\}, !guideFresh\);\n\s+if \(!phoneControls\(\)\) cmd\.focus\(\);\n\s+if \(!guideFresh && !guideActive\(\)\) connect\(\);/, 'the keys line and a new key\'s walk after it, and the door opens at once underneath');
     assert.match(pub, /if \(bootHeld && !bootOwn\) \{\n\s+bootHeld\.push\(\[text, cls, who, pk, voiced\]\);\n\s+if \(BOOT_CUT\.test\(cls \|\| classify\(String\(text\)\) \|\| ""\)\) bootCut\(\);/, 'the world waits behind it, and a fight ends it');
     assert.match(pub, /var BOOT_CUT = \/\^\(dmgin\|death\|seize\|stun\|fumble\|block\|dodge\)\$\/;/);
     assert.match(pub, /if \(w\.king\) add\("", row\("kings", w\.king\.standing \? "STANDING" : "DOWN"/, 'one king, drawn at random');
+    // in a fight, no readout at all (rome, 2026-11-15)
+    assert.match(pub, /if \(bootWait\) bootWait\(!!f\.combat\);/, 'it waits on the world\'s first word on you');
+    assert.match(pub, /if \(fighting\) \{ finish\(\); return; \}/, 'and one in a fight gets none of it');
+    assert.match(pub, /\}, !guideFresh\);/, 'a returning key waits for the world; a new key in practice does not');
   });
 
   check('the door controller reads the sky and the ledger, and the ledger keeps the arena\'s promise (2026-11-15)', () => {
