@@ -9766,7 +9766,7 @@ export class ZoneDO implements DurableObject {
   }
 
   // The spectator feed, kind 24913: to everyone standing in the room, and —
-  // when the relay door is open — to anyone anywhere watching t=mudroom-<id>.
+  // when the relay door is open — to anyone anywhere watching t=mudregion-<region> (the region, never the room).
   //
   // THE ARENA LAW (rome, 2026-07-15): the public feed is moves, fights, kills,
   // deaths — and those ride out under the ACTOR's own key (actorFeed), 15s
@@ -9815,7 +9815,7 @@ export class ZoneDO implements DurableObject {
     // death, an arrival. Idle creature wandering stays LOCAL: it was flooding the
     // relays two ephemeral events per step (leave + enter) with rats pacing empty
     // rooms nobody watches. That noise never leaves the box now.
-    if (toRelay && typeof text === "string") this.relayFeed("mudroom-" + roomId, text);
+    if (toRelay && typeof text === "string") this.relayFeed("mudregion-" + this.regionOf(roomId), text); // the region, not the room (actorFeed)
   }
 
   // A WORLD-WIDE LINE THAT IS NOT ACTUALLY WORLD-WIDE (rome, 2026-08-02: "I'm
@@ -9967,7 +9967,9 @@ export class ZoneDO implements DurableObject {
     // Nobody who switched the arena off goes out on it: not their own deed, and
     // not a line that names them (alsoSkip is the other player a line names).
     const hidden = actor.arenaOff || (alsoSkip ? this.sessions.get(alsoSkip)?.arenaOff : false);
-    if (toRelay && !hidden) try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", room: roomId, text, fx: cls })); } catch {}
+    // THE REGION, NOT THE ROOM (rome, 2026-11-15): the public copy says what stretch of
+    // country a deed happened in, so it cannot pin a wanderer to one room on a map.
+    if (toRelay && !hidden) try { actor.ws.send(JSON.stringify({ v: 0, t: "fpub", region: this.regionOf(roomId), text, fx: cls })); } catch {}
   }
 
   // The arena feed's third-person voice — a kill or a status proc retold for the

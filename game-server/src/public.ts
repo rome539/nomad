@@ -122,7 +122,8 @@ export const PAGE = `<!doctype html>
        exactly that much and the picture, being the complement, gives up the
        same. 0.5in is 48px flat - a CSS inch is 96px by definition and does not
        vary with the screen. */
-    --logh: calc(24vh + 0.5in);
+    /* ...and another half inch (rome, 2026-11-15): a whole inch over the 24vh now. */
+    --logh: calc(24vh + 1in);
     /* --botth IS MEASURED, NOT ASSUMED, and that is the whole lesson of this
        rule. The first cut said calc(100vh - var(--logh)) - the picture is the
        window less the prose band - and the column does not end at the band:
@@ -5238,16 +5239,17 @@ async function receivePrivateTell(frame) {
 // Two deliberate differences from speech: the content is PLAIN (a spectator
 // client is MEANT to read it \\u2014 this is the show), and every event carries a
 // fixed "nomad-arena" tag so one subscription catches the whole roster, plus a
-// "mudroom-<id>" tag that says where. And it goes out on a 15s HOLD: the room
+// "mudregion-<region>" tag that says what stretch of country (never the room: rome,
+// 2026-11-15, so the feed cannot pin anyone to a room on a map). And it goes out on a 15s HOLD: the room
 // already saw it live over the socket; the public copy trails a quarter-minute,
 // so the feed can't be read as a real-time tracker to intercept anyone.
 var FEED_KIND = 24913;
 var ARENA_TAG = "nomad-arena";
 var FEED_HOLD_MS = 15000;
-async function publishFeed(room, text, fx) {
+async function publishFeed(region, text, fx) {
   if (!text || arenaOn === false || !arenaWanted()) return; // switched out of the arena feed: nothing of yours goes on it
   try {
-    var tags = [["t", ARENA_TAG], ["t", "mudroom-" + (room || "door")], ["v", "0"]];
+    var tags = [["t", ARENA_TAG], ["t", "mudregion-" + (region || "door")], ["v", "0"]];
     // A combat deed carries how it landed (vital / bleed / stun / hobble / kill)
     // so a spectator client can size and colour it without guessing from prose.
     if (fx && fx !== "who") tags.push(["fx", String(fx)]);
@@ -5936,7 +5938,7 @@ async function connect() {
         if (f.t === "tell-sent" && pending.event) publishSealedTell(pending.event);
       }
     } else if (f.t === "fpub") {
-      publishFeed(f.room, f.text, f.fx);  // your deed, your key — the arena broadcast
+      publishFeed(f.region, f.text, f.fx);  // your deed, your key — the arena broadcast
     } else if (f.t === "npost") {
       publishNote(f.text, f.atag, f.card, f.short, f.alt);  // your brag, your key — a kind 1 in your own feed
     }

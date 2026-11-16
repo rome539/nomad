@@ -2018,7 +2018,7 @@ try {
     const z = new ZoneDO({}, {});
     const sock = () => { const out = []; return { out, send: (m) => out.push(JSON.parse(m)), serializeAttachment: () => {}, deserializeAttachment: () => ({}) }; };
     const a = { pubkey: 'a', name: 'Ash', roomId: 'r', ws: sock() }, b = { pubkey: 'b', name: 'Birch', roomId: 'r', ws: sock() };
-    z.sessions = new Map([['a', a], ['b', b]]); z.outOfWorld = () => false;
+    z.sessions = new Map([['a', a], ['b', b]]); z.outOfWorld = () => false; z.regionOf = () => 'deep';
     const fpubs = (s) => s.ws.out.filter((f) => f.t === 'fpub').length;
     z.actorFeed(a, 'r', 'Ash goes north.');
     assert.equal(fpubs(a), 1, 'on by default: the deed goes out');
@@ -7861,6 +7861,27 @@ try {
     assert.equal(z.bearsClause({ templateId: 'dire-hyena', carries: ['tattered-cloak', 'tattered-cloak'] }), ', dragging two tattered cloaks');
     assert.equal(z.bearsClause({ templateId: 'dire-hyena', carries: ['tattered-cloak', 'bone-shiv', 'worn-boots', 'worn-boots'] }), ', dragging a tattered cloak and a bone shiv and two pairs of worn boots', 'a beast drags it all, one verb');
     assert.equal(z.bearsClause({ templateId: 'skeleton', carries: ['bone-shiv', 'tattered-cloak'] }), ', wielding a bone shiv and clad in a tattered cloak', 'hands wield and wear');
+  });
+
+  check('the picture view\'s text box is a whole inch over its 24vh (2026-11-15)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /\n    --logh: calc\(24vh \+ 1in\);/, 'half an inch higher than it was');
+  });
+
+  check('the arena feed says the region a deed happened in, never the room (2026-11-15)', () => {
+    const z = new ZoneDO({}, {});
+    const out = []; const a = { pubkey: 'a', name: 'Ash', roomId: 'the-cold-hearth', ws: { send: (m) => out.push(JSON.parse(m)) } };
+    z.sessions = new Map([['a', a]]); z.outOfWorld = () => false; z.regionOf = (r) => (r === 'the-cold-hearth' ? 'deep' : 'x');
+    z.actorFeed(a, 'the-cold-hearth', 'Ash cuts a rat down.', 'kill');
+    const f = out.find((m) => m.t === 'fpub');
+    assert.equal(f.region, 'deep', 'the player is handed the region');
+    assert.ok(!('room' in f) && !JSON.stringify(f).includes('the-cold-hearth'), 'and nothing of the room');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(pub, /\["t", "mudregion-" \+ \(region \|\| "door"\)\]/, 'the player posts under the region tag');
+    assert.match(pub, /publishFeed\(f\.region, f\.text, f\.fx\);/);
+    assert.match(zone, /this\.relayFeed\("mudregion-" \+ this\.regionOf\(roomId\), text\)/, 'the world posts under the region tag too');
+    assert.doesNotMatch(pub + zone, /"mudroom-"/, 'no room tag goes out at all');
   });
 
   check('the deep keeps ten rat rows, not sixteen (2026-11-15)', () => {
