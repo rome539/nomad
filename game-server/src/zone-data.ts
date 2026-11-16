@@ -9247,6 +9247,8 @@ export const ART_ROOMS = new Set<string>([
   "the-old-plough",
   // THE HIDEAWAYS (2026-11-14): the always-dark rooms, on their region's shared picture or their own
   "the-boundary-cave", "the-boundary-cave-slope", "the-oak-cave", "the-oak-cave-crawl", "the-oak-cave-hall", "the-oak-cave-neck", "the-pile-cave", "the-ridge-cave", "the-ridge-cave-drop", "the-ridge-cave-fork", "the-ridge-cave-pocket", "the-ridge-cave-squeeze", "the-wall-cave", "the-wall-cave-passage", "the-wall-cave-turn", "the-oak-hollow", "the-road-kiln", "the-fall-shelter", "the-grave-drain", "the-blowhole", "the-drowned-chamber", "the-fallen-roof", "the-sand-crawl", "the-shingle-bank", "the-weed-gallery", "the-black-pool", "the-dead-alders", "the-holloway",
+  // THE FIVE SHELTERS (2026-11-16): roofs that painted their region's open ground; an inside of their own now
+  "the-carters-rest", "the-shepherds-bothy", "the-mill-loft", "the-shelter-stone", "the-charcoal-hut",
 ]);
 
 // A ROOF WHOSE PICTURE IS THE GROUND OUTSIDE (rome, 2026-10-25: the Marshal's
@@ -9254,7 +9256,12 @@ export const ART_ROOMS = new Set<string>([
 // roofed, so they stay INDOOR_ROOMS for shelter, but the picture they borrow
 // (public.ts PLATE_OF) is the open ground outside them, and a picture of the
 // outside has to show the outside's hour and weather.
-export const ROOF_SHOWS_OUTSIDE = new Set<string>(["the-marshals-lodging", "the-mine-mouth", "the-village-smithy", "the-cider-house"]);
+// THE LODGING AND THE CIDER HOUSE ARE NOT (rome, 2026-11-16: rain outside, and the
+// Lodging acting roofed). THE PICTURE DECIDES, not the words: neither has a plate
+// of its own; each paints its region's open ground (siege-lines, fort-waste) with
+// the rain drawn falling on it. So they are open ground to the world too, and the
+// rain, the wind and the dark come into them as they do on the ground around.
+export const ROOF_SHOWS_OUTSIDE = new Set<string>(["the-mine-mouth", "the-village-smithy"]);
 export const INDOOR_ROOMS = new Set<string>([
   // THE BEAR CAVES (mig 319): every room behind a mouth. The mouths keep the
   // day, the way the sea cave's does.
@@ -9277,7 +9284,7 @@ export const INDOOR_ROOMS = new Set<string>([
   "the-fall-shelter", "the-shelter-stone",                              // the gill and the climb
   // ---- THE OPEN GROUND (mig 193): the roofs on the ring, and the mine. The
   // earthworks, the camp hollows and the churchyard are weather; these are not.
-  "the-marshals-lodging", "the-village-smithy", "the-cider-house", "the-culver-house",
+  "the-village-smithy", "the-culver-house",   // not the Marshal's Lodging or the Cider House: they paint open ground (2026-11-16)
   "the-charnel", "the-mine-mouth", "the-mine-gallery", "the-camouflet",
   // ---- THE MOUNTAIN IS OUT (rome, 2026-09-06, and the ruling is his because
   // the mistake was: he added twenty-one mountain rooms to this set back when he

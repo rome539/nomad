@@ -10504,8 +10504,8 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "29";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "51";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "30";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "52";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11166,6 +11166,12 @@ var ROOM_PLATE = {
   "the-black-pool":       "night night-torch",
   "the-dead-alders":      "night night-torch",
   "the-holloway":         "night night-torch",
+  // THE FIVE SHELTERS (2026-11-16): roofed, dark inside at every hour, as the black hut is
+  "the-carters-rest": "night night-torch",
+  "the-shepherds-bothy": "night night-torch",
+  "the-mill-loft": "night night-torch",
+  "the-shelter-stone": "night night-torch",
+  "the-charcoal-hut": "night night-torch",
 };
 // A PLATE MAY BE SHARED (rome, 2026-09-09). A room plate's file stem has always
 // been the room id, so two rooms that look the same meant two copies of six
@@ -11707,6 +11713,12 @@ var SHELTERED = {
   "the-black-pool": 1,
   "the-dead-alders": 1,
   "the-holloway": 1,
+  // the five shelters (2026-11-16)
+  "the-carters-rest": 1,
+  "the-shepherds-bothy": 1,
+  "the-mill-loft": 1,
+  "the-shelter-stone": 1,
+  "the-charcoal-hut": 1,
 };
 // AND WHAT WEATHER LOOKS LIKE FROM UNDER ONE (rome, 2026-09-08). A sheltered
 // room takes no weather plate, but that does not mean weather changes nothing:
@@ -12398,6 +12410,8 @@ var MOB_LINE = {
   // THE HIDEAWAYS (2026-11-14), read off the torch plates: the floor starts low under the
   // walls and roots; the pool and the drowned alders stand creatures on the bank, below the water.
   "hideaway-wood": 63, "hideaway-road": 63, "hideaway-crossing": 65, "the-black-pool": 70, "the-dead-alders": 70, "the-holloway": 63,
+  // THE FIVE SHELTERS (2026-11-16), read off the torch plates: where each floor opens out
+  "the-carters-rest": 72, "the-shepherds-bothy": 70, "the-mill-loft": 68, "the-shelter-stone": 70, "the-charcoal-hut": 76,
 };
 // THE KING SITS IN HIS THRONE (rome, 2026-09-26). A king's "keep-the-seat" frame
 // is drawn sitting on nothing, and every creature stands on the one foot line -

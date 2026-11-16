@@ -33,7 +33,7 @@ const ROOMS = {
   "the-deep-cell":    { region: null,    outdoor: false },
   "the-relay-house":  { region: "road",  outdoor: false },   // a gate: open sky by rule
   "the-black-hut":    { region: "den",   outdoor: false },   // a roof in a band with no plates
-  "the-marshals-lodging": { region: "out", outdoor: false },   // a roof whose picture is the ground outside
+  "the-mine-mouth":   { region: "out", outdoor: false },   // a roof whose picture is the ground outside
 };
 function skyFor(id, { night = false, raining = false, inside = false, rainNext = false } = {}) {
   const ctx = {
@@ -60,7 +60,7 @@ function skyFor(id, { night = false, raining = false, inside = false, rainNext =
   const fn = new Function("seesArt", "OUTDOOR_ROOMS", "OUTDOOR_REGIONS", "ROOF_SHOWS_OUTSIDE", "events",
     "isNight", "isBloodMoon", "isFullMoon", "eclipsePhase", "isDusk", "isDawn", "skyCovered", "session", "self",
     body.replace(/\bthis\b/g, "self").replace(/!\./g, ".")   /* the TS non-null assertion is not JS */);
-  return fn(ctx.seesArt, ctx.OUTDOOR_ROOMS, ctx.OUTDOOR_REGIONS, new Set(["the-marshals-lodging"]), ctx.events, ctx.isNight,
+  return fn(ctx.seesArt, ctx.OUTDOOR_ROOMS, ctx.OUTDOOR_REGIONS, new Set(["the-mine-mouth"]), ctx.events, ctx.isNight,
     ctx.isBloodMoon, ctx.isFullMoon, ctx.eclipsePhase, ctx.isDusk, ctx.isDawn, ctx.skyCovered, ctx.session, ctx.self);
 }
 
@@ -89,9 +89,9 @@ t("...and still gets rained on", skyFor("the-east-paving", { raining: true }) ==
   skyFor("the-east-paving", { raining: true }));
 // A ROOF WHOSE PICTURE IS THE OUTSIDE SHOWS THE OUTSIDE (rome, 2026-10-25):
 // the Lodging takes the open ground's weather and hour, as a gate does.
-t("the Lodging takes the rain on the ground outside", skyFor("the-marshals-lodging", { raining: true }) === "rain",
-  skyFor("the-marshals-lodging", { raining: true }));
-t("...and the night", skyFor("the-marshals-lodging", { night: true }) === "night", skyFor("the-marshals-lodging", { night: true }));
+t("the Mine Mouth takes the rain on the ground outside", skyFor("the-mine-mouth", { raining: true }) === "rain",
+  skyFor("the-mine-mouth", { raining: true }));
+t("...and the night", skyFor("the-mine-mouth", { night: true }) === "night", skyFor("the-mine-mouth", { night: true }));
 // And the genuinely sunless places keep their answer.
 t("a sealed fortress room still has no sky", skyFor("the-deep-cell", { night: true }) === "in",
   skyFor("the-deep-cell", { night: true }));

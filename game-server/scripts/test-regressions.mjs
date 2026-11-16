@@ -4139,9 +4139,29 @@ try {
     assert.match(z, /lo: !seesArt\(session\.pubkey\) \? undefined : \(session\.artLow = lowLight\(\)\)/);
     assert.match(z, /lowLight\(\) !== \(s\.artLow \?\? 0\)\) this\.sendStatus\(s\)/, 'the picture turns at dawn even when the sky stays fog');
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
-    for (const r of ['the-marshals-lodging', 'the-mine-mouth', 'the-village-smithy', 'the-cider-house']) assert.ok(zd.match(/ROOF_SHOWS_OUTSIDE = new Set<string>\(\[([^\]]*)\]/)[1].includes(r), r);
+    for (const r of ['the-mine-mouth', 'the-village-smithy']) assert.ok(zd.match(/ROOF_SHOWS_OUTSIDE = new Set<string>\(\[([^\]]*)\]/)[1].includes(r), r);
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /paintScene\(f\.band, f\.sky, f\.terrain, f\.room, f\.torch, f\.skyroll, f\.place, f\.sea, f\.red, f\.covered, f\.nt, f\.lo\);/);
+  });
+  check('a safe room painted on its region\'s open ground is open ground: the Lodging, the Cider House (2026-11-16)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const indoor = zd.match(/export const INDOOR_ROOMS = new Set<string>\(\[([\s\S]*?)\]\);/)[1].replace(/\/\/.*$/gm, '');
+    const roofShows = zd.match(/ROOF_SHOWS_OUTSIDE = new Set<string>\(\[([^\]]*)\]/)[1];
+    for (const r of ['the-marshals-lodging', 'the-cider-house']) {
+      assert.ok(!indoor.includes('"' + r + '"'), r + ' is listed as roofed');
+      assert.ok(!roofShows.includes(r), r + ' is listed as a roof');
+    }
+    assert.ok(indoor.includes('"the-village-smithy"') && indoor.includes('"the-mine-mouth"'), 'the roofed ones stay roofed');
+  });
+  check('the five shelters paint their own dark inside, on both ends (2026-11-16)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const art = zd.match(/export const ART_ROOMS = new Set<string>\(\[([\s\S]*?)\]\);/)[1].replace(/\/\/.*$/gm, '');
+    for (const r of ['the-carters-rest', 'the-shepherds-bothy', 'the-mill-loft', 'the-shelter-stone', 'the-charcoal-hut']) {
+      assert.ok(art.includes('"' + r + '"'), r + ' is not sent its place');
+      assert.match(pub, new RegExp('"' + r + '": "night night-torch",'), r + ' has no plate');
+      assert.match(pub.slice(pub.indexOf('var SHELTERED = {')), new RegExp('^  "' + r + '": 1,', 'm'), r + ' takes the weather on its floor');
+    }
   });
   console.log('the ground shows what happened');
   function groundWorld() {
