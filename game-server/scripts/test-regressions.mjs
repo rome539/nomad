@@ -7873,7 +7873,7 @@ try {
     z.creaturesInRoom = () => [];
     assert.equal(z.shapesInTheDark({ roomId: 'r' }), '', 'an empty room says nothing more');
     const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
-    assert.match(zone, /A light would show it\. \(light a torch, or feel your way back the way you came\)` \+ this\.shapesInTheDark\(session\);\n\s+\}/, 'under the open-sky dark');
+    assert.match(zone, /\(overhead \? `\\n\$\{LORE_LINE\}\$\{overhead\}` : ""\) \+ this\.shapesInTheDark\(session\);\n\s+\}/, 'under the open-sky dark');
     assert.match(zone, /the drip of water\.\$\{redEyesInDark\} A light would show it\. \(light a torch, or feel your way back the way you came\)` \+ this\.shapesInTheDark\(session\);/, 'and the deep\'s');
     assert.match(zone, /"No moon tonight — you can see nothing under open sky, only your own breath\.";/, 'no wind on a still night');
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
@@ -7882,7 +7882,9 @@ try {
 
   check('the wind is said in the dark, and by night the weather rides the night line (2026-11-15)', () => {
     const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
-    assert.match(zone, /return `Night, pitch black outside\.\\n\$\{blind\}\$\{wet\}\$\{felt\}\$\{windy\}/, 'blind, you still hear the wind');
+    assert.match(zone, /const weather = `\$\{wet\}\$\{felt\}\$\{windy\}`\.trim\(\);/, 'blind, you still hear the wind');
+    assert.match(zone, /\+ \(weather \? `\\n\$\{LORE_LINE\}\$\{weather\}` : ""\) \+ \(overhead \? `\\n\$\{LORE_LINE\}\$\{overhead\}` : ""\) \+ this\.shapesInTheDark\(session\);/, 'the dark\'s weather and sky in the lore look, as under a torch');
+    assert.match(zone, /return `Night, pitch black outside\.\\n\$\{blind\}\$\{touch\} A light would show it\./, 'the room\'s own dark line stays plain');
     assert.match(zone, /if \(skyAt >= 0 && lines\.length > nightAt && skyAt === nightAt - 1\) \{\n\s+const night = lines\.splice\(nightAt, 1\)\[0\]!;\n\s+lines\[skyAt\] = night \+ " " \+ lines\[skyAt\]!\.slice\(LORE_LINE\.length\);/, 'one line: the night, then the weather');
     const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     assert.match(ev, /const wind = windClause\(z, roomId\);\n\s+if \(wind\) return wind;/, 'the sky clause says the same wind');
@@ -7896,7 +7898,7 @@ try {
   check('pitch black under a clear sky still says the northern lights and the comet the picture draws (2026-11-15)', () => {
     const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
     assert.match(zone, /const overhead = this\.skyFor\(room\.id\) === "night" \? events\.nightExtras\(Date\.now\(\), false\) : "";/, 'on the sky the page draws them in');
-    assert.match(zone, /return `Night, pitch black outside\.\\n\$\{blind\}\$\{wet\}/, 'the dark line carries them');
+    assert.match(zone, /\(overhead \? `\\n\$\{LORE_LINE\}\$\{overhead\}` : ""\)/, 'the dark carries them, on a line of their own');
     const ex = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
     assert.match(ex, /auroraNight\(day\) \? NIGHT_AURORA : ""/, 'the aurora on its own nights, the page\'s rule');
   });

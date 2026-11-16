@@ -8105,12 +8105,18 @@ export class ZoneDO implements DurableObject {
         // skyFor "night"), the aurora and the comet are said, and the dark is the ground's.
         const overhead = this.skyFor(room.id) === "night" ? events.nightExtras(Date.now(), false) : "";
         // ...the wind only when it is up (rome, 2026-11-15): "and the wind" was said on a still night.
-        const blind = overhead ? `No moon tonight — you can see nothing of the ground, only your own breath. ${overhead}` : "No moon tonight — you can see nothing under open sky, only your own breath.";
+        const blind = overhead ? "No moon tonight — you can see nothing of the ground, only your own breath." : "No moon tonight — you can see nothing under open sky, only your own breath.";
         // ...and the weather the dark does not take away (rome, 2026-11-15): the wind
         // heard, the snow and the fog and the cold felt, as the rain always was.
         const windy = events.windClause(this, room.id);
         const felt = events.feltInTheDark(this, room.id);
-        return `Night, pitch black outside.\n${blind}${wet}${felt}${windy}${touch} A light would show it. (light a torch, or feel your way back the way you came)` + this.shapesInTheDark(session);
+        // IN THE LORE LOOK, AS A LIT ROOM SAYS THEM (rome, 2026-11-15: the dark said its
+        // weather and its sky in the plain white of the room's words, while a lit room
+        // draws them as tellings). The room's own dark line stays plain; the weather is
+        // one telling and what is overhead another, as they are under a torch.
+        const weather = `${wet}${felt}${windy}`.trim();
+        return `Night, pitch black outside.\n${blind}${touch} A light would show it. (light a torch, or feel your way back the way you came)`
+          + (weather ? `\n${LORE_LINE}${weather}` : "") + (overhead ? `\n${LORE_LINE}${overhead}` : "") + this.shapesInTheDark(session);
       }
       // On a blood moon the hollow things are lit from inside — the one light
       // the dark cannot take, and the one thing you can still see in it.
