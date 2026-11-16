@@ -865,6 +865,29 @@ export function saysWeather(clause: string, wx: "snow" | "rain" | "fog" | ""): b
   if (wx === "fog") return clause === FOG_ON_LINE || clause === CLOUD_DOWN_LINE;
   return false;
 }
+// THE WEATHER YOU FEEL IN THE DARK (rome, 2026-11-15): with nothing to see, the snow
+// and the fog and the hard cold still reach you, as the rain and the wind do.
+export function feltInTheDark(z: ZoneDO, roomId: string): string {
+  const parts: string[] = [];
+  if (snowed(z, roomId)) parts.push(" Snow is coming down out of the black, settling cold on your face and hands.");
+  else if (foggy(z, roomId)) parts.push(" The fog is in: it is wet on your face, and the black is thicker for it.");
+  switch (wxPhase(z, "cold", roomId)) {
+    case "telegraph": parts.push(" The air is turning bitter."); break;
+    case "active": parts.push(" The cold has settled in hard, and it bites at every part of you the air can reach."); break;
+    case "aftermath": parts.push(" The worst of the cold is lifting."); break;
+  }
+  return parts.join("");
+}
+// THE WIND, said alone where the dark leaves only what you can hear and feel (zone.ts,
+// the pitch-black line: rome, 2026-11-15) and inside skyClause everywhere else.
+export function windClause(z: ZoneDO, roomId: string): string {
+  switch (wxPhase(z, "wind", roomId)) {
+    case "telegraph": return " The wind is getting up, and every loose thing is starting to talk.";
+    case "active": return " The wind is up and it never lets off. Nothing you carry is quiet, and no open flame is safe out in it.";
+    case "aftermath": return " The wind drops, and the open ground settles back to its own noise.";
+  }
+  return "";
+}
 export function skyClause(z: ZoneDO, roomId: string): string {
   if (roomId === boilRoom(z)) return " The floor is a river of rats, pouring through.";
   if (fordUp(z, roomId)) {
@@ -1105,11 +1128,8 @@ export function skyClause(z: ZoneDO, roomId: string): string {
     case "active": return " The cold has settled in hard. Nothing living wants to be out in it.";
     case "aftermath": return " The worst of the cold is lifting.";
   }
-  switch (wxPhase(z, "wind", roomId)) {
-    case "telegraph": return " The wind is getting up, and every loose thing is starting to talk.";
-    case "active": return " The wind is up and it never lets off. Nothing you carry is quiet, and no open flame is safe out in it.";
-    case "aftermath": return " The wind drops, and the open ground settles back to its own noise.";
-  }
+  const wind = windClause(z, roomId);
+  if (wind) return wind;
   if (LIGHTS_ROOMS.has(roomId)) {
     switch (phaseOf(z, "lights")) {
       case "telegraph": return " The dark out over the water has gone attentive.";

@@ -2484,7 +2484,7 @@ try {
     if (clause) assert.ok(saysWeather(clause, 'snow'), 'the snow clause is known for the snow: ' + clause);
     assert.ok(saysWeather(' The mountain is under snow, and the snow is old enough to have opinions about what stays on it and what sinks.', 'snow'), 'the line rome saw twice');
     assert.ok(!saysWeather(' The mountain is under snow, and the snow is old enough to have opinions about what stays on it and what sinks.', ''), 'kept when the hour line does not say it');
-    assert.match(zs, /if \(sky && !events\.saysWeather\(sky, hourSaysWx\)\) lines\.push/, 'the room leaves the second one out');
+    assert.match(zs, /if \(sky && !events\.saysWeather\(sky, hourSaysWx\)\) \{ lines\.push/, 'the room leaves the second one out');
   });
   // 2026-11-08: there was no way to tell whether grazers had eaten a room down.
   check('the grass can be looked at: how much is left, a bare room says so, and the keeper gets the count', () => {
@@ -3551,7 +3551,7 @@ try {
   // 2026-11-07: the weather and the sky after a room's words wear the lore look.
   check('a room look draws its weather and sky lines in the lore look', () => {
     const zs = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
-    assert.match(zs, /if \(sky && !events\.saysWeather\(sky, hourSaysWx\)\) lines\.push\(LORE_LINE \+ sky\.trim\(\)\);/, 'the weather');
+    assert.match(zs, /if \(sky && !events\.saysWeather\(sky, hourSaysWx\)\) \{ lines\.push\(LORE_LINE \+ sky\.trim\(\)\); skyAt = lines\.length - 1; \}/, 'the weather');
     assert.match(zs, /lines\.push\(LORE_LINE \+ \(isFullMoon\(\)/, 'and the night sky');
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /var loreLine = lines\[i\]\.charAt\(0\) === "\\u0003";\n\s+if \(loreLine\) lines\[i\] = lines\[i\]\.slice\(1\);/, 'the page takes the mark off');
@@ -7861,6 +7861,44 @@ try {
     assert.equal(z.bearsClause({ templateId: 'dire-hyena', carries: ['tattered-cloak', 'tattered-cloak'] }), ', dragging two tattered cloaks');
     assert.equal(z.bearsClause({ templateId: 'dire-hyena', carries: ['tattered-cloak', 'bone-shiv', 'worn-boots', 'worn-boots'] }), ', dragging a tattered cloak and a bone shiv and two pairs of worn boots', 'a beast drags it all, one verb');
     assert.equal(z.bearsClause({ templateId: 'skeleton', carries: ['bone-shiv', 'tattered-cloak'] }), ', wielding a bone shiv and clad in a tattered cloak', 'hands wield and wear');
+  });
+
+  check('in the dark the words name what the picture stands there, quietly, and the weather felt is said (2026-11-15)', () => {
+    const z = new ZoneDO({}, {});
+    const tm = new Map([['grave-hyena', { name: 'a grave-hyena' }], ['rat', { name: 'a scabby rat' }], ['pale-crawler', { name: 'a pale crawler' }]]);
+    z.world = { mobTemplates: tm };
+    const cs = [{ templateId: 'grave-hyena' }, { templateId: 'grave-hyena' }, { templateId: 'rat' }, { templateId: 'pale-crawler', hidden: true }];
+    z.creaturesInRoom = () => cs; z.mossUnseen = () => false;
+    assert.equal(z.shapesInTheDark({ roomId: 'r' }), '\n\u0003Something is standing in it with you, close: two grave-hyenas and a scabby rat.', 'the picture\'s creatures, in the lore look; the lurker lying in wait is not named');
+    z.creaturesInRoom = () => [];
+    assert.equal(z.shapesInTheDark({ roomId: 'r' }), '', 'an empty room says nothing more');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /A light would show it\. \(light a torch, or feel your way back the way you came\)` \+ this\.shapesInTheDark\(session\);\n\s+\}/, 'under the open-sky dark');
+    assert.match(zone, /the drip of water\.\$\{redEyesInDark\} A light would show it\. \(light a torch, or feel your way back the way you came\)` \+ this\.shapesInTheDark\(session\);/, 'and the deep\'s');
+    assert.match(zone, /"No moon tonight — you can see nothing under open sky, only your own breath\.";/, 'no wind on a still night');
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    assert.match(ev, /if \(snowed\(z, roomId\)\) parts\.push[\s\S]{0,200}else if \(foggy\(z, roomId\)\) parts\.push[\s\S]{0,200}switch \(wxPhase\(z, "cold", roomId\)\)/, 'snow, fog and cold felt');
+  });
+
+  check('the wind is said in the dark, and by night the weather rides the night line (2026-11-15)', () => {
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /return `Night, pitch black outside\.\\n\$\{blind\}\$\{wet\}\$\{felt\}\$\{windy\}/, 'blind, you still hear the wind');
+    assert.match(zone, /if \(skyAt >= 0 && lines\.length > nightAt && skyAt === nightAt - 1\) \{\n\s+const night = lines\.splice\(nightAt, 1\)\[0\]!;\n\s+lines\[skyAt\] = night \+ " " \+ lines\[skyAt\]!\.slice\(LORE_LINE\.length\);/, 'one line: the night, then the weather');
+    const ev = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    assert.match(ev, /const wind = windClause\(z, roomId\);\n\s+if \(wind\) return wind;/, 'the sky clause says the same wind');
+    // the merge, run: the night line first, then the wind, in one lore line
+    const L = '\u0003', lines = ['A room.', L + 'The wind is up.'];
+    const skyAt = 1, nightAt = 2; lines.push(L + "Night's fully down.");
+    if (skyAt >= 0 && lines.length > nightAt && skyAt === nightAt - 1) { const night = lines.splice(nightAt, 1)[0]; lines[skyAt] = night + ' ' + lines[skyAt].slice(L.length); }
+    assert.deepEqual(lines, ['A room.', L + "Night's fully down. The wind is up."]);
+  });
+
+  check('pitch black under a clear sky still says the northern lights and the comet the picture draws (2026-11-15)', () => {
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /const overhead = this\.skyFor\(room\.id\) === "night" \? events\.nightExtras\(Date\.now\(\), false\) : "";/, 'on the sky the page draws them in');
+    assert.match(zone, /return `Night, pitch black outside\.\\n\$\{blind\}\$\{wet\}/, 'the dark line carries them');
+    const ex = readFileSync(new URL('../src/events.ts', import.meta.url), 'utf8');
+    assert.match(ex, /auroraNight\(day\) \? NIGHT_AURORA : ""/, 'the aurora on its own nights, the page\'s rule');
   });
 
   check('the picture view\'s text box is a whole inch over its 24vh (2026-11-15)', () => {

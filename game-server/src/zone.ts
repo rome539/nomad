@@ -8100,14 +8100,24 @@ export class ZoneDO implements DurableObject {
         // about which part of it you were blind in.
         const own = DARK_TOUCH[room.id] ?? QUARTER_DARK[MAP_QUARTERS[room.id] ?? ""];
         const touch = own ? ` ${own}` : "";
-        return `Night, pitch black outside.\nNo moon tonight — you can see nothing under open sky, only your own breath and the wind.${wet}${touch} A light would show it. (light a torch, or feel your way back the way you came)`;
+        // THE NORTHERN LIGHTS STILL SHOW (rome, 2026-11-15: pitch black, and the picture
+        // had the aurora in it). On the sky the page draws them in (a clear night,
+        // skyFor "night"), the aurora and the comet are said, and the dark is the ground's.
+        const overhead = this.skyFor(room.id) === "night" ? events.nightExtras(Date.now(), false) : "";
+        // ...the wind only when it is up (rome, 2026-11-15): "and the wind" was said on a still night.
+        const blind = overhead ? `No moon tonight — you can see nothing of the ground, only your own breath. ${overhead}` : "No moon tonight — you can see nothing under open sky, only your own breath.";
+        // ...and the weather the dark does not take away (rome, 2026-11-15): the wind
+        // heard, the snow and the fog and the cold felt, as the rain always was.
+        const windy = events.windClause(this, room.id);
+        const felt = events.feltInTheDark(this, room.id);
+        return `Night, pitch black outside.\n${blind}${wet}${felt}${windy}${touch} A light would show it. (light a torch, or feel your way back the way you came)` + this.shapesInTheDark(session);
       }
       // On a blood moon the hollow things are lit from inside — the one light
       // the dark cannot take, and the one thing you can still see in it.
       const redEyesInDark = isBloodMoon() && [...this.creatures.values()]
         .some((c) => c.roomId === room.id && HOLLOW.has(c.templateId))
         ? BLOOD_MOON_EYES_DARK : "";
-      return `Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water.${redEyesInDark} A light would show it. (light a torch, or feel your way back the way you came)`;
+      return `Pitch dark.\nYou can see nothing — no walls, no way on, only your own breath and, somewhere, the drip of water.${redEyesInDark} A light would show it. (light a torch, or feel your way back the way you came)` + this.shapesInTheDark(session);
     }
     const title = den.roomTitle(this, session, room.name);
     // BEHIND YOUR DOOR THE ROOM IS THE HOUSE (rome, 2026-10-22). The den stands
@@ -8163,7 +8173,8 @@ export class ZoneDO implements DurableObject {
     // ...said once: the hour line below carries the weather in the air, so the
     // clause that says only that weather again is left out (events.saysWeather).
     const hourSaysWx = !indoors && OUTDOOR_ROOMS.has(room.id) && (isNight() || eclipsePhase() !== "active") ? events.weatherSky(this, room.id) : "";
-    if (sky && !events.saysWeather(sky, hourSaysWx)) lines.push(LORE_LINE + sky.trim());
+    let skyAt = -1;
+    if (sky && !events.saysWeather(sky, hourSaysWx)) { lines.push(LORE_LINE + sky.trim()); skyAt = lines.length - 1; }
     // The night-clock itself gets a line too, same legibility rule as
     // weather — this only runs past the pitch-dark return above, so it's
     // either a torch holding the dark at bay or a full moon lighting the
@@ -8176,6 +8187,7 @@ export class ZoneDO implements DurableObject {
     // this same line wherever the page draws them (2026-11-11).
     const starSky = !indoors && OUTDOOR_ROOMS.has(room.id) && isNight() ? this.skyFor(room.id) : "";
     const starry = starSky === "night" || starSky === "moon";
+    const nightAt = lines.length;
     if (nightWx) lines.push(LORE_LINE + WEATHER_NIGHT[nightWx]);
     else if (!indoors && OUTDOOR_ROOMS.has(room.id) && isNight() && !isBloodMoon()) {
       // the full moon by its kind, so the words say the moon the sky is drawing
@@ -8200,6 +8212,13 @@ export class ZoneDO implements DurableObject {
           : this.carriesLight(session)
           ? "Night's fully down and the sky over you is open and black — past your light, so is everything else."
           : "Night's fully down and the sky over you is open and black — past the light you're standing in, so is everything else."));
+    }
+    // THE NIGHT AND THE WEATHER, ONE LINE (rome, 2026-11-15): the wind said on a line
+    // of its own and the night on the next read as two skies; the night comes first
+    // and the weather after it, in the one line.
+    if (skyAt >= 0 && lines.length > nightAt && skyAt === nightAt - 1) {
+      const night = lines.splice(nightAt, 1)[0]!;
+      lines[skyAt] = night + " " + lines[skyAt]!.slice(LORE_LINE.length);
     }
     // THE NIGHT'S EXTRAS (2026-11-11): the northern lights and the comet, on a
     // line of their own, under exactly the skies the page draws them in (the
@@ -8729,6 +8748,26 @@ export class ZoneDO implements DurableObject {
   // and never be jumped again — the whole archetype, defeated by typing a word
   // (rome, 2026-07-12). Torchlight is the honest counter: carry a flame and the
   // room shows it pressed into its crevice, so it becomes addressable.
+  // WHAT THE PICTURE SHOWS STANDING IN THE DARK, said quietly (rome, 2026-11-15): the
+  // picture draws the creatures in a pitch-black room (chips.sendCtx), so the words
+  // name them too, in the lore look under the dark's own line. The same set the
+  // picture stands up: a sloth in its moss is not there, and a lurker lying in wait
+  // is only its faint shape, never named.
+  public shapesInTheDark(session: Session): string {
+    const world = this.world!;
+    const counts = new Map<string, number>();
+    for (const c of this.creaturesInRoom(session.roomId)) {
+      if (this.mossUnseen(c, session)) continue;
+      if (LURKERS.has(c.templateId) && c.hidden && !c.joinedOpenly) continue;
+      const name = world.mobTemplates.get(c.templateId)?.name;
+      if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    if (!counts.size) return "";
+    const said = [...counts].map(([name, n]) => countedName(name, n));
+    const list = said.length === 1 ? said[0]! : `${said.slice(0, -1).join(", ")} and ${said[said.length - 1]}`;
+    return `\n${LORE_LINE}Something is standing in it with you, close: ${list}.`;
+  }
+
   public lurkerUnseen(creature: Creature, session: Session): boolean {
     if (this.mossUnseen(creature, session)) return true;
     return LURKERS.has(creature.templateId)
