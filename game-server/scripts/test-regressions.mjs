@@ -7863,6 +7863,27 @@ try {
     assert.equal(z.bearsClause({ templateId: 'skeleton', carries: ['bone-shiv', 'tattered-cloak'] }), ', wielding a bone shiv and clad in a tattered cloak', 'hands wield and wear');
   });
 
+  check('the door controller\'s readout stays in the log through the tutorial (2026-11-16)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /body\[data-tutorial="on"\] #log > :not\(\.guide-step\):not\(\.boot-line\) \{ display: none; \}/, 'the walk hides the log but not the readout');
+    assert.match(pub, /print\(l\.cls === "gap" \? " " : l\.text, [^\n]+\);\n\s+if \(log\.lastElementChild\) log\.lastElementChild\.classList\.add\("boot-line"\);/, 'each readout line is marked as it prints');
+  });
+
+  check('the tutorial\'s last button can be typed: "enter the dungeon" ends the walk (2026-11-16)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const m = pub.match(/if \(guideAt >= GUIDE_LESSONS\.length\) \{\n\s+if \((\/[^\n]+\/)\.test\(lower\.trim\(\)\)\) \{ guideOff\(\); return true; \}/);
+    assert.ok(m, 'at the last lesson, typing it ends the walk as the button does');
+    const re = new Function('return ' + m[1].replace(/\\\\/g, '\\'))();
+    for (const t of ['enter the dungeon', 'enter dungeon', 'enter']) assert.ok(re.test(t), t);
+    assert.ok(!re.test('enter the cellar'));
+  });
+
+  check('the wind steps back while the door controller prints, so its ticks are heard (2026-11-15)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /if \(bootHeld\) windBase \*= BOOT_WIND_DUCK;\n\s+scapeTo\(scape\.wind\.gain\.gain, windBase/, 'ducked under the readout, before the wind is set');
+    assert.match(pub, /var BOOT_WIND_DUCK = 0\.2;/);
+  });
+
   check('in the dark the words name what the picture stands there, quietly, and the weather felt is said (2026-11-15)', () => {
     const z = new ZoneDO({}, {});
     const tm = new Map([['grave-hyena', { name: 'a grave-hyena' }], ['rat', { name: 'a scabby rat' }], ['pale-crawler', { name: 'a pale crawler' }]]);

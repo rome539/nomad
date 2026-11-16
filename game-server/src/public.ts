@@ -2305,7 +2305,9 @@ export const PAGE = `<!doctype html>
     top: auto; bottom: 4%; height: max(81%, 50.22vh);
   }
   /* The first walk owns the log until the player finishes or skips it. */
-  body[data-tutorial="on"] #log > :not(.guide-step) { display: none; }
+  /* ...all but the door controller's readout above it (rome, 2026-11-16: it vanished
+     when the walk began; it is how you came in, so it stays). */
+  body[data-tutorial="on"] #log > :not(.guide-step):not(.boot-line) { display: none; }
   body[data-tutorial="on"] :is(#scene, #sky, #mobs, #loggrip, #chips) { display: none; }
   body[data-tutorial="on"] #logbox {
     flex: 1 1 auto !important;
@@ -3219,6 +3221,10 @@ function scapeBreathe() {
   // under a roof the gale is a moan through the walls, not air on your face
   // The gust's top a quarter down (rome, 2026-10-24: the gusts ran a bit high);
   // the lull underneath it is where it was.
+  // THE WIND STEPS BACK WHILE THE DOOR CONTROLLER PRINTS (rome, 2026-11-15: its
+  // booting ticks were lost under the wind). bootHeld is set for exactly as long as
+  // the readout runs; the next breath after it brings the wind back in.
+  if (bootHeld) windBase *= BOOT_WIND_DUCK;
   scapeTo(scape.wind.gain.gain, windBase * (0.3 + 0.6 * scape.gust) * SCAPE_VOL);
   scapeTo(scape.wind.chain[0].frequency, 260 + (a.wind >= 3 ? 700 : 380) * scape.gust);
   scapeTo(scape.wind.chain[1].frequency, a.shut ? 600 : 2400);
@@ -17736,6 +17742,7 @@ function bootAgo(ms) {
 var bootHeld = null, bootOwn = false, bootCut = function () {}, bootWait = null;
 var BOOT_CUT = /^(dmgin|death|seize|stun|fumble|block|dodge)$/;
 var BOOT_WAIT_MS = 2500;
+var BOOT_WIND_DUCK = 0.2; // the wind's share while the readout prints (scapeBreathe)
 var BOOT_WORLD_MS = 1500; // how long the readout waits for a world feed it still lacks
 function bootReadout(done, waitForWorld) {
   var pad = function (v, n) { v = String(v); return v + " ".repeat(Math.max(0, n - v.length)); };
@@ -17837,6 +17844,7 @@ function bootReadout(done, waitForWorld) {
       timers.push(setTimeout(function () {
         bootOwn = true;
         print(l.cls === "gap" ? " " : l.text, l.cls === "dim" || l.cls === "gap" ? "dim" : "sys");
+        if (log.lastElementChild) log.lastElementChild.classList.add("boot-line"); // stays through the first walk (#log in tutorial)
         bootOwn = false;
         if (l.ticks && soundOn && actx) {
           var t = actx.currentTime + 0.01;
@@ -17967,6 +17975,13 @@ function guideCommand(text) {
   if (lower === "tutorial off" || lower === "tutorial stop") { guideOff(); return true; }
   if (lower === "tutorial") { guideStart(); return true; }
   if (lower === "keys") { idbtn.click(); return true; }
+  // THE LAST LESSON'S BUTTON CAN BE TYPED (rome, 2026-11-16): "enter the dungeon",
+  // or just "enter", does what the button under it does.
+  if (guideAt >= GUIDE_LESSONS.length) {
+    if (/^enter( the)?( dungeon)?$/.test(lower.trim())) { guideOff(); return true; }
+    print("Tap 'Enter the dungeon', or type it, to step into the live dungeon.", "sys guide-step");
+    return true;
+  }
   var expected = guideAt < GUIDE_LESSONS.length && GUIDE_LESSONS[guideAt].re;
   if (expected && expected.test(lower) && (guideAt !== 2 || lower === "go north")) {
     print("Practice: " + text + " — nothing sent to the live dungeon.", "sys guide-step");

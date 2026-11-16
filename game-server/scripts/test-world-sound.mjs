@@ -63,7 +63,7 @@ function fixture() {
     setInterval: () => 1, clearTimeout() {}, clearInterval() {},
     anims: [], mobsEl: null, sceneEl: null, lastCombat: false, inGatehouseNow: false,
     thrCtx: null, thrMaster: null, thrOut: null, thrTimers: [], thrFading: [],
-    lastPlace: '', MOB_SPRITE: {}, STAGGER_S: 1, renderSnd() {},
+    lastPlace: '', MOB_SPRITE: {}, STAGGER_S: 1, renderSnd() {}, bootHeld: null, BOOT_WIND_DUCK: 0.2,
   });
   vm.runInContext(sound + '\n' + functionSource('setSound') + '\n' + functionSource('thrMusicStop'), context);
   context.sndInit();
