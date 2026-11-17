@@ -6490,6 +6490,24 @@ try {
     for (let i = 0; i < 50; i++) assert.equal(rollDen(z, 'hill-fox', 'wood'), 'wood', 'off the mountain nothing changes');
   });
 
+  // 2026-11-17: the whole deep lies behind the deep-heart door, so it had no homes and
+  // nothing there ever moved. The deep's animals reach past that one door, never another,
+  // and never into a king's room.
+  check('the deep draws homes past the deep-heart door, never past another, never a king\'s room (2026-11-17)', () => {
+    const rooms = new Map([['gate', 'gate'], ['undercroft', 'upper'], ['the-descent', 'deep'], ['d2', 'deep'], ['sunken-throne', 'deep'], ['the-still-cradle', 'deep'], ['kept', 'deep']]
+      .map(([id, region]) => [id, { id, region }]));
+    const exits = new Map([
+      ['gate', [{ to_room: 'undercroft' }]],
+      ['undercroft', [{ to_room: 'the-descent', key_item: 'deep-heart' }]],
+      ['the-descent', [{ to_room: 'd2' }, { to_room: 'kept', key_item: 'riddle-door' }]],
+      ['d2', [{ to_room: 'sunken-throne' }, { to_room: 'the-still-cradle' }]],
+    ]);
+    const world = { rooms, exits, entryRooms: new Set(['gate']), safeRooms: new Set(),
+      mobSpawns: [{ template_id: 'pale-crawler', room_id: 'd2' }, { template_id: 'pale-crawler', room_id: 'the-descent' }] };
+    const z = { world, regionOf: (r) => rooms.get(r).region };
+    assert.deepEqual(livingHomes(z, 'pale-crawler', 'deep').sort(), ['d2', 'the-descent'], 'the deep has homes, behind no other door and in no king\'s room');
+  });
+
   check('mountain groups: chance and food place them, a wipe leaves a loner and fresh ground, hunger moves them', () => {
     const names = Array.from({ length: 24 }, (_, i) => `m${i}`);
     const rooms = new Map(['gate', ...names].map((id) => [id, { id, region: 'mountain' }]));

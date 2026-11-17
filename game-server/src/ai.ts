@@ -52,7 +52,7 @@ import {
   SUMMIT_BOSS, SUMMIT_BOSSES, DRAKE_ROUSED_MS, DRAKE_WINDUP_MS, DRAKE_BREATH_EVERY_MS, DRAKE_BREATH_MIN, DRAKE_BREATH_MAX,
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
-  STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT,
+  STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT, DEEP_HEART, KINGS_ROOMS_DEEP,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
   RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
@@ -4147,7 +4147,10 @@ export function spookFromNoise(z: ZoneDO, sourceRoomId: string, now: number): vo
   // The dead stay dead — but the dungeon refills. When a population is below
   // its cap, a migrant is already on its way; it arrives here.
 // How far each room is from the nearest gate, walking through open ways only.
-// A room behind a keyed door has no entry, so nothing is ever homed behind one.
+// A room behind a keyed door has no entry, so nothing is ever homed behind one,
+// EXCEPT THE DEEP (2026-11-17): the whole deep lies behind the deep-heart door, so
+// measured from the gates it had no rooms and nothing there ever drew a home. The
+// deep's animals were born behind that door; it is the wanderer's lock, not theirs.
 const gateSteps = new WeakMap<object, Map<string, number>>();
 function stepsFromGates(world: NonNullable<ZoneDO["world"]>): Map<string, number> {
   let dist = gateSteps.get(world);
@@ -4158,7 +4161,7 @@ function stepsFromGates(world: NonNullable<ZoneDO["world"]>): Map<string, number
   for (let i = 0; i < queue.length; i++) {
     const at = queue[i];
     for (const e of world.exits.get(at) ?? []) {
-      if (e.key_item || dist.has(e.to_room)) continue;
+      if ((e.key_item && e.key_item !== DEEP_HEART) || dist.has(e.to_room)) continue;
       dist.set(e.to_room, dist.get(at)! + 1);
       queue.push(e.to_room);
     }
@@ -4187,7 +4190,9 @@ export function livingHomes(z: ZoneDO, templateId: string, inRegion?: string): s
   // THE TERRITORY IS OPEN (rome, 2026-11-09: everything gathered on the high bone
   // ground and the top stood empty). Tier five took no homes, so the crag and bone
   // animals were squeezed onto the five bone rooms below it; only the summit is shut.
-  const barred = new Set(region === "mountain" ? MOUNTAIN_QUARTER_ROOMS.summit ?? [] : []);
+  // In the deep the kings' own rooms stay theirs: nothing draws a home where the
+  // Forgotten King sits or where the drowned hulk lies (KINGS_ROOMS_DEEP).
+  const barred = new Set(region === "mountain" ? MOUNTAIN_QUARTER_ROOMS.summit ?? [] : region === "deep" ? KINGS_ROOMS_DEEP : []);
   return [...world.rooms.keys()].filter((r) => {
     const d = dist.get(r);
     // NO CEILING (rome, 2026-11-08: every goat and hind lived low). A home was held

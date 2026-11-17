@@ -11544,6 +11544,8 @@ export const SEA_STATES = ["slack low", "the flood", "half flood", "high water"]
 // door before it spoils. Fresh heart opens it (and is consumed); a stale one is
 // grey slime. No hoarding (it rots), no soft-lock (the sim keeps surfacing).
 export const DEEP_HEART = "deep-heart";               // the perishable key item
+// The deep's kings' rooms: no living animal draws its home in one (ai.ts livingHomes).
+export const KINGS_ROOMS_DEEP = new Set(["sunken-throne", "the-still-cradle"]);
 export const DEEP_DOOR_KEY = "undercroft:down";       // "roomId:dir" of the sealed deep door (the stair out of the undercroft, past the hound)
 // How long the black door stands open after a heart is pressed to it. It only
 // bars the way DOWN — the-descent's way up is unkeyed, so a shut door never
