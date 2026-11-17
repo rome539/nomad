@@ -248,6 +248,7 @@ export interface Creature {
   roundFor?: string;  // the feeding ground a herd animal is out on this hour (herds.roundGround)
   roundAt?: number;   // when that answer is worth asking again
   huntAt?: number;      // ms until that errand is worth recomputing (HUNT_RECHECK_MS)
+  arc?: boolean;        // put down by an event arc and taken back by it (events.ts hatch): never in a living region's groups (2026-11-17)
   drift?: number;       // rooms walked on a WALKABOUT — set = unmoored, no territory (ai.beginDrift)
   driftFrom?: string;   // the ground it set out from: what it walks away from, and what it returns to if it finds nothing
   holding?: string;  // creature id this predator has by the throat (a kill in progress, one room, no pursuit)

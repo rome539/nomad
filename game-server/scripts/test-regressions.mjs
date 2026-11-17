@@ -42,12 +42,12 @@ try {
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, wardAt} from './zone-data';",
         "export {forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, keeperRead, eatsAt, rollBloodline, reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep, broodBirths} from './ai';",
-        "export {waters, ratHoards, godMet, godRemembers, rollDen, livingHomes, catchMult, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead} from './ai';",
+        "export {waters, ratHoards, godMet, godRemembers, rollDen, livingHomes, applyArrivals, catchMult, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead} from './ai';",
         "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry, holdLand, holdBody, mobEagle} from './groups';",
         "export {PREYS_ON, PACK_PREY, SMALL_PREY, SMALL_EATERS, mealOf, HUNGER_FLOOR} from './zone-data';",
         "export {CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS} from './zone-data';",
         "export {CROSSING_GROUND, CROSSING_SETTLES} from './crossing-ground';",
-        "export {ROAD_GROUND, ROAD_SETTLES} from './road-ground';", "export {OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES} from './fortress-ground';", "export {OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD} from './zone-data';", "export {ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, SQUADS} from './zone-data';", "export * as squadsMod from './squads';", "export {packmates} from './ai';", "export * as manhunterMod from './manhunter';", "export {huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED} from './zone-data';",
+        "export {ROAD_GROUND, ROAD_SETTLES} from './road-ground';", "export {WOOD_GROUND, DEN_GROUND} from './wood-ground';", "export {GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS} from './zone-data';", "export {OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES} from './fortress-ground';", "export {OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD} from './zone-data';", "export {ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, SQUADS} from './zone-data';", "export * as squadsMod from './squads';", "export {packmates} from './ai';", "export * as manhunterMod from './manhunter';", "export {huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED} from './zone-data';",
         "export * as beasts from './beasts';",
         "export {tick as flightTick, foodIn as flightFoodIn} from './flight';",
         "export {GROUND_OF, SETTLES_ON, settlesOn} from './mountain-ground';",
@@ -116,7 +116,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot } = await import(pathToFileURL(output));
+  const { applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -3115,6 +3115,8 @@ try {
       ]) };
     const z = { world, creatures: new Map(), sessions: new Map(), herds: new Map(), groups: { at: 0, packs: {}, gone: {} }, variantBase: new Map(), arrivals: new Map(), conditions: new Map(),
       regionOf: () => 'wood', outOfWorld: () => false, roomDist: () => 1, rollCarry: () => undefined,
+      // the wood lives (2026-11-17), so its groups ask what is near: rooms with no ways between them are near only themselves
+      nearby: (from) => new Map([[from, 0]]), withinRadius: (a, b) => a === b,
       noteCreaturesChanged() {}, roomFeed() {}, roomSound() {}, refreshRoomCtx() {} };
     const add = (t, room) => { const id = 'c' + Math.random(); z.creatures.set(id, { id, templateId: t, roomId: room, home: room, hp: 1 }); };
     const count = (t) => [...z.creatures.values()].filter((c) => c.templateId === t).length;
@@ -5781,7 +5783,7 @@ try {
     const herds = readFileSync(new URL('../src/herds.ts', import.meta.url), 'utf8');
     assert.match(herds, /roamsIn\(line, band\) && !tiedOpen\.length \? groups\.plan\(z, line, now, band\)/);
     const g = readFileSync(new URL('../src/groups.ts', import.meta.url), 'utf8');
-    assert.match(g, /if \(!roamsIn\(line\) \|\| c\.drift !== undefined\) continue;[\s\S]{0,400}const region = roamsIn\(line, z\.regionOf\(c\.home \?\? c\.roomId\)\);\n\s+if \(!region \|\|/, 'each line is looked over in its own region');
+    assert.match(g, /if \(!roamsIn\(line\) \|\| c\.drift !== undefined \|\| c\.arc\) continue;[\s\S]{0,600}const region = roamsIn\(line, z\.regionOf\(c\.home \?\? c\.roomId\)\);\n\s+if \(!region \|\|/, 'each line is looked over in its own region');
   });
 
   check('the road lives: every room has its ground, its animals settle on their own kind of it, and the rest stay (2026-11-13)', () => {
@@ -7797,6 +7799,137 @@ try {
     assert.match(block, /\{\n\s*cmd\.focus\(\{ preventScroll: true \}\);/, 'the command line gets it');
   });
 
+  check('the wood and Assart End live: every room with its ground, the wolves in packs that hold it, the rest alone, the bears and the people left be (2026-11-17)', () => {
+    const ids = { wood: [], den: [] };
+    for (const f of readdirSync(new URL('../regions/', import.meta.url)).filter((f) => f.endsWith('.rooms'))) {
+      let reg = null;
+      for (const line of readFileSync(new URL('../regions/' + f, import.meta.url), 'utf8').split('\n')) {
+        const r = line.match(/^!region (\S+)/); if (r) reg = r[1];
+        const m = line.match(/^## (\S+) \|/); if (m && ids[reg]) ids[reg].push(m[1]);
+        if (/^!existing/.test(line) && ids[reg]) ids[reg].pop();
+      }
+    }
+    const tables = { wood: WOOD_GROUND, den: DEN_GROUND };
+    for (const reg in tables) {
+      const listed = new Set(Object.values(tables[reg]).flat());
+      assert.deepEqual(ids[reg].filter((r) => !listed.has(r)), [], 'every ' + reg + ' room the region files add has a kind of ground');
+      for (const kind in tables[reg]) assert.equal(new Set(tables[reg][kind]).size, tables[reg][kind].length, reg + ' ' + kind + ' lists a room once');
+    }
+    // the first wood and the old village are not all in region files, so the tables' sizes are pinned
+    assert.equal(new Set(Object.values(WOOD_GROUND).flat()).size, 332, 'all 332 rooms of the wood');
+    assert.equal(new Set(Object.values(DEN_GROUND).flat()).size, 60, 'all 60 of Assart End');
+    for (const [reg, lines] of [['wood', ['roe-deer', 'wood-stag', 'wild-boar', 'hedgehog', 'wood-sloth', 'grey-wolf', 'coyote', 'tawny-owl', 'scarp-raven', 'the-baited-bear']], ['den', ['masterless-dog', 'roe-deer']]])
+      for (const l of lines) { assert.equal(roamsIn(l, reg), reg, l + ' lives in ' + reg); assert.ok(SETTLES_ON.has(l), l + ' has its ground named'); }
+    for (const keep of ['brown-bear', 'root-thing', 'the-follower', 'the-mire-walker', 'charcoal-burner', 'the-woodward', 'the-old-grey', 'the-keeper-of-the-holding'])
+      assert.equal(roamsIn(keep, 'wood'), undefined, keep + ' stays where it is');
+    for (const keep of ['rat', 'footpad']) assert.equal(roamsIn(keep, 'den'), undefined, keep + ' stays: the old village is the fever rat\'s ground');
+    // company
+    assert.equal(groupOf('grey-wolf', 'wood').min, 3); assert.equal(groupOf('grey-wolf', 'wood').max, 5);
+    assert.equal(groupOf('wild-boar', 'wood').max, 4, 'the boar in sounders');
+    assert.equal(groupOf('coyote', 'wood').max, 4, 'the coyotes in bands');
+    assert.equal(groupOf('masterless-dog', 'den').max, 4, 'the dogs in packs');
+    for (const alone of ['wood-stag', 'hedgehog', 'wood-sloth', 'tawny-owl', 'scarp-raven']) assert.equal(groupOf(alone, 'wood'), undefined, alone + ' alone');
+    assert.equal(groupOf('roe-deer', 'wood').min, 3, 'the wood\'s roe in herds (rome, 2026-11-17)'); assert.equal(groupOf('roe-deer', 'wood').max, 6);
+    assert.ok(groupOf('roe-deer', 'den'), 'the village\'s roe together'); assert.equal(groupOf('roe-deer', 'road'), undefined, 'the road\'s roe as they were');
+    // the wolves hold their ground against the coyotes and close on a boar or the stag together; the owl holds its land
+    assert.ok(PACK_HUNTERS.has('grey-wolf') && GROUND_HOLDERS.has('grey-wolf') && GROUND_DRIVEN.has('coyote'), 'the wolf packs hunt together and run the coyotes off');
+    assert.ok(PACK_QUARRY.has('wild-boar') && PACK_QUARRY.has('wood-stag') && PACK_STAGS.has('wood-stag') && PACK_STAGS.has('red-stag'), 'the wood stag is the grey wolves\' stag');
+    assert.ok(LAND_HOLDERS.has('tawny-owl'), 'the tawny owl holds its land');
+    // their ground
+    assert.ok(settlesOn('tawny-owl', 'the-owl-oak') && settlesOn('tawny-owl', 'the-dovecote') && !settlesOn('tawny-owl', 'the-bracken-sea'), 'an owl in a hollow tree or the dovecote');
+    assert.ok(settlesOn('scarp-raven', 'the-crow-roost') && !settlesOn('scarp-raven', 'the-bracken-sea') && settlesOn('scarp-raven', 'the-raven-rock'), 'a raven in the great trees, and still on its crags');
+    assert.ok(settlesOn('wood-sloth', 'the-high-crowns') && !settlesOn('wood-sloth', 'the-deer-lawn'), 'a sloth in the trees');
+    assert.ok(settlesOn('coyote', 'the-dry-heath') && !settlesOn('coyote', 'the-close-dark'), 'a coyote on the edges, off the deep wood');
+    assert.ok(settlesOn('masterless-dog', 'the-street') && settlesOn('masterless-dog', 'the-common-field') && !settlesOn('masterless-dog', 'the-fever-graves'), 'a dog on the street and the fields, never the graves');
+    for (const line of ['roe-deer', 'grey-wolf', 'wild-boar', 'hedgehog', 'wood-sloth', 'coyote', 'tawny-owl', 'scarp-raven', 'the-baited-bear', 'wood-stag'])
+      for (const r of ['the-paved-road', 'the-bounds-house', 'the-ridge-cave', 'the-under-roots', 'the-drip-line']) assert.ok(!settlesOn(line, r), line + ' does not settle in ' + r);
+    // the road's rules are the road's still: its roe and dogs settle on exactly the road rooms they did
+    assert.ok(settlesOn('roe-deer', 'the-high-common') && !settlesOn('roe-deer', 'the-long-straight') && settlesOn('masterless-dog', 'the-high-common'), 'the road unchanged');
+    const shown = readFileSync(new URL('../src/beasts.ts', import.meta.url), 'utf8');
+    for (const [list, lines] of [['WOOD_SHOWN', ['roe-deer', 'wood-stag', 'wild-boar', 'hedgehog', 'wood-sloth', 'grey-wolf', 'coyote', 'tawny-owl', 'scarp-raven', 'the-baited-bear']], ['DEN_SHOWN', ['masterless-dog', 'roe-deer']]]) {
+      const s = shown.match(new RegExp(`const ${list} = \\[([^\\]]*)\\]`))[1];
+      for (const l of lines) assert.ok(s.includes(`"${l}"`), `${l} must be in beasts' ${list}`);
+    }
+  });
+
+  check('the boar hit softer: the wild boar 3-6, the old boar 5-9, the rest of them as they were (rome, 2026-11-17)', () => {
+    const mig = readFileSync(new URL('../migrations/401_the_boar_hit_softer.sql', import.meta.url), 'utf8').replace(/^--.*$/gm, '');
+    assert.match(mig, /UPDATE mob_templates SET dmg_min = 3, dmg_max = 6 WHERE id = 'wild-boar';/);
+    assert.match(mig, /UPDATE mob_templates SET dmg_min = 5, dmg_max = 9 WHERE id = 'old-boar';/);
+    assert.doesNotMatch(mig, /max_hp|armor|stun|bleed/, 'only the damage');
+    // nothing after it puts the old damage back
+    for (const f of readdirSync(new URL('../migrations/', import.meta.url)).filter((f) => f.endsWith('.sql') && f > '401_the_boar_hit_softer.sql'))
+      assert.doesNotMatch(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8'), /dmg_(min|max)[^;]*'(wild|old)-boar'/, f + ' touches the boar\'s damage');
+  });
+
+  check('a living line\'s arrival lands only in a region short of its rows, never over the wood\'s count (2026-11-17)', () => {
+    // the raven: two rows on the mountain, two in the wood; the wood's two live in it, away
+    // from their rows; one is owed (the mountain's), so it must come back on the mountain
+    const reg = { gate: 'gate', m1: 'mountain', m2: 'mountain', m3: 'mountain', w1: 'wood', w2: 'wood', w3: 'wood', w4: 'wood' };
+    const names = Object.keys(reg);
+    const rooms = new Map(names.map((id) => [id, { id, region: reg[id] }]));
+    const exits = new Map(names.map((id) => [id, []]));
+    const link = (a, b) => { exits.get(a).push({ to_room: b, dir: 'n' }); exits.get(b).push({ to_room: a, dir: 's' }); };
+    link('gate', 'm1'); link('m1', 'm2'); link('m2', 'm3'); link('gate', 'w1'); link('w1', 'w2'); link('w2', 'w3'); link('w3', 'w4');
+    const tmpl = { id: 'scarp-raven', name: 'a scarp raven', max_hp: 20, respawn_secs: 600, is_boss: 0 };
+    let wood = 0;
+    for (let run = 0; run < 40; run++) {
+      const world = { rooms, exits, entryRooms: new Set(['gate']), safeRooms: new Set(), entryRoom: 'gate', mobVariants: [],
+        mobTemplates: new Map([['scarp-raven', tmpl]]),
+        mobSpawns: [{ template_id: 'scarp-raven', room_id: 'm1' }, { template_id: 'scarp-raven', room_id: 'm2' }, { template_id: 'scarp-raven', room_id: 'w1' }, { template_id: 'scarp-raven', room_id: 'w2' }] };
+      const z = { world, creatures: new Map(), sessions: new Map(), arrivals: new Map([['scarp-raven', 0]]), variantBase: new Map(), groups: { at: 0, packs: {}, gone: {} },
+        regionOf: (r) => reg[r] ?? 'wood', roomDist: () => 1, nearby: (from) => new Map([[from, 0]]), rollCarry: () => undefined,
+        noteCreaturesChanged() {}, roomFeed() {}, roomSound() {}, refreshRoomCtx() {}, roomFeedBands() {} };
+      for (const [id, home] of [['a', 'w3'], ['b', 'w4'], ['c', 'm3']]) z.creatures.set(id, { id, templateId: 'scarp-raven', roomId: home, home, hp: 20, hunger: 0 });
+      applyArrivals(z, 1, true);
+      const born = [...z.creatures.values()].filter((c) => !['a', 'b', 'c'].includes(c.id));
+      assert.equal(born.length, 1, 'the one owed raven comes');
+      if (reg[born[0].home] === 'wood') wood++;
+    }
+    assert.equal(wood, 0, 'never in the wood, which holds its two already');
+  });
+
+  check('a sounder of boar shares one home and moves on together (rome, 2026-11-17)', () => {
+    const g = groupOf('wild-boar', 'wood');
+    assert.equal(g.min, 2); assert.equal(g.max, 4);
+    assert.equal(g.spread, undefined, 'no home of its own per boar: the sounder\'s ground is all of theirs');
+    const src = readFileSync(new URL('../src/groups.ts', import.meta.url), 'utf8');
+    assert.ok(!src.includes('settleApart'), 'members take the group\'s home');
+  });
+
+  check('an event arc\'s animals and the white roe never take a living home in the wood or Assart End (2026-11-17)', () => {
+    const names = ['gate', 'a', 'b', 'c'];
+    const rooms = new Map(names.map((id) => [id, { id }]));
+    const exits = new Map(names.map((id, i) => [id, [...(names[i + 1] ? [{ to_room: names[i + 1] }] : []), ...(i ? [{ to_room: names[i - 1] }] : [])]]));
+    const world = { rooms, exits, entryRooms: new Set(['gate']), safeRooms: new Set(), mobTemplates: new Map(),
+      mobSpawns: [{ template_id: 'masterless-dog', room_id: 'a' }, { template_id: 'roe-deer', room_id: 'a' }] };
+    const nearby = (from, depth) => {
+      const out = new Map([[from, 0]]), q = [from];
+      for (const at of q) { const d = out.get(at); if (d < depth) for (const e of exits.get(at)) if (!out.has(e.to_room)) { out.set(e.to_room, d + 1); q.push(e.to_room); } }
+      return out;
+    };
+    const run = (reg) => {
+      const z = { world, nearby, withinRadius: () => true, regionOf: (r) => r === 'gate' ? 'gate' : reg, variantBase: new Map([['white-roe', 'roe-deer']]), creatures: new Map(),
+        groups: { at: 0, packs: {}, gone: {} }, noteCreaturesChanged() {} };
+      const put = (id, t, extra = {}) => z.creatures.set(id, { id, templateId: t, roomId: 'b', home: 'b', hunger: 0, hp: 10, ...extra });
+      put('dog', 'masterless-dog'); put('arcdog', 'masterless-dog', { arc: true });
+      put('roe', 'roe-deer'); put('arcroe', 'roe-deer', { arc: true }); put('white', 'white-roe');
+      const rnd = crypto.getRandomValues; crypto.getRandomValues = (a) => { a.fill(0xffffffff); return a; }; // no die lands: never alone
+      try { groupTick(z, 10 * 60_000); groupTick(z, 20 * 60_000); } finally { crypto.getRandomValues = rnd; }
+      return z;
+    };
+    const den = run('den');
+    assert.ok(den.creatures.get('dog').group, 'a dog of the village joins a pack');
+    assert.equal(den.creatures.get('arcdog').group, undefined, 'a dog the pack arc brought in does not');
+    assert.ok(den.creatures.get('roe').group, 'a roe of the ground joins a herd');
+    assert.equal(den.creatures.get('arcroe').group, undefined, 'an arc\'s roe does not');
+    const wood = run('wood');
+    assert.ok(wood.creatures.get('roe').group, 'a wood roe joins a herd');
+    assert.equal(wood.creatures.get('white').group, undefined, 'the white roe walks the wood alone');
+    assert.equal(wood.creatures.get('white').moveAt, undefined, 'with no home clock');
+    assert.equal(wood.creatures.get('white').home, 'b', 'and is given none');
+  });
+
   check('the fortress lives: the open ground, the keep and the deep, every room with its ground, the goats in a herd, the hyenas in packs, the warren rats left to their king (2026-11-14)', () => {
     // every room the region files add to these three has a kind of ground; the first fortress
     // rooms are not in region files, so the tables' sizes are pinned as well
@@ -7861,7 +7994,7 @@ try {
     assert.match(ai, /&& \(!SETTLES_BY_SCRAPS\.has\(templateId\) \|\| \[\.\.\.z\.nearby\(r, ROUND_RANGE\)\.keys\(\)\]\.some\(\(n\) => FORAGE_ROOMS\.has\(n\)\)\)/, 'a home needs scraps within its round');
     // the keeper's count has a section for each
     const b = readFileSync(new URL('../src/beasts.ts', import.meta.url), 'utf8');
-    assert.match(b, /const VIEWS = \[CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW\];/, 'beasts shows all three');
+    assert.match(b, /const VIEWS = \[CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW[,\]]/, 'beasts shows all three');
   });
 
   check('a rebuilt room draws each creature as it is at once: a lurker stays faint when something beside it dies (2026-11-14)', () => {

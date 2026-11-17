@@ -19,7 +19,7 @@ import {
   CARRION_ROOMS, GROUND_CHASE_ODDS, GROUND_DRIVEN, GROUND_DRIVEN_LEAVES, GROUND_HOLDERS, GROUND_KILL_ODDS, KILL_FRESH_MS,
   DAY_CYCLE_MS, HOME_FED_EXTRA_DAYS, HOME_MAX_DAYS, HOME_MIN_DAYS, HUNGER_FLOOR, mealOf, RIVAL_AVOID_MS, RIVAL_REST_MS, SMALL_PREY, GROUP_GONE_MS, GROUP_LEAN_MS, GROUP_SWEEP_MS, HUNGRY_AT, roamsIn, groupOf,
   PACK_PREY, PREYS_ON, SCAVENGERS, SETTLES_BY_PREY, SURFACE_FORAGE, TERRITORY_RADIUS, BROWSERS, CRAG_ROOMS, GRASS_BITES, FLOCKS, SPREAD_ROOSTS,
-  PACK_QUARRY, PACK_HUNTERS, PACK_STAG_ODDS, PACK_STAG, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS, FOOD_PULL, LEAN_AGAIN_MS,
+  WHITE_ROE, PACK_QUARRY, PACK_HUNTERS, PACK_STAG_ODDS, PACK_STAGS, PACK_HUNT_RANGE, HUNT_RECHECK_MS, LAND_HOLDERS, LAND_BITE_ODDS, FOOD_PULL, LEAN_AGAIN_MS,
   BODY_HOLDERS, MOBBERS, MOB_AT, BODY_CHASE_ODDS, MOB_ODDS, BODY_AVOID_MS, BODY_REST_MS, BROODERS, tiedHome } from "./zone-data";
 
 export interface Group { line: string; region?: string; home: string; size: number; peak: number; leanSince?: number; leanMovedAt?: number; moveAt?: number; kept?: boolean; quarry?: string; quarryAt?: number }
@@ -197,9 +197,11 @@ export function tick(z: ZoneDO, now: number): void {
   let undecided: Creature | undefined;
   for (const c of z.creatures.values()) {
     const line = lineOf(z, c.templateId);
-    if (!roamsIn(line) || c.drift !== undefined) continue;
+    if (!roamsIn(line) || c.drift !== undefined || c.arc) continue; // an event arc's animal is taken back when the arc ends
     // a brood mother is nest-bound whatever its line (BROODERS), and a warren rat is the rat king's (tiedHome)
     if (BROODERS.has(c.templateId) || tiedHome(line, c.home ?? c.roomId)) continue;
+    // the white roe walks the whole wood with no home of its own (whiteroe.ts), roe's rare blood or not
+    if (c.templateId === WHITE_ROE) continue;
     // each animal answers to the region its home is in, if its line lives there
     const region = roamsIn(line, z.regionOf(c.home ?? c.roomId));
     if (!region || (c.group && z.groups.packs[c.group] && groupRegion(z.groups.packs[c.group]) !== region)) {
@@ -449,7 +451,7 @@ export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefi
     || (PACK_PREY.get(g.line)?.get(q.templateId) ?? Infinity) <= alive;
   const fit = (q: Creature | undefined): q is Creature =>
     !!q && q.hp > 0 && q.aloft === undefined && reach.has(q.roomId) && PACK_QUARRY.has(lineOf(z, q.templateId))
-    && canTake(q) && (q.templateId !== PACK_STAG || stagOdds > 0);
+    && canTake(q) && (!PACK_STAGS.has(q.templateId) || stagOdds > 0);
   let q = g.quarry ? z.creatures.get(g.quarry) : undefined;
   if (!fit(q)) {
     q = undefined;
@@ -462,7 +464,7 @@ export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefi
     for (const o of z.creatures.values()) {
       if (!fit(o)) continue;
       const d = reach.get(o.roomId)!;
-      if (o.templateId === PACK_STAG) { if (d < ds) { ds = d; stag = o; } }
+      if (PACK_STAGS.has(o.templateId)) { if (d < ds) { ds = d; stag = o; } }
       else if (d < dr) { dr = d; other = o; }
     }
     q = stag && (!other || chance(stagOdds)) ? stag : other;

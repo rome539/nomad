@@ -1969,6 +1969,10 @@ function hatch(z: ZoneDO, templateId: string, roomId: string, now: number, strid
   z.creatures.set(id, {
     id, templateId, roomId, hp: tmpl.max_hp, hunger: randInt(20, 60),
     grudges: [], nextWanderAt: now + randInt(stride[0], stride[1]), target: null,
+    // AN ARC'S ANIMAL IS NOT THE GROUND'S (2026-11-17): the dogs that come into Assart
+    // End, the deer and the wolf the wood's arcs put down, are taken back when the arc
+    // ends, so none of them joins a pack or draws a home (groups.ts tick).
+    arc: true,
   });
   z.noteCreaturesChanged();
   z.refreshRoomCtx(roomId);

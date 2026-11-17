@@ -4501,6 +4501,7 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
     // currently homed to it. Both built once, in the walks above.
     let rowsBy: Map<string, Map<string, number>> | null = null;
     const homedBy = new Map<string, Map<string, number>>();
+    const homedBand = new Map<string, Map<string, number>>(); // line -> region of home -> bodies
     const tallies = (): void => {
       if (capOf) return;
       capOf = new Map();
@@ -4517,6 +4518,10 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         let m = homedBy!.get(line);
         if (!m) { m = new Map(); homedBy!.set(line, m); }
         m.set(at, (m.get(at) ?? 0) + 1);
+        const band = z.regionOf(at);
+        let b = homedBand.get(line);
+        if (!b) { b = new Map(); homedBand.set(line, b); }
+        b.set(band, (b.get(band) ?? 0) + 1);
       }
       rowsBy = new Map();
       for (const sp of world.mobSpawns) {
@@ -4590,8 +4595,22 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         // hunter three rooms out on an errand would read as a free slot.)
         const rows = rowsBy!.get(templateId) ?? new Map<string, number>();
         const homed = homedBy.get(templateId) ?? new Map<string, number>();
-        const open = homes.filter((r) => (homed.get(r) ?? 0) < (rows.get(r) ?? 1));
-        if (open.length) homes = open;
+        // A LIVING REGION'S LINE IS SHORT BY REGION, NOT BY ROOM (2026-11-17: the wood held
+        // eighteen ravens on eight rows). Its homes are drawn away from its rows, so nearly
+        // every row read as empty and a raven killed on the mountain came back in the wood,
+        // over the wood's count. It lands only in a region holding fewer than its rows there,
+        // counted by where each lives, as the herds already refill (herds.ts).
+        if (roamsIn(templateId)) {
+          const inBand = new Map<string, number>();
+          for (const [r, n] of rows) inBand.set(z.regionOf(r), (inBand.get(z.regionOf(r)) ?? 0) + n);
+          const living = homedBand.get(templateId) ?? new Map<string, number>();
+          const short = homes.filter((r) => (living.get(z.regionOf(r)) ?? 0) < (inBand.get(z.regionOf(r)) ?? 0));
+          if (!short.length) continue; // every region it lives in is full: nothing is owed anywhere
+          homes = short;
+        } else {
+          const open = homes.filter((r) => (homed.get(r) ?? 0) < (rows.get(r) ?? 1));
+          if (open.length) homes = open;
+        }
       }
       let home = homes[randInt(0, Math.max(0, homes.length - 1))] ?? world.entryRoom;
       const creature = mintCreature(z, baseTmpl, home, now);
@@ -4605,6 +4624,9 @@ export function applyArrivals(z: ZoneDO, now: number, silent: boolean): void {
         let m = homedBy.get(templateId);
         if (!m) { m = new Map(); homedBy.set(templateId, m); }
         m.set(home, (m.get(home) ?? 0) + 1);
+        let b = homedBand.get(templateId);
+        if (!b) { b = new Map(); homedBand.set(templateId, b); }
+        b.set(z.regionOf(home), (b.get(z.regionOf(home)) ?? 0) + 1);
       }
       if (tmpl.is_boss) {
         // What lives behind the black door has reformed — and the door knows.

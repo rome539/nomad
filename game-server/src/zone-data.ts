@@ -2609,6 +2609,39 @@ export const UPPER_GROUPS = new Map<string, { min: number; max: number; lone: nu
 // the kings stay where they are.
 export const DEEP_ROAMERS = new Set(["pale-crawler", "rat", "twice-dead", "marrow-cantor"]);
 export const DEEP_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>();
+// THE WOOD AND ASSART END LIVE TOO (2026-11-17), the fifth and sixth living regions.
+// In the wood the grey wolves live in packs (as the hill wolves do on the mountain:
+// they hold their ground against the coyotes, and close together on a boar or a stag),
+// the boar in sounders and the coyotes in small bands; the roe, the stags, the
+// hedgehogs, the sloths, the tawny owls (which hold their land), the ravens and the
+// baited bear alone; the roe in herds (rome, 2026-11-17). Ground: wood-ground.ts. Left where they are: the brown bears (they
+// keep to their caves, CAVE_DWELLERS), the root-things (rooted), the followers
+// (lurkers), the mire-walkers (drowners hold their water), the charcoal-burners and the
+// other people, the woodward, the old grey and the keeper of the holding.
+// In Assart End the masterless dogs live in packs and the roe together. The rats stay: the
+// old village is the fever rat's ground, as the Salt and Shieling hamlets are. The footpad
+// keeps his place. Rare blood lives as its line (rome's ruling for the scary rat,
+// 2026-11-14): the lead dog runs with the dogs, the dire wolf with the wolves, the old
+// boar with the boar, the white roe and the old raven alone as their lines do.
+export const WOOD_ROAMERS = new Set([
+  "roe-deer", "wood-stag", "wild-boar", "hedgehog", "wood-sloth", "grey-wolf", "coyote", "tawny-owl", "scarp-raven", "the-baited-bear",
+]);
+export const WOOD_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
+  ["grey-wolf", { min: 3, max: 5, lone: 0.2 }],
+  // THE BOAR IN SOUNDERS (rome, 2026-11-17): a sounder draws one home and stays on it as
+  // a group, and moves on together; each boar wanders the ground round it on its own,
+  // so they are a room or two apart as often as together.
+  ["wild-boar", { min: 2, max: 4, lone: 0.3 }],
+  ["coyote", { min: 2, max: 4, lone: 0.3 }],
+  // THE ROE IN HERDS (rome, 2026-11-17): the wood's deer live together, as the hinds do
+  // on the mountain, and herds keep apart from one another (groups.pickHome)
+  ["roe-deer", { min: 3, max: 6, lone: 0.1 }],
+]);
+export const DEN_ROAMERS = new Set(["masterless-dog", "roe-deer"]);
+export const DEN_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
+  ["masterless-dog", { min: 2, max: 4, lone: 0.2 }],
+  ["roe-deer", { min: 2, max: 3, lone: 0.1 }], // the village's three roe, together on the fields
+]);
 // A HOME THAT IS NOT GIVEN UP. A roaming line whose home is one of these rooms stays
 // there and draws no new one: the warren rats are the rat king's (ratking.ts), as the
 // hamlet rats are the fever rat's. A rat born to a row out there still roams.
@@ -2626,6 +2659,8 @@ export const LIVING_REGIONS: Record<string, { roamers: Set<string>; groups: Map<
   out: { roamers: OUT_ROAMERS, groups: OUT_GROUPS },
   upper: { roamers: UPPER_ROAMERS, groups: UPPER_GROUPS },
   deep: { roamers: DEEP_ROAMERS, groups: DEEP_GROUPS },
+  wood: { roamers: WOOD_ROAMERS, groups: WOOD_GROUPS },
+  den: { roamers: DEN_ROAMERS, groups: DEN_GROUPS },
 };
 /** With a region: that region if the line roams there. Without one: the first living
  *  region the line roams in (a line may roam in more than one, as the goat does). */
@@ -2646,8 +2681,8 @@ export function groupOf(line: string, region?: string): { min: number; max: numb
 // gives up its home and draws a new one; GROUND_KILL_ODDS of the time it is caught.
 // Either way a pack wolf takes any fresh kill it finds it on, and so does a lone
 // wolf, which holds no ground and only chases it off the meal.
-export const GROUND_HOLDERS = new Set(["hill-wolf"]);
-export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox"]);
+export const GROUND_HOLDERS = new Set(["hill-wolf", "grey-wolf"]); // the wood's packs hold theirs too (2026-11-17)
+export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox", "coyote"]); // ...against the coyotes
 // HOLDING LAND (rome, 2026-11-07). These hunters keep their home and the rooms
 // round it (TERRITORY_RADIUS) as their own. A new one does not settle on the land
 // of another of its kind, or of a bigger hunter that eats the same food, while
@@ -2662,16 +2697,17 @@ export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox
 // (The crossing's gulls and seals hunt, but live as flocks and herds do, apart.)
 export const FLOCKS = new Set<string>(["mountain-chough", "great-gull", "grey-seal"]);
 export const SPREAD_ROOSTS = new Set<string>(["scarp-raven", "carrion-vulture", "bone-breaker"]);
-export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder"]); // the last three: the road (2026-11-13)
+export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder", "tawny-owl"]); // otter, heron, adder: the road (2026-11-13); the tawny owl: the wood (2026-11-17)
 export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a bite in first
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
 // together, so the two a hind needs are in the room at once.
 export const PACK_QUARRY = new Set(["red-stag", "red-hind", "feral-goat",
-  "grey-seal", "conger"]); // the marsh hounds' big game (rome, 2026-11-12), as the stag is the wolves'
+  "grey-seal", "conger",
+  "wild-boar", "wood-stag"]); // the wood's packs (2026-11-17): two take a boar, three the stag (PACK_PREY) // the marsh hounds' big game (rome, 2026-11-12), as the stag is the wolves'
 // WHO HUNTS AS A PACK. The hill wolves, and the marsh hounds, which gang up on a
 // seal or a conger as the wolves do on a stag; the hounds still hold no ground.
-export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog", "drove-dog", "grave-hyena"]); // the road dog packs close on a goat together (2026-11-13), and the open ground's hyena packs (2026-11-14)
+export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog", "drove-dog", "grave-hyena", "grey-wolf"]); // the road dog packs close on a goat together (2026-11-13), and the open ground's hyena packs (2026-11-14)
 // ...AND THE STAG, MORE OFTEN THE BIGGER THE PACK (rome, 2026-11-11: nothing ever
 // set out after a stag, which died only when three wolves happened into its
 // room; a pack of five should mostly go after the big game). A pack picking its
@@ -2679,7 +2715,8 @@ export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog
 // alive (none under three: a stag needs three in the room, PACK_PREY), and
 // otherwise for the nearest hind or goat, as before.
 export const PACK_STAG_ODDS: Record<number, number> = { 3: 1 / 3, 4: 0.5, 5: 0.8 };
-export const PACK_STAG = "red-stag";
+// The wood's stag is the grey wolves' as the red stag is the hill wolves' (2026-11-17).
+export const PACK_STAGS = new Set(["red-stag", "wood-stag"]);
 export const PACK_HUNT_RANGE = 12;
 export const GROUND_CHASE_ODDS = 0.35;
 export const GROUND_KILL_ODDS = 0.1;

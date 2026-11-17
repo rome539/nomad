@@ -8,7 +8,7 @@ import { FOOD_FLIERS, SALT_HAMLET_ROOMS, SHIELING_HAMLET_ROOMS, roamsIn } from "
 
 const DAY_MS = 24 * 3_600_000;
 type Kills = Record<string, Record<string, number>>;
-export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Kills; crossingKills?: Kills; roadKills?: Kills; outKills?: Kills; upperKills?: Kills; deepKills?: Kills }
+export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Kills; crossingKills?: Kills; roadKills?: Kills; outKills?: Kills; upperKills?: Kills; deepKills?: Kills; woodKills?: Kills; denKills?: Kills }
 type Event = "moved" | "flights" | "chases" | "caught" | "stolen";
 
 const SHOWN = [
@@ -27,7 +27,13 @@ const ROAD_SHOWN = [
 const OUT_SHOWN = ["rat", "feral-goat", "gibbet-crow", "grave-hyena", "dire-hyena"]; // the scary rat counts with the rat; the dire hyena is its own
 const UPPER_SHOWN = ["rat", "grave-hyena", "skeleton", "warden"];
 const DEEP_SHOWN = ["rat", "pale-crawler", "twice-dead", "marrow-cantor"];
-const ALL_SHOWN = new Set([...SHOWN, ...CROSSING_SHOWN, ...ROAD_SHOWN, ...OUT_SHOWN, ...UPPER_SHOWN, ...DEEP_SHOWN]);
+// THE WOOD'S AND ASSART END'S SECTIONS (2026-11-17), read the same way. The brown bears keep
+// their caves and are shown for what they hunt; Assart End's rats are the fever rat's and stay.
+const WOOD_SHOWN = [
+  "roe-deer", "wood-stag", "wild-boar", "hedgehog", "wood-sloth", "grey-wolf", "coyote", "tawny-owl", "scarp-raven", "brown-bear", "the-baited-bear",
+];
+const DEN_SHOWN = ["rat", "roe-deer", "masterless-dog"];
+const ALL_SHOWN = new Set([...SHOWN, ...CROSSING_SHOWN, ...ROAD_SHOWN, ...OUT_SHOWN, ...UPPER_SHOWN, ...DEEP_SHOWN, ...WOOD_SHOWN, ...DEN_SHOWN]);
 const lineOf = (z: ZoneDO, id: string): string => ALL_SHOWN.has(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
 const onMountain = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "mountain";
 
@@ -125,7 +131,7 @@ export function lines(z: ZoneDO, now: number): string[] {
 
 // What a living region's section shows: its packs, its herds, its lines against
 // their limit, and what was killed and by what.
-interface RegionView { title: string; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" | "outKills" | "upperKills" | "deepKills" }
+interface RegionView { title: string; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" | "outKills" | "upperKills" | "deepKills" | "woodKills" | "denKills" }
 const CROSSING_VIEW: RegionView = {
   title: "THE CROSSING", region: "crossing", shown: CROSSING_SHOWN, kills: "crossingKills",
   packs: [{ line: "marsh-hound", label: "Marsh hounds", hamlet: SALT_HAMLET_ROOMS }],
@@ -151,7 +157,17 @@ const DEEP_VIEW: RegionView = {
   packs: [],
   herds: [],
 };
-const VIEWS = [CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW];
+const WOOD_VIEW: RegionView = {
+  title: "THE WOOD", region: "wood", shown: WOOD_SHOWN, kills: "woodKills",
+  packs: [{ line: "grey-wolf", label: "Grey wolves" }, { line: "coyote", label: "Coyotes" }],
+  herds: ["wild-boar", "roe-deer"],
+};
+const DEN_VIEW: RegionView = {
+  title: "ASSART END", region: "den", shown: DEN_SHOWN, kills: "denKills",
+  packs: [{ line: "masterless-dog", label: "Masterless dogs" }],
+  herds: ["roe-deer"],
+};
+const VIEWS = [CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW, WOOD_VIEW, DEN_VIEW];
 
 function regionLines(z: ZoneDO, now: number, v: RegionView): string[] {
   const world = z.world!;

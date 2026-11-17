@@ -101,8 +101,8 @@ export const ROAD_GROUND: Record<string, string[]> = {
 // The kinds of ground each road animal will settle on. The draw stays random inside them.
 // The goat and the raven are not here: their mountain rules ("crag", "green") hold on the road.
 export const ROAD_SETTLES: [string, string[]][] = [
-  ["roe-deer", ["green", "lane", "wood"]],
-  ["masterless-dog", ["green", "lane"]],
+  ["roe-deer", ["green", "lane", "wood", "thicket", "heath"]], // thicket and heath are the wood's (wood-ground.ts); the road has none
+  ["masterless-dog", ["green", "lane", "hamlet"]],           // hamlet is Assart End's street (wood-ground.ts); the road has none
   ["drove-dog", ["green", "lane"]],
   ["otter", ["water"]],
   ["grey-heron", ["water", "wet"]],
