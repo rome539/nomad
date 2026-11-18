@@ -9332,11 +9332,19 @@ export class ZoneDO implements DurableObject {
       // The heads-up, so wear is never a silent surprise-break. One-shot crossings
       // (the decrement passes each mark once); urgent checked first so a single big
       // bite — a corrode, a stone-smash — that leaps both marks speaks the louder line.
-      const weap = tmpl.slot === "weapon";
+      // A piece in the PACK is being eaten by the damp, not by use: it says so,
+      // and names the pack (2026-11-17: a spare rusted through in a pack and read
+      // as the weapon in hand coming apart "in your grip").
+      const weap = tmpl.slot === "weapon" && carried.equipped;
+      const packed = !carried.equipped && tmpl.slot !== ""; // a lantern or a hammerstone wears from use, never "equipped"
       if (before > GEAR_FAILING_AT && carried.condition <= GEAR_FAILING_AT) {
-        this.send(session, `${cap(tmpl.name)} is about to fail — ${weap ? "one more hard blow could finish it" : "it's barely holding together"}. (repair at a gate, or find another)`, "wear");
+        this.send(session, packed
+          ? `${cap(tmpl.name)}, in your pack, has rusted nearly through — it will not last much longer. (repair at a gate, or seal it)`
+          : `${cap(tmpl.name)} is about to fail — ${weap ? "one more hard blow could finish it" : "it's barely holding together"}. (repair at a gate, or find another)`, "wear");
       } else if (before > GEAR_WORN_AT && carried.condition <= GEAR_WORN_AT) {
-        this.send(session, `${cap(tmpl.name)} is ${weap ? "notched and loose in your grip" : "battered and thinning"} — it's taken hard wear. (repair at a gate to hammer it out)`, "wear");
+        this.send(session, packed
+          ? `${cap(tmpl.name)}, in your pack, is going to rust — the damp is getting into it. (repair at a gate to hammer it out)`
+          : `${cap(tmpl.name)} is ${weap ? "notched and loose in your grip" : "battered and thinning"} — it's taken hard wear. (repair at a gate to hammer it out)`, "wear");
       }
       return;
     }
@@ -9344,7 +9352,9 @@ export class ZoneDO implements DurableObject {
     if (idx >= 0) session.items.splice(idx, 1);
     await removeItemRow(this.env.DB, carried.rowId);
     if (carried.serial !== null) await voidMint(this.env.DB, carried.serial); // gone is gone, seal and all
-    this.send(session, `${cap(tmpl.name)} is worn through — it comes apart in your ${tmpl.slot === "weapon" ? "grip" : "hands"} and is gone.`, "wear");
+    this.send(session, carried.equipped || tmpl.slot === ""
+      ? `${cap(tmpl.name)} is worn through — it comes apart in your ${tmpl.slot === "weapon" ? "grip" : "hands"} and is gone.`
+      : `${cap(tmpl.name)} has rusted through in your pack — it falls to pieces, and you shake them out.`, "wear");
     this.sendStatus(session); // the pill goes with the piece, not on the next beat
     this.refreshRoomCtx(session.roomId);
   }

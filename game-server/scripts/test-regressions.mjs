@@ -8202,6 +8202,30 @@ try {
     assert.match(src, /if \(n >= this\.dogpileCap\(this\.sessions\.get\(pubkey\)\)\) return false;/, 'the turnpike lets two past');
   });
 
+  await checkAsync('a spare rusting through in the pack says the pack, not your grip (2026-11-17)', async () => {
+    const said = [];
+    const db = { prepare: () => ({ bind: () => ({ run: async () => ({}) }) }) };
+    const z = Object.assign(Object.create(ZoneDO.prototype), { env: { DB: db }, send: (_s, t) => said.push(t), sendStatus() {}, refreshRoomCtx() {} });
+    const tmpl = { id: 'widow-maker', name: 'a widow-maker', slot: 'weapon', traits: '' };
+    const spare = { rowId: 'r1', itemId: 'widow-maker', condition: 36, equipped: false, serial: null };
+    const session = { roomId: 'x', items: [spare] };
+    await z.wear(session, spare, tmpl, 2);
+    assert.match(said.pop(), /in your pack, is going to rust/, 'the first tell names the pack');
+    await z.wear(session, spare, tmpl, 30);
+    assert.match(said.pop(), /in your pack, has rusted nearly through/);
+    await z.wear(session, spare, tmpl, 10);
+    assert.match(said.pop(), /has rusted through in your pack/, 'and its end');
+    assert.equal(session.items.length, 0, 'and it is gone');
+    const held = { ...spare, rowId: 'r2', condition: 1, equipped: true };
+    session.items.push(held);
+    await z.wear(session, held, tmpl, 2);
+    assert.match(said.pop(), /comes apart in your grip/, 'the weapon in your hand still comes apart in your grip');
+    const lantern = { ...spare, rowId: 'r3', condition: 1 };
+    session.items.push(lantern);
+    await z.wear(session, lantern, { ...tmpl, name: 'a lantern', slot: '' }, 2);
+    assert.match(said.pop(), /is worn through/, 'a lantern is worn by use, not rust');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });
