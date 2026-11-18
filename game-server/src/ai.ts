@@ -1953,16 +1953,12 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
       );
       z.refreshRoomCtx(from);
       z.refreshRoomCtx(creature.roomId);
-      // IT CROSSED A THRESHOLD, and whoever is standing in that threshold sees
-      // it go by and nothing more. This is the only thing that ever happens
-      // inside a hideaway or a gate: it does not stop, it does not look at you,
-      // and it is gone the same beat it arrived. (Anyone sheltering there keeps
-      // every promise the room ever made — nothing can take a target in a room
-      // it is never resident in.)
-      if (through) {
-        z.roomFeed(through, `${cap(tmpl.name)} comes through without stopping, crosses, and is gone.`, undefined, false);
-        z.refreshRoomCtx(through);
-      }
+      // IT CROSSED A THRESHOLD, and nothing is said in it (rome, 2026-11-18). A
+      // gate or a hideaway is never entered: the step goes past it, from the
+      // room on one side to the room on the other. Whoever shelters there hears
+      // it in those rooms, as any neighbour does (the roomSound above), and is
+      // never told a beast came through the room they are standing in.
+      if (through) z.refreshRoomCtx(through);
       // The loosed Gaunt empties every room it enters: what can run, runs —
       // and those emptying rooms ARE its telegraph, spreading a step ahead of
       // it. (The posted and the brood stand; they are nobody's prey.)

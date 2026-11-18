@@ -343,6 +343,19 @@ export const PAGE = `<!doctype html>
   #idpanel button:hover { color: var(--gold); border-color: var(--gold); }
   #idpanel button.primary { color: var(--gold); border-color: var(--border2); width: 100%; }
   #idpanel button.soon { opacity: 0.45; border-style: dashed; cursor: default; }
+  /* small text buttons: the panel's second-rank actions */
+  #idpanel button.link, #idpanel button.fold {
+    flex: none; width: auto; border: 0; padding: 2px 0; background: none;
+    color: var(--dim); font-size: 12px; text-decoration: underline dotted; text-underline-offset: 3px;
+  }
+  #idpanel button.fold { text-decoration: none; font-size: 12.5px; letter-spacing: 0.04em; }
+  #idpanel button.link:hover, #idpanel button.fold:hover { color: var(--gold); }
+  #idpanel .links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 10px; }
+  #idpanel .sep { color: var(--dim); font-size: 12px; }
+  #sectname { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+  #sectname .note { flex-basis: 100%; margin-top: 2px; }
+  #sectname.saved #nstate { order: -1; color: var(--cream); }
+  #ownbody { margin-top: 8px; }
   #idpanel button.soon:hover { color: var(--cream); border-color: var(--border); }
   /* The vault's PIN dialog: in-world, masked — a PIN never sits on screen in
      plaintext, and never goes through a browser prompt. */
@@ -1913,8 +1926,10 @@ export const PAGE = `<!doctype html>
   /* What NOMAD is, in plain words, for a stranger and for search (2026-10-27).
      Inside the pinned footer, so the centred stack does not move. */
   #thr-about { margin: 0 auto 6px; max-width: 64ch; line-height: 1.5; font-size: 12px; opacity: .8; }
-  #thr-guide { color: var(--bone); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-  #thr-guide:hover, #thr-guide:focus-visible { color: var(--cream); outline: none; }
+  #thr-guide, #thr-back { color: var(--bone); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  #thr-guide:hover, #thr-guide:focus-visible, #thr-back:hover, #thr-back:focus-visible { color: var(--cream); outline: none; }
+  #thr-backmsg { color: var(--cream); margin-top: 6px; min-height: 1em; }
+  #thr-backmsg:empty { display: none; }
   /* ---- the door's news: one live line under the keys, and the reckoning ----
      The line is the hook (something is happening and you are not in it); the
      board is for anyone the hook works on. Both hidden until /world.json
@@ -2446,7 +2461,7 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
     <div id="thr-line">a shared dungeon, alive whether or not anyone is watching</div>
     <button id="thr-enter" type="button">enter</button>
     <button id="thr-reck" type="button">the reckoning</button>
-    <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser. The creatures hunt, sleep and remember you, wounds do not heal on their own, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a></div>
+    <div id="thr-help"><p id="thr-about">a free multiplayer text dungeon, a MUD, played in the browser. The creatures hunt, sleep and remember you, wounds do not heal on their own, and the dead stay dead.</p>first time? <a id="thr-guide" href="/guide">how it works</a> &middot; lost your wanderer? <a id="thr-back" href="#">bring it back</a><div id="thr-backmsg" role="status"></div></div>
   </div>
   <div id="reckm" role="dialog" aria-modal="true" aria-labelledby="recktitle">
     <div class="lbox">
@@ -2479,23 +2494,30 @@ body[data-modal-layout="classic"] .bench-capacity,body[data-modal-layout="classi
       <span class="lbl">YOU</span>
       <div class="ident"><span id="idname"></span><span id="idnpub" title="copy your public key"></span></div>
     </div>
+    <!-- ONE PLACE TO KEEP THIS WANDERER (rome, 2026-11-18: the panel was cluttered):
+         the password save is the one big button, the copied key and the Drive vault
+         are the links under it, and other keys fold away below. -->
     <div class="sect" id="sectsave">
-      <button id="idcopy" class="primary">copy secret key</button>
-      <span class="note">The only way back if this browser forgets you. Keep it secret.</span>
-    </div>
-    <div class="sect" id="sectgoogle">
-      <span class="lbl" id="glbl">EASY MODE</span>
+      <span class="lbl">KEEP THIS WANDERER</span>
+      <div id="sectname">
+        <button id="idnsave" class="primary">save with a password</button>
+        <span class="note" id="nstate"></span>
+        <button id="idnremove" class="link">remove</button>
+      </div>
       <span class="note" id="gstate" style="display:none"></span>
-      <button id="idgoogle" class="primary">Continue with Google</button>
-      <span class="note" id="gnote">Your key, sealed in a vault in your own Drive and opened by a PIN only you know. Sign in on any device to return.</span>
+      <div class="links">
+        <button id="idcopy" class="link">copy secret key</button><span class="sep" id="gsep">&#183;</span><button id="idgoogle" class="link">Google Drive</button>
+      </div>
     </div>
     <div class="sect" id="sectown">
-      <span class="lbl">USE YOUR OWN KEYS</span>
-      <div class="row">
-        <button id="idext">extension</button>
-        <button id="idconn">signer</button>
+      <button id="idownfold" class="fold" aria-expanded="false">&#9656; use other keys</button>
+      <div id="ownbody" hidden>
+        <div class="row">
+          <button id="idext">extension</button>
+          <button id="idconn">signer</button>
+        </div>
+        <div class="row"><input id="idpaste" placeholder="or paste nsec1&#8230; / bunker:// &#8212; enter" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"></div>
       </div>
-      <div class="row"><input id="idpaste" placeholder="or paste nsec1&#8230; / bunker:// &#8212; enter" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"></div>
     </div>
     <div class="sect" id="sectback">
       <button id="idback">return to previous keys</button>
@@ -4980,8 +5002,19 @@ function toHex(b){ return Array.from(b).map(function(x){return x.toString(16).pa
 function fromHex(h){ var o=new Uint8Array(h.length/2); for(var i=0;i<o.length;i++) o[i]=parseInt(h.substr(i*2,2),16); return o; }
 var stored = localStorage.getItem("nomad_sk");
 var sk;
+// THE GAME'S OWN KEYS (rome, 2026-11-18). Only a key the game made can be saved
+// with a name and a password; a pasted nsec, an extension or a signer never is.
+// Only record a mint we witness. Legacy pocket and previous-key slots may hold imported keys.
+function keyListed(list, pk) { try { return JSON.parse(localStorage.getItem(list) || "[]").indexOf(pk) !== -1; } catch (e) { return false; } }
+function keyList(list, pk) {
+  try {
+    var l = JSON.parse(localStorage.getItem(list) || "[]");
+    if (l.indexOf(pk) === -1) { l.push(pk); localStorage.setItem(list, JSON.stringify(l.slice(-20))); }
+  } catch (e) {}
+}
+function noteMinted(pk) { keyList("nomad_minted_v2", pk); }
 if (stored) { sk = fromHex(stored); }
-else { sk = generateSecretKey(); localStorage.setItem("nomad_sk", toHex(sk)); }
+else { sk = generateSecretKey(); localStorage.setItem("nomad_sk", toHex(sk)); noteMinted(getPublicKey(sk)); }
 var method = localStorage.getItem("nomad_login") || "guest"; // "guest" | "ext" | "bunker"
 
 // NIP-46 remote signer: your keys stay in your signer app; the game only
@@ -5688,6 +5721,9 @@ var freshLoad = true;    // this page just loaded with an EMPTY scroll — the f
 
 async function connect() {
   if (typeof guideActive === "function" && guideActive()) return;
+  // AT THE DOOR'S MENU nothing dials on its own (a focus, a wake): only a choice
+  // that changed the keys does, and that choice ends the menu (doorMenuEnd).
+  if (typeof doorMenu !== "undefined" && doorMenu) { if (identityEpoch === doorMenuEpoch) return; doorMenuEnd(); }
   // The stilled tab never dials, whoever asks, and neither does a page whose
   // player has not crossed the threshold. Both guards sit on the door as well
   // as on wakeReconnect: the whole shape of this bug, twice now, has been a
@@ -5879,6 +5915,7 @@ async function connect() {
       lastName = f.name;
       lastNamed = !!f.named;
       maybeAdoptProfileName(f);
+      if (typeof doorSettle === "function") doorSettle(); // the name and password chosen at the door, handed over now
       // If the panel is open when the name arrives, don't make them reopen it.
       if (idpanel.classList.contains("open")) refreshIdPanel();
     } else if (f.t === "ctx" && Array.isArray(f.suggest)) {
@@ -5894,7 +5931,8 @@ async function connect() {
       // the lessons reads the waystones like everybody else.
       wayHome = f.home || "";
       paintWayHome();
-      renderChips(f.suggest, f.combat);
+      if (typeof doorPwWait !== "undefined" && doorPwWait) doorPwWorld = [f.suggest, f.combat]; // a question is on the line: its buttons stay, the world's wait
+      else renderChips(f.suggest, f.combat);
       if (bootWait) bootWait(!!f.combat); // the door controller plays only for one not in a fight (bootReadout)
       updateGuideExits();
       // The world's own build is RECORDED here, and never alone decides
@@ -5914,6 +5952,8 @@ async function connect() {
       lightningBolt(false, true, f.d); // under a roof: the sound only, never the flash
     } else if (f.t === "rumble") {
       thunderFar(); // a storm too far off to see, or one still building
+    } else if (f.t === "kept") {
+      keySaveNudge("kept"); // the first thing put away this session
     } else if (f.t === "bench") {
       if (f.open) { renderBench(f); } else closeBench();
     } else if (f.t === "trade") {
@@ -6151,6 +6191,17 @@ function sendCmd(text) {
   // behind 'login' or pasted bare. A bare paste means what it obviously
   // means: these are my keys, let me in.
   var t = text.trim();
+  // A QUESTION ON THE LINE (doorLineAsk) takes its buttons here; what is typed is
+  // caught earlier, in submitCommand, before anything sees it.
+  if (typeof doorPwWait !== "undefined" && doorPwWait) {
+    var lw = t.toLowerCase();
+    if (doorPwMasked && (lw === "show" || lw === "hide")) { doorPwToggle(); return; }
+    if (doorPwChips.indexOf(lw) !== -1) { doorPwInput(doorPwMasked && lw === "skip" ? "" : t); return; }
+    // Any other button in the page that sends a command is not an answer: the
+    // question goes unanswered and the command runs as it would have. (A gate
+    // button's words must never be taken for a password, or count as a wrong one.)
+    doorPwInput("");
+  }
   // Identify and consume private-key input before history, echo, or the wire.
   // The same parser handles casing and every whitespace spelling of login.
   var loginMatch = /^login(?:\\s+([\\s\\S]*))?$/i.exec(t);
@@ -6158,7 +6209,7 @@ function sendCmd(text) {
   if (loginMatch) {
     var arg = (loginMatch[1] || "").trim();
     var normalized = "login " + arg;
-    if (!arg) { print("Use 'login extension', 'login signer', or paste your key.", "sys"); return; }
+    if (!arg) { print("Use 'login <name>' for a wanderer saved with a password, 'login extension', 'login signer', or paste your key.", "sys"); return; }
     localCmd(normalized);
     return;
   }
@@ -6167,6 +6218,7 @@ function sendCmd(text) {
     print("That looks like a private key. Paste it on its own to sign in; it will not be sent.", "sys");
     return;
   }
+  if (typeof doorMenuCommand === "function" && doorMenuCommand(t)) return; // the door's menu: who are you (kept out of history)
   history.unshift(text); histAt = -1;
   if (guideCommand(t)) return;
   // Speech doesn't need an echo. The server answers every spoken line with
@@ -6206,7 +6258,17 @@ function localCmd(text) {
   var t = text.trim(), lower = t.toLowerCase();
   if (lower === "login extension" || lower === "login ext") { loginExtension(); return true; }
   if (lower === "login signer" || lower === "login bunker") { connectSignerApp(); return true; }
-  if (/^login(?:\\s|$)/i.test(t)) { importKey(t.replace(/^login\\s*/i, "")); return true; }
+  if (/^login(?:\\s|$)/i.test(t)) {
+    // 'login <name>': a wanderer saved with a name and a password (keyRecover).
+    // A name can never look like a key (nsec1..., 64 hex, bunker://), so the two never collide.
+    var loginArg = t.replace(/^login\\s*/i, "");
+    if (KEYSAVE_NAME.test(loginArg)) keyRecover(loginArg, false);
+    else importKey(loginArg);
+    return true;
+  }
+  // The panel's name-and-password section, typed (modals mirror text).
+  if (lower === "keys save") { keySave(true); return true; }   // typed: asked on the command line
+  if (lower === "keys unsave") { keySaveRemove(true); return true; }
   if (lower === "logout") { logout(); return true; }
   // 'keys' shows the identity panel; 'keys reveal' shows the secret itself.
   // Both the server's welcome line and the panel's own help advertise these,
@@ -6279,10 +6341,12 @@ async function showKeys(reveal) {
   var lines = ["The keys in your pocket:", "who you are:  " + nip19.npubEncode(getPublicKey(sk))];
   if (reveal) {
     lines.push("the secret:   " + nip19.nsecEncode(sk));
+    noteExported(getPublicKey(sk));
     lines.push("Anyone holding the secret IS you. Copy it somewhere safe. Show no one.");
   } else {
     lines.push("Type 'keys reveal' to see your secret key. Save it: if this browser");
     lines.push("forgets, the secret is the only way back to this wanderer.");
+    if (keySaveAllowed()) lines.push("Or 'keys save': your wanderer's name and a password bring it back anywhere.");
   }
   lines.push("Return anywhere with 'login <nsec\\u2026>' \\u00b7 own keys? 'login extension'");
   print(lines.join("\\n"), "sys");
@@ -6308,7 +6372,8 @@ function importKey(arg) {
   localStorage.setItem("nomad_login", "guest");
   sk = fromHex(hex);
   method = "guest";
-  print("— you pocket different keys ('logout' returns the old ones) —", "sys");
+  // At the door's menu there are no old keys worth returning to (doorMenuEnd drops them).
+  print(typeof doorMenu !== "undefined" && doorMenu ? "— you knock with those keys —" : "— you pocket different keys ('logout' returns the old ones) —", "sys");
   reconnect();
   // A restored key is a real identity: pull its name from the relays NOW, in
   // parallel with reconnecting, so we can claim it the instant we're in —
@@ -6480,6 +6545,7 @@ function burnPocketIfGraduated(connectedPk) {
   } else {
     sk = generateSecretKey();
     localStorage.setItem("nomad_sk", toHex(sk));
+    noteMinted(getPublicKey(sk));
   }
   print("Your pocket copy burns \\u2014 the signer holds the only key now.", "sys");
 }
@@ -6517,6 +6583,7 @@ function vaultSignOut() {
   } else {
     sk = generateSecretKey();
     localStorage.setItem("nomad_sk", toHex(sk));
+    noteMinted(getPublicKey(sk));
     print("\\u2014 signed out. The vault keeps those keys; your PIN brings them back. \\u2014", "sys");
   }
   method = "guest";
@@ -9359,8 +9426,20 @@ function phoneControls() {
   return window.matchMedia("(pointer: coarse) and (max-width: 1000px), (max-width: 680px)").matches;
 }
 function submitCommand() {
+  // THE DOOR'S PASSWORD is typed here, masked, and goes nowhere but doorName:
+  // not the log, not the history, not the wire (doorPwAsk).
+  if (typeof doorPwWait !== "undefined" && doorPwWait) {
+    var pwTyped = cmd.value;
+    cmd.value = "";
+    if (doorPwMasked && /^(show|hide)$/i.test(pwTyped.trim())) { doorPwToggle(); return; } // never a password: they are under 10
+    doorPwInput(pwTyped);
+    return;
+  }
   var text = cmd.value.trim();
-  if (!text) return;
+  if (!text) {
+    if (typeof doorMenu !== "undefined" && doorMenu && doorMenuStep === "name") { doorSay("\\u25b8 ", "echo"); doorName(""); }
+    return;
+  }
   cmd.value = "";
   sendCmd(text);
 }
@@ -9433,6 +9512,7 @@ cmd.addEventListener("keydown", function (e) {
     e.preventDefault();
     submitCommand();
   } else if (e.key === "ArrowUp") {
+    if (typeof doorPwWait !== "undefined" && doorPwWait) { e.preventDefault(); return; } // no old commands into the password line
     if (histAt < history.length - 1) { histAt++; cmd.value = history[histAt]; }
     e.preventDefault();
   } else if (e.key === "ArrowDown") {
@@ -9468,12 +9548,23 @@ var signerApp = preferredSignerApp();
 idconn.textContent = signerApp ? "signer / " + signerApp : "signer";
 var idpaste = document.getElementById("idpaste");
 var sectsave = document.getElementById("sectsave");
+var sectname = document.getElementById("sectname");
+var nstate = document.getElementById("nstate");
+var idnsave = document.getElementById("idnsave");
+var idnremove = document.getElementById("idnremove");
 var sectown = document.getElementById("sectown");
-var sectgoogle = document.getElementById("sectgoogle");
-var glbl = document.getElementById("glbl");
 var gstate = document.getElementById("gstate");
-var gnote = document.getElementById("gnote");
+var gsep = document.getElementById("gsep");
 var idgoogle = document.getElementById("idgoogle");
+// "use other keys" opens and folds; it starts folded each time the panel opens.
+var idownfold = document.getElementById("idownfold");
+var ownbody = document.getElementById("ownbody");
+function ownFold(open) {
+  ownbody.hidden = !open;
+  idownfold.setAttribute("aria-expanded", open ? "true" : "false");
+  idownfold.textContent = (open ? "\\u25be" : "\\u25b8") + " use other keys";
+}
+idownfold.addEventListener("click", function () { ownFold(ownbody.hidden); });
 var sectback = document.getElementById("sectback");
 var lastName = "";
 var lastNamed = false;      // did the server say this name was chosen (named=1)?
@@ -9518,9 +9609,10 @@ function vmOpen(mode, title, okLabel) {
     vmtitle.textContent = title;
     vmok.textContent = okLabel || (mode === "confirm" ? "yes" : "unlock");
     vminput.value = "";
-    vminput.style.display = mode === "secret" ? "" : "none";
+    vminput.type = mode === "text" ? "text" : "password";
+    vminput.style.display = mode === "confirm" ? "none" : "";
     vmodal.classList.add("open");
-    setTimeout(function () { (mode === "secret" ? vminput : vmok).focus(); }, 40);
+    setTimeout(function () { (mode === "confirm" ? vmok : vminput).focus(); }, 40);
   });
 }
 function askSecret(title, okLabel) { return vmOpen("secret", title, okLabel); }
@@ -9783,7 +9875,7 @@ async function continueWithGoogle() {
   } finally { vaultBusy = false; }
 }
 
-async function refreshIdPanel() {
+async function refreshIdPanel(fresh) {
   var showName = lastName && !/^[0-9a-f]{8}$/.test(lastName) ? lastName : "";
   if (method === "ext" || method === "bunker") {
     idname.textContent = showName || (method === "ext" ? "your extension's keys" : "your signer's keys");
@@ -9798,8 +9890,8 @@ async function refreshIdPanel() {
       }
     } catch (e) {}
     sectsave.style.display = "none";
+    sectname.style.display = "none";
     sectown.style.display = "none";
-    sectgoogle.style.display = "none";
     sectback.style.display = "";
     idback.textContent = "use the pocket keys instead";
   } else {
@@ -9810,24 +9902,22 @@ async function refreshIdPanel() {
     idnpub.setAttribute("data-npub", np2);
     sectsave.style.display = "";
     idcopy.textContent = "copy secret key";
-    sectgoogle.style.display = "";
-    // Two states: signed into your Drive vault (self-custody), or a fresh
-    // guest who sees every door.
+    keySavePanel(fresh);
+    // Two states: kept in your Drive vault (self-custody), or a fresh guest
+    // who sees every way to keep it.
     var vpk = localStorage.getItem("nomad_vault_pk");
     if (vpk && vpk === myPk) {
-      glbl.textContent = "SIGNED IN \\u2014 DRIVE VAULT";
-      gstate.textContent = "\\u2713 your key lives in a vault in your own Drive \\u2014 Continue with Google + your passphrase restores it on any device.";
+      gstate.textContent = "\\u2713 kept in a vault in your own Google Drive; Google and your passphrase bring it back on any device.";
       gstate.style.display = "";
       idgoogle.style.display = "none";
-      gnote.style.display = "none";
+      gsep.style.display = "none";
       sectown.style.display = "none";
       sectback.style.display = "";
       idback.textContent = "sign out";
     } else {
-      glbl.textContent = "EASY MODE";
       gstate.style.display = "none";
       idgoogle.style.display = "";
-      gnote.style.display = "";
+      gsep.style.display = "";
       sectown.style.display = "";
       idext.style.display = window.nostr ? "" : "none";
       sectback.style.display = localStorage.getItem("nomad_sk_prev") ? "" : "none";
@@ -9835,6 +9925,240 @@ async function refreshIdPanel() {
     }
   }
 }
+
+// ---- A NAME AND A PASSWORD (rome, 2026-11-18; server side in keysave.ts) ----
+// A key the game made can be saved: the browser locks it with the password and
+// sends only the locked copy, and the wanderer's name and that password bring it
+// back on any device. Never a pasted nsec, an extension or a signer.
+var KEYSAVE_ITER = 600000;            // keysave.ts KEYSAVE_ITER
+var KEYSAVE_MIN = 10;                 // rome: 10+, with "three words" as the hint
+var KEYSAVE_NAME = /^[a-z0-9][a-z0-9_-]{1,15}$/i; // the name rule (verbs.ts cmdName)
+var KEYSAVE_AAD = new TextEncoder().encode("nomad-keysave-v1");
+var keySaveBusy = false;
+function noteExported(pk) { keyList("nomad_exported", pk); }
+function keyBacked(pk) { return keyListed("nomad_exported", pk) || localStorage.getItem("nomad_vault_pk") === pk; }
+function keySaveAllowed() {
+  try { return method === "guest" && !!sk && keyListed("nomad_minted_v2", getPublicKey(sk)); } catch (e) { return false; }
+}
+function ksB64(u8) { var s = ""; for (var i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); }
+function ksUnB64(t) { var b = atob(t), o = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) o[i] = b.charCodeAt(i); return o; }
+// One PBKDF2 run, two halves: the first locks the key, the second is the check
+// the server keeps a hash of. The check proves the password; it unlocks nothing.
+async function keySaveDerive(password, salt, iter) {
+  var base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  var bits = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iter, hash: "SHA-256" }, base, 512));
+  var aes = await crypto.subtle.importKey("raw", bits.slice(0, 32), "AES-GCM", false, ["encrypt", "decrypt"]);
+  return { aes: aes, check: toHex(bits.slice(32)) };
+}
+function ksPost(path, body, auth) {
+  var h = { "content-type": "application/json" };
+  if (auth) h.authorization = "Bearer " + auth;
+  return fetch(path, { method: "POST", headers: h, body: JSON.stringify(body || {}) });
+}
+async function keySaveMutation(path, payload, secret, token) {
+  var digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(payload)));
+  var proof = finalizeEvent({
+    kind: 27235, created_at: Math.floor(Date.now() / 1000), content: "",
+    tags: [["u", location.origin + path], ["method", "POST"], ["payload", toHex(new Uint8Array(digest))], ["nonce", crypto.randomUUID()]]
+  }, secret);
+  return ksPost(path, Object.assign({ proof: proof }, payload), token);
+}
+async function keySaveStatus() {
+  if (!sessionToken) return null;
+  try {
+    var r = await ksPost("/keysave/status", {}, sessionToken);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+// WHAT THE SERVER LAST SAID about this key's save. The panel is redrawn on every
+// status frame while it is open, and redrawing from "not saved" and asking again
+// each time made it flicker between the two (rome, 2026-11-18). It is asked when
+// the panel opens, and set by a save or a removal here; every redraw reads it.
+var keySaveKnown = { pk: "", saved: false };
+function keySaveNote(pk, saved) { keySaveKnown = { pk: pk, saved: !!saved }; }
+function keySaveRender(eligible, saved) {
+  var who = lastName && !/^[0-9a-f]{8}$/.test(lastName) ? lastName : "this wanderer";
+  idnsave.style.display = eligible ? "" : "none";
+  if (!saved) {
+    sectname.classList.remove("saved");
+    sectname.style.display = eligible ? "" : "none";
+    idnsave.className = "primary";
+    idnsave.textContent = "save with a password";
+    nstate.textContent = "Your name and a password bring " + who + " back anywhere.";
+    idnremove.style.display = "none";
+    return;
+  }
+  sectname.style.display = ""; // An older backup can still be removed.
+  sectname.classList.add("saved");
+  nstate.textContent = "\\u2713 saved: 'login " + who + "' and your password bring " + who + " back anywhere.";
+  idnsave.className = "link";
+  idnsave.textContent = "change the password";
+  idnremove.style.display = "";
+}
+async function keySavePanel(fresh) {
+  var eligible = keySaveAllowed(), epoch = identityEpoch, pk = "";
+  try { pk = getPublicKey(sk); } catch (e) {}
+  var known = keySaveKnown.pk === pk;
+  keySaveRender(eligible, known && keySaveKnown.saved);
+  if (known && !fresh) return;
+  var st = await keySaveStatus();
+  if (!st || epoch !== identityEpoch) return;
+  keySaveNote(pk, st.saved);
+  keySaveRender(eligible, st.saved);
+}
+async function keySave(typed) {
+  if (!keySaveAllowed()) { print("Only keys the game made for you are saved this way; yours are already in your own hands.", "sys"); return; }
+  if (!sessionToken || !lastName) { print("\\u2014 step into the world first, then save \\u2014", "sys"); return; }
+  if (keySaveBusy) return;
+  keySaveBusy = true;
+  try {
+    var name = lastName, secret = sk, token = sessionToken, epoch = identityEpoch, choice = identityChoice;
+    // ALREADY SAVED, SAID FIRST (rome, 2026-11-18): saving again replaces the old
+    // password, and nothing said so; it looked like a save that had not taken.
+    var st = await keySaveStatus();
+    var already = !!(st && st.saved);
+    if (already) keySaveNote(getPublicKey(secret), true);
+    var ask = already
+      ? name + " is already saved. A new password replaces the old one, which stops working. At least " + KEYSAVE_MIN + " characters; three words you will remember are best."
+      : "A password for " + name + ". At least " + KEYSAVE_MIN + " characters; three words you will remember are best. Nobody can reset it.";
+    var pw;
+    while (true) {
+      pw = typed
+        ? (doorSay(ask + (already ? " 'skip' keeps the old one." : "")), await doorPwAsk(already ? "New password:" : "Password:"))
+        : await askSecret(ask, already ? "replace" : "save");
+      if (pw === null) { print(already ? "\\u2014 nothing changed; the old password still opens it \\u2014" : "\\u2014 nothing saved \\u2014", "sys"); return; }
+      if (pw.length >= KEYSAVE_MIN && pw.length <= 256) break;
+      print("At least " + KEYSAVE_MIN + " characters. Three words you will remember are best.", "sys");
+    }
+    var again = typed ? await doorPwAsk("Again, to be sure:") : await askSecret("The same password, once more.", "save");
+    if (again !== pw) { print("\\u2014 the passwords disagree; nothing saved \\u2014", "sys"); return; }
+    print("\\u2014 locking your key\\u2026 \\u2014", "sys");
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var d = await keySaveDerive(pw, salt, KEYSAVE_ITER);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv, additionalData: KEYSAVE_AAD }, d.aes, secret));
+    if (epoch !== identityEpoch || choice !== identityChoice || sk !== secret || sessionToken !== token) { print("\\u2014 your keys changed; nothing saved \\u2014", "sys"); return; }
+    var r = await keySaveMutation("/keysave", { salt: ksB64(salt), iter: KEYSAVE_ITER, iv: ksB64(iv), ct: ksB64(ct), check: d.check }, secret, token);
+    if (!r.ok) { print("\\u2014 the save did not take; try again in a moment \\u2014", "sys"); return; }
+    var j = await r.json();
+    keySaveNote(getPublicKey(secret), true);
+    credStore(j.name, pw);
+    if (epoch !== identityEpoch) return;
+    print(already
+      ? "\\u2014 password changed. 'login " + j.name + "' and the new one bring " + j.name + " back; the old one no longer does. \\u2014"
+      : "\\u2014 saved. If this browser ever forgets you, 'login " + j.name + "' and your password bring " + j.name + " back. A new name carries it along. \\u2014", "sys");
+  } catch (e) {
+    print("\\u2014 the save did not take; try again in a moment \\u2014", "sys");
+  } finally {
+    keySaveBusy = false;
+    if (idpanel.classList.contains("open")) refreshIdPanel();
+  }
+}
+async function keySaveRemove(typed) {
+  if (method !== "guest" || !sk || !sessionToken || keySaveBusy) return;
+  var epoch = identityEpoch, choice = identityChoice, token = sessionToken, secret = sk;
+  keySaveBusy = true;
+  try {
+    var ok = typed ? await lineConfirm("Remove the name-and-password save for " + lastName + "?") : await askConfirm("Remove the name-and-password save for " + lastName + "?", "remove");
+    if (!ok || epoch !== identityEpoch || choice !== identityChoice || token !== sessionToken) return;
+    var r = await keySaveMutation("/keysave/remove", {}, secret, token);
+    if (!r.ok) throw new Error("remove");
+    keySaveNote(getPublicKey(secret), false);
+    var suffix = getPublicKey(secret).slice(0, 16);
+    localStorage.removeItem("nomad_nudged_kept_" + suffix);
+    localStorage.removeItem("nomad_nudged_hour_" + suffix);
+    if (epoch === identityEpoch) print("The name-and-password save is gone.", "sys");
+  } catch (e) {
+    if (epoch === identityEpoch) print("Nothing removed; try again in a moment.", "sys");
+  } finally {
+    keySaveBusy = false;
+    if (idpanel.classList.contains("open")) refreshIdPanel();
+  }
+}
+// Bring a saved wanderer back. From the door nothing is connected yet, so the
+// key goes into the pocket and the door is crossed; in the world it goes through
+// importKey like any other key.
+async function keyRecover(name, fromDoor) {
+  var say = function (m) { if (fromDoor) thrBackMsg.textContent = m; else print("\\u2014 " + m + " \\u2014", "sys"); };
+  name = (name || "").trim();
+  if (!KEYSAVE_NAME.test(name)) { say("No wanderer is called that."); return; }
+  if (keySaveBusy) return;
+  keySaveBusy = true;
+  try {
+    var epoch = identityEpoch, choice = identityChoice;
+    // At the door's menu it is asked on the command line, as a new one's is (doorPwAsk).
+    // Typed ('login <name>', or the door's menu): asked on the command line. The
+    // title screen's link has no line to ask on, so it keeps its box.
+    var pw = !fromDoor ? await linePassword(name, "Password for " + name + ":") : await askSecret("The password for " + name + ".", "open");
+    if (pw === null) return;
+    say("trying the lock\\u2026");
+    var sr = await ksPost("/keysave/salt", { name: name });
+    if (sr.status === 429) { say("too many tries from here; wait a minute"); return; }
+    if (!sr.ok) throw new Error("salt");
+    var sj = await sr.json();
+    var iter = Math.min(2000000, Math.max(100000, Math.floor(Number(sj.iter) || 0)));
+    var d = await keySaveDerive(pw, ksUnB64(sj.salt), iter);
+    var or = await ksPost("/keysave/open", { name: name, check: d.check });
+    if (or.status === 429) {
+      var oj = {};
+      try { oj = await or.json(); } catch (e) {}
+      say(oj.error === "too_many" ? "too many wrong passwords for " + name + "; wait an hour and try again" : "too many tries from here; wait a minute");
+      return;
+    }
+    if (or.status === 401) { say("that name and password open nothing"); return; }
+    if (!or.ok) throw new Error("open");
+    var o = await or.json();
+    var raw = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: ksUnB64(o.iv), additionalData: KEYSAVE_AAD }, d.aes, ksUnB64(o.ct)));
+    if (raw.length !== 32 || getPublicKey(raw) !== o.pubkey) throw new Error("mismatch");
+    var hex = toHex(raw);
+    if (epoch !== identityEpoch || choice !== identityChoice || (fromDoor && crossed)) return;
+    if (o.minted === true) noteMinted(o.pubkey);
+    credStore(name, pw);
+    if (fromDoor) {
+      var cur = localStorage.getItem("nomad_sk");
+      if (cur && cur !== hex) localStorage.setItem("nomad_sk_prev", cur);
+      localStorage.setItem("nomad_sk", hex);
+      localStorage.setItem("nomad_login", "guest");
+      sk = raw;
+      method = "guest";
+      guideFresh = false; // a returning wanderer, not a new one
+      doorMenu = false;   // and it needs no menu: it has said who it is
+      thrBackMsg.textContent = "";
+      crossThreshold(); // the world greets them by name; nothing printed over the door's readout
+    } else if (importKey(hex)) {
+      print("\\u2014 your password opens the lock; you are " + name + " again \\u2014", "sys");
+    }
+  } catch (e) {
+    say("the lock would not open; try again in a moment");
+  } finally { keySaveBusy = false; }
+}
+// THE REMINDER, when there is something to lose: the first thing put away in
+// the lockbox or the vault, and an hour of play. Each once per key, and never
+// for a wanderer already saved any way (name and password, Drive, copied key).
+async function keySaveNudge(kind) {
+  if (!keySaveAllowed()) return;
+  var pk = getPublicKey(sk);
+  if (keyBacked(pk)) return;
+  var told = "nomad_nudged_" + kind + "_" + pk.slice(0, 16);
+  try { if (localStorage.getItem(told)) return; } catch (e) { return; }
+  var st = await keySaveStatus();
+  if (!st || st.saved || keyBacked(pk) || !keySaveAllowed() || getPublicKey(sk) !== pk) return;
+  try { localStorage.setItem(told, "1"); } catch (e) {}
+  print("\\u2014 you have something to lose now. If this browser forgets you, this wanderer is gone with it. Tap your name, top right, and save it with a password, or type 'keys save'. \\u2014", "sys");
+}
+var KEYSAVE_HOUR_MS = 3600000;
+setInterval(function () {
+  if (!ws || ws.readyState !== 1 || document.hidden || !keySaveAllowed()) return;
+  try {
+    var at = "nomad_played_" + getPublicKey(sk).slice(0, 16);
+    var played = (Number(localStorage.getItem(at)) || 0) + 60000;
+    localStorage.setItem(at, String(played));
+    if (played >= KEYSAVE_HOUR_MS) keySaveNudge("hour");
+  } catch (e) {}
+}, 60000);
+idnsave.addEventListener("click", function () { idpanel.classList.remove("open"); keySave(); });
+idnremove.addEventListener("click", function () { idpanel.classList.remove("open"); keySaveRemove(); });
 
 // Settings live under the wordmark: click NOMAD, flip the sound.
 var brand = document.getElementById("brand");
@@ -10441,14 +10765,17 @@ idbtn.addEventListener("click", function () {
   guideNotice("keys"); // the walk's last gate: opening your keys IS the lesson
   if (idpanel.classList.contains("open")) { idpanel.classList.remove("open"); return; }
   setpanel.classList.remove("open");
-  refreshIdPanel();
+  ownFold(false);
+  refreshIdPanel(true); // opening the panel is the one time the save is asked about
   idpanel.classList.add("open");
   // Warm the vault kit + GIS so the Google popup opens promptly on click.
   vaultKit().then(function (m) { try { m.preloadGoogleAuth(); } catch (e) {} }).catch(function () {});
 });
 idcopy.addEventListener("click", function () {
+  var copiedPk = getPublicKey(sk);
   var nsec = nip19.nsecEncode(sk);
   var flash = function () {
+    noteExported(copiedPk);
     idcopy.textContent = "copied \\u2014 keep it safe";
     setTimeout(function () { idcopy.textContent = "copy secret key"; }, 2500);
   };
@@ -17794,7 +18121,12 @@ function bootReadout(done, waitForWorld) {
     }
     add("", row("door", "OPEN", ""), 420, 4);
     add("gap", "", 120);
-    if (thrKnown) {
+    if (doorMenu) {
+      // NO KEY IN THIS BROWSER: the door asks who you are (doorMenuStart), and the
+      // minting and the rules come after 'new'.
+      add("", "> no key in this browser.", 480, 6);
+      return lines;
+    } else if (thrKnown) {
       add("", "> key detected \u2026 " + thrKnown + ".", 480, 7);
       add("", "> account lookup \u2026 none needed. the key is the account.", 520, 8);
     } else {
@@ -17888,14 +18220,274 @@ function crossThreshold() {
   // has just printed, so it cannot print into the wait). A new key does not connect: the
   // walk is practice, and it opens the door itself when it ends.
   bootReadout(function () {
+    if (doorMenu) { doorMenuStart(); return; }
     print("— you feel keys in your pocket. tap your name, top right, to see them —", "sys");
     if (guideFresh) guideStart();
-  }, !guideFresh);
+  }, !guideFresh && !doorMenu);
   if (!phoneControls()) cmd.focus();
-  if (!guideFresh && !guideActive()) connect();
+  if (!guideFresh && !guideActive() && !doorMenu) connect();
   // Start before connecting so new players never see a burst of welcome text.
 }
 thrEnter.addEventListener("click", crossThreshold);
+// "lost your wanderer? bring it back": a name and a password (keyRecover).
+var thrBack = document.getElementById("thr-back");
+var thrBackMsg = document.getElementById("thr-backmsg");
+thrBack.addEventListener("click", async function (e) {
+  e.preventDefault();
+  if (crossed || keySaveBusy) return;
+  var nm = await vmOpen("text", "Your wanderer's name.", "next");
+  if (nm) keyRecover(nm, true);
+});
+
+// WHO ARE YOU (rome, 2026-11-18): the old MUD login, before the first walk. Only a
+// browser with no key is asked; anyone with keys walks straight in as before. 'new'
+// is a new wanderer: a name, then a password it can skip, then the rules and the
+// walk. Every other answer is a sign-in that already exists (a saved name and its
+// password, the Drive vault, an extension, a signer, a pasted key), and the menu
+// ends the moment one of them changes the keys and dials (connect -> doorMenuEnd).
+var doorMenu = !stored;   // this browser came with no key
+var doorMenuEpoch = -1;   // identityEpoch while the menu waits; a new one means a choice was made
+var doorMenuStep = "";    // "pick" | "name" | "busy"
+var doorFreshHex = "";    // the key minted for this page, dropped if another is chosen
+var doorWant = null;      // { secret, name, lock, nameSent, saving, timer } - handed over on arrival
+var DOOR_PICKS = ["new", "google", "extension", "signer"];
+function doorSay(text, cls) {
+  print(text, cls || "sys");
+  if (log.lastElementChild) log.lastElementChild.classList.add("boot-line");
+}
+function doorMenuAsk() {
+  doorMenuStep = "pick";
+  doorSay("By what name are you known, wanderer?");
+  doorSay([
+    "  new          a new wanderer",
+    "  <name>       one you saved with a password",
+    "  google       your Google Drive backup",
+    "  extension    a Nostr extension",
+    "  signer       a Nostr signer app",
+    "  nsec1\\u2026       paste a secret key",
+  ].join("\\n"), "dim");
+  renderChips(DOOR_PICKS.slice(), false);
+}
+function doorMenuStart() {
+  doorMenuEpoch = identityEpoch;
+  doorFreshHex = sk ? toHex(sk) : "";
+  doorSay(" ", "dim");
+  doorMenuAsk();
+}
+function doorMenuEnd() {
+  if (!doorMenu) return;
+  doorMenu = false;
+  doorMenuStep = "";
+  // A choice other than 'new' is a wanderer who already is someone: no first walk,
+  // and the key minted for this page is not a "previous key" worth going back to.
+  guideFresh = false;
+  try { if (doorFreshHex && localStorage.getItem("nomad_sk_prev") === doorFreshHex) localStorage.removeItem("nomad_sk_prev"); } catch (e) {}
+  renderChips([], false);
+}
+// After an answer that can fail without changing the keys, ask again.
+function doorMenuAgain() {
+  if (!doorMenu || identityEpoch !== doorMenuEpoch) return;
+  doorSay("\\u2014 still at the door \\u2014", "dim");
+  doorMenuAsk();
+}
+function doorMenuCommand(t) {
+  if (!doorMenu || !doorMenuStep) return false;
+  var lower = t.toLowerCase();
+  if (doorMenuStep === "busy") { doorSay("\\u2014 a moment \\u2014", "dim"); return true; }
+  doorSay("\\u25b8 " + t, "echo");
+  if (doorMenuStep === "name") { doorName(t); return true; }
+  if (lower === "new") { doorNew(); return true; }
+  // A first habit is to look around or ask for help: that shows the menu again,
+  // rather than taking the word for a saved name and asking its password.
+  if (lower === "look" || lower === "l" || lower === "help" || lower === "?") { doorMenuAsk(); return true; }
+  if (lower === "google") { doorMenuStep = "busy"; continueWithGoogle().finally(function () { if (doorMenu) doorMenuStep = "pick"; doorMenuAgain(); }); return true; }
+  if (lower === "extension" || lower === "ext") { doorMenuStep = "busy"; loginExtension().finally(function () { if (doorMenu) doorMenuStep = "pick"; doorMenuAgain(); }); return true; }
+  if (lower === "signer") { connectSignerApp(); return true; } // its card waits for the signer; the menu ends when it knocks
+  if (KEYSAVE_NAME.test(t)) {
+    doorMenuStep = "busy";
+    keyRecover(t, false).finally(function () { if (doorMenu) doorMenuStep = "pick"; doorMenuAgain(); });
+    return true;
+  }
+  doorSay("Type 'new', the name you saved, 'google', 'extension' or 'signer', or paste your key.", "sys");
+  return true;
+}
+function doorNew() {
+  doorMenuStep = "name";
+  renderChips([], false);
+  doorSay("> minting visitor \\u2026 done. it is you.");
+  // THE DUNGEON STILL NAMES THE NAMELESS (rome, 2026-11-18): Enter, or 'name me',
+  // and it gives you one of its own (names.ts) as it always has; a name typed here
+  // is yours instead.
+  doorSay("What shall the dungeon call you? Type a name, or press Enter and it names you itself.");
+  renderChips(["name me"], false);
+}
+async function doorName(name) {
+  var own = !(name === "" || name.toLowerCase() === "name me");
+  if (!own) name = "";
+  if (own && !KEYSAVE_NAME.test(name)) { doorSay("Names are 2-16 characters: letters, numbers, - or _. Another?"); return; }
+  doorMenuStep = "busy";
+  renderChips([], false);
+  var free = true;
+  if (own) {
+    try {
+      var r = await ksPost("/keysave/name", { name: name });
+      if (r.ok) free = (await r.json()).free !== false;
+    } catch (e) {} // the door cannot ask: the name is tried when you step in
+  }
+  if (!doorMenu) return;
+  if (!free) { doorMenuStep = "name"; renderChips(["name me"], false); doorSay("Someone in the dungeon already answers to " + name + ". Another?"); return; }
+  doorSay(own ? "> " + name + "." : "> the dungeon will name you when you step in.");
+  doorWant = { secret: sk, name: name, lock: null, nameSent: false, saving: false, timer: 0 };
+  doorSay("A password lets " + (own ? "'login " + name + "'" : "'login' and your wanderer's name") + " bring you back from any browser. At least " + KEYSAVE_MIN + " characters; three words you will remember are best. Nobody can reset it. 'skip' goes without.");
+  var pw = null;
+  while (true) {
+    pw = await doorPwAsk("Password:");
+    if (pw === null) break;
+    if (pw.length < KEYSAVE_MIN || pw.length > 256) { doorSay("At least " + KEYSAVE_MIN + " characters. Three words you will remember are best."); continue; }
+    var again = await doorPwAsk("Again, to be sure:");
+    if (again === null) { pw = null; break; }
+    if (again === pw) break;
+    doorSay("The passwords disagree. Once more, or 'skip'.");
+  }
+  if (!doorMenu) return;
+  if (pw !== null) {
+    try {
+      var salt = crypto.getRandomValues(new Uint8Array(16));
+      var d = await keySaveDerive(pw, salt, KEYSAVE_ITER);
+      var iv = crypto.getRandomValues(new Uint8Array(12));
+      var ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv, additionalData: KEYSAVE_AAD }, d.aes, doorWant.secret));
+      doorWant.lock = { salt: ksB64(salt), iter: KEYSAVE_ITER, iv: ksB64(iv), ct: ksB64(ct), check: d.check };
+      // held only in this page until the save is made, then offered to the browser's own store
+      doorWant.keep = (function (p) { return function (n) { credStore(n, p); }; })(pw);
+      doorSay("> password set. it is kept when you step into the world.");
+    } catch (e) {
+      doorSay("> the password would not take. 'keys save' sets one any time.");
+    }
+  } else {
+    doorSay("> no password. 'keys save' sets one any time.");
+  }
+  pw = null;
+  doorMenuEnd();
+  guideFresh = !localStorage.getItem("nomad_guided"); // 'new' is a new wanderer: the walk is theirs
+  doorSay(" ", "dim");
+  doorSay("rules.txt (complete):", "dim");
+  doorSay("  1. sealed at the gate = yours.\\n  2. carried = a bet.\\n  3. weight is not free.\\n  4. the door does not care.");
+  doorSay(" ", "dim");
+  doorSay("> the world will not pause for you.");
+  print("\\u2014 you feel keys in your pocket. tap your name, top right, to see them \\u2014", "sys");
+  if (guideFresh) guideStart(); else connect();
+}
+// THE PASSWORD ON THE COMMAND LINE, as an old MUD asks it (rome, 2026-11-18: no
+// box): the line masks what is typed, Enter gives it, and 'skip' or an empty line
+// goes without. Nothing typed here is echoed, kept in history or sent anywhere.
+// TYPED COMMANDS ASK HERE TOO (rome, 2026-11-18: no box for a typed command):
+// 'login <name>', 'keys save' and 'keys unsave' put their question on this line.
+// A box is only for a button pressed in a panel.
+var doorPwWait = null, doorPwHint = "", doorPwMasked = false, doorPwWorld = null, doorPwChips = [];
+function doorLineAsk(prompt, masked, chips) {
+  if (doorPwWait) doorPwInput(""); // one question at a time: an unanswered one goes without
+  doorSay(prompt);
+  doorPwMasked = masked;
+  doorPwChips = chips.slice();
+  doorPwWorld = [lastSuggest, lastCombat]; // renderChips takes these over; they come back after
+  renderChips(chips.slice(), false);
+  doorPwHint = cmd.placeholder;
+  cmd.value = "";
+  if (masked) {
+    cmd.type = "password";
+    cmd.setAttribute("autocomplete", "new-password");
+    cmd.placeholder = "password, or 'skip'";
+  } else cmd.placeholder = chips.join(" / ");
+  if (!phoneControls()) cmd.focus();
+  return new Promise(function (resolve) { doorPwWait = resolve; });
+}
+function doorPwAsk(prompt) { return doorLineAsk(prompt, true, ["show", "skip"]); }
+// THE BROWSER KEEPS THE PASSWORD (rome, 2026-11-18): where the browser has its own
+// password store (Chrome, Edge, Android), a save offers to keep the name and
+// password there, and 'login <name>' offers it back; picking it answers the
+// question. Elsewhere nothing changes and the password is typed.
+function credStore(name, pw) {
+  try {
+    if (!window.PasswordCredential || !navigator.credentials || !name || !pw) return;
+    navigator.credentials.store(new window.PasswordCredential({ id: name, password: pw, name: name })).catch(function () {});
+  } catch (e) {}
+}
+function linePassword(name, prompt) {
+  var asked = doorPwAsk(prompt), waiter = doorPwWait;
+  try {
+    if (window.PasswordCredential && navigator.credentials) {
+      navigator.credentials.get({ password: true, mediation: "optional" }).then(function (c) {
+        if (c && c.type === "password" && String(c.id).toLowerCase() === name.toLowerCase() && doorPwWait === waiter) doorPwInput(c.password);
+      }).catch(function () {});
+    }
+  } catch (e) {}
+  return asked;
+}
+async function lineConfirm(prompt) {
+  var a = await doorLineAsk(prompt + " (yes / no)", false, ["yes", "no"]);
+  return !!a && /^y(es)?$/i.test(a.trim());
+}
+// 'show' lets you see what you typed, and 'hide' covers it again; what is typed stays.
+function doorPwToggle() {
+  var shown = cmd.type === "password";
+  cmd.type = shown ? "text" : "password";
+  // The swap is the button's whole job: not the "it just changed under you" pause (chipButton).
+  prevChipCmds = [shown ? "hide" : "show", "skip"];
+  renderChips(prevChipCmds.slice(), false);
+  if (!phoneControls()) cmd.focus();
+}
+function doorPwInput(v) {
+  var done = doorPwWait, masked = doorPwMasked;
+  doorPwWait = null;
+  doorPwMasked = false;
+  cmd.type = "search";
+  cmd.setAttribute("autocomplete", "off");
+  cmd.placeholder = doorPwHint;
+  var world = doorPwWorld || [[], false];
+  doorPwWorld = null;
+  if (doorMenu) renderChips([], false); else renderChips(world[0], world[1]); // the world's own buttons come back
+  var s = String(v || "").trim();
+  if (done) done(!s || (masked && s.toLowerCase() === "skip") ? null : masked ? v : s);
+}
+
+// IN THE WORLD AT LAST: the name chosen at the door is taken, then the locked key
+// is kept. Each once; a key that changed in between takes neither.
+function doorSettle() {
+  var w = doorWant;
+  if (!w || w.saving || !sessionToken || !ws || ws.readyState !== 1) return;
+  if (w.secret !== sk || method !== "guest") { doorWant = null; return; }
+  var named = !w.name || lastName.toLowerCase() === w.name.toLowerCase(); // no name asked for: the dungeon's own stands
+  if (!w.nameSent) {
+    w.nameSent = true;
+    if (!named) {
+      ws.send(JSON.stringify({ v: 0, t: "cmd", text: "name " + w.name }));
+      if (w.lock) w.timer = setTimeout(doorSaveNow, 4000); // a name taken meanwhile still keeps the key
+      else doorWant = null;
+      return;
+    }
+  }
+  if (!w.lock) { doorWant = null; return; }
+  if (named) doorSaveNow();
+}
+async function doorSaveNow() {
+  var w = doorWant;
+  if (!w || w.saving || !w.lock) return;
+  w.saving = true;
+  clearTimeout(w.timer);
+  doorWant = null;
+  var token = sessionToken;
+  if (w.secret !== sk || method !== "guest" || !token) return;
+  try {
+    var r = await keySaveMutation("/keysave", w.lock, w.secret, token);
+    if (!r.ok) throw new Error("save");
+    var j = await r.json();
+    keySaveNote(getPublicKey(w.secret), true);
+    if (w.keep) w.keep(j.name);
+    print("\\u2014 saved. If this browser ever forgets you, 'login " + j.name + "' and your password bring " + j.name + " back. \\u2014", "sys");
+  } catch (e) {
+    print("\\u2014 the password did not keep; 'keys save' sets it again \\u2014", "sys");
+  }
+}
 
 // THE FIRST WALK: five lessons with readable scrollback in the log — where this game's
 // teaching belongs — each one explaining a real system, each advancing only
@@ -17915,7 +18507,18 @@ var GUIDE_LESSONS = [
     "names you meet down here are real people. ('tutorial off' ends this walk)",
     "\\u2192 type 'look' to read the room you are standing in.",
   ] },
-  { re: /^look(\\s|$)/, text: [
+  // WHAT EACH COMMAND SHOWS (rome, 2026-11-18): after every practice command the
+  // walk prints what the game would, in the game's own colours (guideShow), and the
+  // lesson goes on under it. A real room, and a rat in it for lesson 4 to point to.
+  { re: /^look(\\s|$)/, shows: [{ room: "The Weeper's Arch", text: [
+    "The Weeper's Arch",
+    "A low arch on the dungeon's eastern face, its keystone carved with a face worn smooth by rain into something that seems to grieve. Water beads and runs from it even in the dry. The dark descends beyond. This was a gate once, with a keeper behind it: the hatch in the wall beside the arch is boarded over now and nobody answers it, though the lamp on its bracket is still lit.",
+    "\\u0003Night, and rain coming down out of the dark, no moon and no star through it.",
+    "Exits: down, east.",
+    "A scabby rat is here.",
+  ].join("\\n") }], text: [
+    "That is a room: its name, what you see, the sky, the ways out, and what is here with you.",
+    "",
     "\\u2500 lesson 2/5 \\u2500 moving \\u2500",
     "Every room names its exits; walking is 'go down', 'go west'. Two",
     "things travel with you everywhere: light and noise. The deep is",
@@ -17923,7 +18526,14 @@ var GUIDE_LESSONS = [
     "everything sees you. And all you do makes sound; sound draws feet.",
     "\\u2192 practice moving: type 'go north'.",
   ] },
-  { re: /^go\\s/, text: [
+  { re: /^go\\s/, shows: [{ room: "The Thorn-Court", text: [
+    "The Thorn-Court",
+    "A yard on the eastern face swallowed whole by briar. Paths run through it low and narrow, cut by things that go on four legs. Above, carved in the arch's keystone, the weeping face stares out over the waste.",
+    "\\u0003Night, and rain coming down out of the dark, no moon and no star through it.",
+    "Exits: east, north, south, up, west.",
+  ].join("\\n") }], text: [
+    "Every step shows you the room you walk into, as 'look' does.",
+    "",
     "\\u2500 lesson 3/5 \\u2500 your hands \\u2500",
     "The floor is real. 'get' takes what lies there, 'drop' leaves it,",
     "and it stays where it fell \\u2014 unless something hungrier finds it",
@@ -17931,7 +18541,21 @@ var GUIDE_LESSONS = [
     "itself down here: the gate's bench and forge repair what's worn.",
     "\\u2192 type 'inventory' to see your pack, lockbox, and vault.",
   ] },
-  { re: /^inventory(\\s|$)/, text: [
+  // the pack in the game's own layout (verbs.ts keepingLines)
+  { re: /^inventory(\\s|$)/, shows: [{ text: [
+    "You carry (4/20):",
+    "  EQUIPPED",
+    "    a quarterstaff [common] (+1 dmg, 2 kg) \\u2014 weapon, wielded, sound",
+    "    a padded jerkin [common] (1 armor, 3 kg) \\u2014 armor, worn, sound",
+    "  IN THE PACK",
+    "    a pitch-soaked torch [common]",
+    "  FOOD",
+    "    a strip of dried meat [common]",
+    "Lockbox (0/8):",
+    "  \\u2014 empty \\u2014",
+  ].join("\\n") }], text: [
+    "What you wear, what you carry, what you can eat, and what is safe in the lockbox.",
+    "",
     "\\u2500 lesson 4/5 \\u2500 blood \\u2500",
     "'attack <name>' starts a fight. Blows land in rounds, seconds",
     "apart \\u2014 you have time to think, so think. Stances tilt the trade:",
@@ -17939,9 +18563,17 @@ var GUIDE_LESSONS = [
     "turns blows but kills slowly. Walking out of the room is how you",
     "flee. Wounds keep bleeding until you 'bandage'. And health NEVER",
     "returns on its own \\u2014 'rest' where nothing is watching, or 'eat'.",
-    "\\u2192 type 'stance guarded' (then 'stance steady' to square back up).",
+    "\\u2192 practice a fight: type 'attack rat'.",
   ] },
-  { re: /^stance\\s/, text: [
+  { re: /^attack\\s+.*rat$/, shows: [
+    { text: "You square up against a scabby rat." },
+    { text: "You crack the staff across a scabby rat for 4. (wounded)", cls: "dmgout" },
+    { text: "A scabby rat sinks small teeth into your ankle for 2. [98/100 hp]", cls: "dmgin" },
+    { text: "You rap a scabby rat with the quarterstaff for 5. (near death)", cls: "dmgout" },
+    { text: "You finish a scabby rat.", cls: "kill big" },
+  ], text: [
+    "A fight goes a round at a time like that, until one of you is down or gone.",
+    "",
     "\\u2500 lesson 5/5 \\u2500 the stakes \\u2500",
     "When you die, everything you carry scatters where you fall, and",
     "the world keeps it. The answer is a gate: the keeper barters in",
@@ -18005,12 +18637,29 @@ function guideCommand(text) {
   }
   return true;
 }
+// What the command would have printed, through print() as the world's own lines go,
+// so each wears the game's colours; marked guide-step so the walk keeps them and
+// takes them away with itself.
+function guideShow(shows) {
+  var first = null;
+  (shows || []).forEach(function (s) {
+    if (s.room) knownRooms[s.room] = 1; // a room look is drawn as one (print's roomBlock)
+    var before = log.children.length;
+    print(s.text, s.cls);
+    for (var j = before; j < log.children.length; j++) {
+      log.children[j].classList.add("guide-step");
+      if (!first) first = log.children[j];
+    }
+  });
+  return first;
+}
 function guidePrint(i) {
   // Keep completed lessons and their exit snapshot available for scrolling back.
   var previousExits = document.getElementById("guide-exits");
   if (previousExits) previousExits.removeAttribute("id");
+  var shown = guideShow(GUIDE_LESSONS[i].shows);
   print(GUIDE_LESSONS[i].text.join("\\n"), "sys guide-step");
-  var lesson = log.lastElementChild;
+  var lesson = shown || log.lastElementChild;
   if (i === 1) {
     var exits = document.createElement("div");
     exits.id = "guide-exits"; exits.className = "guide-step";

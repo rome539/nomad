@@ -29,9 +29,20 @@ try {
   await page.evaluateOnNewDocument(()=>localStorage.setItem('nomad_sound','off'));
   await page.goto('http://nomad.test');await page.waitForFunction(()=>window.practice);
   await page.evaluate(async()=>{practice.crossThreshold();practice.skipBoot();await practice.connect();practice.wakeReconnect();});
+  // A BROWSER WITH NO KEY IS ASKED WHO IT IS FIRST (2026-11-18): 'new', a name, a password it may skip.
+  assert(await page.evaluate(()=>document.getElementById('log').textContent.includes('By what name are you known')),'the door asks before the walk');
+  assert.equal(await page.evaluate(()=>practice.at()),-1,'no walk until the door is answered');
+  await page.evaluate(()=>practice.sendCmd('new'));
+  await page.evaluate(()=>practice.sendCmd('Testwren'));
+  await page.waitForFunction(()=>document.getElementById('cmd').type==='password');
+  assert.equal(await page.evaluate(()=>document.getElementById('vmodal').classList.contains('open')),false,'the password is asked on the command line, not in a box');
+  await page.evaluate(()=>practice.sendCmd('skip'));
+  assert.equal(await page.evaluate(()=>document.getElementById('cmd').type),'search','the line is itself again');
+  await page.waitForFunction(()=>practice.at()===1);
+  await page.evaluate(async()=>{await practice.connect();practice.wakeReconnect();});
   assert.equal(auth,0,'first-time practice never authenticates into the live world');
   await page.evaluate(()=>practice.live());
-  for(const command of ['look','go north','go north','attack keeper','inventory','stance guarded','keys'])await page.evaluate(c=>practice.sendCmd(c),command);
+  for(const command of ['look','go north','go north','attack keeper','inventory','attack rat','keys'])await page.evaluate(c=>practice.sendCmd(c),command);
   const result=await page.evaluate(()=>{
    const log=document.getElementById('log');
    document.getElementById('idpanel').classList.remove('open');

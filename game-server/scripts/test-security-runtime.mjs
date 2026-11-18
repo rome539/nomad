@@ -124,12 +124,18 @@ print(json.dumps(out))
      await page.click('#thr-enter');
      const named=async name=>page.waitForFunction(name=>window.__auditFrames.filter(f=>f.t==='status').at(-1)?.name===name,{timeout:15000},name);
      const command=async text=>{await page.$eval('#cmd',(el,text)=>{el.value=text;el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));},text);};
-     await named('AuditBrowser');await command('login extension');await named('AuditExtension');
+     await named('AuditBrowser');
+     await page.click('#idbtn');
+     assert.equal(await page.$eval('#sectname', el => el.getClientRects().length), 0, 'an unmarked legacy key cannot start a backup');
+     await page.click('#idbtn');
+     await command('login extension');await named('AuditExtension');
      await command('logout');await named('AuditBrowser');
      const secret=nip19.nsecEncode(sk);await command('LOGIN\t'+secret);await named('AuditOne');
      assert.equal(await page.evaluate(secret=>JSON.stringify(window.__auditSent).includes(secret)||document.querySelector('#log').textContent.includes(secret),secret),false);
      assert.deepEqual(browserErrors,[]);
      console.log('PASS: actual browser boot, guest login, extension signing, logout, and uppercase/tab key import; no key in socket frames or rendered history.');
+     const {checkKeySaveBrowser}=await import('./keysave-browser.mjs');
+     await checkKeySaveBrowser(browser,origin,db);
    } finally {await browser.close();}
  }
  const publicBurst=await Promise.all(Array.from({length:185},()=>request('/build')));

@@ -8150,7 +8150,7 @@ try {
   check('coming through the door prints the door controller\'s readout in the log; the door opens at once and a fight cuts it short (2026-11-15)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.doesNotMatch(pub, /id="boot"|#bootscr/, 'no screen of its own: it is the game\'s text box');
-    assert.match(pub, /bootReadout\(function \(\) \{\n\s+print\("— you feel keys in your pocket[^\n]*\n\s+if \(guideFresh\) guideStart\(\);\n\s+\}, !guideFresh\);\n\s+if \(!phoneControls\(\)\) cmd\.focus\(\);\n\s+if \(!guideFresh && !guideActive\(\)\) connect\(\);/, 'the keys line and a new key\'s walk after it, and the door opens at once underneath');
+    assert.match(pub, /bootReadout\(function \(\) \{\n\s+if \(doorMenu\) \{ doorMenuStart\(\); return; \}\n\s+print\("— you feel keys in your pocket[^\n]*\n\s+if \(guideFresh\) guideStart\(\);\n\s+\}, !guideFresh && !doorMenu\);\n\s+if \(!phoneControls\(\)\) cmd\.focus\(\);\n\s+if \(!guideFresh && !guideActive\(\) && !doorMenu\) connect\(\);/, 'the keys line and a new key\'s walk after it (a browser with no key is asked who it is first), and the door opens at once underneath');
     assert.match(pub, /if \(bootHeld && !bootOwn\) \{\n\s+bootHeld\.push\(\[text, cls, who, pk, voiced\]\);\n\s+if \(BOOT_CUT\.test\(cls \|\| classify\(String\(text\)\) \|\| ""\)\) bootCut\(\);/, 'the world waits behind it, and a fight ends it');
     assert.match(pub, /var BOOT_CUT = \/\^\(dmgin\|death\|seize\|stun\|fumble\|block\|dodge\)\$\/;/);
     assert.match(pub, /if \(w\.king\) add\("", row\("boss", w\.king\.standing \? "STANDING" : "DOWN"/, 'one boss, drawn at random, under a label that says boss');
@@ -8159,7 +8159,7 @@ try {
     // in a fight, no readout at all (rome, 2026-11-15)
     assert.match(pub, /if \(bootWait\) bootWait\(!!f\.combat\);/, 'it waits on the world\'s first word on you');
     assert.match(pub, /if \(fighting\) \{ finish\(\); return; \}/, 'and one in a fight gets none of it');
-    assert.match(pub, /\}, !guideFresh\);/, 'a returning key waits for the world; a new key in practice does not');
+    assert.match(pub, /\}, !guideFresh && !doorMenu\);/, 'a returning key waits for the world; a new key in practice, or at the door\'s menu, does not');
     // the lines are written when it starts, and a world feed not back yet is asked for again (rome, 2026-11-15)
     assert.match(pub, /var worldAsk = thrWorldData \? null : thrWorld\(\);\n\s+var build = function \(\) \{\n\s+var w = thrWorldData;/, 'read when it starts, not at the click');
     assert.match(pub, /if \(!thrWorldData && worldAsk\) \{/, 'and it waits a moment for a feed still on its way');
@@ -8236,6 +8236,44 @@ try {
     session.items.push(lantern);
     await z.wear(session, lantern, { ...tmpl, name: 'a lantern', slot: '' }, 2);
     assert.match(said.pop(), /is worn through/, 'a lantern is worn by use, not rust');
+  });
+
+  check('the open keys panel does not flicker between saved and not saved on every status frame (2026-11-18)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const panel = pub.slice(pub.indexOf('async function keySavePanel(fresh) {'), pub.indexOf('async function keySave() {'));
+    assert.ok(panel.length > 100, 'keySavePanel(fresh)');
+    assert.match(panel, /keySaveRender\(eligible, known && keySaveKnown\.saved\);\n\s+if \(known && !fresh\) return;/, 'a redraw paints what is known and asks nothing');
+    assert.match(pub, /if \(idpanel\.classList\.contains\("open"\)\) refreshIdPanel\(\);\n\s+\} else if \(f\.t === "ctx"/, 'the status frame redraws without asking');
+    assert.match(pub, /refreshIdPanel\(true\); \/\/ opening the panel is the one time/, 'opening the panel asks');
+    assert.ok((pub.match(/keySaveNote\(getPublicKey\([a-z.]+\), true\)/g) ?? []).length >= 2, 'both saves note it');
+  });
+
+  check('a typed login, keys save or keys unsave asks on the command line, never in a box (2026-11-18)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /if \(lower === "keys save"\) \{ keySave\(true\); return true; \}/);
+    assert.match(pub, /if \(lower === "keys unsave"\) \{ keySaveRemove\(true\); return true; \}/);
+    assert.match(pub, /var pw = !fromDoor \? await linePassword\(name, /, 'login <name> typed asks on the line');
+    assert.match(pub, /function linePassword\(name, prompt\) \{\n\s+var asked = doorPwAsk\(prompt\)/, 'still on the line, the browser\'s saved one offered alongside');
+    assert.match(pub, /pw = typed\n\s+\? \([^\n]*await doorPwAsk\(already \? "New password:" : "Password:"\)\)/, 'keys save typed');
+    assert.match(pub, /var again = typed \? await doorPwAsk\(/);
+    assert.match(pub, /var ok = typed \? await lineConfirm\(/, 'keys unsave typed');
+    assert.match(pub, /doorPwWorld = \[lastSuggest, lastCombat\];/, 'the world\'s buttons are kept aside and come back');
+    assert.match(pub, /if \(doorPwChips\.indexOf\(lw\) !== -1\) \{ doorPwInput\(doorPwMasked && lw === "skip" \? "" : t\); return; \}\n(\s+\/\/[^\n]*\n)+\s+doorPwInput\(""\);\n\s+\}/, 'only the question\'s own buttons answer it; any other command cancels it and runs');
+  });
+
+  check('saving again when already saved says it replaces the old password (2026-11-18)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const save = pub.slice(pub.indexOf('async function keySave(typed) {'), pub.indexOf('async function keySaveRemove(typed) {'));
+    assert.match(save, /var already = !!\(st && st\.saved\);/);
+    assert.match(save, /" is already saved\. A new password replaces the old one, which stops working\./, 'said before asking');
+    assert.match(save, /password changed\. 'login /, 'and after');
+  });
+
+  check('an animal crossing past a gate is never said to be in the gate room', () => {
+    const aiSrc = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.doesNotMatch(aiSrc, /roomFeed\(through\b/, 'nothing is fed to the room a beast steps past');
+    assert.doesNotMatch(aiSrc, /comes through without stopping/, 'the old crossing line is gone');
+    assert.match(aiSrc, /if \(through\) z\.refreshRoomCtx\(through\);/, 'the gate room still refreshes');
   });
 
   console.log(`\n${passed} regression checks pass`);

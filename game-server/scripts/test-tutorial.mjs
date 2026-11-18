@@ -11,11 +11,11 @@ const ast=parse(js,{ecmaVersion:'latest',sourceType:'module'});
 const fn=name=>{const n=ast.body.find(n=>n.type==='FunctionDeclaration'&&n.id.name===name);assert(n,name);return js.slice(n.start,n.end)};
 const lessons=ast.body.find(n=>n.type==='VariableDeclaration'&&n.declarations[0].id.name==='GUIDE_LESSONS');
 const nodes=[],saved=new Map(),sent=[];
-function element(){return {className:'',textContent:'',getBoundingClientRect(){return {top:nodes.indexOf(this)*100-log.scrollTop}},removeAttribute(k){delete this[k]},remove(){const i=nodes.indexOf(this);if(i>=0)nodes.splice(i,1)},addEventListener(type,fn){this[type]=fn}}}
-const log={get lastElementChild(){return nodes.at(-1)},getBoundingClientRect(){return {top:0}},appendChild(el){nodes.push(el)},querySelectorAll(){return nodes.filter(n=>n.className.includes('guide-step'))},scrollTop:0,scrollHeight:500};
-const ctx={guideAt:-1,lastSuggest:['go north','go east','inventory'],log,document:{body:{dataset:{}},createElement:element,getElementById:id=>nodes.find(n=>n.id===id)},localStorage:{setItem:(k,v)=>saved.set(k,v)},print(text,cls){const el=element();el.textContent=text;el.className=cls||'';nodes.push(el)},paintWayHome(){},fitPicture(){},sendCmd:c=>sent.push(c),idbtn:{click(){ctx.guideNotice('keys')}}};
+function element(){const el={className:'',textContent:'',getBoundingClientRect(){return {top:nodes.indexOf(this)*100-log.scrollTop}},removeAttribute(k){delete this[k]},remove(){const i=nodes.indexOf(this);if(i>=0)nodes.splice(i,1)},addEventListener(type,fn){this[type]=fn}};el.classList={add(c){el.className+=' '+c}};return el}
+const log={get children(){return nodes},get lastElementChild(){return nodes.at(-1)},getBoundingClientRect(){return {top:0}},appendChild(el){nodes.push(el)},querySelectorAll(){return nodes.filter(n=>n.className.includes('guide-step'))},scrollTop:0,scrollHeight:500};
+const ctx={knownRooms:{},guideAt:-1,lastSuggest:['go north','go east','inventory'],log,document:{body:{dataset:{}},createElement:element,getElementById:id=>nodes.find(n=>n.id===id)},localStorage:{setItem:(k,v)=>saved.set(k,v)},print(text,cls){const el=element();el.textContent=text;el.className=cls||'';nodes.push(el)},paintWayHome(){},fitPicture(){},sendCmd:c=>sent.push(c),idbtn:{click(){ctx.guideNotice('keys')}}};
 vm.createContext(ctx);
-vm.runInContext(js.slice(lessons.start,lessons.end)+'\n'+['guideActive','guideCommand','updateGuideExits','guidePrint','guideStart','guideNotice','guideOff'].map(fn).join('\n'),ctx);
+vm.runInContext(js.slice(lessons.start,lessons.end)+'\n'+['guideActive','guideCommand','updateGuideExits','guideShow','guidePrint','guideStart','guideNotice','guideOff'].map(fn).join('\n'),ctx);
 ctx.print('An ordinary room description','head');
 ctx.guideStart();
 assert.equal(ctx.document.body.dataset.tutorial,'on');
@@ -27,7 +27,7 @@ assert.match(nodes.find(n=>n.id==='guide-exits').textContent,/Practice exit: go 
 assert(nodes.some(n=>n.textContent.includes('THE FIRST WALK')),'previous lesson is retained');
 ctx.lastSuggest=['go south'];ctx.updateGuideExits();
 assert.match(nodes.find(n=>n.id==='guide-exits').textContent,/Practice exit: go north/);
-ctx.guideNotice('go south');ctx.guideNotice('inventory');ctx.guideNotice('stance guarded');ctx.guideNotice('keys');
+ctx.guideNotice('go south');ctx.guideNotice('inventory');ctx.guideNotice('attack rat');ctx.guideNotice('keys');
 assert.equal(ctx.guideActive(),true,'completion lesson stays isolated until dismissed');
 assert.equal(saved.has('nomad_guided'),false);
 const finish=nodes.find(n=>n.textContent==='Enter the dungeon');assert(finish);finish.click();
@@ -45,10 +45,17 @@ ctx.guideCommand('go south');assert.equal(ctx.guideAt,2,'only the practice exit 
 ctx.guideCommand('go north');assert.equal(ctx.guideAt,3);
 assert.equal(nodes.some(n=>n.id==='guide-exits'),false,'completed exits are frozen');
 ctx.guideCommand('go north');assert.equal(ctx.guideAt,3,'repeated movement cannot skip lessons');
-ctx.guideCommand('inventory');ctx.guideCommand('stance guarded');ctx.guideCommand('keys');
+ctx.guideCommand('inventory');ctx.guideCommand('stance guarded');assert.equal(ctx.guideAt,4,'a stance no longer ends lesson 4');ctx.guideCommand('attack rat');ctx.guideCommand('keys');
 assert.equal(ctx.guideAt,6);
 assert.equal(nodes.filter(n=>n.textContent.includes('lesson ')).length >=4,true);
 assert.deepEqual(sent,['look','look'],'practice commands never reach live dispatch');
 assert(js.indexOf('if (guideCommand(t)) return;') < js.indexOf('if (queuePrivateTell(t)) return;'));
 assert.match(fn('connect'),/guideActive.*return/,'reconnect cannot enter during practice');
+const shown=t=>nodes.find(n=>n.textContent.includes(t));
+assert(shown('A scabby rat is here')&&!/\bsys\b/.test(shown('A scabby rat is here').className)&&/guide-step/.test(shown('A scabby rat is here').className),'look is shown in the game\'s own colours, and kept by the walk');
+assert.equal(ctx.knownRooms["The Weeper's Arch"],1,'drawn as a room');
+assert(shown('The Thorn-Court'),'go north shows the room walked into');
+assert(shown('EQUIPPED')&&!/\bsys\b/.test(shown('EQUIPPED').className),'the pack is shown');
+assert(/dmgout/.test(shown('You crack the staff').className)&&/dmgin/.test(shown('sinks small teeth').className)&&/kill/.test(shown('You finish a scabby rat').className),'the fight wears the fight\'s colours');
+assert(nodes.some(n=>n.textContent.includes("type 'attack rat'")&&n.textContent.includes('stance guarded')),'lesson 4 asks for the fight and keeps the stances');
 console.log('PASS tutorial history, practice-only commands, frozen exits, final acknowledgement, skip and replay');

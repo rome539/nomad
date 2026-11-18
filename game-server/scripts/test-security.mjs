@@ -194,8 +194,9 @@ try {
  assert.deepEqual(signerWrites,[]);assert.equal(selection.pendingBunker,null);
  console.log('PASS: a superseded extension selection cannot change the active identity.');
  const wire=[],printed=[],imports=[];
- const ctx={history:[],histAt:-1,inGatehouseNow:true,ws:{readyState:1,send:s=>wire.push(JSON.parse(s))},print:s=>printed.push(s),guideCommand:()=>false,importKey:s=>imports.push(s)};
- const declarations=['SPEECH_VERBS','GATEHOUSE_CMDS','GATEHOUSE_NOARG_CMDS'].map(name=>{const n=ast.body.find(n=>n.type==='VariableDeclaration'&&n.declarations.some(d=>d.id.name===name));assert.ok(n);return moduleText.slice(n.start,n.end);}).join('\n');
+ const recovers=[];
+ const ctx={history:[],histAt:-1,inGatehouseNow:true,ws:{readyState:1,send:s=>wire.push(JSON.parse(s))},print:s=>printed.push(s),guideCommand:()=>false,importKey:s=>imports.push(s),keyRecover:(n,door)=>recovers.push([n,door])};
+ const declarations=['SPEECH_VERBS','GATEHOUSE_CMDS','GATEHOUSE_NOARG_CMDS','KEYSAVE_NAME'].map(name=>{const n=ast.body.find(n=>n.type==='VariableDeclaration'&&n.declarations.some(d=>d.id.name===name));assert.ok(n);return moduleText.slice(n.start,n.end);}).join('\n');
  vm.createContext(ctx);vm.runInContext(declarations+'\n'+fn('isSpeech')+'\n'+fn('sendCmd')+'\n'+fn('localCmd'),ctx);
  for(const verb of ['login','LOGIN','Login']) for(const sep of [' ', '\t', '\u00a0', '\n', '  ']) {
    ctx.input=verb+sep+nsec;vm.runInContext('sendCmd(input)',ctx);
@@ -203,6 +204,9 @@ try {
  assert.equal(wire.length,0);assert.equal(imports.length,15);
  assert.equal(ctx.history.length,0);assert.ok(printed.every(line=>!line.includes(nsec)));
  ctx.input='please use '+nsec;vm.runInContext('sendCmd(input)',ctx);assert.equal(wire.length,0);
+ // 'login <name>' (a wanderer saved with a password, keysave.ts) stays local too, and never mistakes a key for a name.
+ ctx.input='login Ironwren';vm.runInContext('sendCmd(input)',ctx);
+ assert.deepEqual(recovers,[['Ironwren',false]]);assert.equal(wire.length,0);assert.equal(ctx.history.length,0);assert.equal(imports.length,15);
  const speaker={pubkey:'speaker',name:'speaker'},listener={pubkey:'listener',name:'listener'};const messages=[];
  const z={sessions:new Map([['speaker',speaker],['listener',listener]]),outOfWorld:()=>true,send:(s,text)=>messages.push({to:s.pubkey,text})};
  await api.handleGatehouse(z,speaker,'login\t'+nsec);

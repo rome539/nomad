@@ -5,6 +5,7 @@
 // seam moved. `import type` for ZoneDO keeps this a compile-time reference, so
 // there's no runtime import cycle.
 import { handleLoadout } from "./loadouts";
+import { noteKept } from "./keysave";
 import { SIG_DOES, SIG_NAME } from "./legendary";
 import * as invites from "./invites";
 import type { ZoneDO } from "./zone";
@@ -2253,6 +2254,7 @@ export async function benchStore(z: ZoneDO, session: Session, row: string, key: 
       session.items.splice(idx, 1);
     }
     await setContainer(z.env.DB, carried.rowId, cfg.container);
+    noteKept(session);
     return undefined;
   }
 
@@ -2526,6 +2528,7 @@ export async function cmdStore(z: ZoneDO, session: Session, arg: string, key: "l
     }
     await setContainer(z.env.DB, carried.rowId, cfg.container);
     z.send(session, cfg.put(tmpl.name), "sfx-box");
+    noteKept(session);
     // Banking at a gate happens behind the door (gatehouse); a mid-dungeon lockbox
     // crouch happens in the open. The witnesses follow: gatehouse folk, or the room.
     if (z.outOfWorld(session)) gatehouseFeed(z, `${session.name} ${cfg.feed}`, session.pubkey);

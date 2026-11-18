@@ -1,3 +1,4 @@
+import { KEYSAVE_ROUTES } from "./keysave";
 import type { Env } from "./env";
 import { CORS, json } from "./http";
 import { admitAuthentication } from "./auth-limit";
@@ -52,7 +53,7 @@ const worker = {
     const m = req.method;
 
     try {
-      if ((m === "POST" && ["/auth/challenge", "/auth/verify", "/auth/ticket"].includes(pathname))
+      if ((m === "POST" && (["/auth/challenge", "/auth/verify", "/auth/ticket"].includes(pathname) || Object.hasOwn(KEYSAVE_ROUTES, pathname)))
           || (m === "GET" && pathname === "/ws")) {
         const limited = await admitAuthentication(req, env);
         if (limited) return limited;
@@ -164,6 +165,8 @@ const worker = {
       if (m === "POST" && pathname === "/auth/challenge") return await handleChallenge(env);
       if (m === "POST" && pathname === "/auth/verify") return await handleVerify(req, env);
       if (m === "POST" && pathname === "/auth/ticket") return await handleTicket(req, env);
+      // A name and a password bring a wanderer back (keysave.ts).
+      if (m === "POST" && Object.hasOwn(KEYSAVE_ROUTES, pathname)) return await KEYSAVE_ROUTES[pathname](req, env);
       // Google is now self-custody only: the browser talks straight to Drive
       // (see /vault.js). The old custodial /auth/google endpoint is retired.
 
@@ -408,7 +411,9 @@ const worker = {
 
   // The dungeon forgets the forgettable: guests who never chose a name,
   // carry nothing, hold no living claim, and haven't been seen in 30 days
-  // fade from the ledger. Named players are never pruned.
+  // fade from the ledger. Named players are never pruned, and neither is one
+  // saved with a name and a password (keysave.ts): saving it says they mean
+  // to come back. A save whose wanderer is gone goes with it.
   async scheduled(_ctrl: ScheduledController, env: Env): Promise<void> {
     const cutoff = Math.floor(Date.now() / 1000) - 30 * 24 * 3600;
     await env.DB.prepare(
@@ -416,8 +421,10 @@ const worker = {
        WHERE named = 0
          AND last_seen < ?
          AND pubkey NOT IN (SELECT pubkey FROM player_items)
-         AND pubkey NOT IN (SELECT pubkey FROM mints WHERE voided_at IS NULL)`,
+         AND pubkey NOT IN (SELECT pubkey FROM mints WHERE voided_at IS NULL)
+         AND pubkey NOT IN (SELECT pubkey FROM key_saves)`,
     ).bind(cutoff).run();
+    await env.DB.prepare("DELETE FROM key_saves WHERE pubkey NOT IN (SELECT pubkey FROM players)").run();
   },
 } satisfies ExportedHandler<Env>;
 export default worker;
