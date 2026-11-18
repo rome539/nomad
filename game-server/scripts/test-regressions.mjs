@@ -8269,6 +8269,26 @@ try {
     assert.match(save, /password changed\. 'login /, 'and after');
   });
 
+  check('one name per wanderer: a chosen name is for good, only the dungeon\'s own may be traded once (2026-11-18)', () => {
+    const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    const name = verbs.slice(verbs.indexOf('export async function cmdName'), verbs.indexOf('export function cmdRest'));
+    assert.match(name, /if \(session\.named\) \{\n\s+return z\.send\(session, `The dungeon already knows you as \$\{session\.name\}, and a name is for good\. Another name is another wanderer\.`\);\n\s+\}\n\s+const ok = await renamePlayer/, 'a chosen name refuses another, before anything is written');
+    assert.match(readFileSync(new URL('../src/parser.ts', import.meta.url), 'utf8'), /name <your name>   choose what the world calls you \(once\)/);
+    assert.doesNotMatch(readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8'), /A new name carries it along/, 'nothing promises a rename');
+  });
+
+  check('a key that cannot be saved is told why, for its own kind (2026-11-18)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /if \(!keySaveAllowed\(\)\) \{ print\(keySaveRefusal\(\), "sys"\); return; \}/);
+    const why = pub.slice(pub.indexOf('function keySaveRefusal() {'), pub.indexOf('function noteImported(hex) {'));
+    assert.match(why, /method === "ext"\) return "Your keys live in your extension; nothing here to save\."/);
+    assert.match(why, /method === "bunker"\) return "Your keys live in your signer; nothing here to save\."/);
+    assert.match(why, /keyListed\("nomad_imported", pk\)\) return "A key you brought stays yours; copy it somewhere safe\."/);
+    assert.match(why, /older than the password save[^"]*'keys reveal'[^"]*Google Drive/, 'an older guest is pointed to its other ways back');
+    assert.doesNotMatch(pub, /already in your own hands/, 'the old line that fit none of them is gone');
+    assert.match(pub, /noteImported\(hex\); \/\/ brought here/, 'a pasted key is listed as brought');
+  });
+
   check('an animal crossing past a gate is never said to be in the gate room', () => {
     const aiSrc = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
     assert.doesNotMatch(aiSrc, /roomFeed\(through\b/, 'nothing is fed to the room a beast steps past');

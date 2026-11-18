@@ -235,8 +235,14 @@ export const GUIDE_PAGE = `<!doctype html>
 
 <section id="key">
   <h2>09 &nbsp;Your key and your name</h2>
-  <p>NOMAD runs on Nostr. Your key is your wanderer: no account, no password, no
-  wipes. Lose the key and nobody can give the wanderer back.</p>
+  <p>NOMAD runs on Nostr. Your key is your wanderer: no account and no wipes. The
+  game keeps your key in this browser, so keep a way back: save it with a password
+  (<code>keys save</code>), and your name and that password bring the wanderer back
+  from any browser. Or copy the key, or seal it in your Google Drive. With none of
+  these, a cleared browser takes the wanderer with it, and nobody can give it back.</p>
+  <p>The dungeon gives you a name when you arrive. You may choose your own once, and
+  that one is for good: a name carries a reputation, and another name is another
+  wanderer.</p>
   <p>Everything you do is counted, privately. Nothing about you leaves the world
   unless you ask: the boards are opt-in, and only one command ever posts to your
   own feed.</p>
@@ -536,8 +542,9 @@ export const GUIDE_PAGE = `<!doctype html>
     three a day. <code>invite post</code> posts the letter to your own feed.</dd>
     <dt><code>who</code></dt>
     <dd>Everyone awake in the world.</dd>
-    <dt><code>name &lt;new name&gt;</code></dt>
-    <dd>Choose what the world calls you.</dd>
+    <dt><code>name &lt;your name&gt;</code></dt>
+    <dd>Choose what the world calls you, once. The name the dungeon gave you can be
+    traded for your own; after that it is for good.</dd>
     <dt><code>alias &lt;word&gt; = &lt;command&gt;</code> / <code>unalias &lt;word&gt;</code></dt>
     <dd>Your own short word for something you type often: after <code>alias kr = attack rat</code>,
     <code>kr</code> is <code>attack rat</code>. Words after it carry on, so with
@@ -552,6 +559,28 @@ export const GUIDE_PAGE = `<!doctype html>
     <dd>Fill the screen (also in settings). Again to leave, or hold Esc.</dd>
     <dt><code>help</code> (?)</dt>
     <dd>The short list, in the game.</dd>
+  </dl>
+
+  <h3>Your keys</h3>
+  <dl>
+    <dt><code>keys</code></dt>
+    <dd>Your keys, and the ways to keep this wanderer. Also behind your name, top
+    right.</dd>
+    <dt><code>keys save</code></dt>
+    <dd>Set a password. Your name and that password bring the wanderer back from any
+    browser. The browser locks the key with it before anything leaves, so nobody can
+    reset it. Again later sets a new one, and the old one stops working.</dd>
+    <dt><code>keys unsave</code></dt>
+    <dd>Remove the password save. The wanderer stays; only that way back goes.</dd>
+    <dt><code>keys reveal</code></dt>
+    <dd>Show your secret key, to copy somewhere safe.</dd>
+    <dt><code>login &lt;name&gt;</code></dt>
+    <dd>Come back as a wanderer saved with a password.</dd>
+    <dt><code>login extension</code> / <code>login signer</code></dt>
+    <dd>Use your own Nostr keys. Pasting a secret key on its own works too; it is
+    never sent.</dd>
+    <dt><code>logout</code></dt>
+    <dd>Back to the keys you had before.</dd>
   </dl>
 </section>
 

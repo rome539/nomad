@@ -3083,6 +3083,13 @@ export async function cmdName(z: ZoneDO, session: Session, arg: string): Promise
   if (name.toLowerCase() === session.name.toLowerCase()) {
     return z.send(session, `You are already ${session.name}.`);
   }
+  // ONE NAME PER WANDERER (rome, 2026-11-18). The dungeon's own name may be
+  // traded once for one you choose, and that one is for good: a name carries a
+  // reputation on the boards and in the records, so another name is another
+  // wanderer. (A Nostr profile name adopted on arrival is that one choice.)
+  if (session.named) {
+    return z.send(session, `The dungeon already knows you as ${session.name}, and a name is for good. Another name is another wanderer.`);
+  }
   const ok = await renamePlayer(z.env.DB, session.pubkey, name);
   if (!ok) return z.send(session, `Someone in the dungeon already answers to ${name}.`);
   const old = session.name;

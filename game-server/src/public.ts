@@ -6369,6 +6369,7 @@ function importKey(arg) {
   var current = localStorage.getItem("nomad_sk");
   if (current && current !== hex) localStorage.setItem("nomad_sk_prev", current);
   localStorage.setItem("nomad_sk", hex);
+  noteImported(hex); // brought here, not made here (keySaveRefusal)
   localStorage.setItem("nomad_login", "guest");
   sk = fromHex(hex);
   method = "guest";
@@ -9937,6 +9938,21 @@ var KEYSAVE_AAD = new TextEncoder().encode("nomad-keysave-v1");
 var keySaveBusy = false;
 function noteExported(pk) { keyList("nomad_exported", pk); }
 function keyBacked(pk) { return keyListed("nomad_exported", pk) || localStorage.getItem("nomad_vault_pk") === pk; }
+// WHY A KEY CANNOT BE SAVED, said for the key in hand (rome, 2026-11-18): an
+// extension or signer holds its own keys; a pasted key was brought here (listed
+// from now on in nomad_imported); anything else is a wanderer from before the
+// save, whose key nobody marked as the game's own.
+function keySaveRefusal() {
+  if (method === "ext") return "Your keys live in your extension; nothing here to save.";
+  if (method === "bunker") return "Your keys live in your signer; nothing here to save.";
+  var pk = "";
+  try { pk = getPublicKey(sk); } catch (e) {}
+  if (pk && keyListed("nomad_imported", pk)) return "A key you brought stays yours; copy it somewhere safe.";
+  return "This wanderer is older than the password save, so it can't use it. Keep another way back: 'keys reveal' shows your secret key to copy somewhere safe, or tap your name and choose Google Drive.";
+}
+function noteImported(hex) {
+  try { var pk = getPublicKey(fromHex(hex)); if (!keyListed("nomad_minted_v2", pk)) keyList("nomad_imported", pk); } catch (e) {}
+}
 function keySaveAllowed() {
   try { return method === "guest" && !!sk && keyListed("nomad_minted_v2", getPublicKey(sk)); } catch (e) { return false; }
 }
@@ -10008,7 +10024,7 @@ async function keySavePanel(fresh) {
   keySaveRender(eligible, st.saved);
 }
 async function keySave(typed) {
-  if (!keySaveAllowed()) { print("Only keys the game made for you are saved this way; yours are already in your own hands.", "sys"); return; }
+  if (!keySaveAllowed()) { print(keySaveRefusal(), "sys"); return; }
   if (!sessionToken || !lastName) { print("\\u2014 step into the world first, then save \\u2014", "sys"); return; }
   if (keySaveBusy) return;
   keySaveBusy = true;
@@ -10047,7 +10063,7 @@ async function keySave(typed) {
     if (epoch !== identityEpoch) return;
     print(already
       ? "\\u2014 password changed. 'login " + j.name + "' and the new one bring " + j.name + " back; the old one no longer does. \\u2014"
-      : "\\u2014 saved. If this browser ever forgets you, 'login " + j.name + "' and your password bring " + j.name + " back. A new name carries it along. \\u2014", "sys");
+      : "\\u2014 saved. If this browser ever forgets you, 'login " + j.name + "' and your password bring " + j.name + " back. \\u2014", "sys");
   } catch (e) {
     print("\\u2014 the save did not take; try again in a moment \\u2014", "sys");
   } finally {
