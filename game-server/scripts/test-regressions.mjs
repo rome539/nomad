@@ -7247,8 +7247,20 @@ try {
     add('w8', 'hill-wolf', 'the-hill-graves', { lone: true, roomId: 'the-first-crag' }); // lives in it, out hunting
     assert.match(beasts.lines(z, now + 2 * DAY).join('\n'), /Wolves: 8 alive, 5 alone, 5 in the hamlet/);
     for (const id of ['w5', 'w6', 'w7', 'w8']) creatures.delete(id);
+    // ONE GROUND AT A TIME (2026-11-18): `beasts woods` prints the wood alone, for every region.
+    const all = beasts.lines(z, now).join('\n');
+    assert.match(all, /^THE MOUNTAIN/); assert.match(all, /\nTHE WOOD\n/); assert.match(all, /\nASSART END\n/);
+    const wood = beasts.lines(z, now, 'woods').join('\n');
+    assert.match(wood, /^THE WOOD\n/, 'the woods find the wood');
+    assert.doesNotMatch(wood, /THE MOUNTAIN|THE CROSSING|ASSART END/, 'and nothing else');
+    assert.equal(beasts.lines(z, now, 'mountain')[0], 'THE MOUNTAIN');
+    assert.doesNotMatch(beasts.lines(z, now, 'mountain').join('\n'), /THE WOOD/);
+    for (const [word, title] of [['crossing', 'THE CROSSING'], ['road', 'THE ROAD'], ['open ground', 'THE OPEN GROUND'], ['keep', 'THE KEEP AND THE WARRENS'], ['the deep', 'THE DEEP'], ['assart end', 'ASSART END']])
+      assert.equal(beasts.lines(z, now, word)[0], title, word);
+    assert.match(beasts.lines(z, now, 'moon')[0], /No ground called "moon"\. Try: mountain, crossing/);
+    assert.equal(parse('beasts woods').arg, 'woods', 'the parser hands the word over');
     const vs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
-    assert.match(vs, /export function cmdBeasts\(z: ZoneDO, session: Session\): void \{\n\s*if \(session\.pubkey !== CENSUS_PUBKEY\)/, 'only the keeper reads it');
+    assert.match(vs, /export function cmdBeasts\(z: ZoneDO, session: Session, region = ""\): void \{\n\s*if \(session\.pubkey !== CENSUS_PUBKEY\)/, 'only the keeper reads it');
     const census = vs.slice(vs.indexOf('export async function cmdCensus'));
     assert.ok(!census.slice(0, census.indexOf('\nexport ', 10)).includes('beasts.'), 'and it stays out of the census');
     const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');

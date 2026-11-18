@@ -2492,7 +2492,7 @@ export class ZoneDO implements DurableObject {
       case "inventory": return verbs.cmdInventory(this, session);
       case "who": return verbs.cmdWho(this, session);
       case "census": return verbs.cmdCensus(this, session);
-      case "beasts": return verbs.cmdBeasts(this, session);
+      case "beasts": return verbs.cmdBeasts(this, session, cmd.arg);
       case "skies": return verbs.cmdSkies(this, session);
       case "name": return verbs.cmdName(this, session, cmd.arg);
       case "rest": return verbs.cmdRest(this, session);

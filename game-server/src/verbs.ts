@@ -2901,9 +2901,9 @@ export async function recordCensus(z: ZoneDO, now: number): Promise<void> {
 }
 
 // The mountain's own count, behind the census's key and kept out of it (beasts.ts).
-export function cmdBeasts(z: ZoneDO, session: Session): void {
+export function cmdBeasts(z: ZoneDO, session: Session, region = ""): void {
   if (session.pubkey !== CENSUS_PUBKEY) return z.send(session, "The deep keeps its own count.");
-  z.send(session, beasts.lines(z, Date.now()).join("\n"));
+  z.send(session, beasts.lines(z, Date.now(), region).join("\n"));
 }
 
 export async function cmdCensus(z: ZoneDO, session: Session): Promise<void> {

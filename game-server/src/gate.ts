@@ -3221,7 +3221,7 @@ export async function handleGatehouse(z: ZoneDO, session: Session, text: string)
   // nothing in here). This handler answers its own verbs and says the rest out
   // loud, so the census and the sky were being spoken at the room, not run.
   if (v === "census") return cmdCensus(z, session);
-  if (v === "beasts") return cmdBeasts(z, session);
+  if (v === "beasts") return cmdBeasts(z, session, cmd.arg);
   if (v === "skies") return cmdSkies(z, session);
   if (v === "who") { // who's by the fire, not who's in the dungeon
     const folk = gatehouseFolk(z);

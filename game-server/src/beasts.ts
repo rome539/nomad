@@ -75,7 +75,20 @@ const hoursAgo = (now: number, at: number): string => {
   return h < 1 ? "the last hour" : h === 1 ? "the last hour" : `the last ${h} hours`;
 };
 
-export function lines(z: ZoneDO, now: number): string[] {
+// ONE GROUND AT A TIME (rome, 2026-11-18): `beasts wood` prints only the wood's
+// section, for every region; bare `beasts` prints them all as before.
+export function lines(z: ZoneDO, now: number, only = ""): string[] {
+  const q = only.toLowerCase().trim().replace(/^the\s+/, "");
+  if (!q) return [...mountainLines(z, now), ...VIEWS.flatMap((v) => ["", ...regionLines(z, now, v)])];
+  const hit = (words: string[]) => words.includes(q) || words.includes(q.replace(/s$/, ""));
+  if (hit(MOUNTAIN_WORDS)) return mountainLines(z, now);
+  const v = VIEWS.find((x) => hit(x.words));
+  if (v) return regionLines(z, now, v);
+  return [`No ground called "${only.trim()}". Try: mountain, ${VIEWS.map((x) => x.words[0]).join(", ")}.`];
+}
+
+const MOUNTAIN_WORDS = ["mountain"];
+function mountainLines(z: ZoneDO, now: number): string[] {
   const world = z.world!;
   const name = (id: string) => (world.mobTemplates.get(id)?.name ?? id).replace(/^(an?|the) /i, "");
   const roomName = (id: string) => world.rooms.get(id)?.name ?? id;
@@ -125,45 +138,44 @@ export function lines(z: ZoneDO, now: number): string[] {
       .map(([k, n]) => `${k === "wanderers" ? k : name(k)} ${n}`).join(", ");
     out.push(`  ${name(line)} ${total}: ${who}`);
   }
-  for (const v of VIEWS) out.push("", ...regionLines(z, now, v));
   return out;
 }
 
 // What a living region's section shows: its packs, its herds, its lines against
 // their limit, and what was killed and by what.
-interface RegionView { title: string; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" | "outKills" | "upperKills" | "deepKills" | "woodKills" | "denKills" }
+interface RegionView { title: string; words: string[]; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" | "outKills" | "upperKills" | "deepKills" | "woodKills" | "denKills" }
 const CROSSING_VIEW: RegionView = {
-  title: "THE CROSSING", region: "crossing", shown: CROSSING_SHOWN, kills: "crossingKills",
+  title: "THE CROSSING", words: ["crossing"], region: "crossing", shown: CROSSING_SHOWN, kills: "crossingKills",
   packs: [{ line: "marsh-hound", label: "Marsh hounds", hamlet: SALT_HAMLET_ROOMS }],
   herds: ["grey-seal", "great-gull", "oystercatcher", "wrack-crab"],
 };
 const ROAD_VIEW: RegionView = {
-  title: "THE ROAD", region: "road", shown: ROAD_SHOWN, kills: "roadKills",
+  title: "THE ROAD", words: ["road"], region: "road", shown: ROAD_SHOWN, kills: "roadKills",
   packs: [{ line: "masterless-dog", label: "Masterless dogs" }, { line: "drove-dog", label: "Drove dogs" }],
   herds: ["feral-goat"],
 };
 const OUT_VIEW: RegionView = {
-  title: "THE OPEN GROUND", region: "out", shown: OUT_SHOWN, kills: "outKills",
+  title: "THE OPEN GROUND", words: ["open ground", "open", "ground", "out"], region: "out", shown: OUT_SHOWN, kills: "outKills",
   packs: [{ line: "grave-hyena", label: "Grave hyenas" }],
   herds: ["feral-goat"],
 };
 const UPPER_VIEW: RegionView = {
-  title: "THE KEEP AND THE WARRENS", region: "upper", shown: UPPER_SHOWN, kills: "upperKills",
+  title: "THE KEEP AND THE WARRENS", words: ["keep", "warren", "warrens", "upper"], region: "upper", shown: UPPER_SHOWN, kills: "upperKills",
   packs: [{ line: "grave-hyena", label: "Grave hyenas" }],
   herds: [],
 };
 const DEEP_VIEW: RegionView = {
-  title: "THE DEEP", region: "deep", shown: DEEP_SHOWN, kills: "deepKills",
+  title: "THE DEEP", words: ["deep"], region: "deep", shown: DEEP_SHOWN, kills: "deepKills",
   packs: [],
   herds: [],
 };
 const WOOD_VIEW: RegionView = {
-  title: "THE WOOD", region: "wood", shown: WOOD_SHOWN, kills: "woodKills",
+  title: "THE WOOD", words: ["wood", "forest"], region: "wood", shown: WOOD_SHOWN, kills: "woodKills",
   packs: [{ line: "grey-wolf", label: "Grey wolves" }, { line: "coyote", label: "Coyotes" }],
   herds: ["wild-boar", "roe-deer"],
 };
 const DEN_VIEW: RegionView = {
-  title: "ASSART END", region: "den", shown: DEN_SHOWN, kills: "denKills",
+  title: "ASSART END", words: ["assart end", "assart", "den"], region: "den", shown: DEN_SHOWN, kills: "denKills",
   packs: [{ line: "masterless-dog", label: "Masterless dogs" }],
   herds: ["roe-deer"],
 };
