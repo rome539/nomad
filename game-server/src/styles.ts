@@ -1,4 +1,5 @@
 import * as exhaustion from "./exhaustion";
+import { SIG } from "./legendary";
 // WAYS OF FIGHTING (rome, 2026-10-05). The spine's creature round asks this file
 // how hard the blow it is about to land should be, and whether it knocks you
 // down; the player's round asks how much a blow lands on a creature that has
@@ -396,12 +397,14 @@ export function pickTarget(z: ZoneDO, creature: Creature, tmpl: MobTemplate): vo
 // Its prey walked out of the room: a cat does not lose it, it follows.
 export function lostPrey(z: ZoneDO, creature: Creature, victim: Session | undefined, now: number): void {
   if (!STALKERS.has(creature.templateId) || !victim || victim.hp <= 0 || z.outOfWorld(victim)) return;
+  if (z.wearsTrait(victim, SIG.unstalked)) return; // SIGNATURE: the white roe
   startStalk(creature, victim.pubkey, now);
 }
 
 // A cat that means to hunt somebody stalks them instead of winding up.
-export function stalksInstead(creature: Creature, prey: Session, now: number): boolean {
+export function stalksInstead(creature: Creature, prey: Session, now: number, z?: ZoneDO): boolean {
   if (!STALKERS.has(creature.templateId)) return false;
+  if (z?.wearsTrait(prey, SIG.unstalked)) return false; // SIGNATURE: the white roe
   startStalk(creature, prey.pubkey, now);
   return true;
 }

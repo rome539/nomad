@@ -38,6 +38,7 @@ try {
         "export * as ratking from './ratking';",
         "export * as coughing from './cough';",
         "export * as campfire from './campfire';",
+        "export * as legendary from './legendary';",
         "export {cmdCook, moveLoad} from './verbs';",
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, wardAt} from './zone-data';",
@@ -116,7 +117,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot } = await import(pathToFileURL(output));
+  const { applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -2251,7 +2252,7 @@ try {
     assert.equal(moveLoad(z, s), 5 + SNOW_LOAD_KG, 'the snow holds your feet');
     z.snowUntil = 0; assert.equal(moveLoad(z, s), 5, 'and lets them go when it melts');
     const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
-    assert.match(verbs, /partingOdds = Math\.min\(PARTING_CAP, moveLoad\(z, session\)/, 'the parting blow reads it');
+    assert.match(verbs, /partingOdds = .*Math\.min\(PARTING_CAP, moveLoad\(z, session\)/, 'the parting blow reads it');
     assert.match(verbs, /stealthMult = Math\.max\(ENTRY_STEALTH_MIN, Math\.min\(1, moveLoad\(z, session\)/, 'and the crash into a room');
   });
   await checkAsync('gear on a den shelf does not rust (2026-10-29)', async () => {
@@ -8158,6 +8159,47 @@ try {
     assert.match(zs, /sky: \{ night: isNight\(\), moon: fullMoonTonight\(\) \},/, 'the sky as it is now');
     assert.match(pub, /if \(w\.ledger\) add\("", row\("ledger"/, 'the ledger line');
     assert.match(pub, /add\("dim", "rules\.txt \(complete\):", 420\);/, 'a new key gets the rules');
+  });
+
+  check('every legendary has one thing nothing else has, rolls the lottery, and five are found anywhere (2026-11-17)', () => {
+    const { SIG, SIG_TELL, SIG_DOES, SIG_DEAD_ROLLS, sigOf } = legendary;
+    const sql = readFileSync(new URL('../migrations/402_every_legendary_its_own.sql', import.meta.url), 'utf8');
+    const rows = new Map([...sql.matchAll(/SET traits = '([^']*)'\s+WHERE id = '([^']+)'/g)].map((m) => [m[2], m[1]]));
+    for (const m of sql.matchAll(/\('(the-[a-z-]+)', 'the [^']+',\n\s+'[^\n]*',\n\s+'legendary', '[a-z]+', \d+, \d+, \d+, '([^']+)'\)/g)) rows.set(m[1], m[2]);
+    assert.equal(rows.size, 29, 'the twenty-seven, the cold lining and the head start');
+    const seen = new Set();
+    const SOFT = ['quiet', 'slick', 'padded', 'wardhide', 'strapped', 'staunched', 'fleeced', 'hooded', 'keen', 'wicked', 'weighted', 'balanced', 'tempered', 'greased'];
+    for (const [id, traits] of rows) {
+      const tags = traits.split(',').map((t) => t.split(':')[0]);
+      const sigs = tags.filter((t) => t.startsWith('sig-'));
+      assert.equal(sigs.length, 1, id + ' carries exactly one signature');
+      assert.ok(!seen.has(sigs[0]), id + "'s signature is its own"); seen.add(sigs[0]);
+      assert.ok(SIG_TELL[sigs[0]] && SIG_DOES[sigs[0]], id + ' says what its signature does');
+      assert.equal(sigOf(traits), sigs[0]);
+      for (const t of SOFT) assert.ok(!tags.includes(t), id + ' lost its soft bonus ' + t);
+    }
+    assert.deepEqual([...seen].sort(), Object.values(SIG).sort(), 'every signature is on exactly one item');
+    // the lottery: a legendary always rolls, an ordinary piece mostly does not, and a dead roll is never drawn
+    const roll = (tmpl) => ZoneDO.prototype.rollTraits.call({}, tmpl);
+    const edge = { id: 'the-filed-edge', slot: 'weapon', rarity: 'legendary', traits: 'reach,sig-unwearing', bleed: 3, sweep: 1 };
+    let rolled = 0;
+    for (let i = 0; i < 400; i++) {
+      const r = roll(edge);
+      if (r) rolled++;
+      for (const t of SIG_DEAD_ROLLS[SIG.unwearing]) assert.ok(!r.split(',').includes(t), 'the filed edge never rolls ' + t);
+    }
+    assert.equal(rolled, 400, 'every legendary copy rolls');
+    let plain = 0;
+    for (let i = 0; i < 400; i++) if (roll({ ...edge, id: 'worn-boots', slot: 'feet', rarity: 'common', traits: '' })) plain++;
+    assert.ok(plain < 200, 'an ordinary piece still rolls only sometimes');
+    // the worldwide pool: five pieces, every chest but the hamlets', none left in their old boxes
+    assert.match(sql, /DELETE FROM cache_loot WHERE item_id IN \('still-water-shroud', 'mirror-plate', 'pale-tread'\);/);
+    assert.match(sql, /WHERE c\.room_id NOT IN \(SELECT id FROM rooms WHERE region = 'den'\);/, 'no legendary in a hamlet');
+    // each signature is read where it acts
+    const src = ['zone', 'verbs', 'pvp', 'cough', 'styles', 'ai', 'chase', 'den', 'legendary'].map((f) => readFileSync(new URL(`../src/${f}.ts`, import.meta.url), 'utf8')).join('\n');
+    for (const [k] of Object.entries(SIG)) assert.ok(new RegExp(`SIG\\.${k}\\b`).test(src), `SIG.${k} is used where it acts`);
+    assert.match(src, /exhaustion\.walk\(session\.exhaustion!, z\.wornWeight\(session\), session\.movedAt, z\.wearsTrait\(session, SIG\.untiring\) \? SIG_WALK_MULT : 1\)/, "the carrier's mile halves a step");
+    assert.match(src, /if \(n >= this\.dogpileCap\(this\.sessions\.get\(pubkey\)\)\) return false;/, 'the turnpike lets two past');
   });
 
   console.log(`\n${passed} regression checks pass`);

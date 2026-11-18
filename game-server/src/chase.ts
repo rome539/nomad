@@ -18,6 +18,7 @@ import type { Creature, Session } from "./zone-types";
 import { pick, randInt } from "./rng";
 import { cap } from "./zone-util";
 import { creatureMoves } from "./ai";
+import { SIG, SIG_CHASE_LAG_MULT } from "./legendary";
 import {
   CHASE_PREY, CHASE_PLAYERS, CHASE_LAG_MIN_MS, CHASE_LAG_MAX_MS, CHASE_RUSH_MS, CHASE_LETS_GO,
   CHASE_MEMORY_MS, CHASE_LINES, HUNT_REST_MIN, HUNT_REST_MAX,
@@ -69,7 +70,7 @@ export function lostYou(z: ZoneDO, c: Creature, s: Session | undefined, now: num
   const same = c.chase?.pubkey === s.pubkey && now - c.chase.since < CHASE_MEMORY_MS;
   if (!same) c.chase = { pubkey: s.pubkey, left: randInt(range[0], range[1]), at: 0, since: now };
   if (c.chase!.left <= 0) return;
-  c.chase!.at = lag(now);
+  c.chase!.at = z.wearsTrait(s, SIG.headStart) ? now + (lag(now) - now) * SIG_CHASE_LAG_MULT : lag(now); // SIGNATURE: the head start
   c.chase!.since = now;
 }
 

@@ -4,6 +4,7 @@ import * as beasts from "./beasts";
 import * as chronicle from "./chronicle";
 import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
+import { SIG, SIG_WALK_MULT } from "./legendary";
 // The player's verbs, out of the spine. zone.ts keeps dispatch, transport, and
 // the tick/combat loop; everything a wanderer TYPES that isn't starting a fight
 // lands here (attack/throw stay with the spine — they're where fights begin).
@@ -1427,7 +1428,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = fals
   // clean. (Armor still soaks it — that's what it's for.) A pack full of
   // loose iron drags the same — stripping down buys nothing while you're
   // still hauling the armory. `drop` it, or pay the toll.
-  const partingOdds = Math.min(PARTING_CAP, moveLoad(z, session) * PARTING_PER_WEIGHT);
+  const partingOdds = z.wearsTrait(session, SIG.unparted) ? 0 : Math.min(PARTING_CAP, moveLoad(z, session) * PARTING_PER_WEIGHT); // SIGNATURE: the great shell
   const dragLine = z.wornWeight(session) > 0 ? "The mail drags at you" : "The pack's iron drags at you";
   if (wasFighting && partingOdds > 0 && chance(partingOdds)) {
     const striker = [...z.creatures.values()].find(
@@ -1513,8 +1514,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = fals
   // Charge only a completed step, after every blocked-exit/failed-flight check.
   // The same equipped weight as combat includes balanced/cumbersome, never pack.
   z.syncExhaustion(session, session.movedAt);
-  exhaustion.walk(session.exhaustion!, z.wornWeight(session), session.movedAt);
-  z.addTrace(session.roomId, { kind: "passage", at: Date.now() });
+  exhaustion.walk(session.exhaustion!, z.wornWeight(session), session.movedAt, z.wearsTrait(session, SIG.untiring) ? SIG_WALK_MULT : 1); // SIGNATURE: the carrier's mile
+  if (!z.wearsTrait(session, SIG.trackless)) z.addTrace(session.roomId, { kind: "passage", at: Date.now() }); // SIGNATURE: the snow road
   // Standing in your own doorway IS the upkeep (mig 162). No rent, no chore —
   // walking home is the whole of it, and it writes at most once an hour.
   den.tend(z, session);
@@ -1569,7 +1570,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = fals
   // you land — SCALE with the load (rome, 2026-07-19). Cloth is dead quiet and
   // sneaks; full plate broadcasts every step. Worn mass reads as armor, the pack
   // as loose iron.
-  const noiseOdds = Math.min(NOISE_CAP, NOISE_FLOOR + z.loadOf(session) * NOISE_PER_WEIGHT)
+  const noiseOdds = z.wearsTrait(session, SIG.silent) ? 0 // SIGNATURE: the pale tread
+    : Math.min(NOISE_CAP, NOISE_FLOOR + z.loadOf(session) * NOISE_PER_WEIGHT)
     * (events.snowed(z, session.roomId) ? SNOW_NOISE_MULT : 1); // the season wraps every sound (5d)
   if (chance(noiseOdds)) {
     // The flavor has to name what's actually heavy on you, or a rock-and-shield

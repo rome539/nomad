@@ -16,6 +16,7 @@
 
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
+import { SIG } from "./legendary";
 import { chance, pick } from "./rng";
 import * as events from "./events";
 import * as den from "./den";
@@ -146,7 +147,7 @@ export function tick(z: ZoneDO, now: number): void {
       const wasChilled = !!s.chilled;
       s.chilled = false; s.chillMs = 0;
       if (wasChilled) { z.send(s, "The warmth gets into your chest at last, and the cough lets go of you."); z.sendStatus(s); }
-    } else if (!out && coldHere(z, s.roomId) && (isWet(s, now) || z.wearsTrait(s, "sodden"))) {
+    } else if (!out && coldHere(z, s.roomId) && (isWet(s, now) || z.wearsTrait(s, "sodden")) && !z.wearsTrait(s, SIG.chillProof)) { // SIGNATURE: the long-hunger shroud
       s.chillMs = (s.chillMs ?? 0) + 60_000;
       if (!s.chilled && s.chillMs >= COUGH_CHILL_AFTER_MS) {
         s.chilled = true;

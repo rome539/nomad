@@ -62,9 +62,10 @@ export const WALK_SCALE = 1000 / (125 * (20 + 1.1 * 41) / 10);
 export function walkCost(weight: number): number {
   return WALK_SCALE * (20 + 1.1 * Math.max(0, weight)) / 10;
 }
-export function walk(e: Exhaustion, weight: number, now: number): void {
+// mult: the Carrier's Mile halves a step's cost (legendary.ts SIGNATURE).
+export function walk(e: Exhaustion, weight: number, now: number, mult = 1): void {
   recover(e, now);
-  e.units = Math.min(FATIGUE_CAP, Math.round((e.units + walkCost(weight)) * 100) / 100);
+  e.units = Math.min(FATIGUE_CAP, Math.round((e.units + walkCost(weight) * mult) * 100) / 100);
   e.walkingUntil = e.at + WALK_RECOVERY_DELAY_MS;
 }
 // THREE STEPS, NOT FIVE (rome, 2026-10-12): a quarter of the way down, at half,

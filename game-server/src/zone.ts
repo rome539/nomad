@@ -14,6 +14,8 @@ export function bodyNewerThanSave<B extends { savedAt: number }>(body: B | undef
   return body.savedAt + BODY_SAVE_SLACK_MS >= (row.last_seen ?? 0) * 1000 ? body : undefined;
 }
 import * as exhaustion from "./exhaustion";
+import * as legendary from "./legendary";
+import { SIG, SIG_BLEED_TICKS, SIG_GUARDED_ATK, SIG_DOGPILE, SIG_AMBUSH_MULT, SIG_CRIT_CHANCE, SIG_HARVEST_BLEED_TICKS, SIG_DEAD_ROLLS, sigOf } from "./legendary";
 import * as herds from "./herds";
 import * as groups from "./groups";
 import * as beasts from "./beasts";
@@ -1810,7 +1812,8 @@ export class ZoneDO implements DurableObject {
   public syncExhaustion(s: Session, now = Date.now()): void {
     const e = s.exhaustion ??= exhaustion.readExhaustion(undefined, now);
     const nextMode = this.recoveryMode(s);
-    const healingRate = e.mode === "fire" ? FIRE_REST_REGEN_PER_TICK * 1000 / TICK_MS : (e.mode === "rest" || e.mode === "shelter") ? REST_REGEN_PER_TICK * 1000 / TICK_MS : 0;
+    const hearth = (e.mode === "rest" || e.mode === "shelter") && this.wearsTrait(s, SIG.hearth); // SIGNATURE: the pale-scale mantle
+    const healingRate = e.mode === "fire" || hearth ? FIRE_REST_REGEN_PER_TICK * 1000 / TICK_MS : (e.mode === "rest" || e.mode === "shelter") ? REST_REGEN_PER_TICK * 1000 / TICK_MS : 0;
     s.healingDue = nextMode === "combat" ? 0 : (s.healingDue ?? 0) + Math.max(0, now - e.at) * healingRate / 1000;
     exhaustion.recover(e, now, nextMode);
     // A fight interrupts deliberate rest even when the first blow misses.
@@ -2835,7 +2838,7 @@ export class ZoneDO implements DurableObject {
       const weapon = this.equippedItem(session, "weapon");
       let dmg = Math.round(
         (randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) + (weapon ? this.effDmg(weapon) : 0)) *
-          STANCE[session.stance].atk * this.wallDrag(session) * AMBUSH_MULT,
+          this.stanceAtk(session) * this.wallDrag(session) * (this.itemRolled(weapon, SIG.attaint) ? SIG_AMBUSH_MULT : AMBUSH_MULT), // SIGNATURE: the attainder
       );
       if (session.hp < session.maxHp * WOUNDED_FRACTION) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); this.tellWounded(session); }
       // No crit on top: the surprise IS the crit. (Stacked, a pebble
@@ -2961,7 +2964,7 @@ export class ZoneDO implements DurableObject {
     this.rouseCrows(session, creature); // crows: a thrown stone rouses the murder too
     // Every attack is a gamble — thrown ones too. A wild throw still leaves
     // your hand (and still wakes what it nearly hit).
-    if (chance(FUMBLE_CHANCE + (session.hp < session.maxHp * WOUNDED_FRACTION ? WOUNDED_FUMBLE_BONUS : 0))) {
+    if (chance(FUMBLE_CHANCE + (session.hp < session.maxHp * WOUNDED_FRACTION && !this.wearsTrait(session, SIG.steadyHands) ? WOUNDED_FUMBLE_BONUS : 0))) { // SIGNATURE: the marrow crown
       session.items.splice(session.items.indexOf(carried), 1);
       await removeItemRow(this.env.DB, carried.rowId);
       if (carried.serial !== null) await voidMint(this.env.DB, carried.serial);
@@ -2981,7 +2984,7 @@ export class ZoneDO implements DurableObject {
       return;
     }
     let dmg = randInt(THROW_DMG_MIN, THROW_DMG_MAX) + this.effStat(itmpl.dmg, carried.condition);
-    dmg = Math.round(dmg * STANCE[session.stance].atk * this.wallDrag(session));
+    dmg = Math.round(dmg * this.stanceAtk(session) * this.wallDrag(session));
     if (session.hp < session.maxHp * WOUNDED_FRACTION) dmg = Math.round(dmg * WOUNDED_DMG_MULT);
     // Surprise IS the crit: an ambush throw never double-dips a crit roll.
     let flourish = unaware ? " — it never saw it coming!" : ".";
@@ -4383,7 +4386,7 @@ export class ZoneDO implements DurableObject {
   // they're already fully pressed (the attacker keeps its target and waits).
   public canLandBlow(pubkey: string): boolean {
     const n = this.blowsThisTick.get(pubkey) ?? 0;
-    if (n >= DOGPILE_CAP) return false;
+    if (n >= this.dogpileCap(this.sessions.get(pubkey))) return false;
     this.blowsThisTick.set(pubkey, n + 1);
     return true;
   }
@@ -4648,7 +4651,7 @@ export class ZoneDO implements DurableObject {
         continue;
       }
       session.toldAirborne = false;
-      const atkMult = STANCE[session.stance].atk * this.wallDrag(session);
+      const atkMult = this.stanceAtk(session) * this.wallDrag(session);
       const alive = (c: Creature) => this.creatures.has(c.id);
       let primary = foes.find((c) => c.id === session.target && alive(c)) ?? foes.find(alive);
       const speed = Math.max(1, this.equippedItem(session, "weapon")?.tmpl.speed ?? 1);
@@ -4666,15 +4669,16 @@ export class ZoneDO implements DurableObject {
         // Wounds are felt: below a third of your blood, your hands shake
         // (more fumbles) and your blows soften.
         const hurt = session.hp < session.maxHp * WOUNDED_FRACTION;
-        if (chance(FUMBLE_CHANCE + (hurt ? WOUNDED_FUMBLE_BONUS : 0))) {
+        const shaky = hurt && !this.wearsTrait(session, SIG.steadyHands); // SIGNATURE: the marrow crown
+        if (!this.itemRolled(weapon, SIG.sureGrip) && chance(FUMBLE_CHANCE + (shaky ? WOUNDED_FUMBLE_BONUS : 0))) { // SIGNATURE: the long tooth
           // The whole arc goes wide either way — but the blade only flies from
           // your grip when your blood's low, your hands are shaking, AND the luck
           // runs against you (WOUNDED_DROP_ODDS). Hale you just whiff; hurt you
           // usually just whiff too, and only rarely actually lose the sword. You
           // never drop it at full strength, and not on most shaky swings either.
-          const dropsIt = hurt && weapon && chance(WOUNDED_DROP_ODDS);
+          const dropsIt = shaky && weapon && chance(WOUNDED_DROP_ODDS);
           await this.playerFumble(session, dropsIt ? weapon : null);
-        } else if (session.stance === "reckless" && chance(RECKLESS_MISS)) {
+        } else if (session.stance === "reckless" && !this.itemRolled(weapon, SIG.sureSwing) && chance(RECKLESS_MISS)) { // SIGNATURE: the long crossing
           // The reckless tax: a wild swing carries you wide. Keep your grip
           // (never a drop), but you've left yourself open — playerFumble(null)
           // whiffs and staggers you.
@@ -4712,7 +4716,7 @@ export class ZoneDO implements DurableObject {
             let dmg = Math.round((body + (weapon ? this.effDmg(weapon) + honed + staggerDmg : 0)) * atkMult);
             if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); this.tellWounded(session); }
             let flourish = ".";
-            const crit = chance(CRIT_CHANCE);
+            const crit = chance(this.itemRolled(weapon, SIG.killingPoint) ? SIG_CRIT_CHANCE : CRIT_CHANCE); // SIGNATURE: houndsbane
             if (crit) {
               dmg *= 2;
               flourish = pick(CRIT_FLOURISH);
@@ -4811,14 +4815,14 @@ export class ZoneDO implements DurableObject {
               // over time that no armor turns. Fresh hits keep it open. But the
               // HOLLOW don't bleed (dry bone, old iron): the DoT finds no blood.
               if (weapon && effBleed > 0 && !hollow && !BLOODLESS.has(tmpl.id)) {
-                creature.bleedTicks = BLEED_TICKS;
+                creature.bleedTicks = this.itemRolled(weapon, SIG.longBleed) ? SIG_HARVEST_BLEED_TICKS : BLEED_TICKS; // SIGNATURE: the harvest
                 creature.bleedDmg = Math.max(creature.bleedDmg ?? 0, wound);
                 if (freshBleed) this.actorFeed(session, session.roomId, this.feedProc(FEED_BLEED, session.name, tmpl.name), "bleed");
               }
               // TRIPPING (2026-08-20): a chain or lash takes the legs — the
               // snare rides windedUntil, the chase's own latch, so the thing
               // cannot flee for TRIP_HOLD_MS whatever roll it wins.
-              if (weapon && (trait(weapon.tmpl, "tripping") ?? 0) > 0 && !creature.windedUntil && chance(TRIP_ODDS)) {
+              if (weapon && (trait(weapon.tmpl, "tripping") ?? 0) > 0 && !creature.windedUntil && (this.itemRolled(weapon, SIG.legTaker) || chance(TRIP_ODDS))) { // SIGNATURE: the lash flail
                 creature.windedUntil = Date.now() + TRIP_HOLD_MS;
                 this.send(session, `${cap(tmpl.name)} is caught around the legs — it thrashes, but it is not running anywhere.`, "stun");
               }
@@ -5017,7 +5021,7 @@ export class ZoneDO implements DurableObject {
           creature.rouseAt = undefined; // no one to hunt — the hunger settles back
         } else if (creature.rouseAt === undefined) {
           const springs = chance(STARVE_HUNTS_ODDS * nightHuntMult(creature.templateId, creature.roomId, now) * ai.moonHuntMult(this, creature, now));
-          if (springs && styles.stalksInstead(creature, prey, now)) {
+          if (springs && styles.stalksInstead(creature, prey, now, this)) {
             // a cat stalks rather than winding up (styles.ts)
           } else if (springs && ai.hushed(creature)) {
             // The owl at night gives no warning at all: the strike is the first
@@ -5061,7 +5065,7 @@ export class ZoneDO implements DurableObject {
           creature.rouseAt = undefined; // healed up, left, or died — the interest settles
         } else if (creature.rouseAt === undefined) {
           const springs = chance(WOUNDED_PREY_ODDS * nightHuntMult(creature.templateId, creature.roomId, now) * ai.moonHuntMult(this, creature, now));
-          if (springs && styles.stalksInstead(creature, prey, now)) {
+          if (springs && styles.stalksInstead(creature, prey, now, this)) {
             // a cat stalks rather than winding up (styles.ts)
           } else if (springs && ai.hushed(creature)) {
             creature.target = prey.pubkey; // the owl, silent (as above)
@@ -5377,10 +5381,11 @@ export class ZoneDO implements DurableObject {
         dmg = Math.max(1, Math.round(dmg * way.mult));
         if (way.line) this.send(victim, way.line, "dmgin");
         let flourish = way.flourish ?? ".";
-        if (chance(CRIT_CHANCE)) {
+        if (!this.wearsTrait(victim, SIG.glancing) && chance(CRIT_CHANCE)) { // SIGNATURE: the mirror plate
           dmg *= 2;
           flourish = pick(CRIT_FLOURISH);
         }
+        if (victim.staggered && this.wearsTrait(victim, SIG.unshaken)) victim.staggered = false; // SIGNATURE: the tenor bell
         if (victim.staggered) {
           dmg += STAGGER_BONUS;
           victim.staggered = false;
@@ -5697,6 +5702,7 @@ export class ZoneDO implements DurableObject {
     // closing back over, and a lantern's last burn spending the lantern.
     await light.tickLights(this, now);
     mark("lights");
+    await legendary.tickColdLining(this, now, (id) => events.perishes(this, id)); // SIGNATURE: the cold lining
     await events.tickFoodRot(this); // rotten food goes to nothing (events.ts)
 
     // The sky turns (events.ts): rain telegraphs, falls, and leaves mud —
@@ -6141,7 +6147,7 @@ export class ZoneDO implements DurableObject {
         // touch, and multiplying zero every tick forever is just a slower way
         // of saying so.
         const stuff = materialDamp(t.id);
-        if (stuff === 0) continue;
+        if (stuff === 0 || this.wearsTrait(session, SIG.dryPack)) continue; // SIGNATURE: the still-water shroud
         // Oiled kit barely notices the damp; pitted kit is where the next rust
         // starts. Neither is immunity — greased steel still goes, slowly.
         // Same fold-in as wear(): the template counts too, not only the roll.
@@ -7521,12 +7527,12 @@ export class ZoneDO implements DurableObject {
     // It cannot protect a man who is walking: `go` drops the posture before
     // dispatch runs, so the entry and exit ambushes are untouched. It answers
     // what comes to YOU while you stand there — which is exactly what a guard is.
-    if (victim.pose === "guard" && chance(GUARD_SPOIL_ODDS)) {
+    if ((victim.pose === "guard" || legendary.roomWatched(this, victim.roomId)) && chance(GUARD_SPOIL_ODDS)) { // SIGNATURE: the captain's wall
       this.send(victim, pick(GUARD_SPOIL));
       this.roomFeed(victim.roomId, `${cap(tmpl.name)} comes at ${victim.name} and finds them already turned.`, victim.pubkey, false);
       return;
     }
-    if (this.engagedOn(victim.pubkey, victim.roomId, creature.id) >= DOGPILE_CAP || !this.canLandBlow(victim.pubkey)) {
+    if (this.engagedOn(victim.pubkey, victim.roomId, creature.id) >= this.dogpileCap(victim) || !this.canLandBlow(victim.pubkey)) {
       if (!quiet) {
         this.send(victim, `${cap(tmpl.name)} shoulders in — and cannot get at you through the press. It waits at your shoulder.`, "dmgin");
       }
@@ -8914,11 +8920,21 @@ export class ZoneDO implements DurableObject {
   // the fraction (0..POISE_CAP) a control effect is reduced by. Combined with the
   // resist traits STRONGEST-WINS (see the CC sites), never stacked.
   public poiseOf(session: Session): number {
+    if (this.wearsTrait(session, SIG.upright)) return POISE_CAP; // SIGNATURE: the last watch
     return Math.min(POISE_CAP, this.wornWeight(session) * POISE_PER_WEIGHT);
   }
   // The quick-foot dodge added to a foe's miss chance: real evasion when light,
   // scaling to nothing as the load climbs to DODGE_ZERO_AT.
+  // Your stance's share of your blow. The Last Bear's guard keeps more of it (SIGNATURE).
+  public stanceAtk(session: Session): number {
+    return session.stance === "guarded" && this.wearsTrait(session, SIG.bearGuard) ? SIG_GUARDED_ATK : STANCE[session.stance].atk;
+  }
+  // How many blows can land on you a tick. The Turnpike lets two past the bar (SIGNATURE).
+  public dogpileCap(session: Session | undefined): number {
+    return session && this.wearsTrait(session, SIG.twoAbreast) ? SIG_DOGPILE : DOGPILE_CAP;
+  }
   public dodgeBonus(session: Session): number {
+    if (this.wearsTrait(session, SIG.unburdened)) return DODGE_MAX; // SIGNATURE: the bounds hood
     return Math.max(0, DODGE_MAX * (1 - this.loadOf(session) / DODGE_ZERO_AT));
   }
 
@@ -8961,6 +8977,7 @@ export class ZoneDO implements DurableObject {
   // which is exactly why the two surface bosses hurt so much more than their
   // damage column said. A floor of one tick — nothing makes a cut free.
   public bleedTicksFor(session: Session): number {
+    if (this.wearsTrait(session, SIG.clotting)) return SIG_BLEED_TICKS; // SIGNATURE: hulk's iron
     return Math.max(1, BLEED_TICKS - (this.wearsTrait(session, "staunched") ? 1 : 0));
   }
 
@@ -9017,7 +9034,10 @@ export class ZoneDO implements DurableObject {
   public rollTraits(tmpl: ItemTemplate | undefined): string {
     if (!tmpl || tmpl.slot === "") return "";
     const pool = TRAIT_POOL[tmpl.slot];
-    if (!pool || !chance(TRAIT_ROLL_ODDS)) return "";
+    // A LEGENDARY ALWAYS ROLLS (2026-11-17): its soft bonuses came off in mig
+    // 402, so the lottery is how one copy differs from the next, flaws and all.
+    if (!pool || (tmpl.rarity !== "legendary" && !chance(TRAIT_ROLL_ODDS))) return "";
+    const dead = SIG_DEAD_ROLLS[sigOf(tmpl.traits) ?? ""] ?? []; // a roll its signature makes pointless
     // Class-locked weapon traits (weighted/needling/cleaving) only enter the
     // draw for a weapon of their own class — no wasted rolls on a mace that
     // can never use needling.
@@ -9025,7 +9045,7 @@ export class ZoneDO implements DurableObject {
     // the piece is made of. A river cobble cannot be oiled against rust and a
     // headstone cannot pit, so neither draw is offered there (TRAIT_MATERIAL).
     const stuff = materialOf(tmpl.id);
-    const fits = (t: string) => !hasTrait(tmpl, t)
+    const fits = (t: string) => !hasTrait(tmpl, t) && !dead.includes(t)
       && (WEAPON_CLASS_TRAIT[t]?.(tmpl) ?? true)
       && (TRAIT_MATERIAL[t]?.(stuff) ?? true);
     const options = pool.filter(fits);
@@ -9036,7 +9056,7 @@ export class ZoneDO implements DurableObject {
     // good, one bad, two good, two bad, or one of each. A piece can simply be
     // badly made, the way things in the world are, and that is what makes
     // finding a good one worth anything.
-    const bad = (BAD_TRAIT_POOL[tmpl.slot] ?? []).filter((t) => !hasTrait(tmpl, t));
+    const bad = (BAD_TRAIT_POOL[tmpl.slot] ?? []).filter((t) => !hasTrait(tmpl, t) && !dead.includes(t));
     const goodLeft = [...options];
     const badLeft = [...bad];
     const out: string[] = [];
@@ -9067,8 +9087,11 @@ export class ZoneDO implements DurableObject {
   // The itemId is not decoration: the same trait says a different true thing
   // depending on what the piece is made of, and traitTell picks (zone-data).
   public rolledTell(itemId: string, rolled?: Map<string, number>): string {
-    if (!rolled?.size) return "";
-    const tells: string[] = [];
+    // A legendary's signature speaks first, every copy alike (legendary.ts).
+    const sig = sigOf(this.world?.itemTemplates.get(itemId)?.traits);
+    const own = sig ? legendary.SIG_TELL[sig] ?? "" : "";
+    if (!rolled?.size) return own ? " " + own : "";
+    const tells: string[] = own ? [own] : [];
     for (const tag of rolled.keys()) { const s = traitTell(tag, itemId); if (s) tells.push(s); }
     return tells.length ? " " + tells.join(" ") : "";
   }
@@ -9204,6 +9227,11 @@ export class ZoneDO implements DurableObject {
     if (this.wearsTrait(session, "strapped")) traits.push("strapped (theft-proof)");
     if (this.wearsTrait(session, "thorns")) traits.push("thorns (blocks bite back)");
     if (t && hasTrait(t, "reach")) traits.push("reach (blunts the rush; still finds what's off the ground)");
+    // A worn legendary's signature, in its own words (legendary.ts).
+    for (const c of session.items) {
+      const sig = c.equipped ? sigOf(this.world!.itemTemplates.get(c.itemId)?.traits) : undefined;
+      if (sig && legendary.SIG_DOES[sig]) traits.push(legendary.SIG_DOES[sig]);
+    }
     return {
       hp: wholeHp(session.hp), maxHp: wholeHp(session.maxHp), stance: session.stance,
       slots,
@@ -9265,7 +9293,7 @@ export class ZoneDO implements DurableObject {
       block += s.tmpl.block * Math.max(0, s.carried.condition) / 100;
       // Guarded means fighting BEHIND the shield — it catches a shade more.
       // (Stance only sweetens a shield you actually carry; bare guarded gets nothing.)
-      if (session.stance === "guarded") block += GUARDED_BLOCK_BONUS;
+      if (session.stance === "guarded") block += GUARDED_BLOCK_BONUS * (hasTrait(s.tmpl, SIG.setWall) ? 2 : 1); // SIGNATURE: the drake-scale shield
     }
     if (w && w.tmpl.block > 0) block += w.tmpl.block * Math.max(0, w.carried.condition) / 100;
     return block;
@@ -9284,6 +9312,7 @@ export class ZoneDO implements DurableObject {
   // the mark holds the dungeon off, it doesn't stop time), and it can be mended
   // at the bench like anything else. At 0 a piece is gone — worn through, mid-life.
   public async wear(session: Session, carried: CarriedItem, tmpl: ItemTemplate, amount: number): Promise<void> {
+    if (hasTrait(tmpl, SIG.unwearing)) return; // SIGNATURE: the filed edge
     if (carried.serial !== null) amount *= SEALED_WEAR_MULT; // sealed: protected, not immortal — the mark slows the wear
     // Tempered steel takes punishment; a brittle piece is already going. Every
     // wear path in the game funnels through here — strikes landed, blows turned,
@@ -9749,7 +9778,7 @@ export class ZoneDO implements DurableObject {
     // noise draws in from next door (rome, 2026-07-13) — same exemptions, rolled
     // once per ring so the room joins in a stagger, not all at once.
     ai.joinSameRoomFight(this, roomId);
-    this.creatureNoise(roomId);
+    if (!legendary.fightMuffled(this, roomId)) this.creatureNoise(roomId); // SIGNATURE: the bearded cowl
   }
 
   // Creatures have ears too. Player-made noise makes everything idle in

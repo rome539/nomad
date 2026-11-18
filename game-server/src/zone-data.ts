@@ -10908,6 +10908,7 @@ export const MATERIAL_HIDE = new Set([
   // the upper is what fails and the nails are consumable. Distinct from real
   // foot armour — ironshod, plated greaves, sabatons — which is metal and is.
   "hobnailed-boots", "watchmans-boots", "the-carriers-mile",
+  "the-head-start", // legendary.ts: a runner's light hide boots
   "eel-skin-cloak", "hide-cloak", "hyena-mantle", "sentinels-mantle",
   "white-hide-mantle", "wolfskin-cloak", "harness-leathers", "long-hunger-shroud",
   "wardens-watch-mantle", "strapped-baldric",
@@ -10917,6 +10918,7 @@ export const MATERIAL_HIDE = new Set([
   "lead-wolf-ruff", "white-hide-targe", "the-white-roe",
 ]);
 export const MATERIAL_CLOTH = new Set([
+  "the-cold-lining", // legendary.ts: straw packed under waxed linen
   // wet wool and linen go faster than tanned hide, which is why cloth sits
   // ABOVE leather below and not beneath it
   "padded-jerkin", "rag-vest", "moss-packed-jerkin", "cork-lined-jack",

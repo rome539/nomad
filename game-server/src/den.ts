@@ -44,9 +44,10 @@
 import * as chronicle from "./chronicle";
 import type { ZoneDO } from "./zone";
 import type { Session } from "./zone-types";
-import { type CarriedItem, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow, insertLoot, itemAcquiredAt, savePlayer } from "./world";
+import { type CarriedItem, hasTrait, loadContainer, setContainer, setItemCondition, setItemAcquiredAt, removeItemRow, insertLoot, itemAcquiredAt, savePlayer } from "./world";
 import * as events from "./events";
 import * as body from "./body";
+import { SIG } from "./legendary";
 import { uuid } from "./rng";
 import { SCRAP_ID, IRON_ID, PACK_CAP, DEN_BUNKS, DEN_CAP, DEN_LAPSE_MS, DEN_BAR_IRON, DEN_BAR_SCRAP,
   DEN_RAISE_IRON, DEN_RAISE_SCRAP, DEN_RAISE_WOOD, DEN_RAISE_LEATHER, DEN_MIN_GATE_STEPS,
@@ -729,6 +730,7 @@ export function denTool(z: ZoneDO, session: Session, kind: DenTool): CarriedItem
   const fits = (c: CarriedItem): boolean => {
     const t = z.world!.itemTemplates.get(c.itemId);
     if (!t || t.slot !== "weapon") return false;
+    if (hasTrait(t, SIG.allTools)) return true; // SIGNATURE: the hedge bill does every kind of work
     if (kind === "wood") return /axe|hatchet|cleaver|billhook|hedge-bill/.test(t.id);
     if (kind === "heavy") return t.stun > 0 || /pick|hammer|mallet|maul/.test(t.id);
     if (kind === "dig") return /pick/.test(t.id);
@@ -795,7 +797,7 @@ export async function cmdBuild(z: ZoneDO, session: Session, arg: string): Promis
   const doing = job && job.key === key ? job : { key, want, done: 0, at: 0 };
   if (now < doing.at) return z.send(session, "Your hands are still busy with the last of it. A moment, then 'build' again.", "dmgin");
   const tool = b.tool ? denTool(z, session, b.tool) : undefined;
-  doing.done += tool ? 2 : 1;
+  doing.done += tool ? (hasTrait(z.world!.itemTemplates.get(tool.itemId), SIG.allTools) ? DEN_BUILD_WORK : 2) : 1; // SIGNATURE: the hedge bill, in one go
   doing.at = now + DEN_BUILD_BEAT_MS;
   if (doing.done < DEN_BUILD_WORK) {
     buildJobs.set(session.pubkey, doing);

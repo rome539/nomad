@@ -1,5 +1,6 @@
 import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
+import { SIG, SIG_AMBUSH_MULT, SIG_CRIT_CHANCE } from "./legendary";
 // PvP — steel between wanderers. The law was written long before this file:
 // witnesses are the sound system, evidence is blood on the killer (never a
 // name on a wall), fresh keys are weak, and no dice ever punish the
@@ -206,15 +207,18 @@ async function swingAt(
   const ambush = !!opts.ambush;
   // Every attack is a gamble — a wild swing can fling your blade to the
   // stones, where your victim is as free to snatch it as anyone.
-  if (!ambush && chance(FUMBLE_CHANCE + (hurt ? WOUNDED_FUMBLE_BONUS : 0))) {
-    const dropsIt = hurt && weaponAtStart && chance(WOUNDED_DROP_ODDS);
+  // SIGNATURES (legendary.ts): the marrow crown keeps a hurt hand steady, the
+  // long tooth never turns in the hand, the long crossing's reckless swing never sails.
+  const shaky = hurt && !z.wearsTrait(attacker, SIG.steadyHands);
+  if (!ambush && !z.itemRolled(weaponAtStart, SIG.sureGrip) && chance(FUMBLE_CHANCE + (shaky ? WOUNDED_FUMBLE_BONUS : 0))) {
+    const dropsIt = shaky && weaponAtStart && chance(WOUNDED_DROP_ODDS);
     await z.playerFumble(attacker, dropsIt ? weaponAtStart : null);
     return;
   }
   // The reckless tax: a wild swing — all shoulder, no aim — carries you wide,
   // and leaves you open (staggered) for the answer. You keep your grip; it's a
   // whiff, not a fumble. The price that keeps the 1.5x stance an honest gamble.
-  if (!ambush && attacker.stance === "reckless" && chance(RECKLESS_MISS)) {
+  if (!ambush && attacker.stance === "reckless" && !z.itemRolled(weaponAtStart, SIG.sureSwing) && chance(RECKLESS_MISS)) {
     attacker.staggered = true;
     z.send(attacker, `You swing to wound — too hard, and it carries you wide. An opening.`, "fumble");
     z.send(defender, `${attacker.name} swings wild and reckless; the blow sails past you.`, "dodge");
@@ -267,7 +271,7 @@ async function swingAt(
   // fast steel's follow-ups carry the edge alone — the PvE rule, unchanged.
   const weapon = z.equippedItem(attacker, "weapon");
   const body = opts.body ? randInt(PLAYER_DMG_MIN, PLAYER_DMG_MAX) : 0;
-  let dmg = Math.round((body + (weapon ? z.effDmg(weapon) : 0)) * STANCE[attacker.stance].atk * z.wallDrag(attacker));
+  let dmg = Math.round((body + (weapon ? z.effDmg(weapon) : 0)) * z.stanceAtk(attacker) * z.wallDrag(attacker));
   if (hurt) { dmg = Math.round(dmg * WOUNDED_DMG_MULT); z.tellWounded(attacker); }
   let flourish = ".";
   let crit = false;
@@ -278,13 +282,14 @@ async function swingAt(
   const defWeapon = z.equippedItem(defender, "weapon");
   const atLength = opts.ambush && defWeapon !== null && hasTrait(defWeapon.tmpl, "reach");
   if (opts.ambush && !atLength) {
-    dmg = Math.round(dmg * AMBUSH_MULT); // the surprise IS the crit — never both
-  } else if (chance(CRIT_CHANCE)) {
+    dmg = Math.round(dmg * (z.itemRolled(weapon, SIG.attaint) ? SIG_AMBUSH_MULT : AMBUSH_MULT)); // the surprise IS the crit — never both
+  } else if (!z.wearsTrait(defender, SIG.glancing) && chance(z.itemRolled(weapon, SIG.killingPoint) ? SIG_CRIT_CHANCE : CRIT_CHANCE)) {
     crit = true;
     dmg *= 2;
     flourish = pick(CRIT_FLOURISH);
   }
   let staggerHit = false;
+  if (defender.staggered && z.wearsTrait(defender, SIG.unshaken)) defender.staggered = false;
   if (defender.staggered) {
     dmg += STAGGER_BONUS;
     defender.staggered = false;

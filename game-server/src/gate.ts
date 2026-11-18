@@ -5,6 +5,7 @@
 // seam moved. `import type` for ZoneDO keeps this a compile-time reference, so
 // there's no runtime import cycle.
 import { handleLoadout } from "./loadouts";
+import { SIG_DOES, SIG_NAME } from "./legendary";
 import * as invites from "./invites";
 import type { ZoneDO } from "./zone";
 import { MAX_BATCH_ROWS, SECRET_INPUT } from "./security";
@@ -248,10 +249,10 @@ function benchSheet(z: ZoneDO, c: CarriedItem, where: string, have: (id: string)
   const seen = new Set<string>();
   const add = (tag: string, n: number) => {
     if (seen.has(tag)) return;
-    const does = TRAIT_DOES[tag];
+    const does = TRAIT_DOES[tag] ?? SIG_DOES[tag]; // a legendary's signature reads beside the rest (legendary.ts)
     if (!does) return; // structural oddities with no line of their own stay in the stat text
     seen.add(tag);
-    const shown = c.rolledMap?.has(tag) ? traitAdj(tag, t.id) : tag;
+    const shown = SIG_DOES[tag] ? SIG_NAME : c.rolledMap?.has(tag) ? traitAdj(tag, t.id) : tag;
     own.push({ name: TRAIT_COUNTED.has(tag) || n > 1 ? `${shown} ${n}` : shown, does });
   };
   for (const [tag, n] of parseTraits(t.traits)) add(tag, n);

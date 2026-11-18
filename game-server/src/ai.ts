@@ -1,6 +1,7 @@
 import { manHuntsAt, bornManHunter } from "./manhunter";
 import { hpLabel } from "./util";
 import * as exhaustion from "./exhaustion";
+import { SIG } from "./legendary";
 // Creature AI: how the dungeon's animals think between alarms — grudges and
 // memory, waking to noise, hunting and wandering, scavenging and breeding, the
 // boss's rage, and the migration that refills the world. Free functions over a
@@ -1238,6 +1239,7 @@ export async function wolfTests(z: ZoneDO, c: Creature, now: number): Promise<bo
   if (here.length !== 1) return false; // only a lone wanderer is tested
   const s = here[0];
   if (c.testing !== s.pubkey) {
+    if (z.wearsTrait(s, SIG.unstalked)) return false; // SIGNATURE: the white roe
     if (!chance(TEST_START_ODDS)) return false;
     c.testing = s.pubkey;
     c.testFeints = 0;
