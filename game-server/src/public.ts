@@ -10842,7 +10842,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "134";      // /mob/      strips and their eye layers
+var MOB_V  = "135";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
@@ -16096,7 +16096,7 @@ var MOB_SPRITE = {
   "old-boar": 14,
   "root-thing": 24,
   "the-follower": 28,
-  "the-hush": 7,               // a grey wolf's length, measured on the walking frames (rome, 2026-11-19: at 12 it was near twice a wolf), and lower than one
+  "the-hush": 9.7,             // a grey wolf's body, measured as drawn area on screen (mobVh, size^0.45) on idle and walking, as the sheet before this one had at 7 (2026-11-19). Matched by length at 5.1 it drew a quarter smaller: it is long and thin
   "something-ahead": 28,
   "charcoal-burner": 28,
   "the-woodward": 40,
@@ -16137,7 +16137,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
-  "the-hush":       { n: 8, aspect: 1.972, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-hush":       { n: 8, aspect: 1.704, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "capercaillie":   { n: 9, aspect: 1.144, f: {"idle":0,"up":1,"glide":2,"landing":3,"alert-alarm":4,"attack":5,"graze":6,"rest":7,"death":8,"down":2} },
   "water-vole":   { n: 8, aspect: 1.1, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "fever-rat":   { n: 8, aspect: 1.478, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"death":7} },

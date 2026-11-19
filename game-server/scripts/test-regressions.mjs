@@ -6787,24 +6787,31 @@ try {
     assert.match(ai, /if \(lurker && lurkerFoundBy\(z, session, now\)\) continue;/, 'and so does the ambush');
   });
 
-  await checkAsync('the hush is a wolf\'s size: drawn as long as a grey wolf when it walks (2026-11-19)', async () => {
+  await checkAsync('the hush is a wolf\'s size: as much body on screen as a grey wolf, idle and walking (2026-11-19)', async () => {
     const sharp = (await import('sharp')).default;
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    const long = async (id) => {
+    // BODY, NOT LENGTH: matched by length the hush (long and thin) drew a quarter
+    // smaller than a wolf. Drawn height is MOB_K * size^0.45 (mobVh), not size.
+    const bulk = async (id) => {
       const m = pub.match(new RegExp('^\\s+"' + id + '":\\s*\\{ n: (\\d+), aspect: [\\d.]+, f: (\\{[^}]*\\}) \\}', 'm'));
       const size = +pub.match(new RegExp('^\\s+"' + id + '":\\s+([\\d.]+),', 'm'))[1];
       const file = new URL('../public/mob/' + id + '.webp', import.meta.url);
       if (!existsSync(file)) return null; // the strips are art, synced, not in git
-      const n = +m[1], k = JSON.parse(m[2])['move-a'];
+      const n = +m[1], f = JSON.parse(m[2]);
       const { data, info } = await sharp(fileURLToPath(file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-      const fw = info.width / n, H = info.height;
-      let x0 = 1e9, x1 = -1;
-      for (let y = 0; y < H; y++) for (let x = Math.round(k * fw); x < Math.round((k + 1) * fw); x++) if (data[(y * info.width + x) * 4 + 3] > 60) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
-      return (x1 - x0 + 1) / H * size;
+      const fw = info.width / n, H = info.height, u = Math.pow(size, 0.45) / H;
+      let tot = 0;
+      for (const k of [f.idle, f['move-a'], f['move-b']]) {
+        let a = 0;
+        for (let y = 0; y < H; y++) for (let x = Math.round(k * fw); x < Math.round((k + 1) * fw); x++) if (data[(y * info.width + x) * 4 + 3] > 60) a++;
+        tot += Math.sqrt(a) * u;
+      }
+      return tot / 3;
     };
-    const hush = await long('the-hush'), wolf = await long('grey-wolf');
+    const hush = await bulk('the-hush'), wolf = await bulk('grey-wolf');
     if (hush === null || wolf === null) return;
-    assert.ok(Math.abs(hush / wolf - 1) <= 0.08, 'the hush walks ' + (hush / wolf * 100).toFixed(0) + '% of a grey wolf\'s length');
+    assert.ok(Math.abs(hush / wolf - 1) <= 0.05, 'the hush has ' + (hush / wolf * 100).toFixed(0) + '% of a grey wolf\'s body on screen');
+    assert.match(pub, /var MOB_P = 0\.45;\nvar MOB_K = 42 \/ Math\.pow\(22, MOB_P\);\nfunction mobVh\(id\) \{ return MOB_K \* Math\.pow\(MOB_SPRITE\[id\], MOB_P\); \}/, 'and the curve this measures by is still the one the page draws with');
   });
 
   check('what a creature is doing reads as a storied line of its own under its look (2026-11-19)', () => {
