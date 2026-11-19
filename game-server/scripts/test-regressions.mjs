@@ -6753,6 +6753,46 @@ try {
     }
     assert.ok(checked > 30, 'the strips were read: ' + checked);
   });
+  await checkAsync('the follower runs a raven off a body: it is twice the raven, and holds its meal (2026-11-19)', async () => {
+    const now = 2_000_000_000, fed = [], sounds = [], fled = [];
+    const follower = { id: 'f', templateId: 'the-follower', roomId: 'r', hunger: 90, eatingUntil: now + 30000, eatingIn: 'r', eatingOn: 'carrion', target: null };
+    const raven = { id: 'v', templateId: 'scarp-raven', roomId: 'r', target: null, eatingUntil: now + 30000, eatingIn: 'r' };
+    const tm = (id, name) => [id, { id, name, max_hp: 20 }];
+    const z = { world: { mobTemplates: new Map([tm('the-follower', 'the follower'), tm('scarp-raven', 'a scarp raven')]), variantBase: new Map() },
+      traces: new Map(), groups: {}, creatures: new Map([['f', follower], ['v', raven]]),
+      creaturesInRoom: () => [follower, raven], roomFeed: (r, t) => fed.push(t), roomSound: (r, t) => sounds.push(t), refreshRoomCtx: () => {} };
+    const orig = Math.random; Math.random = () => 0;
+    try { assert.equal(await holdBody(z, follower, now, async (c) => fled.push(c.id)), true, 'the follower takes its turn on the raven'); } finally { Math.random = orig; }
+    assert.deepEqual(fled, ['v'], 'the raven gives up the body and goes');
+    assert.ok(!/snarl/i.test(sounds.join(' ')), 'and nothing snarls: ' + sounds);
+  });
+
+  await checkAsync('the hush is a wolf\'s size: drawn as long as a grey wolf when it walks (2026-11-19)', async () => {
+    const sharp = (await import('sharp')).default;
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const long = async (id) => {
+      const m = pub.match(new RegExp('^\\s+"' + id + '":\\s*\\{ n: (\\d+), aspect: [\\d.]+, f: (\\{[^}]*\\}) \\}', 'm'));
+      const size = +pub.match(new RegExp('^\\s+"' + id + '":\\s+([\\d.]+),', 'm'))[1];
+      const file = new URL('../public/mob/' + id + '.webp', import.meta.url);
+      if (!existsSync(file)) return null; // the strips are art, synced, not in git
+      const n = +m[1], k = JSON.parse(m[2])['move-a'];
+      const { data, info } = await sharp(fileURLToPath(file)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const fw = info.width / n, H = info.height;
+      let x0 = 1e9, x1 = -1;
+      for (let y = 0; y < H; y++) for (let x = Math.round(k * fw); x < Math.round((k + 1) * fw); x++) if (data[(y * info.width + x) * 4 + 3] > 60) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+      return (x1 - x0 + 1) / H * size;
+    };
+    const hush = await long('the-hush'), wolf = await long('grey-wolf');
+    if (hush === null || wolf === null) return;
+    assert.ok(Math.abs(hush / wolf - 1) <= 0.08, 'the hush walks ' + (hush / wolf * 100).toFixed(0) + '% of a grey wolf\'s length');
+  });
+
+  check('what a creature is doing reads as a storied line of its own under its look (2026-11-19)', () => {
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /\+ \(tell \? `\\n\$\{LORE_LINE\}It is \$\{tell\}\.` : ""\);/, 'the doing line is its own line, in the lore look');
+    assert.doesNotMatch(ai, /\(\$\{z\.condition\(creature\)\}\)\$\{tell \? ` It is/, 'and is no longer run on after the condition');
+  });
+
   check('the boar and the capercaillie face you before they come at you: a wind-up, not a free first blow (2026-11-19)', () => {
     const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
     assert.match(ai, /const wind = WINDS_UP\[creature\.templateId\];\n\s+if \(wind && hostile && !holdsGrudge && !bloodWake\) \{[^]*?continue;\n\s+\}\n\s+creature\.target = session\.pubkey;/, 'walking in starts the wind-up and takes no first blow');

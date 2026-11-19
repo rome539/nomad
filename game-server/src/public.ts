@@ -16096,7 +16096,7 @@ var MOB_SPRITE = {
   "old-boar": 14,
   "root-thing": 24,
   "the-follower": 28,
-  "the-hush": 12,              // about a roe long, but low: a wolf's height, lying flat
+  "the-hush": 7,               // a grey wolf's length, measured on the walking frames (rome, 2026-11-19: at 12 it was near twice a wolf), and lower than one
   "something-ahead": 28,
   "charcoal-burner": 28,
   "the-woodward": 40,

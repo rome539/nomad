@@ -2753,6 +2753,10 @@ export const GROUND_DRIVEN_LEAVES = 2;
 // bone-breaker takes a carcass from the smaller scavengers; the one run off keeps
 // away from that room for BODY_AVOID_MS and then comes back to what is left. A
 // meal it was at is cut short and the uneaten part goes back on the body (digest).
+// What is heard from the next room when one runs another off a body; unnamed, the snarl.
+export const BODY_HOLD_SOUND: Record<string, string> = {
+  "the-follower": "A raven goes up {dir} all at once, calling, and nothing else is heard.", // it makes no sound of its own
+};
 export const BODY_HOLDERS = new Map<string, Set<string>>([
   ["hill-wolf",    new Set(["carrion-vulture", "scarp-raven", "bone-breaker"])],
   ["lead-wolf",    new Set(["carrion-vulture", "scarp-raven", "bone-breaker"])],
@@ -2768,6 +2772,9 @@ export const BODY_HOLDERS = new Map<string, Set<string>>([
   ["the-baited-bear", new Set(["grey-wolf", "dire-wolf", "coyote", "scarp-raven", "the-hush"])],
   ["grey-wolf",       new Set(["coyote", "scarp-raven"])],
   ["coyote",          new Set(["scarp-raven"])],
+  // THE FOLLOWER (2026-11-19) lives on bodies as the ravens do and is twice their size
+  // (40 hp to 20), but it had no row, so a raven ate beside it at its own meal.
+  ["the-follower",    new Set(["scarp-raven"])],
 ]);
 // ...UNLESS THE RAVENS ARE SEVERAL. Two or more ravens in a room go up at an
 // eagle together and push it out, kill or no kill; one raven alone is run off.

@@ -42,7 +42,7 @@ import {
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, MILKER_GOATS, MILKING_ODDS, MILKING_LINES, MILKED_GOAT_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES, PRESENCE_ODDS, PRESENCE_ROOM_MS, PRESENCE_LINES, PRESENCE_OWN, FOLK, CUTTHROATS,
-  ALARM_CALLERS, ALARM_CALL_WORDS, ALARM_HEEDS, WINDS_UP, WINDUP_MS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
+  ALARM_CALLERS, ALARM_CALL_WORDS, ALARM_HEEDS, WINDS_UP, WINDUP_MS, LORE_LINE, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
   MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, SMALL_PREY, HUNGER_MAX, HUNGER_FLOOR, mealOf, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
@@ -608,8 +608,12 @@ export function creatureRead(z: ZoneDO, creature: Creature, viewer: string): str
   ]) : "";
   // On a blood moon the hollow read by their eyes before anything else.
   const redEyes = isBloodMoon() && HOLLOW.has(creature.templateId) ? BLOOD_MOON_EYES_READ : "";
-  return `${tmpl.description}${mark ? ` ${mark}` : ""}${marked}${redEyes} (${z.condition(creature)})${tell ? ` It is ${tell}.` : ""}`
-    + (hoard || (bears ? ` It is ${bears.slice(2)}.` : ""));
+  // WHAT IT IS DOING WEARS THE LORE LOOK (rome, 2026-11-19), on a line of its own
+  // under the description, as the sky does under a room: "It is head down in the
+  // carcass of a capercaillie, tearing at it with its bill."
+  return `${tmpl.description}${mark ? ` ${mark}` : ""}${marked}${redEyes} (${z.condition(creature)})`
+    + (hoard || (bears ? ` It is ${bears.slice(2)}.` : ""))
+    + (tell ? `\n${LORE_LINE}It is ${tell}.` : "");
 }
 
 // THE PACK WITH NO TERRITORY (RANGERS). World-level, once a tick beside
