@@ -54,7 +54,7 @@ import {
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT, DEEP_HEART, KINGS_ROOMS_DEEP,
-  WARY_BOLT_ODDS, SCAVENGER_HEAL, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
+  WARY_BOLT_ODDS, SCAVENGER_HEAL, bodyOf, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
   RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
@@ -2059,6 +2059,7 @@ export function eatsAt(templateId: string): number {
 
 export function creatureEatsHere(z: ZoneDO, creature: Creature, silent: boolean, at = Date.now()): void {
     if (HOLLOW.has(creature.templateId)) return; // nothing inside to feed
+    if (fightIn(z, creature.roomId)) return; // ...and no meal starts in the middle of a fight
     const world = z.world!;
     const here = z.ground.get(creature.roomId) ?? [];
     const idx = here.findIndex((id) => world.itemTemplates.get(id)?.lure);
@@ -2395,7 +2396,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     if (victim.hp <= 0) {
       preyFalls(z, victim, vt, creature.templateId);
       const fedFrom4 = creature.hunger;
-      creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(tmpl.max_hp, vt.max_hp)); // by size: its own weight is two hours fed
+      creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(bodyOf(tmpl.id, tmpl.max_hp), bodyOf(vt.id, vt.max_hp))); // by body (BODY_SIZE): its own weight is two hours fed
       ate(creature, undefined, undefined, fedFrom4 - creature.hunger, undefined, victim.templateId);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
@@ -2472,7 +2473,7 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     releaseHold(z, creature);
     preyFalls(z, victim, vt, creature.templateId);
     const fedFrom5 = creature.hunger;
-    creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(tmpl.max_hp, vt.max_hp)); // by size: its own weight is two hours fed
+    creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(bodyOf(tmpl.id, tmpl.max_hp), bodyOf(vt.id, vt.max_hp))); // by body (BODY_SIZE): its own weight is two hours fed
     ate(creature, undefined, undefined, fedFrom5 - creature.hunger, undefined, victim.templateId);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
@@ -2642,6 +2643,7 @@ export function walksAnyway(creature: Creature): boolean {
 
 /** A fight is going on in this room: a wanderer in it is fighting. */
 export function fightIn(z: ZoneDO, roomId: string): boolean {
+  if (!z.sessions) return false; // no wanderers known here, so no fight
   for (const s of z.sessions.values()) if (s.roomId === roomId && z.inCombat(s)) return true;
   return false;
 }
@@ -2895,7 +2897,14 @@ export function hyenaGuardsMeal(z: ZoneDO, creature: Creature): boolean {
 
   // Eat one corpse (blood/remains litter) in the room: heal, sate, and grow
   // bolder. Leaving the dead lying is what fattens a hyena into a real threat.
+/** What a body-eater takes off a body in one meal (half its body), and its body. */
+export function biteOf(templateId: string, maxHp: number): { bite: number; size: number } {
+  const size = bodyOf(templateId, maxHp);
+  return { bite: Math.ceil(size / 2), size };
+}
+
 export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): void {
+    if (fightIn(z, creature.roomId)) return; // no meal starts in the middle of a fight
     // NOTHING EATS WITH A FULL BELLY, and this is the one place in the ecology
     // that did (rome, 2026-08-25: a grave-hyena stripped a room of bodies).
     //
@@ -2938,17 +2947,19 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     // A BIG BODY FEEDS MORE MOUTHS (rome, 2026-11-10: a cave lion should feed
     // many). A feeder takes half its own size off it, not all of it, so a lion
     // goes four ways among great vultures and six among hill wolves.
-    const bite = Math.ceil(tmpl.max_hp / 2);
-    const left = (eaten.meat ?? deadT?.max_hp ?? 0) - bite;
-    const gone = !deadT || tmpl.max_hp >= deadT.max_hp || left <= 0;
+    // ...by its body, not its health (BODY_SIZE): a raven is not half a wolf.
+    const { bite, size } = biteOf(creature.templateId, tmpl.max_hp);
+    const onIt = eaten.meat ?? (deadT ? bodyOf(deadT.id, deadT.max_hp) : 0);
+    const left = onIt - bite;
+    const gone = !deadT || size >= bodyOf(deadT.id, deadT.max_hp) || left <= 0;
     // THE BODY STAYS WHILE IT IS EATEN (rome, 2026-11-07): a meal takes its
     // time now, so the last of a body is spoken for at the bite, nothing is
     // left on it for another mouth, and it lies there until the last meal on
     // it is done (digest takes it off the floor).
-    const taken = gone ? (eaten.meat ?? deadT?.max_hp ?? 0) : bite;
+    const taken = gone ? onIt : bite;
     eaten.meat = gone ? 0 : left;
     const fedFrom6 = creature.hunger;
-    creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(tmpl.max_hp, taken)); // what it took off the body, against its own size
+    creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(size, taken)); // what it took off the body, against its own size
     // A body it took whole, or the share of one it took, goes back if it is cut short.
     ate(creature, undefined, "carrion", fedFrom6 - creature.hunger, { roomId: creature.roomId, prey: eaten.prey ?? deadT?.id, label: eaten.label, meat: taken, key: bodyKey(eaten), id: eaten.id }, eaten.prey ?? eaten.id);
     // A body picked clean goes once the last meal on it is done, even if the
@@ -5191,6 +5202,7 @@ export function eatingNow(c: Creature, now = Date.now()): boolean {
 // play once, at the bite, and the words go on for EAT_SHOW_MS; this is the same
 // question creatureTell asks, for the sprite. "" = not eating.
 export function eatingShown(z: ZoneDO, c: Creature, now = Date.now()): "" | "eat" | "graze" {
+  if (c.target || fightIn(z, c.roomId)) return ""; // nothing is drawn eating in a fight
   if (eatingNow(c, now)) return c.eatingOn === "graze" ? "graze" : "eat";
   // Only a meal that is on: a scavenger standing by a body it is not eating is
   // drawn standing (rome, 2026-11-08), as the words say.
@@ -5249,9 +5261,14 @@ export function digest(z: ZoneDO, c: Creature, now: number): void {
   const m = c.meal;
   if (!m) return;
   if (now >= m.to) { c.meal = undefined; clearEaten(z, m.body); return; }
-  const cut = c.eatingIn !== c.roomId || c.eatingUntil === undefined || !!c.target || c.hp <= 0;
+  // NO MEAL GOES ON THROUGH A FIGHT (rome, 2026-11-18): a wolf ate on beside its
+  // pack while they fought a wanderer, and one that turned to fight kept its head
+  // down in the picture. A fight in the room ends every meal in it, and an ended
+  // meal ends the eating the picture and the words show (eatingUntil).
+  const cut = c.eatingIn !== c.roomId || c.eatingUntil === undefined || !!c.target || c.hp <= 0 || fightIn(z, c.roomId);
   if (!cut) return;
   c.meal = undefined;
+  c.eatingUntil = undefined;
   const left = Math.max(0, Math.min(1, (m.to - now) / Math.max(1, m.to - m.from)));
   if (left > 0) c.hunger = Math.min(HUNGER_MAX, c.hunger + m.owed * left);
   // What it was eating stays where it lay, for the next mouth.
@@ -5266,6 +5283,8 @@ export function digest(z: ZoneDO, c: Creature, now: number): void {
 
 /** A body something can still eat from: one picked clean and only being finished is not. */
 export function edibleBody(t: Trace): boolean {
+  // the hollow have nothing on them to eat (BODY_SIZE)
+  if ((t.prey && HOLLOW.has(t.prey)) || (t.id && HOLLOW.has(t.id))) return false;
   return CORPSE_TRACES.has(t.kind) && (t.meat === undefined || t.meat > 0);
 }
 
@@ -5281,7 +5300,8 @@ function mealKey(b: MealBody): string | undefined {
 // THE KEEPER'S READ OF A BODY (rome, 2026-11-11): how much has been eaten off it,
 // to the hit point, and what is at it now - for his key, never for players.
 export function keeperBodyRead(z: ZoneDO, roomId: string, tr: Trace, id: string, now = Date.now()): string {
-  const full = z.world!.mobTemplates.get(id)?.max_hp ?? 0;
+  const fullT = z.world!.mobTemplates.get(id);
+  const full = fullT ? bodyOf(fullT.id, fullT.max_hp) : 0;
   const left = tr.meat === undefined ? full : Math.max(0, tr.meat);
   const eaten = Math.max(0, full - left);
   const at: string[] = [];

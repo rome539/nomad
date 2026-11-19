@@ -2732,6 +2732,15 @@ export const BODY_HOLDERS = new Map<string, Set<string>>([
   ["hill-eagle",   new Set(["scarp-raven"])],
   ["bone-breaker", new Set(["carrion-vulture", "scarp-raven"])],   // 44 hp over 40 and 20
   ["marsh-hound",  new Set(["great-gull"])],                        // the crossing (rome, 2026-11-12): 32 hp over 28
+  // THE WOOD (rome, 2026-11-18): it had no row here at all, so two bears, a wolf
+  // and a raven fed at the same deer and nothing ran anything off. The bear takes
+  // a body from the wolves, the coyotes and the ravens; the wolf from the coyotes
+  // and the ravens; the coyote from the ravens. (KILL_TAKERS only ever fired as a
+  // bear walked in on wolves already at a kill; this holds every beat.)
+  ["brown-bear",      new Set(["grey-wolf", "dire-wolf", "coyote", "scarp-raven"])],
+  ["the-baited-bear", new Set(["grey-wolf", "dire-wolf", "coyote", "scarp-raven"])],
+  ["grey-wolf",       new Set(["coyote", "scarp-raven"])],
+  ["coyote",          new Set(["scarp-raven"])],
 ]);
 // ...UNLESS THE RAVENS ARE SEVERAL. Two or more ravens in a room go up at an
 // eagle together and push it out, kill or no kill; one raven alone is run off.
@@ -2996,7 +3005,16 @@ export const SCAVENGERS = new Set([
   // THE CROSSING'S CARRION (rome, 2026-11-12): only the rats and the crabs ate its
   // dead. The gull takes whatever any of them leaves, and its rare blood with it,
   // and the marsh hound finishes what it did not start, as the hill wolf does.
-  "great-gull", "black-backed-gull", "marsh-hound", "a-lymer"]);
+  "great-gull", "black-backed-gull", "marsh-hound", "a-lymer",
+  // THE RAVENS AND THE FOLLOWER (rome, 2026-11-18). The scarp raven hunts nothing
+  // and grazes nothing, and was on no list that eats the dead, so its only meal was
+  // a scrap lying on the floor: in the wood and on the mountain it sat at the cap,
+  // while the wolves and the eagle were written to drive it off kills it never came
+  // to. It works the dead now, as a raven does. The follower ate only as a lurker,
+  // and only when something died in its own stretch of the maze; it scavenges as
+  // the rest do (the feeding chain in zone.ts checks SCAVENGERS first, so being a
+  // lurker too never feeds it twice).
+  "scarp-raven", "the-follower"]);
 // THE HYENAS HUNT (rome, 2026-10-30). They live in the pits and the camp
 // graves, and those are carrion ground, so every time they got hungry they ate
 // the room and were never hungry enough to go after anything. They are not
@@ -5925,6 +5943,47 @@ export const THIEF_LIFT_ODDS = new Map<string, number>([
 export const THIEF_LIFT_DEFAULT = 0.35; // a future THIEF is never silently a 100% grab again
 export const SCAVENGER_HEAL = 6; // hp restored per corpse fed on
 export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
+// EVERY ANIMAL EATS AND IS EATEN BY ITS BODY, NOT ITS HEALTH (rome, 2026-11-18:
+// a scarp raven took three less off a deer than a wolf did; then: all of them).
+// Health is how hard a thing is to kill, and a raven, an adder or the rat king is
+// far harder to kill than it is big, so reading size off health let a raven eat
+// most of a deer and a dead adder feed a wolf. The size named here is used for
+// all of it (bodyOf): how much meat lies on its body, how much it takes off a
+// body in a bite (half its size), and what fills it (its own size in meat is
+// STOMACH_MEAL). A creature not named is the size its health says, which is
+// right for the land animals and the people the meals were first set on. The
+// hollow have nothing on them at all (ai.edibleBody).
+const MAN = 28;
+export const BODY_SIZE = new Map<string, number>([
+  // the rats and the voles
+  ["rat", 1], ["fleet-rat", 1], ["water-vole", 1], ["brood-rat", 2], ["fever-rat", 2], ["albino-rat", 3], ["rat-king", 8],
+  // the small furred things
+  ["hedgehog", 1], ["ermine", 1], ["mountain-hare", 3], ["snow-hare", 3], ["wildcat", 3], ["the-tom", 5],
+  ["snow-fox", 4], ["hill-fox", 5], ["the-blue-fox", 5], ["the-raiding-fox", 6], ["otter", 5], ["dog-otter", 7],
+  ["wood-sloth", 6], ["coyote", 9], ["lynx", 15],
+  // the birds
+  ["ptarmigan", 1], ["oystercatcher", 1], ["mountain-chough", 1], ["gibbet-crow", 1], ["grey-heron", 1], ["bittern", 1],
+  ["tawny-owl", 1], ["great-gull", 1], ["black-backed-gull", 1], ["scarp-raven", 2], ["eagle-owl", 2],
+  ["the-old-raven", 3], ["hill-eagle", 3], ["bone-breaker", 4], ["eyrie-holder", 4], ["carrion-vulture", 5],
+  ["the-bone-dropper", 5], ["brooding-vulture", 6], ["great-vulture", 7],
+  // the snakes, the crabs and the eels
+  ["gill-adder", 1], ["fen-viper", 1], ["stone-adder", 1], ["the-gravid-adder", 2],
+  ["wrack-crab", 1], ["devil-crab", 2], ["the-great-crab", 20], ["the-great-devil-crab", 25],
+  ["ford-eel", 1], ["silver-eel", 2], ["conger", 10], ["old-conger", 14],
+  // a wolf however old is a wolf; the Gaunt is starved down to cords
+  ["the-old-grey", 40], ["the-gaunt", 25],
+  // the people are the size of a person, however hard they are to kill
+  ...["cutpurse", "footpad", "cutthroat", "wayman", "strand-thief", "the-wrecker", "the-sapper", "the-cook", "the-milker",
+    "the-butter-wife", "the-bellfounder", "the-scaffold-hand", "the-fowler", "the-drove-master", "the-tide-warden",
+    "the-eel-cutter", "charcoal-burner", "the-drover", "the-miller", "the-salt-widow", "the-pilot", "the-refuge-man",
+    "the-bridge-mason", "the-chainman", "road-carrier", "the-herd", "the-one-who-stayed", "the-keeper-of-the-holding",
+    "the-drowned-ferryman"].map((id): [string, number] => [id, MAN]),
+  ["rag-and-bone", 40], // half again the size of a man
+]);
+/** How big a creature's body is, in meat (BODY_SIZE, else its health). */
+export function bodyOf(templateId: string | undefined, maxHp: number): number {
+  return (templateId !== undefined ? BODY_SIZE.get(templateId) : undefined) ?? maxHp;
+}
 export const SCAVENGER_CARRY_CAP = 3; // jaws only hold so much — gear it can drag off before it stops scooping
 export const BOLD_DMG_MULT = 1.35; // a gorged scavenger swings harder
 
