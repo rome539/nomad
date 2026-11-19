@@ -196,6 +196,8 @@ export const WOOD_SETTLES: [string, string[]][] = [
   ["hedgehog", ["thicket", "wood", "green", "heath", "earth", "ruin"]],
   ["wood-sloth", ["wood", "roost"]],                       // up in the trees, and nowhere else
   ["grey-wolf", ["wood", "thicket", "earth", "green"]],
-  ["coyote", ["heath", "thicket", "green", "earth"]],      // the open edges and the scrub, off the wolves' deep wood
   ["tawny-owl", ["roost", "ruin"]],                        // a hollow tree, or the dovecote and the chapel walls
+  ["the-follower", ["wood", "thicket", "heath", "wet", "water", "under"]], // the kinds its old fixed homes stood on
+  ["the-hush", ["wood", "thicket", "heath"]],              // low and long, in the litter and the scrub (mig 405)
+  ["capercaillie", ["wood", "heath", "green", "thicket"]], // the forest floor, where the bilberry grows (mig 405)
 ];

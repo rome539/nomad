@@ -1029,6 +1029,12 @@ const BIRD_SHEETS = {
 // wrong one out of sixteen lists, which is how eight drawn sheets lost a real
 // cell. Restored, with hit gone instead.
 const REDRAW = {
+  // THE HUSH (2026-11-19), new in the wood: the follower's sheet, 8 frames, death last.
+  // HAND-BUILT off the follower's prompt: output/imagegen/the-hush-prompt.txt.
+  "the-hush": ["idle","alert","listen","feed","move-a","move-b","attack","death"],
+  // THE CAPERCAILLIE (2026-11-19), new in the wood: the ptarmigan's bird sheet plus the alarm call
+  // its sheet never had. HAND-BUILT off the ptarmigan's prompt: output/imagegen/capercaillie-prompt.txt.
+  "capercaillie": ["idle","up","glide","landing","alert-alarm","attack","graze","rest","death"],
   // THE FEVER RAT (rome, 2026-11-01): a boss rat sheet. No sweep: a second blow
   // breaks a rat's body. ITS PROMPT IS HAND-BUILT from the rat king's
   // (output/imagegen/fever-rat-prompt.txt off rat-king-prompt.txt): the tool's
@@ -1225,6 +1231,8 @@ try { cache = JSON.parse(fs.readFileSync(CACHE, "utf8")); } catch {}
 // So an entry here wins over D1 until its migration ships. DELETE THE ENTRY the
 // moment it does, or this quietly becomes the thing that overrides live prose.
 const PENDING_DESC = {
+  // the capercaillie, new in the wood (2026-11-19)
+  "capercaillie": "A grouse the size of a goose, the cock all dark slate with a bottle-green breast, a hooked pale bill and a bar of red skin over the eye. It sits tight on the wood floor until you are nearly on it, then goes up through the branches with a crash like a door kicked in. In the spring the cock fans his tail and clicks, and goes for anything that comes near him, a man included.",
   // migration 390 — the water vole, new (rome, 2026-11-12)
   "water-vole": "A round brown body the size of a fist, a blunt face with the ears lost in the fur, and a tail that is mostly an afterthought. It sits up on the creek bank with a reed stem in both hands, eating it from the bottom like somebody working through a stick of rock, and at the first wrong sound it is a plop in the water and a line of bubbles going away under the bank.",
   // migration 362 — the fever rat, new (rome, 2026-11-01)
@@ -1772,7 +1780,7 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "the-cook", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand", "the-long-warden", "the-miller", "the-keeper-of-the-holding", "fever-rat"]);
+const CLEAR_BG = new Set(["twice-dead", "the-cook", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand", "the-long-warden", "the-miller", "the-keeper-of-the-holding", "fever-rat", "capercaillie"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")

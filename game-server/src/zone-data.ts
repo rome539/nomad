@@ -1085,6 +1085,8 @@ export function mealOf(eaterHp: number, meat: number): number {
   return STOMACH_MEAL * Math.max(0, meat) / Math.max(1, eaterHp);
 }
 export const SMALL_PREY = new Set([
+  // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
+  "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
   "water-vole",
   "rat", "fleet-rat", "albino-rat", "brood-rat",                  // the rats
@@ -1395,6 +1397,10 @@ export const ECO_SLOWEST = 4;      // hardest case: an empty den takes 4x as lon
 // Only the living eat. The hollow do not hunger and are not food, so the deep's
 // bone-things keep the flat clock they always had.
 export const ECO_LINES = new Set([
+  // THE HUSH (mig 405, 2026-11-19): the wood's middle hunter
+  "the-hush",
+  // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
+  "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
   "water-vole",
   // mig 247, the mountain's rare blood: the-raiding-fox, the-dancer, the-gravid-adder, the-blue-fox, the-tom, the-bone-dropper, the-old-glutton
@@ -1893,6 +1899,8 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "coyote": "Quick light feet go {dir}, several of them, and a yip, and then nothing.",
   "the-old-grey": "Something heavy pads {dir}, unhurried, and the smaller feet around it go where it goes.",
   "the-follower": "A step {dir} that matches yours, and stops when you stop.",
+  "the-hush": "The birds {dir} stop calling, one after another, in a line.",
+  "capercaillie": "A heavy crashing {dir} through low branches, and wingbeats.",
   "charcoal-burner": "Boots and a dragging haft go {dir}, at a working pace.",
   "root-thing": "Earth and root shift {dir}, slowly, like a bank giving way.",
   "the-mire-walker": "Water drags {dir} around something that will not lift its feet clear.",
@@ -1978,6 +1986,8 @@ export const STILL_SOUNDS: Record<string, string> = {
   "the-chain-breaker": "a low sound down in the chest of something, felt more than heard",
   "something-ahead": "your own breathing, and ahead of it, a fraction EARLY, something doing the same",
   "the-follower": "your own breathing, and under it, a fraction late, something doing the same",
+  "the-hush": "nothing: no bird anywhere near, where there were birds a moment ago",
+  "capercaillie": "a dry clicking, slow and then faster, like two sticks knocked together",
   "charcoal-burner": "wood being laid on wood, one piece at a time, patiently, by somebody who is not hurrying",
   "root-thing": "a slow creak of wet timber taking weight, over and over, going nowhere",
   "the-mire-walker": "water settling around something standing in it, and settling again",
@@ -2624,18 +2634,28 @@ export const DEEP_GROUPS = new Map<string, { min: number; max: number; lone: num
 // 2026-11-14): the lead dog runs with the dogs, the dire wolf with the wolves, the old
 // boar with the boar, the white roe and the old raven alone as their lines do.
 export const WOOD_ROAMERS = new Set([
-  "roe-deer", "wood-stag", "wild-boar", "hedgehog", "wood-sloth", "grey-wolf", "coyote", "tawny-owl", "scarp-raven", "the-baited-bear",
+  "roe-deer", "wood-stag", "wild-boar", "hedgehog", "wood-sloth", "grey-wolf", "tawny-owl", "scarp-raven", "the-baited-bear",
+  // the wood's middle hunter and its ground bird (mig 405, 2026-11-19)
+  "the-hush", "capercaillie",
+  // the follower moves house as the rest do (2026-11-19): a fixed home kept it on one stretch
+  "the-follower",
 ]);
+// NOT THE COYOTES (rome, 2026-11-18). They are the one pack with no ground of its
+// own and walk the whole map to wherever prey is fullest (RANGERS, ai.rangePack).
+// The wood's build put them here, in bands with wood homes, and the two rules
+// fought over their homes and broke the pack up; they took no kills.
 export const WOOD_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
   ["grey-wolf", { min: 3, max: 5, lone: 0.2 }],
   // THE BOAR IN SOUNDERS (rome, 2026-11-17): a sounder draws one home and stays on it as
   // a group, and moves on together; each boar wanders the ground round it on its own,
   // so they are a room or two apart as often as together.
   ["wild-boar", { min: 2, max: 4, lone: 0.3 }],
-  ["coyote", { min: 2, max: 4, lone: 0.3 }],
   // THE ROE IN HERDS (rome, 2026-11-17): the wood's deer live together, as the hinds do
   // on the mountain, and herds keep apart from one another (groups.pickHome)
   ["roe-deer", { min: 3, max: 6, lone: 0.1 }],
+  // THE HUSH IN PAIRS (2026-11-19): two to a home, never one alone, moving on together;
+  // six of them, so three pairs. One whose other dies goes on alone (groups.tick).
+  ["the-hush", { min: 2, max: 2, lone: 0 }],
 ]);
 export const DEN_ROAMERS = new Set(["masterless-dog", "roe-deer"]);
 export const DEN_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
@@ -2682,7 +2702,7 @@ export function groupOf(line: string, region?: string): { min: number; max: numb
 // Either way a pack wolf takes any fresh kill it finds it on, and so does a lone
 // wolf, which holds no ground and only chases it off the meal.
 export const GROUND_HOLDERS = new Set(["hill-wolf", "grey-wolf"]); // the wood's packs hold theirs too (2026-11-17)
-export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox", "coyote"]); // ...against the coyotes
+export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox", "coyote", "the-hush"]); // ...and the hush, the wood's middle hunter (mig 405) // ...against the coyotes
 // HOLDING LAND (rome, 2026-11-07). These hunters keep their home and the rooms
 // round it (TERRITORY_RADIUS) as their own. A new one does not settle on the land
 // of another of its kind, or of a bigger hunter that eats the same food, while
@@ -2697,7 +2717,7 @@ export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox
 // (The crossing's gulls and seals hunt, but live as flocks and herds do, apart.)
 export const FLOCKS = new Set<string>(["mountain-chough", "great-gull", "grey-seal"]);
 export const SPREAD_ROOSTS = new Set<string>(["scarp-raven", "carrion-vulture", "bone-breaker"]);
-export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder", "tawny-owl"]); // otter, heron, adder: the road (2026-11-13); the tawny owl: the wood (2026-11-17)
+export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder", "tawny-owl", "the-hush"]); // otter, heron, adder: the road (2026-11-13); the tawny owl: the wood (2026-11-17)
 export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a bite in first
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
@@ -2717,6 +2737,13 @@ export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog
 export const PACK_STAG_ODDS: Record<number, number> = { 3: 1 / 3, 4: 0.5, 5: 0.8 };
 // The wood's stag is the grey wolves' as the red stag is the hill wolves' (2026-11-17).
 export const PACK_STAGS = new Set(["red-stag", "wood-stag"]);
+// THE PACK KEEPS TO ITS BIG GAME (rome, 2026-11-18: of thirty roe killed in the wood,
+// the wolves took twenty-four, and two boar and two stags). The pack's hunt for a
+// boar or a stag was already there, but any wolf that met a roe on the way took it
+// first. A wolf of a pack named here, while its pack has big game picked, passes
+// over everything else it meets until it is starving; and in a room with big game
+// it can take and a roe, it goes for the big game. A loner still takes the roe.
+export const BIG_GAME_FIRST = new Set(["grey-wolf"]);
 export const PACK_HUNT_RANGE = 12;
 export const GROUND_CHASE_ODDS = 0.35;
 export const GROUND_KILL_ODDS = 0.1;
@@ -2737,8 +2764,8 @@ export const BODY_HOLDERS = new Map<string, Set<string>>([
   // a body from the wolves, the coyotes and the ravens; the wolf from the coyotes
   // and the ravens; the coyote from the ravens. (KILL_TAKERS only ever fired as a
   // bear walked in on wolves already at a kill; this holds every beat.)
-  ["brown-bear",      new Set(["grey-wolf", "dire-wolf", "coyote", "scarp-raven"])],
-  ["the-baited-bear", new Set(["grey-wolf", "dire-wolf", "coyote", "scarp-raven"])],
+  ["brown-bear",      new Set(["grey-wolf", "dire-wolf", "coyote", "scarp-raven", "the-hush"])], // the bears drive the hush off a body too (2026-11-19)
+  ["the-baited-bear", new Set(["grey-wolf", "dire-wolf", "coyote", "scarp-raven", "the-hush"])],
   ["grey-wolf",       new Set(["coyote", "scarp-raven"])],
   ["coyote",          new Set(["scarp-raven"])],
 ]);
@@ -3400,6 +3427,10 @@ export const FEVER_RAT_AMBIENT = [
 // not (the aggro loop skips sleepers), so the same room at night is a thing
 // you can creep past, or open on. Same creature, opposite problem, by the hour.
 export const NAPPERS = new Set([
+  // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
+  "capercaillie",
+  // THE HUSH (2026-11-19): it lies up as the other hunters do, by day's rule
+  "the-hush",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
   "water-vole",
   // mig 247, the mountain's rare blood: the-old-raven
@@ -3817,6 +3848,8 @@ export const REST_LINES: Record<string, string> = {
   "hill-eagle": "hunched on the crag with its head sunk and its feathers out, twice the size it flies at",
   "eagle-owl": "upright on the ledge with its eyes shut and its ear tufts down, and it is bigger asleep than it looked awake",
   "tawny-owl": "pressed against the trunk with its eyes shut, a stub of bark that happens to have feathers",
+  "capercaillie": "sat down in the litter with its head turned back into its feathers, a dark heap that could be a stump",
+  "the-hush": "lying low and long in the litter with its limbs folded under it and its head held level, perfectly still. Whether it is asleep there is no telling", // its idle frame, which is the frame it sleeps in (public NO_FEED_SLEEP)
   "wood-sloth": "asleep against the foot of a tree, curled into a bundle of grey fur with its claws locked round itself",
   "hedgehog": "curled tight in the leaves, a ball of spines rising and falling",
   ptarmigan: "sat down into a scrape in the scree with its head tucked, and it is the exact colour of the ground it is sat in",
@@ -3930,6 +3963,8 @@ export const WATER_ROOMS = new Set(["the-sally-ditch", "the-black-fen", "the-dro
 // The boar is on the list because a boar in water is a boar WALLOWING, which
 // is the other thing a boar is for.
 export const DRINKERS = new Set([
+  // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
+  "capercaillie",
   // mig 247, the mountain's rare blood: the-blue-fox, the-old-glutton
   "the-blue-fox", "the-old-glutton",
 
@@ -4010,7 +4045,7 @@ export const DINNER_LAUGH_ODDS = 0.35;
 // Obeys the hard law like every other call: a summoned creature never re-calls
 // (calledTo), the bark rides its own channel and never creatureNoise, so there
 // are no cascades.
-export const ALARM_CALLERS = new Set(["roe-deer", "white-roe",
+export const ALARM_CALLERS = new Set(["roe-deer", "white-roe", "capercaillie",
   // THE MOUNTAIN, TIER ONE (mig 227). A ptarmigan does not call — it LEAVES, loudly,
   // and that is the same service rendered by a bird with no voice for it.
   "ptarmigan",
@@ -5020,6 +5055,14 @@ const WILD_BEAR_LINES = [
   "The bear stands up against an oak and drags its claws down the bark, slowly, as high as it can reach, and the scores it leaves are above your head. Every bear that comes this way will read how tall this one was.",
   "The bear turns a fallen log over with one paw as if it weighed nothing, and puts its face into what was living underneath, and eats. It knows you are there. You are not the most interesting thing in the wood.",
 ];
+const CAPERCAILLIE_LINES = [
+  "The capercaillie stops in the litter and is a stump again, dark and still, until it decides you are too close.",
+  "The capercaillie fans its tail and clicks at you, and comes a step nearer to do it.",
+];
+const HUSH_LINES = [
+  "The hush lies where it lay, head level, perfectly still. A wren comes down onto a stem a yard from it, looks at it, and goes without a sound.",
+  "Somewhere off in the wood a blackbird starts up, and stops halfway through. The hush has not moved.",
+];
 const PTARMIGAN_LINES = [
   "The ptarmigan takes three quick steps and goes still, and the snow takes it — the hill's oldest trick, the trick of being the hill.",
   "The ptarmigan settles into the white and becomes part of it, and you have to look twice to find the eye looking back. It is not hiding from you. It is being where it is.",
@@ -5227,6 +5270,7 @@ export const WITNESSED_LINES: Record<string, string[]> = {
   "drove-dog": OWN_DROVE_DOG_LINES, "a-lymer": OWN_LYMER_LINES, "lead-dog": OWN_LEAD_DOG_LINES, "marsh-hound": OWN_MARSH_HOUND_LINES, "masterless-dog": OWN_MASTERLESS_DOG_LINES,
   // the last holdouts
   "ptarmigan": PTARMIGAN_LINES,
+  "capercaillie": CAPERCAILLIE_LINES, "the-hush": HUSH_LINES,
   "stone-adder": OWN_STONE_ADDER_LINES, "the-gravid-adder": OWN_GRAVID_ADDER_LINES,
   "road-carrier": ROAD_CARRIER_LINES,
   "the-bellfounder": BELLFOUNDER_LINES,
@@ -5351,6 +5395,9 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // THE WOOD'S OWL (mig 321) eats the two small things it was brought in for: the
   // sloth that will not run and the hedgehog that will not open.
   ["tawny-owl", new Set(["rat", "wood-sloth", "hedgehog"])],
+  // THE HUSH (mig 405, 2026-11-19): the wood's middle hunter. It takes roe as the wolves do,
+  // and the wood's birds, which no other hunter there reaches, and a hedgehog off the floor.
+  ["the-hush", new Set(["roe-deer", "capercaillie", "scarp-raven", "tawny-owl", "hedgehog", "wood-sloth"])],
   ["ermine", new Set(["rat", "mountain-hare", "snow-hare", "ptarmigan"])],
   // TIER THREE (mig 231). THE STAG STOPS BEING UNTOUCHABLE, and the two notes
   // above have been promising exactly this since the foot shipped. One hill wolf
@@ -5515,13 +5562,13 @@ export const PREYS_ON = new Map<string, Set<string>>([
   // meet — the goats are the road's and the wolves are the wood's, so a goat
   // only feeds a wolf that has actually drifted onto the road, or a goat that
   // has drifted into the wood. Both are MIGRANTS, so both do happen.
-  ["grey-wolf", new Set(["rat", "roe-deer", "white-roe", "feral-goat", "old-billy", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
+  ["grey-wolf", new Set(["rat", "roe-deer", "white-roe", "capercaillie", "feral-goat", "old-billy", "grave-hyena", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher"])], // the wood's own food web: wolves run deer, and you can walk into the middle of it. A pack also puts a lone plain hyena off a carcass — the dire one it does not (see dire-hyena)
   // the roaming pack (RANGERS): small game anywhere, a deer when it can, and the
   // smaller hunters it shares the ground with - the foxes, the ermine and the
   // snakes, as a coyote kills a fox on its range. The rare foxes are not on it.
-  ["coyote", new Set(["roe-deer", "white-roe", "mountain-hare", "snow-hare", "ptarmigan", "rat", "fleet-rat", "oystercatcher", "wrack-crab", "otter",
+  ["coyote", new Set(["roe-deer", "white-roe", "capercaillie", "mountain-hare", "snow-hare", "ptarmigan", "rat", "fleet-rat", "oystercatcher", "wrack-crab", "otter",
     "hill-fox", "snow-fox", "ermine", "gill-adder", "fen-viper", "stone-adder"])],
-  ["dire-wolf", new Set(["rat", "roe-deer", "white-roe", "wild-boar", "wood-stag", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
+  ["dire-wolf", new Set(["rat", "roe-deer", "white-roe", "capercaillie", "wild-boar", "wood-stag", "otter", "dog-otter", "wrack-crab", "devil-crab", "oystercatcher", "feral-goat", "old-billy", "great-gull", "black-backed-gull"])], // the big cousin outstats a boar where a plain wolf does not — 52hp/5-9 against 34hp/3-6 (mig 148) — and it needs nobody's help for the goat or the gull either
   ["old-boar", new Set(["grey-wolf", "dire-wolf"])],                          // "hunts OR DRIVES OFF": 70hp and armor 2 taking a carcass off wolves. The wood's apex short of the woodward
   // THE STRAYS EAT SOMETHING NOW (2026-08-12). The west road's seven masterless
   // dogs had NO feeding route in the world at all — not grazers, not scavengers,
@@ -5620,6 +5667,24 @@ export const PACK_PREY = new Map<string, Map<string, number>>([
   ["a-lymer", new Map([["grey-seal", 3], ["conger", 3]])],
   ["hill-wolf", new Map([["red-hind", 2], ["red-stag", 3], ["old-billy", 2], ["scarp-raven", 2], ["bone-breaker", 2], ["carrion-vulture", 2]])],
 ]);
+// THE COYOTES' HUNTERS (rome, 2026-11-18). The coyotes walk every band of the
+// surface (RANGE_BANDS) and nothing anywhere hunted them. In each band they now
+// have the hunters that could realistically win against one (22 hp, 2-5): the
+// big ones alone, and the ones about its size two to a room.
+//   wood       two grey wolves; a dire wolf, a brown bear, the baited bear alone
+//   mountain   a hill wolf, the lead wolf, a lynx, a glutton, the cave lion alone
+//   crossing   two marsh hounds
+//   road, Assart End   two masterless dogs; the lead dog and the baited bear alone
+//   open ground        two grave hyenas; the dire hyena alone
+export const COYOTE_HUNTERS = ["dire-wolf", "brown-bear", "the-baited-bear", "hill-wolf", "lead-wolf", "lynx", "glutton", "cave-lion", "lead-dog", "dire-hyena"];
+export const COYOTE_PACK_HUNTERS: [string, number][] = [["grey-wolf", 2], ["marsh-hound", 2], ["masterless-dog", 2], ["grave-hyena", 2]];
+for (const h of COYOTE_HUNTERS) PREYS_ON.get(h)!.add("coyote");
+for (const [h, n] of COYOTE_PACK_HUNTERS) PACK_PREY.get(h)!.set("coyote", n);
+// THE WOOD'S RAVEN AND OWL HAVE HUNTERS (rome, 2026-11-18), as the mountain's
+// raven does (two hill wolves take one): in the wood two grey wolves together,
+// or a dire wolf alone, take a scarp raven or a tawny owl, mostly at a body or
+// on the ground. A bird in the air is half as easy to catch, as anywhere.
+for (const bird of ["scarp-raven", "tawny-owl"]) { PACK_PREY.get("grey-wolf")!.set(bird, 2); PREYS_ON.get("dire-wolf")!.add(bird); }
 // EVERY RARE BLOOD IS HUNTED LIKE ITS ORIGINAL (rome, 2026-11-13: the snow hare,
 // the mountain hare's rare blood, was missing from the hill fox's, the wildcat's,
 // the tom's and the hill eagle's lists, and so was safe from them; this had
@@ -5757,6 +5822,8 @@ export const TRACK_PRINTS: Record<string, string> = {
   "wood-sloth": "short hooked claw marks dragged through the snow between two trees, as if something had crawled the whole way",
   "hedgehog": "tiny five-toed prints, close together, wandering everywhere and going nowhere",
   "ptarmigan": "small three-toed bird feet, wandering",
+  "capercaillie": "big three-toed bird feet, scratched into the leaf litter, and a dropped dark feather",
+  "the-hush": "long, narrow prints set close, one placed exactly in the last, and no birds singing near them",
   "mountain-chough": "three-toed bird feet that hop, then stop where it took off",
   "scarp-raven": "big three-toed bird feet that walk, then stop where it took off",
   "carrion-vulture": "huge three-toed bird feet that shuffle, then stop where it took off",
@@ -5788,6 +5855,8 @@ export const CROWS_DEAD_MIN_HP = 10;
 // something in PREYS_ON really hunts is sorted; a test holds it. Anything not
 // listed is middling - a roe, a goat, a fox, a dog, a wolf.
 export const KILL_SMALL = new Set([
+  // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
+  "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
   "water-vole",
   "rat", "fleet-rat", "brood-rat", "hedgehog", "ptarmigan", "mountain-hare", "snow-hare",
@@ -5963,6 +6032,7 @@ export const BODY_SIZE = new Map<string, number>([
   ["snow-fox", 4], ["hill-fox", 5], ["the-blue-fox", 5], ["the-raiding-fox", 6], ["otter", 5], ["dog-otter", 7],
   ["wood-sloth", 6], ["coyote", 9], ["lynx", 15],
   // the birds
+  ["capercaillie", 4], ["the-hush", 16], // a goose-sized bird; the hush is a roe's length, laid low (mig 405)
   ["ptarmigan", 1], ["oystercatcher", 1], ["mountain-chough", 1], ["gibbet-crow", 1], ["grey-heron", 1], ["bittern", 1],
   ["tawny-owl", 1], ["great-gull", 1], ["black-backed-gull", 1], ["scarp-raven", 2], ["eagle-owl", 2],
   ["the-old-raven", 3], ["hill-eagle", 3], ["bone-breaker", 4], ["eyrie-holder", 4], ["carrion-vulture", 5],
@@ -6134,7 +6204,7 @@ export const VULTURE_CHECK_MS = 10_000;
 // THE OWL HUNTS IN SILENCE (rome, 2026-10-06). At night it comes and goes
 // without a sound, and when it hunts there is no wind-up: the first thing you
 // know of it is the strike.
-export const SILENT_HUNTERS = new Set(["eagle-owl", "tawny-owl"]);
+export const SILENT_HUNTERS = new Set(["eagle-owl", "tawny-owl", "the-hush"]); // the hush: the birds stop, and that is all the warning there is (mig 405)
 // ANIMALS AS THEY ARE (rome, 2026-10-06), in styles.ts:
 // WOLVES GO FOR THE WEAKEST. A wolf tests the herd: of everyone standing in the
 // room it goes for the most hurt or the least armoured, and changes its mind
@@ -6251,7 +6321,7 @@ export const CAVE_HOLD_MAX_MS = 20 * 3_600_000;
 // the wake roll, named where they bite).
 // THE BEAR TAKES THE KILL. A bear coming in on wolves standing over a fresh
 // kill does not ask: the wolves give it up and go, and the bear eats.
-export const KILL_TAKERS = new Map<string, Set<string>>([["brown-bear", new Set(["grey-wolf", "dire-wolf"])]]);
+export const KILL_TAKERS = new Map<string, Set<string>>([["brown-bear", new Set(["grey-wolf", "dire-wolf", "the-hush"])]]); // ...and the hush's (2026-11-19)
 export const KILL_FRESH_MS = 20 * 60_000;
 // THE CROWS MOB THE OWL. By day a corvid that walks in on a roosting owl goes
 // up shouting and calls the murder in from CROW_ROUSE_RADIUS (CROW_CALL_ODDS
@@ -6582,6 +6652,8 @@ export const HURT_STYLE: Record<string, { out: string; in_: string }> = {
   "hedgehog": { out: "unrolls and scuttles off {dir} through the leaves.", in_: "comes scuttling in through the leaves and rolls up tight." },
   "the-chain-breaker": { out: "withdraws {dir} without hurrying, which is somehow worse.", in_: "arrives, and the room is smaller for it." },
   "the-follower": { out: "goes {dir} — the step you had been hearing, leaving.", in_: "arrives a fraction after the sound of it does." },
+  "the-hush": { out: "is not where it was. Somewhere {dir} the birds go quiet.", in_: "is here, low against the litter. The birds round you have stopped." },
+  "capercaillie": { out: "goes up {dir} through the branches with a crash, trailing feathers.", in_: "comes running in low, wings half open, dragging one." },
   "something-ahead": { out: "goes {dir}, and is somehow ahead of you again.", in_: "is here before the sound of it is." },
   "charcoal-burner": { out: "walks {dir}, soot falling off him as he goes.", in_: "comes in with the billhook trailing at his side." },
   "the-woodward": { out: "withdraws {dir} at a walk, axe at the trail.", in_: "walks in and looks at what you are doing on his ground." },
@@ -7213,6 +7285,8 @@ export const MOB_VITALS: Record<string, string[]> = {
 // (No oystercatcher: it is prey, it stays PLAIN, and these three Sets only ever
 // refine what is already in BITERS — they never promote a thing into biting.)
 export const BEAKS = new Set([
+  // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
+  "capercaillie",
   // mig 247, the mountain's rare blood: the-old-raven, the-bone-dropper
   "the-old-raven", "the-bone-dropper",
 
@@ -7245,6 +7319,8 @@ export const SMALL_BITE = new Set([
   "rat", "fleet-rat", "brood-rat", "albino-rat", "wrack-crab", "devil-crab",
 ]);
 export const BITERS = new Set([
+  // THE HUSH (2026-11-19): what opens you is teeth, not a blow
+  "the-hush",
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer, the-blue-fox, the-tom, the-old-glutton
   "the-old-raven", "the-raiding-fox", "the-dancer", "the-blue-fox", "the-tom", "the-old-glutton",
 
@@ -7326,6 +7402,8 @@ export const AGGRESSIVE = new Set([
   // mig 247, the mountain's rare blood: the-one-who-stayed, the-tom, the-pale-drake
   "the-one-who-stayed", "the-tom", "the-pale-drake",
 "last-watchman", "wild-boar", "old-boar", "the-keeper-of-the-holding", "the-miller",
+  // THE CAPERCAILLIE (mig 405): the cock goes for anything that comes near him, a man included
+  "capercaillie",
   // THE SUMMIT (mig 237). Once it is a fight it holds its ground like everything
   // else on this list, and is_boss already stops it wandering off its mountain.
   SUMMIT_BOSS,
@@ -7866,6 +7944,8 @@ export const HOUND_WAKE_MS = 900_000; // 15 minutes
 // exactly as dangerous as it was. And you can't hunt what runs from you: pelts,
 // haunches and tusks now come to whoever walks in by lantern-light, or by none.
 export const FEARS_FIRE = new Set([
+  // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
+  "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
   "water-vole",
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer, the-blue-fox, the-tom, the-bone-dropper, the-old-glutton
@@ -8339,6 +8419,7 @@ export const THICK_HUNTERS = new Set<string>([
   "drove-dog", "masterless-dog", "lead-dog", "marsh-hound", "a-lymer",
   "grave-hyena", "dire-hyena", "hill-fox", "snow-fox",
   "lynx", "wildcat", "cave-lion", "glutton",
+  "the-hush", // the wood's middle hunter runs its ground's roe down as the wolves do (2026-11-19)
 ]);
 // WARY (rome, 2026-10-25). On hunted ground the prey change: they bolt when
 // someone walks in, the day's animals give up the dawn and come out only in the
@@ -8382,6 +8463,8 @@ export const CRAG_ROOMS = new Set<string>(MOUNTAIN_GROUND.crag);
 // animal before it is anything else. Named here so the next grazer is one line
 // and not a hunt through ai.ts.
 export const GRAZERS = new Set<string>([
+  // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
+  "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
   "water-vole",
   // THE MOUNTAIN, TIER TWO (mig 229).
@@ -10438,6 +10521,7 @@ export const LEATHER_DROPS: Record<string, number> = {
   "hill-fox": 0.2, "snow-fox": 0.2, "grave-hyena": 0.25, "dire-hyena": 0.35,
   "lynx": 0.35, "wildcat": 0.2, "glutton": 0.35, "brown-bear": 0.5, "cave-lion": 0.5,
   "grey-seal": 0.35, "bull-seal": 0.45, "otter": 0.15, "dog-otter": 0.2, "wood-sloth": 0.2,
+  "the-hush": 0.25, // a hide the colour of leaf-fall, a wolf's worth (2026-11-19)
 };
 export const BONE_DROPS: Record<string, number> = {
   "roe-deer": 0.25, "white-roe": 0.3, "red-hind": 0.25, "red-stag": 0.5, "wood-stag": 0.5,
@@ -10625,6 +10709,7 @@ export const BLEED_ODDS = new Map<string, number>([
   ["the-baited-bear", 0.3],
   ["brown-bear", 0.3],      // claws nobody ever trimmed, and a mouth that was muzzled rather than mended
   ["the-chain-breaker", 0.32],
+  ["the-hush", 0.15],            // claws, low and fast: a wildcat's rake more than a follower's
   ["the-follower", 0.20],        // level with the deep's pale kin, which is what it is
   ["something-ahead", 0.25],
   ["the-mire-walker", 0.20],

@@ -3698,7 +3698,7 @@ var VOICE_FAMILY = {
   gull: "great-gull black-backed-gull",
   oystercatcher: "oystercatcher",
   chough: "mountain-chough",
-  ptarmigan: "ptarmigan",
+  ptarmigan: "ptarmigan capercaillie",
   heron: "grey-heron",
   crow: "gibbet-crow scarp-raven the-old-raven",
   eagle: "hill-eagle eyrie-holder",
@@ -3744,7 +3744,7 @@ var VOICE_FAMILY = {
   king: "forgotten-king marrow-king",
   drowned: "the-miller the-drowned the-drowned-ferryman the-mire-walker",
   pale: "pale-crawler",
-  steps: "the-follower something-ahead the-reed-walker",
+  steps: "the-follower something-ahead the-reed-walker the-hush",
   root: "root-thing verdigris-thing",
   drake: "the-drake the-pale-drake"
 };
@@ -4595,7 +4595,7 @@ function heardSound(f, delay, destination) {
 // quieter than anything it does when it moves on you. Nothing hidden is drawn,
 // so nothing hidden is ever heard; the ones whose whole nature is silence
 // never make one.
-var IDLE_SILENT = { "pale-stalker": 1, "pale-crawler": 1, "the-follower": 1, "something-ahead": 1, "the-reed-walker": 1 };
+var IDLE_SILENT = { "pale-stalker": 1, "pale-crawler": 1, "the-follower": 1, "the-hush": 1, "something-ahead": 1, "the-reed-walker": 1 };
 function houndBreath(t, o, heads) {
   for (var i = 0; i < heads; i++) VOX.voc(t + i * 0.17, { f: [[0, 90 + i * 22], [0.4, 100 + i * 18]], d: 0.45, r: [28 + i * 6, 0.6], fm: [[400 + i * 80, 2]], n: 0.5, g: 0.5 / heads, a: 0.08 }, o);
 }
@@ -10842,7 +10842,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "133";      // /mob/      strips and their eye layers
+var MOB_V  = "134";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
@@ -12730,7 +12730,7 @@ var MOB_LINE = {
 // strip measured 0.
 var FRAME_DROP = { "forgotten-king": { death: 0.03 },
   "tawny-owl": { feed: 0.248 },
-  "ptarmigan": { graze: 0.167 },
+  "ptarmigan": { graze: 0.167 }, "capercaillie": { graze: 0.116 },
   "black-backed-gull": { feed: 0.134 },
   "carrion-vulture": { feed: 0.130 },
   "bittern": { feed: 0.128 },
@@ -15927,6 +15927,7 @@ var MOB_SPRITE = {
   // so on all fours it fills only 0.60 of it and the number is that much bigger
   "brown-bear": 47,           // 1.30  on all fours; a shade over the baited bear
   "tawny-owl": 9,             // 0.40  perched
+  "capercaillie": 8,          // a goose-sized grouse: over the raven, under the perched owl
   "wood-sloth": 10,           // 0.60  sitting
   "hedgehog": 4,              // 0.20  just over a rat
   "water-vole": 3,            // 0.15  fist-sized, the rat's floor (mig 390)
@@ -16095,6 +16096,7 @@ var MOB_SPRITE = {
   "old-boar": 14,
   "root-thing": 24,
   "the-follower": 28,
+  "the-hush": 12,              // about a roe long, but low: a wolf's height, lying flat
   "something-ahead": 28,
   "charcoal-burner": 28,
   "the-woodward": 40,
@@ -16135,6 +16137,8 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "the-hush":       { n: 8, aspect: 1.972, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "capercaillie":   { n: 9, aspect: 1.144, f: {"idle":0,"up":1,"glide":2,"landing":3,"alert-alarm":4,"attack":5,"graze":6,"rest":7,"death":8,"down":2} },
   "water-vole":   { n: 8, aspect: 1.1, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "fever-rat":   { n: 8, aspect: 1.478, f: {"idle":0,"watch":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"death":7} },
   "the-cook":   { n: 8, aspect: 0.928, f: {"idle":0,"hone-the-blade":1,"wipe-the-blade":2,"alert":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -17280,7 +17284,7 @@ function poseAt(a, now) {
     // out of reach, on its own flight frames: off the ground, wings beating up
     // to height, then held there on the glide with a few beats now and then,
     // until it drops to strike.
-    var abeat = Math.floor(t * (a.id === "ptarmigan" ? WINGBEAT_HZ_FAST : WINGBEAT_HZ)) % 2 ? "up" : "down";
+    var abeat = Math.floor(t * (a.id === "ptarmigan" || a.id === "capercaillie" ? WINGBEAT_HZ_FAST : WINGBEAT_HZ)) % 2 ? "up" : "down";
     if (f.takeoff !== undefined && t < 0.25) { name = "takeoff"; air = lift * (t / 0.8); }
     else if (t < 0.8 || f.glide === undefined) { name = f.up !== undefined ? abeat : a.watch; air = lift * Math.min(1, t / 0.8); }
     else { name = (t % 3) < 0.6 ? abeat : "glide"; air = lift + Math.sin(t * 1.3) * 0.03; }
@@ -17355,7 +17359,7 @@ function poseAt(a, now) {
         else air = Math.abs(Math.sin(t * 5 * Math.PI)) * BOB;
       }
     } else if (f.up !== undefined) {
-      var wh = a.id === "ptarmigan" ? WINGBEAT_HZ_FAST : WINGBEAT_HZ;
+      var wh = a.id === "ptarmigan" || a.id === "capercaillie" ? WINGBEAT_HZ_FAST : WINGBEAT_HZ;
       var uf = Math.min(t / (TRAVEL_MS / 1000), 1);
       var beat = Math.floor(t * wh) % 2 ? "up" : "down";
       // LEAVING THE GROUND IS ITS OWN MOVEMENT for anything drawn doing it: the
@@ -17465,7 +17469,9 @@ var STAGGER_S = 0.75;     // how far apart blows in the same round are spread
 var SLEEP_POSES = ["rest", "bask", "hold-warm-ground", "hold-ground", "feed"];
 // (The two hyenas were kept off it here until their sheets were redrawn with a
 // sleeping frame, rome 2026-10-29. They have one now and it wins this list.)
-var NO_FEED_SLEEP = {};
+// The hush sleeps in its idle frame, lying low with its head level: its feed frame is
+// head-down over a kill, and a sleeping one must not look as if it were eating (2026-11-19).
+var NO_FEED_SLEEP = { "the-hush": 1 };
 var STRIKE_POSES = ["attack", "bite", "sweep", "breath"];
 var HIT_POSES = ["hit"];
 // DRAWN WITH NO HIT FRAME, A BLOW SHOWS THIS ONE instead of the idle profile

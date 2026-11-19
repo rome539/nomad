@@ -229,6 +229,8 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "white-roe": [0, 0, 0, 0],
   "wild-boar": [12, 3, 28, 0],
   "wildcat": [12, 2, 24, 0],
+  "the-hush": [16, 3, 28, 0],   // a sprinter from stillness, not a runner (mig 405)
+  "capercaillie": [10, 1, 24, 0], // the cock fights in short bursts (mig 405)
   "wrack-crab": [16, 2, 20, 0],
 };
 export interface CreatureEffort { effort: number; at: number; fighting: boolean; beat: number; penalty: number; before: number }

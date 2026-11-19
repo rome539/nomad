@@ -342,7 +342,7 @@ export async function holdGround(
   if (onGround && (rival.drivenOff = (rival.drivenOff ?? 0) + 1) >= GROUND_DRIVEN_LEAVES) {
     rival.drivenOff = undefined;
     const home = pickHome(z, lineOf(z, rival.templateId), now, group!.home, z.regionOf(rival.home ?? rival.roomId));
-    if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; beasts.note(z, "moved", now); }
+    if (home) { rehome(z, rival, home); beasts.note(z, "moved", now); }
   }
   await flee(rival);
   // The chase: a stolen meal holds it here; otherwise it runs after, a beat behind.
@@ -435,6 +435,13 @@ export async function mobEagle(
 /** Where a hungry pack wolf is going: the room its pack's quarry stands in, or
  *  nothing. A pack hunts when two or more of it are hungry; it keeps one animal
  *  until that one is dead or out of reach, then picks the nearest other. */
+/** The big game this creature's pack has picked, if it is still alive (packQuarry). */
+export function packQuarryId(z: ZoneDO, c: Creature): string | undefined {
+  const g = c.group ? z.groups.packs[c.group] : undefined;
+  const q = g?.quarry ? z.creatures.get(g.quarry) : undefined;
+  return q && q.hp > 0 ? q.id : undefined;
+}
+
 export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefined {
   const g = c.group ? z.groups.packs[c.group] : undefined;
   if (!g || !PACK_HUNTERS.has(g.line) || (c.hunger ?? 0) < HUNGRY_AT) return undefined;
@@ -475,6 +482,18 @@ export function packQuarry(z: ZoneDO, c: Creature, now: number): string | undefi
   return q.roomId;
 }
 
+/** One run off its home draws a new one. One of a group (the hush's pairs, 2026-11-19)
+ *  takes the group with it: the group's home is every member's, and tick() would put
+ *  the one alone straight back on the old ground. */
+export function rehome(z: ZoneDO, rival: Creature, home: string): void {
+  const g = rival.group ? z.groups.packs[rival.group] : undefined;
+  if (g) {
+    g.home = home; g.moveAt = undefined; g.kept = undefined;
+    for (const c of z.creatures.values()) if (c.group === rival.group) c.home = home;
+  }
+  rival.home = home; rival.moveAt = undefined; rival.kept = undefined;
+}
+
 /** A land holder's beat on an intruder in its room on its own land. True when it took its turn. */
 export async function holdLand(
   z: ZoneDO, holder: Creature, now: number,
@@ -512,7 +531,7 @@ export async function holdLand(
   if (livesHere && (rival.drivenOff = (rival.drivenOff ?? 0) + 1) >= GROUND_DRIVEN_LEAVES) {
     rival.drivenOff = undefined;
     const home = pickHome(z, lineOf(z, rival.templateId), now, holder.home, z.regionOf(rival.home ?? rival.roomId));
-    if (home) { rival.home = home; rival.moveAt = undefined; rival.kept = undefined; beasts.note(z, "moved", now); }
+    if (home) { rehome(z, rival, home); beasts.note(z, "moved", now); }
   }
   await flee(rival);
   if (rival.roomId !== roomId) {

@@ -30,7 +30,7 @@ const DEEP_SHOWN = ["rat", "pale-crawler", "twice-dead", "marrow-cantor"];
 // THE WOOD'S AND ASSART END'S SECTIONS (2026-11-17), read the same way. The brown bears keep
 // their caves and are shown for what they hunt; Assart End's rats are the fever rat's and stay.
 const WOOD_SHOWN = [
-  "roe-deer", "wood-stag", "wild-boar", "hedgehog", "wood-sloth", "grey-wolf", "coyote", "tawny-owl", "scarp-raven", "brown-bear", "the-baited-bear",
+  "roe-deer", "wood-stag", "wild-boar", "hedgehog", "wood-sloth", "grey-wolf", "coyote", "tawny-owl", "scarp-raven", "brown-bear", "the-baited-bear", "the-hush", "capercaillie",
 ];
 const DEN_SHOWN = ["rat", "roe-deer", "masterless-dog"];
 const ALL_SHOWN = new Set([...SHOWN, ...CROSSING_SHOWN, ...ROAD_SHOWN, ...OUT_SHOWN, ...UPPER_SHOWN, ...DEEP_SHOWN, ...WOOD_SHOWN, ...DEN_SHOWN]);
@@ -171,7 +171,7 @@ const DEEP_VIEW: RegionView = {
 };
 const WOOD_VIEW: RegionView = {
   title: "THE WOOD", words: ["wood", "forest"], region: "wood", shown: WOOD_SHOWN, kills: "woodKills",
-  packs: [{ line: "grey-wolf", label: "Grey wolves" }, { line: "coyote", label: "Coyotes" }],
+  packs: [{ line: "grey-wolf", label: "Grey wolves" }],
   herds: ["wild-boar", "roe-deer"],
 };
 const DEN_VIEW: RegionView = {

@@ -68,7 +68,7 @@ import {
   HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
   VARIANT_HOMES,
   groundWord,
-  PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, BODY_ERRANDS, BODY_ERRAND_RANGE, OWN_FORAGE_MEAL_LEFT,
+  PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, BODY_ERRANDS, BODY_ERRAND_RANGE, BIG_GAME_FIRST, PACK_QUARRY, OWN_FORAGE_MEAL_LEFT,
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING, WHITE_ROE, FEVER_RAT, bossStands, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
@@ -137,7 +137,9 @@ export async function arrivalHabits(z: ZoneDO, creature: Creature, tmpl: MobTemp
     const wolves = others.filter((c) => gives.has(c.templateId) && !c.target);
     if (kill && wolves.length) {
       if (!silent) {
-        z.roomFeed(here, `${cap(tmpl.name)} comes in on the wolves at their kill and does not slow down. They give it up to it and go, and it puts its head down to what they leave.`, undefined, false);
+        // the hush's kill is named as the hush's (2026-11-19); the wolves' reads as it always did
+        const hush = wolves.every((w) => w.templateId === "the-hush"), one = hush && wolves.length === 1;
+        z.roomFeed(here, `${cap(tmpl.name)} comes in on ${hush ? (one ? "the hush at its" : "the hushes at their") : "the wolves at their"} kill and does not slow down. ${one ? "It gives it up to it and goes" : "They give it up to it and go"}, and it puts its head down to what ${one ? "it leaves" : "they leave"}.`, undefined, false);
         z.roomSound(here, "Snarling {dir}, and then a deep cough that ends it.", undefined, undefined, false, { mob: tmpl.id, act: "fight" });
       }
       for (const w of wolves) await creatureMoves(z, w, now, "flee", silent);
@@ -624,7 +626,11 @@ export function rangePack(z: ZoneDO, now: number): void {
   const lead = pack[0];
   if ((lead.rangeAt ?? 0) <= now) chooseGround(z, lead, now);
   for (const c of pack) {
-    if (c === lead || c.rangeSince === lead.rangeSince) continue;
+    // one pack, with no group of a region's making (rome, 2026-11-18): the wood's
+    // bands once split it, and a coyote left in one walks with the lead again
+    const strayed = !!(c.group || c.lone);
+    if (strayed) { c.group = undefined; c.lone = undefined; }
+    if (c === lead || (!strayed && c.rangeSince === lead.rangeSince)) continue;
     c.rangeBand = lead.rangeBand;
     c.rangeSince = lead.rangeSince;
     c.home = lead.home;
@@ -1293,9 +1299,12 @@ function forageErrand(z: ZoneDO, creature: Creature, now: number): string | unde
 /** The follower, hungry: the nearest body with meat on it within BODY_ERRAND_RANGE (BODY_ERRANDS). */
 export function bodyErrand(z: ZoneDO, creature: Creature): string | undefined {
   if (!BODY_ERRANDS.has(creature.templateId) || (creature.hunger ?? 0) < deadEatsAt(creature.templateId)) return undefined;
+  // ...only in its own region (rome, 2026-11-18: one walked out of the wood to a
+  // body in the fortress and attacked a wanderer there)
+  const own = z.regionOf(creature.home ?? creature.roomId);
   let best: string | undefined, bestD = Infinity;
   for (const [room, d] of z.nearby(creature.roomId, BODY_ERRAND_RANGE)) {
-    if (d < bestD && (z.traces.get(room) ?? []).some(edibleBody)) { bestD = d; best = room; }
+    if (d < bestD && z.regionOf(room) === own && (z.traces.get(room) ?? []).some(edibleBody)) { bestD = d; best = room; }
   }
   return best;
 }
@@ -2332,7 +2341,15 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
     if (!chased && !chance(PREDATION_ODDS)) return false;
     // A target in the room; prefer one not already busy with a player (the easy meal).
     let victim: Creature | null = chased ?? null;
-    for (const c of chased ? [] : z.creaturesInRoom(creature.roomId)) {
+    // THE PACK KEEPS TO ITS BIG GAME (BIG_GAME_FIRST): on the way to its pick it
+    // passes the rest by until it is starving, and big game in the room comes first.
+    const lineOfIt = (id: string) => z.variantBase.get(id) ?? id;
+    const bigFirst = !!creature.group && BIG_GAME_FIRST.has(lineOfIt(creature.templateId));
+    const onQuarry = bigFirst && creature.hunger < STARVING_AT ? groups.packQuarryId(z, creature) : undefined;
+    const inRoom = chased ? [] : z.creaturesInRoom(creature.roomId);
+    const order = bigFirst ? [...inRoom].sort((a, b) => Number(PACK_QUARRY.has(lineOfIt(b.templateId))) - Number(PACK_QUARRY.has(lineOfIt(a.templateId)))) : inRoom;
+    for (const c of order) {
+      if (onQuarry && c.id !== onQuarry) continue;
       if (c.id === creature.id || packmates(creature, c) || !(prey?.has(c.templateId) || (strays && strayFor(z, creature, c)))) continue;
       // THE MOSS (rome, 2026-10-21): a sloth is a green-grey lump moving too
       // slowly to catch the eye, and a hunter often looks straight past it - no
