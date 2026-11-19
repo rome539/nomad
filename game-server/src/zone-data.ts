@@ -4045,6 +4045,36 @@ export const DINNER_LAUGH_ODDS = 0.35;
 // Obeys the hard law like every other call: a summoned creature never re-calls
 // (calledTo), the bark rides its own channel and never creatureNoise, so there
 // are no cascades.
+// A CALLER'S OWN CALL (2026-11-19). The bark below is the roe's; the capercaillie
+// was saying it ("barks once... a deer barks"). One named here calls in its own
+// words and shows the frame it was drawn calling in, only while it calls.
+export const ALARM_CALL_WORDS: Record<string, { line: string; sound: string; pose?: string }> = {
+  "capercaillie": {
+    line: "throws its head up and gives a hard, knocking kok-kok-kok that carries off through the trees.",
+    sound: "A big bird calls {dir}, a hard knocking kok-kok-kok, and stops.",
+    pose: "alert-alarm",
+  },
+  // ...and the heron, which was barking like a deer too (2026-11-19)
+  "grey-heron": {
+    line: "throws its neck up straight and gives one harsh, tearing cry that carries a long way down the water.",
+    sound: "A heron cries {dir}, once, harsh as cloth tearing.",
+    pose: "alert-alarm",
+  },
+  // ...and the other birds that were barking like deer (2026-11-19). None of them
+  // was drawn calling, so the call shows no frame of its own.
+  "ptarmigan": {
+    line: "goes up from almost under your feet with a loud, dry, croaking rattle, and the whole hillside hears it go.",
+    sound: "A bird goes up {dir} with a loud, dry, croaking rattle.",
+  },
+  "mountain-chough": {
+    line: "goes up calling, a high, ringing chee-ow, and the rest of the crag takes it up.",
+    sound: "A chough calls {dir}, high and ringing, and others answer it.",
+  },
+  "oystercatcher": {
+    line: "goes off in a shrill, piping kleep-kleep-kleep that does not stop, and every bird on the flats hears it.",
+    sound: "Piping {dir}, shrill and frantic, kleep-kleep-kleep, on and on.",
+  },
+};
 export const ALARM_CALLERS = new Set(["roe-deer", "white-roe", "capercaillie",
   // THE MOUNTAIN, TIER ONE (mig 227). A ptarmigan does not call — it LEAVES, loudly,
   // and that is the same service rendered by a bird with no voice for it.
@@ -4671,6 +4701,18 @@ export const DREAMS: Record<string, string[]> = {
 // box out of BOTH laws at once, so the box walks out of the sealed room it is
 // the whole point of and can come up empty when you finally reach it.
 export const DOOR_PRIZE_BOXES = new Set(["reliquary", "box-kept", "box-glade", "box-cave", "box-armory"]);
+// BOXES THAT ARE PART OF THEIR ROOM STAY IN IT (2026-11-19). The reeve's box is a
+// space cut under a board by his hearth; roaming, it turned up in an open field as
+// "a box under the floor". It stays home as the door boxes do; its house is neither
+// a hideaway nor a gate, so what is in it still carries the risk every box does.
+// SO DO THE REST THAT ARE PART OF THEIR PLACE: the cairn's, the cleft's, the
+// stone's, the icehouse wall's, the toll stone's chamber, the toll-house box
+// bolted to its floor, the hearth-stone cavity, the beam pit, the chapel's almsbox
+// on its wall and the cart's box bolted through its floor. None stands on a
+// hideaway or a gate. The boxes that roam were rewritten to fit any room (mig 406).
+export const STAYS_HOME_BOXES = new Set(["reeves-floor",
+  "cairn-cache", "cleft-cache", "ridge-cache", "box-icehouse", "box-toll",
+  "box-tollshell", "box-ruin", "box-relay", "box-chapel", "carts-strongbox"]);
 // ...EXCEPT THE BELL'S, NOW AND THEN (rome, 2026-10-26). The issue chest
 // refills for every ringing (mig 341), so it is twice a day, not once, and an
 // empty one now and then is the price of that: the last issue already given out

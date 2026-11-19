@@ -42,7 +42,7 @@ import {
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, MILKER_GOATS, MILKING_ODDS, MILKING_LINES, MILKED_GOAT_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES, PRESENCE_ODDS, PRESENCE_ROOM_MS, PRESENCE_LINES, PRESENCE_OWN, FOLK, CUTTHROATS,
-  ALARM_CALLERS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
+  ALARM_CALLERS, ALARM_CALL_WORDS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
   MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, SMALL_PREY, HUNGER_MAX, HUNGER_FLOOR, mealOf, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
@@ -3331,8 +3331,10 @@ export function ratSqueal(z: ZoneDO, roomId: string, now: number, squealer: Crea
   // the second one is not on your side.
 export function alarmBark(z: ZoneDO, roomId: string, now: number, caller: Creature): void {
     const tmpl = z.world!.mobTemplates.get(caller.templateId)!;
-    z.roomFeed(roomId, `${cap(tmpl.name)} barks once — a flat, carrying cough of a sound, nothing like an animal in pain.`, undefined, false);
-    z.roomSound(roomId, "A deer barks {dir}, once, and does not repeat it.", undefined, undefined, false, { mob: caller.templateId, act: "call" });
+    const own = ALARM_CALL_WORDS[caller.templateId];
+    z.roomFeed(roomId, own ? `${cap(tmpl.name)} ${own.line}` : `${cap(tmpl.name)} barks once — a flat, carrying cough of a sound, nothing like an animal in pain.`, undefined, false);
+    z.roomSound(roomId, own ? own.sound : "A deer barks {dir}, once, and does not repeat it.", undefined, undefined, false, { mob: caller.templateId, act: "call" });
+    if (own?.pose) z.fxPose(roomId, caller.templateId, own.pose);
     const exitsOf = (id: string) => (z.world!.exits.get(id) ?? []);
     for (const c of z.creatures.values()) {
       if (c.id === caller.id || c.target) continue;

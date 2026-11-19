@@ -12730,7 +12730,7 @@ var MOB_LINE = {
 // strip measured 0.
 var FRAME_DROP = { "forgotten-king": { death: 0.03 },
   "tawny-owl": { feed: 0.248 },
-  "ptarmigan": { graze: 0.167 }, "capercaillie": { graze: 0.116 },
+  "ptarmigan": { graze: 0.167 }, "capercaillie": { graze: 0.116, death: 0.139, "alert-alarm": -0.102 }, // its death was drawn 13.9% up its cell and it died in the air; its call 10.2% down, and it sank when it called (2026-11-19)
   "black-backed-gull": { feed: 0.134 },
   "carrion-vulture": { feed: 0.130 },
   "bittern": { feed: 0.128 },
@@ -16827,6 +16827,7 @@ function paintMobs(ids, doing, dead) {
     var watch = "idle";
     for (var z5 = 0; z5 < WATCH_POSES.length; z5++)
       if (spec.f[WATCH_POSES[z5]] !== undefined) { watch = WATCH_POSES[z5]; break; }
+    if (typeof WATCH_AS !== "undefined" && WATCH_AS[id] && spec.f[WATCH_AS[id]] !== undefined) watch = WATCH_AS[id];
     // THE POSE IT EATS IN, which is not always called "feed". The fed beat used
     // to name that frame literally, so an animal drawn with its head down in the
     // ground could be sent the signal and had nothing to answer it with — and
@@ -17478,6 +17479,11 @@ var HIT_POSES = ["hit"];
 // (rome, 2026-11-08: the hill wolf turned to its idle side-on frame every time it
 // was hit; in a fight it keeps facing you).
 var HIT_AS = { "hill-wolf": "alert" };
+// ...AND THE POSE IT FIXES YOU WITH, where the list above would pick the wrong one
+// (2026-11-19): the capercaillie's first match was its call, beak open, so it
+// called between every blow of a fight. It faces you in its idle; the call frame
+// shows only when it calls (the server's alarm pose).
+var WATCH_AS = { "capercaillie": "idle", "grey-heron": "idle" }; // the heron's first match was its call too
 // WHAT EATING LOOKS LIKE. Separate from CALM_POSES on purpose: this one answers
 // an EVENT — the world says this animal just ate — so nothing shadows it. A
 // grazer that also sleeps still shows the sleep as its idle alternate and the
