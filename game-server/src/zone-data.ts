@@ -3191,6 +3191,27 @@ export const CUDDLE_COLD_MULT = 3; // in the cold, everything warm looks like a 
 // It doesn't spring the instant you're in reach — it lifts its head, hackles up,
 // and takes a beat to commit. That wind-up is your window to back out or hit first.
 export const DIRE_ROUSE_MS = 5000;
+// A WIND-UP BEFORE IT COMES AT YOU (2026-11-19). The boar and the capercaillie were
+// on you the moment you walked into their room, with a free first blow. Now each
+// faces you first and comes at you WINDUP_MS later if you are still there (ai.windsUp):
+// leave and it lets you go, strike first and it is an ordinary fight. One that
+// remembers you still comes straight for you. {A} is its name, {name} the wanderer.
+export const WINDUP_MS = 5000;
+export const WINDS_UP: Record<string, { tell: string; seen: string; state: string; go: string; pose?: string }> = {
+  "wild-boar": {
+    tell: "{A} swings round to face you, head down and bristles up along its back, and stamps. It has not come at you yet.",
+    seen: "{A} swings round on {name}, head down and bristling.",
+    state: "head down and bristling, stamping at you",
+    go: "{A} drops its head and charges.",
+    pose: "alert",
+  },
+  "capercaillie": {
+    tell: "{A} fans its tail up behind it, drops its wings and starts to click at you. It has not come at you yet.",
+    seen: "{A} fans its tail at {name} and clicks.",
+    state: "tail fanned and wings down, clicking at you",
+    go: "{A} comes at you, wings trailing and bill open.",
+  },
+};
 // The grave-hyena will not eat its own kind. It stands over a dead grave-hyena,
 // throws its head back, and laughs — that keening, no-mirth laugh — and holds
 // over the body a while before it drifts off. The dire-hyena has no such

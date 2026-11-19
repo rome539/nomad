@@ -42,7 +42,7 @@ import {
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, MILKER_GOATS, MILKING_ODDS, MILKING_LINES, MILKED_GOAT_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
   SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES, PRESENCE_ODDS, PRESENCE_ROOM_MS, PRESENCE_LINES, PRESENCE_OWN, FOLK, CUTTHROATS,
-  ALARM_CALLERS, ALARM_CALL_WORDS, ALARM_HEEDS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
+  ALARM_CALLERS, ALARM_CALL_WORDS, ALARM_HEEDS, WINDS_UP, WINDUP_MS, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
   MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, SMALL_PREY, HUNGER_MAX, HUNGER_FLOOR, mealOf, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
   NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
@@ -806,6 +806,7 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     if (winded(creature, Date.now())) return "blown, sides going like a bellows, out of running";
     if (creature.stunned) return "reeling and dazed";
     if (creature.bleedTicks && creature.bleedTicks > 0) return "bleeding freely, dark spatter on the stone";
+    if (creature.rouseAt && Date.now() < creature.rouseAt && WINDS_UP[creature.templateId]) return WINDS_UP[creature.templateId].state;
     if (creature.rouseAt && Date.now() < creature.rouseAt) return creature.templateId === DROWNED_GOD ? "risen to the head in the black water, looking at you, not yet coming" : "winding up to spring, hackles high";
     if (creature.waitsOn && creature.waitSettled && !creature.target) {
       return creature.waitsOn === viewer ? "settled a little way off, watching you, waiting"
@@ -1076,6 +1077,17 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
       // Inside the rearm, or with you on its books, it is no bluff.
       if (cave && !holdsGrudge && styles.bluffPending(z, creature, tmpl, session.pubkey, now)) {
         styles.beforeAttack(z, creature, tmpl, session, now);
+        continue;
+      }
+      // The boar and the capercaillie face you first (WINDS_UP); windsUp brings it in.
+      const wind = WINDS_UP[creature.templateId];
+      if (wind && hostile && !holdsGrudge && !bloodWake) {
+        if (creature.rouseAt === undefined) {
+          creature.rouseAt = now + WINDUP_MS;
+          if (wind.pose) z.fxPose(session.roomId, creature.templateId, wind.pose);
+        }
+        z.send(session, wind.tell.replace("{A}", cap(tmpl.name)));
+        z.roomFeed(session.roomId, wind.seen.replace("{A}", cap(tmpl.name)).replace("{name}", session.name), session.pubkey, false);
         continue;
       }
       creature.target = session.pubkey;
@@ -3329,6 +3341,23 @@ export function ratSqueal(z: ZoneDO, roomId: string, now: number, squealer: Crea
   // sound does two opposed things: the game hears a warning, and the hunters
   // hear an address. It is the only call in the game with two audiences, and
   // the second one is not on your side.
+/** The boar's and the capercaillie's wind-up (WINDS_UP): it comes at whoever is still
+ *  in its room once WINDUP_MS is up, lets it go if the room empties, and drops it
+ *  for an ordinary fight if it is struck first. Run each combat round. */
+export function windsUp(z: ZoneDO, creature: Creature, tmpl: { name: string }, now: number): void {
+  const wind = WINDS_UP[creature.templateId];
+  if (!wind || creature.rouseAt === undefined) return;
+  if (creature.target) { creature.rouseAt = undefined; return; } // struck first: an ordinary fight
+  const prey = [...z.sessions.values()].find((s) => s.roomId === creature.roomId && z.reachable(s));
+  if (!prey) { creature.rouseAt = undefined; return; } // gone: it lets them go
+  if (now < creature.rouseAt) return;
+  creature.rouseAt = undefined;
+  creature.target = prey.pubkey;
+  if (!prey.target) prey.target = creature.id;
+  z.send(prey, wind.go.replace("{A}", cap(tmpl.name)));
+  z.roomFeed(creature.roomId, `${cap(tmpl.name)} goes for ${prey.name}.`, prey.pubkey, false);
+}
+
 export function alarmBark(z: ZoneDO, roomId: string, now: number, caller: Creature): void {
     const tmpl = z.world!.mobTemplates.get(caller.templateId)!;
     const own = ALARM_CALL_WORDS[caller.templateId];

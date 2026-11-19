@@ -5007,6 +5007,7 @@ export class ZoneDO implements DurableObject {
           this.roomFeed(creature.roomId, `${cap(tmpl.name)} springs at ${prey.name}.`, prey.pubkey, false);
         }
       }
+      ai.windsUp(this, creature, tmpl, now); // the boar's and the capercaillie's wind-up (WINDS_UP)
       // The food web reaches UP: a predator starved past mere hunger, with no
       // easier prey in the room, turns on the lone delver sharing it — you're the
       // nearest meat. Like the meal-guard it WINDS UP (DIRE_ROUSE_MS) rather than
