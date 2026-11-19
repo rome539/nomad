@@ -68,7 +68,7 @@ import {
   HUNT_RANGE, HUNT_RECHECK_MS, MORPHS, MOUNTAIN_HEARD_BANDS, BOSS_ROUSE_ODDS, BEAKS, COILS,
   VARIANT_HOMES,
   groundWord,
-  PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, OWN_FORAGE_MEAL_LEFT,
+  PRICKLY, MOSS_HIDDEN, OWN_FORAGE_ROOMS, OWN_FORAGE_RANGE, BODY_ERRANDS, BODY_ERRAND_RANGE, OWN_FORAGE_MEAL_LEFT,
   SURPLUS_KILLERS, SURPLUS_ODDS, SURPLUS_REARM_MS, WOLF_TESTERS, TEST_START_ODDS, TEST_GAP_MIN_MS, TEST_GAP_MAX_MS,
   TEST_FEINTS, TEST_FORGET_MS, TEST_RUSH_LINES,
   RAT_KING, WHITE_ROE, FEVER_RAT, bossStands, FEVER_GRAVES, RAT_KING_RATS, HOARD_HOLE, HOARD_HOLE_CAP,
@@ -1290,6 +1290,16 @@ function forageErrand(z: ZoneDO, creature: Creature, now: number): string | unde
   return (creature.forageFor = best);
 }
 
+/** The follower, hungry: the nearest body with meat on it within BODY_ERRAND_RANGE (BODY_ERRANDS). */
+export function bodyErrand(z: ZoneDO, creature: Creature): string | undefined {
+  if (!BODY_ERRANDS.has(creature.templateId) || (creature.hunger ?? 0) < deadEatsAt(creature.templateId)) return undefined;
+  let best: string | undefined, bestD = Infinity;
+  for (const [room, d] of z.nearby(creature.roomId, BODY_ERRAND_RANGE)) {
+    if (d < bestD && (z.traces.get(room) ?? []).some(edibleBody)) { bestD = d; best = room; }
+  }
+  return best;
+}
+
 /** The cave lion, hungry: the nearest room on its own ground with something it eats. */
 export function lionStalks(z: ZoneDO, creature: Creature): string | undefined {
   if (!OPEN_LURKERS.has(creature.templateId) || (creature.hunger ?? 0) < HUNGRY_AT) return undefined;
@@ -1499,9 +1509,12 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
       // meal on its ground, and stays when it is there.
       const stalk = quarry || creature.wateringTo ? undefined : lionStalks(z, creature);
       if (stalk === creature.roomId) return;
+      // THE FOLLOWER WALKS TO THE DEAD (BODY_ERRANDS), and stays on the body to eat.
+      const carrion = quarry || stalk || creature.wateringTo ? undefined : bodyErrand(z, creature);
+      if (carrion === creature.roomId) return;
       // A bird down from the sky walks the ground round where it landed (flight.ts).
       const landed = creature.awayUntil !== undefined && creature.aloft === undefined ? creature.awayAt : undefined;
-      const anchor = creature.wateringTo ?? quarry ?? stalk ?? landed ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
+      const anchor = creature.wateringTo ?? quarry ?? stalk ?? carrion ?? landed ?? forageErrand(z, creature, now) ?? huntGround(z, creature, now) ?? herds.roundGround(z, creature, now) ?? creature.home;
       // ONE capped walk out from the den answers both halves — am I inside my
       // range, and which of these exits are. This is the hottest distance query
       // in the game (every wandering creature, every beat); routing it through
@@ -1531,11 +1544,11 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
           if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
         }
       } else {
-        const within = quarry || stalk ? exits.filter((e) => (near.get(e.to_room) ?? Infinity) < d) : exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
+        const within = quarry || stalk || carrion ? exits.filter((e) => (near.get(e.to_room) ?? Infinity) < d) : exits.filter((e) => (near.get(e.to_room) ?? Infinity) <= TERRITORY_RADIUS);
         if (within.length) exits = within;
         // ...and inside its range, the hour decides which ground it keeps to:
         // out on the feeding ground in its waking hours, back in cover after.
-        if (!quarry && !stalk) exits = herds.roundExits(z, creature, exits, now);
+        if (!quarry && !stalk && !carrion) exits = herds.roundExits(z, creature, exits, now);
       }
     }
     // A patroller's route IS its territory. It leaves the circuit sometimes — it
@@ -2905,6 +2918,9 @@ export function biteOf(templateId: string, maxHp: number): { bite: number; size:
 
 export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): void {
     if (fightIn(z, creature.roomId)) return; // no meal starts in the middle of a fight
+    // ...nor while it is still eating the last one (rome, 2026-11-18: a raven took a
+    // fresh bite every beat, and each one said it tore into the dead again).
+    if (eatingNow(creature)) return;
     // NOTHING EATS WITH A FULL BELLY, and this is the one place in the ecology
     // that did (rome, 2026-08-25: a grave-hyena stripped a room of bodies).
     //
@@ -2950,14 +2966,24 @@ export function scavengerFeeds(z: ZoneDO, creature: Creature, silent: boolean): 
     // ...by its body, not its health (BODY_SIZE): a raven is not half a wolf.
     const { bite, size } = biteOf(creature.templateId, tmpl.max_hp);
     const onIt = eaten.meat ?? (deadT ? bodyOf(deadT.id, deadT.max_hp) : 0);
-    const left = onIt - bite;
-    const gone = !deadT || size >= bodyOf(deadT.id, deadT.max_hp) || left <= 0;
+    // ONE SITTING (rome, 2026-11-18). It takes bite after bite until it is no
+    // longer hungry or the body is bare, as one meal with one line, where it used
+    // to take one bite a beat and say so every time.
+    const whole = !deadT || size >= bodyOf(deadT.id, deadT.max_hp);
+    let taken = whole ? onIt : 0;
+    if (!whole) {
+      let hungerAfter = creature.hunger;
+      do {
+        const b = Math.min(bite, onIt - taken);
+        taken += b;
+        hungerAfter = Math.max(HUNGER_FLOOR, hungerAfter - mealOf(size, b));
+      } while (taken < onIt && hungerAfter >= deadEatsAt(creature.templateId));
+    }
     // THE BODY STAYS WHILE IT IS EATEN (rome, 2026-11-07): a meal takes its
     // time now, so the last of a body is spoken for at the bite, nothing is
     // left on it for another mouth, and it lies there until the last meal on
     // it is done (digest takes it off the floor).
-    const taken = gone ? onIt : bite;
-    eaten.meat = gone ? 0 : left;
+    eaten.meat = Math.max(0, onIt - taken);
     const fedFrom6 = creature.hunger;
     creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(size, taken)); // what it took off the body, against its own size
     // A body it took whole, or the share of one it took, goes back if it is cut short.

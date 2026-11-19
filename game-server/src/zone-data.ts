@@ -2840,7 +2840,8 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // walks toward a brawl or joins one: the noise sends them away, as it does a
 // runner. The hedgehog the same: it curls, it does not come to look.
 export const NOISE_SHY = new Set(["red-stag", "wood-stag", "feral-goat", "old-billy", "hedgehog",
-  "wrack-crab", "ford-eel"]); // the crossing's crab and eel keep out of a fight too (rome, 2026-11-12)
+  "wrack-crab", "ford-eel", // the crossing's crab and eel keep out of a fight too (rome, 2026-11-12)
+  "wood-sloth"]); // and the sloth: it was hauling itself over to a fight and joining it (rome, 2026-11-18)
 export const RUNNERS = new Set(["fleet-rat", "roe-deer", "water-vole",
   // THE MOUNTAIN, TIER FOUR (mig 233). It shouts and it goes; it does not fight
   // and it never joins one.
@@ -8150,6 +8151,13 @@ export const OWN_FORAGE_ROOMS = new Map<string, Set<string>>();
 // nearest, however far (out to OWN_FORAGE_RANGE), eats its fill there - a full
 // meal, hunger to nothing, not the mouthful a band grazer gets - and walks home.
 export const OWN_FORAGE_RANGE = 40;
+// THE FOLLOWER GOES AFTER THE DEAD (rome, 2026-11-18). It lives on bodies alone,
+// and a scavenger notices only the dead within TERRITORY_RADIUS of its ground, so
+// every follower stood starving where it lurked. Hungry, it walks to the nearest
+// body with meat on it out to BODY_ERRAND_RANGE rooms, stays on it to eat, and
+// once fed its own ground pulls it home again.
+export const BODY_ERRANDS = new Set(["the-follower"]);
+export const BODY_ERRAND_RANGE = 20;
 // ...BUT NOT TO NOTHING (rome, 2026-10-21: they should get hungry). A meal leaves
 // the bear at this much hunger, so it is hungry again within the hour or so and
 // the long walks - the Ridge cave's above all - now and then run it past
