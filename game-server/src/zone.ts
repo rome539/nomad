@@ -8435,9 +8435,10 @@ export class ZoneDO implements DurableObject {
       // crevice before it can spring, and the ambush is spoiled (wakeListeners).
       if (this.mossUnseen(creature, session)) continue; // a still sloth in its moss
       const hiddenLurker = LURKERS.has(creature.templateId) && creature.hidden && !creature.target;
-      if (hiddenLurker && !this.litFor(session)) continue;
+      const foundBy = hiddenLurker ? ai.lurkerFoundBy(this, session) : ""; // only what spoils its drop finds it (ai.lurkerFoundBy)
+      if (hiddenLurker && !foundBy) continue;
       if (hiddenLurker) {
-        lines.push(`${cap(t.name)} is here, caught in ${this.carriesLight(session) ? "your torchlight" : "the torchlight"} before it could spring — pressed into a crevice, watching.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
+        lines.push(`${cap(t.name)} is here, caught in ${foundBy} before it could spring — pressed into a crevice, watching.${creature.hp < t.max_hp ? ` (${this.condition(creature)})` : ""}`);
         continue;
       }
       // A sentinel reads by its state: asleep and steppable, or awake and barring the stair.

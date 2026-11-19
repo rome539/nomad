@@ -960,7 +960,7 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // deep's crawlers and stalkers are untouched: they have never seen a sky.
       // GLINTING (2026-08-20) is the same answer by daylight's other shape:
       // polished steel gives a waiting lurker nowhere to hide, like the flame.
-      if (lurker && (carriesFire(session) || z.roomLit(roomId) || moonlit(z, roomId, now) || z.wearsTrait(session, "glinting"))) continue;
+      if (lurker && lurkerFoundBy(z, session, now)) continue;
       // The din of a fight no longer rouses the bone-sleepers — they wake to
       // movement (in or past) and to a grudge, not to noise alone. Blind lurkers
       // still strike at sound; that's the whole of what they are.
@@ -2606,6 +2606,19 @@ export function scavengerBold(z: ZoneDO, creature: Creature): boolean {
 // moon stated as a question about a ROOM rather than about the calendar. That
 // matters because the gloam blots out a sky (events.gloamed feeds isDark), and
 // a room the dark is standing in gets none of this no matter what the moon is.
+/** WHAT FINDS A LURKER LYING IN WAIT, named, or "" when nothing does (2026-11-19).
+ *  One rule for the ambush, the room text and the picture: a flame you carry, a fire
+ *  in the room, the moon, or glinting steel. Daylight is not one of them: by day a
+ *  follower in its crevice was printed "caught in the torchlight" with no torch
+ *  anywhere, and then dropped on the wanderer it was said to have been caught by. */
+export function lurkerFoundBy(z: ZoneDO, session: Session, now = Date.now()): string {
+  if (carriesFire(session)) return "your torchlight";
+  if (z.roomLit(session.roomId)) return "the firelight";
+  if (moonlit(z, session.roomId, now)) return "the moonlight";
+  if (z.wearsTrait(session, "glinting")) return "the flash of your polished steel";
+  return "";
+}
+
 export function moonlit(z: ZoneDO, roomId: string, now = Date.now()): boolean {
   // ...AND IT HAS TO ASK THE CALENDAR NOW, not just the room (2026-08-19). The
   // "!isDark" trick was exact while the only lit outdoor night was a full moon.

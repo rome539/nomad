@@ -249,7 +249,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // gets no chip: there is no lurk frame for a thing that is not lying in wait.
     if (z.mossUnseen(creature, session)) continue;
     const lurking = LURKERS.has(creature.templateId) && creature.hidden && !creature.joinedOpenly;
-    if (lurking && (creature.target || (!z.carriesLight(session) && !z.wearsTrait(session, "glinting")))) {
+    if (lurking && (creature.target || !ai.lurkerFoundBy(z, session))) { // the same light the room text and the ambush read
       if (seen.length < ROOM_DRAWN) { seen.push(creature.templateId); who.push(creature.id); doing.push("lurk"); eyes.push(""); }
       continue;
     }
