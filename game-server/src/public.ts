@@ -5891,6 +5891,7 @@ async function connect() {
       lastEcl = f.ecl ? 1 : 0;
       lastBow = f.bow ? 1 : 0;
       lastDrake = f.dk || "";
+      lastHallFog = f.hf ? 1 : 0;
       paintScene(f.band, f.sky, f.terrain, f.room, f.torch, f.skyroll, f.place, f.sea, f.red, f.covered, f.nt, f.lo);
       roomEl.textContent = "";
       if (f.room) {
@@ -13757,6 +13758,7 @@ var viewMode = "text";   // what is ON SCREEN; viewWant below is what was ASKED 
 var lastBand = "", lastSky = "", lastTerrain = "", lastRoomKey = "", lastPlace = "";
 var lastDrake = ""; // the real drake's flight leg over this ground, from the server (zone.drakeOverFor): the sky flies it once
 var lastBow = 0;   // a rainbow over this sky, from the server (events.rainbowOver)
+var lastHallFog = 0; // the fog come into the halls, from the server (events.hallFogged): laid over the hall's plate
 // Whether the moon is red, kept apart from which sky is painted - see the
 // note beside "red" in zone.ts. Weather decides the picture; the moon decides
 // the eyes, and reading both off one value put the eyes out in any fog.
@@ -14677,6 +14679,9 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // A roof whose picture is the open ground outside (PLATE_OF) shows the fog in it.
   var outside = wxLayer && !singleLayer && scene && (!lastCovered || (place && PLATE_OF[place])) && !SHELTERED[place];
   var veil = outside && wxLayer === "fog" ? (wxHour || "day") : "";
+  // ...AND IN THE HALLS (rome, 2026-11-19): the open ground's fog come in through the
+  // keep, laid over the hall's own plate through its fog mask, in the dark's colour.
+  if (!veil && typeof lastHallFog !== "undefined" && lastHallFog && !singleLayer && scene) veil = "night"; // typeof: the driver tests lift this function whole
   // RAIN AFTER DARK IS DARKER THAN A DRY NIGHT (rome, 2026-10-26: the floor was
   // too bright; about where snow at night sits). The night plate takes a wet
   // grade; a torch plate keeps its own light.

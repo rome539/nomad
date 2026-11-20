@@ -83,6 +83,7 @@ export interface Session {
   artDrake?: string; // the drake flight leg last sent (zone.drakeOverFor), so its passing re-sends the status
   artBow?: number; // the rainbow last sent, so its coming and going re-sends the status
   artNight?: number; // the last `nt` sent: a den's picture turns at nightfall even when the sky string does not
+  artHallFog?: number; // the last `hf` sent: the fog coming into or leaving the halls re-sends the picture
   artLow?: number; // the last `lo` sent: fog at dawn and dusk turns with the low light even when the sky string stays "fog"
   ambKey?: string; // ...and the last soundscape (sound.ts), for the same reason
   pvpTarget?: string | null; // pubkey of the wanderer this one has steel out against (transient — a deploy ends the exchange, never the grudge)

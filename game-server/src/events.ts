@@ -490,8 +490,24 @@ export function songWakeMult(z: ZoneDO, creature: { roomId: string; templateId: 
 }
 
 // Is the fog on this room? (Outdoors only — it pools on the open ground.)
+// THE FOG COMES INTO THE HALLS (rome, 2026-11-19). When the open ground is under
+// fog it gets in through every breach and loophole of the keep: each hall is foggy
+// while the open ground is (not the Deep, not the Warrens, not the keep's open
+// tops, which carry their own sky). It is fog like any other - shapes unreadable,
+// sight cut - and the picture lays it over the hall's plate (the page's hf flag).
+export function hallFogged(z: ZoneDO, roomId: string): boolean {
+  const st = z.events.get("fog"); // the fog first: no fog on the open ground, nothing to ask of the room
+  if (!st || st.phase !== "active" || (st.bands && !st.bands.includes("out"))) return false;
+  return !OUTDOOR_ROOMS.has(roomId) && !WARRENS_ROOMS.has(roomId) && z.regionOf(roomId) === "upper";
+}
+export const HALL_FOG_LINE = "Fog has come in off the open ground and lies along the floor of the hall, thicker toward the far end, where the walls go grey and then go.";
+export function hallFogLine(z: ZoneDO, roomId: string): string {
+  return hallFogged(z, roomId) ? HALL_FOG_LINE : "";
+}
+
 export function foggy(z: ZoneDO, roomId: string): boolean {
-  return (wxPhase(z, "fog", roomId) === "active" && OUTDOOR_ROOMS.has(roomId))
+  return hallFogged(z, roomId)
+    || (wxPhase(z, "fog", roomId) === "active" && OUTDOOR_ROOMS.has(roomId))
     // THE CLOUD-DOWN is the mountain's own fog (8a): the cloud base descends and
     // the high tiers white-out. It rides this same chain — spot odds down both
     // ways, unreadable shapes — at altitude instead of under a canopy.

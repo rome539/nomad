@@ -5617,7 +5617,7 @@ export class ZoneDO implements DurableObject {
       if (!seesArt(s.pubkey)) continue;
       // ...and night falling or lifting re-sends for everyone, not only the dens:
       // a rain that runs on into the dark has to turn its picture to night too.
-      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || this.drakeOverFor(s) !== (s.artDrake ?? "") || (isNight() ? 1 : 0) !== s.artNight || lowLight() !== (s.artLow ?? 0)) this.sendStatus(s);
+      if (this.artSkyFor(s) !== s.artSky || this.artBowFor(s) !== (s.artBow ?? 0) || this.drakeOverFor(s) !== (s.artDrake ?? "") || (isNight() ? 1 : 0) !== s.artNight || lowLight() !== (s.artLow ?? 0) || (events.hallFogged(this, s.roomId) ? 1 : 0) !== (s.artHallFog ?? 0)) this.sendStatus(s);
     }
     // ...and the soundscape the same way: the rain is heard arriving.
     for (const s of this.sessions.values()) {
@@ -8238,6 +8238,8 @@ export class ZoneDO implements DurableObject {
     // clear night, the full moon, the red moon). The red moon has no night line
     // above, so its stars are said here.
     if (starry || starSky === "blood") { const ex = events.nightExtras(Date.now(), !starry); if (ex) lines.push(LORE_LINE + ex); }
+    const hallFog = events.hallFogLine(this, room.id); // the fog come into the halls (events.hallFogged)
+    if (hallFog) lines.push(LORE_LINE + hallFog);
     // ...AND EVERY OTHER PART OF THE DAY (rome, 2026-11-08), the same look.
     if (!indoors && OUTDOOR_ROOMS.has(room.id) && !isNight()) {
       const day = events.dayLine(this, room.id);
@@ -9534,6 +9536,9 @@ export class ZoneDO implements DurableObject {
           // a blood-moon night and the crossing's dead stayed cold-eyed, which
           // on a coast is most of them. Two questions, two fields.
           red: (isNight() && isBloodMoon()) ? 1 : 0,
+          // THE FOG IN THE HALLS (events.hallFogged): a hall has no sky to carry it,
+          // so it rides here and the page lays it over the hall's own plate.
+          hf: !seesArt(session.pubkey) ? undefined : (session.artHallFog = events.hallFogged(this, session.roomId) ? 1 : 0) || undefined,
           // ...and the eclipse the same way, for the same reason (rome,
           // 2026-10-18: under a roof the sky reads "in" and the hollow's eyes
           // never went white). A fact about the sun, not a picture of it.
