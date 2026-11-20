@@ -2830,9 +2830,18 @@ function hourWord(now = Date.now()): string {
 const SLATE_LOOK = "A slate on a nail beside the hatch, in a frame of split ash gone dark where hands have taken it down and hung it up again. The face is grey with chalk wiped and written over so often the old words still show through, and the keeper keeps the sky on it, ground by ground, in a square hand. ('slate' to read it)";
 export function slateText(z: ZoneDO): string {
   const words = skyWords(z);
-  const grounds = [...new Set([...events.weatherGrounds(z).bands, "deep"])]
+  // THE OUTSIDE ONLY (rome, 2026-11-19): no rows for the Halls or the Deep. The gates
+  // are the open ground and Assart End is the wood, each on its ground's one row,
+  // carrying the weather of both.
+  const SLATE_SKIPS = new Set(["upper", "deep"]);
+  const SLATE_PART_OF: Record<string, string> = { gate: "out", den: "wood" };
+  const bands = events.weatherGrounds(z).bands;
+  const grounds = [...new Set([...bands.map((b) => SLATE_PART_OF[b] ?? b)])]
+    .filter((b) => !SLATE_SKIPS.has(b))
     .sort((a, b) => Object.keys(REGION_LABELS).indexOf(a) - Object.keys(REGION_LABELS).indexOf(b));
-  const rows = grounds.map((b) => `  ${REGION_LABELS[b] ?? b} — ${(words.get(b) ?? ["clear"]).join(", ")}`);
+  const sky = (b: string) => [...new Set([...(words.get(b) ?? []),
+    ...Object.entries(SLATE_PART_OF).filter(([, to]) => to === b).flatMap(([part]) => words.get(part) ?? [])])];
+  const rows = grounds.map((b) => `  ${REGION_LABELS[b] ?? b} — ${(sky(b).length ? sky(b) : ["clear"]).join(", ")}`);
   return ["A slate hangs by the hatch with the sky chalked on it in the keeper's square hand, wiped and written over so often the old words still show through:",
     `  The hour — ${hourWord()}`, `  Overhead — ${overhead()}`, ...rows].join("\n");
 }

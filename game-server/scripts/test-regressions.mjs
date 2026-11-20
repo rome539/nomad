@@ -6787,6 +6787,16 @@ try {
     assert.match(ai, /if \(lurker && lurkerFoundBy\(z, session, now\)\) continue;/, 'and so does the ambush');
   });
 
+  check('the slate is the outside only: no Halls, no Deep; the gates are the open ground and Assart End the wood, one row each (2026-11-19)', () => {
+    const g = readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8');
+    const fn = g.slice(g.indexOf('export function slateText'), g.indexOf('\n}\n', g.indexOf('export function slateText')));
+    assert.match(fn, /const SLATE_SKIPS = new Set\(\["upper", "deep"\]\);/, 'the Halls and the Deep get no row');
+    assert.match(fn, /const SLATE_PART_OF: Record<string, string> = \{ gate: "out", den: "wood" \};/, 'the gates go on the open ground, Assart End on the wood');
+    assert.match(fn, /bands\.map\(\(b\) => SLATE_PART_OF\[b\] \?\? b\)/, 'so neither gets a row of its own');
+    assert.match(fn, /filter\(\(\[, to\]\) => to === b\)\.flatMap\(\(\[part\]\) => words\.get\(part\) \?\? \[\]\)/, 'and the row carries the weather of both');
+    assert.doesNotMatch(fn, /"deep"\]\)\]/, 'the Deep is not added back on');
+  });
+
   await checkAsync('the hush is a wolf\'s size: as much body on screen as a grey wolf, idle and walking (2026-11-19)', async () => {
     const sharp = (await import('sharp')).default;
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
