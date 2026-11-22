@@ -3114,24 +3114,29 @@ function fadeGain(ctx, param, to, secs) {
 function startAmb() {
   if (soundFull()) { stopAmb(); return; } // Full sound uses the actual place, including its stone hum.
   if (ambNodes || !actx) return;
+  // The long bed and two slow pulses that never line up (2026-11-22): it was a
+  // two-second loop under one even nine-second throb.
   var src = actx.createBufferSource();
-  src.buffer = SND._noise(); src.loop = true;
+  src.buffer = scapeWhite(); src.loop = true;
   var f = actx.createBiquadFilter();
   f.type = "lowpass"; f.frequency.value = 140;
   var g = actx.createGain(); g.gain.value = 0;
   src.connect(f); f.connect(g); g.connect(aout());
-  src.start();
+  src.start(0, Math.random() * src.buffer.duration);
   fadeGain(actx, g.gain, 0.028, AMB_FADE);
   var o = actx.createOscillator(); o.frequency.value = 39;
   var og = actx.createGain(); og.gain.value = 0;
-  var lfo = actx.createOscillator(); lfo.frequency.value = 0.11;
+  var lfo = actx.createOscillator(); lfo.frequency.value = 0.071;
   var lg = actx.createGain(); lg.gain.value = 0.008;
   lfo.connect(lg); lg.connect(og.gain);
+  var lfo2 = actx.createOscillator(); lfo2.frequency.value = 0.043;
+  var lg2 = actx.createGain(); lg2.gain.value = 0.006;
+  lfo2.connect(lg2); lg2.connect(og.gain);
   o.connect(og); og.connect(aout());
-  o.start(); lfo.start();
+  o.start(); lfo.start(); lfo2.start();
   fadeGain(actx, og.gain, 0.017, AMB_FADE);
   // Gains kept alongside the sources: the stop needs something to ride down.
-  ambNodes = { srcs: [src, o, lfo], gains: [g, og] };
+  ambNodes = { srcs: [src, o, lfo, lfo2], gains: [g, og] };
 }
 function stopAmb() {
   if (!ambNodes) return;
@@ -3161,9 +3166,23 @@ var SCAPE_GLIDE = 1.2;     // seconds a layer takes to settle on a new level
 // the same 30% the ford in the rain was first brought down by. The heartbeat
 // is not part of the place and keeps its own level.
 var SCAPE_VOL = 0.7;
+// THE BEDS ARE LONG (2026-11-22). A steady sound is a stretch of noise played
+// round and round, and at four seconds the ear catches the turn: the hearth's
+// roar came back to the same breath every four seconds, forever. 27 seconds of
+// brown and 17 of white (lengths that never line up with each other) leave
+// nothing short enough to hear coming round.
+var SCAPE_BED_S = 27, SCAPE_WHITE_S = 17;
+function scapeWhite() {
+  if (actx.__wn) return actx.__wn;
+  var b = actx.createBuffer(1, actx.sampleRate * SCAPE_WHITE_S, actx.sampleRate);
+  var d = b.getChannelData(0);
+  for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  actx.__wn = b;
+  return b;
+}
 function scapeBrown() {
   if (actx.__bn) return actx.__bn;
-  var b = actx.createBuffer(1, actx.sampleRate * 4, actx.sampleRate);
+  var b = actx.createBuffer(1, actx.sampleRate * SCAPE_BED_S, actx.sampleRate);
   var d = b.getChannelData(0), last = 0;
   for (var i = 0; i < d.length; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
   // A SEAMLESS LOOP (rome, 2026-10-14: the fire popped the speakers). Brown
@@ -3185,7 +3204,7 @@ function scapeLoop(buf, chain, out) {
   var head = src;
   for (var i = 0; i < chain.length; i++) { head.connect(chain[i]); head = chain[i]; }
   head.connect(g); g.connect(out || aout());
-  src.start(0, Math.random() * 2);
+  src.start(0, Math.random() * buf.duration);
   return { src: src, gain: g, chain: chain };
 }
 function scapeFilter(type, freq, q) {
@@ -3212,23 +3231,51 @@ function scapeBuild() {
   scape = {
     firePan: firePan, life: life, lifeLp: lifeLp,
     // the fen's midges: a thin cloud of a hum, two narrow throats on one band of noise
-    midge: scapeLoop(SND._noise(), [scapeFilter("bandpass", 610, 22), scapeFilter("bandpass", 610, 22)], life),
-    rain: scapeLoop(SND._noise(), [scapeFilter("highpass", 900), scapeFilter("lowpass", 7000)]),
+    midge: scapeLoop(scapeWhite(), [scapeFilter("bandpass", 610, 22), scapeFilter("bandpass", 610, 22)], life),
+    rain: scapeLoop(scapeWhite(), [scapeFilter("highpass", 900), scapeFilter("lowpass", 7000)]),
     wind: scapeLoop(scapeBrown(), [scapeFilter("bandpass", 420, 0.9), scapeFilter("lowpass", 2400)]),
     surf: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 520), scapeFilter("highpass", 35)]),
-    leaves: scapeLoop(SND._noise(), [scapeFilter("highpass", 1400), scapeFilter("lowpass", 5500)]),
+    leaves: scapeLoop(scapeWhite(), [scapeFilter("highpass", 1400), scapeFilter("lowpass", 5500)]),
     falls: scapeLoop(scapeBrown(), [scapeFilter("highpass", 65), scapeFilter("lowpass", 1800)]),
     lap: scapeLoop(scapeBrown(), [scapeFilter("highpass", 160), scapeFilter("lowpass", 1100)]),
-    run: scapeLoop(SND._noise(), [scapeFilter("bandpass", 1100, 0.6), scapeFilter("lowpass", 3000)]),
+    run: scapeLoop(scapeWhite(), [scapeFilter("bandpass", 1100, 0.6), scapeFilter("lowpass", 3000)]),
     roar: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 240), scapeFilter("highpass", 40)], firePan),
     hum: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 170), scapeFilter("highpass", 35)]),
     gust: 0.4, gustTo: 0.4, surfPhase: 0, timers: [],
+    // the hearth's own life: how hard it is drawing, a flare when a log catches,
+    // and whether the crackle is in a busy spell or a quiet one
+    fireLvl: 0.95, fireTo: 0.95, fireFlare: 0, fireBusy: false, fireSpellEnd: 0,
+    // the slow wanders of the steady sounds, and the sea's and the shore's own waves
+    wander: {}, rainNow: 0.5, wave: null, lapWave: null, hushUntil: 0,
   };
   // ONE SLOW CLOCK for everything that breathes: the wind's gusts, the surf's
   // swell, the run of the water. Four times a second is plenty for levels
   // that glide over a second or more.
   scape.timers.push(setInterval(scapeBreathe, 250));
-  scapeDrips(); scapeCrackle(); scapeCreak(); scapeDrop(); scapeHeart(); scapeWinded(); scapeSongs(); scapeNight();
+  scapeDrips(); scapeCrackle(); scapeFireEvent(); scapeCreak(); scapeDrop(); scapeHeart(); scapeWinded(); scapeSongs(); scapeNight();
+}
+// NOTHING STEADY STAYS STEADY (2026-11-22). Rain, a fall, a stream, the stone's
+// own hum: each sat at one level, in one tone, for as long as you stood there.
+// Now each wanders: a value between 0 and 1 that now and then picks a new place
+// to go and drifts there at its own pace, so no two minutes sound alike.
+function scapeWander(k, chance, ease) {
+  var w = scape.wander[k] || (scape.wander[k] = { v: Math.random(), to: Math.random() });
+  if (Math.random() < chance) w.to = Math.random();
+  w.v += (w.to - w.v) * ease;
+  return w.v;
+}
+// ONE WAVE AT A TIME, each its own size and length, so the sea is not a clock.
+// It came in on a nine-second sine before, and the shore lapped on a faster one.
+// Waves come in sets now and then, and the shore sometimes goes still.
+function scapeWave(key, lenLo, lenHi, setChance, stillChance) {
+  var w = scape[key];
+  if (!w || w.p >= 1) {
+    var set = w && w.set > 0 ? w.set - 1 : (Math.random() < setChance ? 2 + Math.floor(Math.random() * 3) : 0);
+    var still = !set && Math.random() < stillChance;
+    w = scape[key] = { p: 0, len: lenLo + Math.random() * (lenHi - lenLo), size: still ? 0 : set ? 0.75 + Math.random() * 0.25 : 0.3 + Math.random() * 0.55, set: set };
+  }
+  w.p += 0.25 / w.len;
+  return w.size * Math.pow(Math.sin(Math.min(1, w.p) * Math.PI), 2);
 }
 function scapeBreathe() {
   if (!scape || !scapeAmb) return;
@@ -3255,15 +3302,34 @@ function scapeBreathe() {
   scapeTo(scape.midge.gain.gain, la && la.life === "fen" && la.hour === "day" && !la.rain && !la.cold
     ? 0.05 * (0.35 + 0.65 * Math.random()) * lifeVol(la) : 0, 0.8);
   // THE SEA COMES IN AND GOES OUT: a swell every nine seconds or so.
-  scape.surfPhase += 0.25 / (8 + Math.random() * 3);
-  var swell = 0.35 + 0.65 * Math.pow(Math.max(0, Math.sin(scape.surfPhase * Math.PI * 2)), 2);
+  var swell = 0.35 + 0.65 * scapeWave("wave", 6, 14, 0.12, 0);
   scapeTo(scape.surf.gain.gain, (a.water === "surf" || a.water === "cave") ? (a.water === "cave" ? 0.08 : a.loud ? 0.32 : 0.18) * swell * SCAPE_VOL : 0, 0.5);
   scapeTo(scape.surf.chain[0].frequency, a.water === "cave" ? 220 : 520);
   scapeTo(scape.leaves.gain.gain, a.leaves ? (0.008 + 0.025 * a.wind) * (0.25 + scape.gust) * SCAPE_VOL : 0);
-  scapeTo(scape.falls.gain.gain, a.water === "falls" ? 0.34 * SCAPE_VOL * (0.94 + scape.gust * 0.06) : 0);
-  scapeTo(scape.lap.gain.gain, a.water === "lap" ? 0.055 * SCAPE_VOL * (0.25 + Math.pow(Math.sin(scape.surfPhase * Math.PI * 7), 2) * 0.75) : 0);
+  var fw = scapeWander("falls", 0.02, 0.04);
+  scapeTo(scape.falls.gain.gain, a.water === "falls" ? 0.34 * SCAPE_VOL * (0.86 + fw * 0.2) : 0, 0.6);
+  scapeTo(scape.falls.chain[1].frequency, 1500 + 600 * fw, 0.6);
+  scapeTo(scape.lap.gain.gain, a.water === "lap" ? 0.055 * SCAPE_VOL * (0.25 + scapeWave("lapWave", 0.8, 2.4, 0, 0.15) * 0.75 / 0.85) : 0);
+  // THE FIRE BREATHES (2026-11-22): it draws harder and sinks on a walk of its
+  // own, its roar darkening as it sinks, and a log catching flares it for a few
+  // seconds. It was one level, one tone, for as long as you sat there.
+  if (Math.random() < 0.04) scape.fireTo = 0.7 + Math.random() * 0.5;
+  scape.fireLvl += (scape.fireTo - scape.fireLvl) * 0.06;
+  scape.fireFlare *= 0.93;
+  var fireNow = scape.fireLvl + scape.fireFlare;
+  scapeTo(scape.roar.gain.gain, a.fire ? 0.12 * SCAPE_VOL * fireNow : 0, 0.5);
+  scapeTo(scape.roar.chain[0].frequency, 150 + 100 * fireNow, 0.5);
   // RUNNING WATER, every room of it, a third down (rome, 2026-10-24: too loud).
-  scapeTo(scape.run.gain.gain, a.water === "run" ? (a.loud ? 0.13 : 0.07) * SCAPE_VOL * (0.85 + 0.3 * Math.random()) : 0, 0.3);
+  var rw = scapeWander("run", 0.05, 0.08);
+  scapeTo(scape.run.gain.gain, a.water === "run" ? (a.loud ? 0.13 : 0.07) * SCAPE_VOL * (0.72 + 0.4 * rw) * (0.92 + 0.16 * Math.random()) : 0, 0.3);
+  scapeTo(scape.run.chain[0].frequency, 850 + 500 * rw, 0.4);
+  // the rain comes in squalls and eases off; the drops on the ground follow it
+  scape.rainNow = scapeWander("rain", 0.03, 0.05);
+  scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * 0.7 * (a.roof ? 0.95 : 1) * SCAPE_VOL * (0.7 + 0.5 * scape.rainNow), 0.6);
+  // the stone's hum swells and sinks so slowly you hardly hear it go
+  var hw = scapeWander("hum", 0.01, 0.02);
+  scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL * (0.8 + 0.35 * hw) : 0, 0.8);
+  scapeTo(scape.hum.chain[0].frequency, 140 + 60 * hw, 0.8);
 }
 function scapeApply() {
   if (!scape || !scapeAmb) return;
@@ -3271,13 +3337,10 @@ function scapeApply() {
   // RAIN ON YOU is bright and close; RAIN ON A ROOF is the same storm through
   // timber and thatch - lower, softer, and nearer the drum than the hiss.
   // 30% down, under the sky and under a roof alike (rome, 2026-10-17: a bit quieter, indoors and out)
-  scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * 0.7 * (a.roof ? 0.95 : 1) * SCAPE_VOL);
   scapeTo(scape.rain.chain[0].frequency, a.roof ? 180 : 900);
   scapeTo(scape.rain.chain[1].frequency, a.roof ? 1100 : 7000);
-  scapeTo(scape.roar.gain.gain, a.fire ? 0.12 * SCAPE_VOL : 0);
   if (scape.firePan.pan) scapeTo(scape.firePan.pan, a.fireSide, 0.2);
   // UNDER STONE: the low pressure of a buried room, never silence
-  scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL : 0);
   scapeTo(scape.life.gain, a.shut ? 0.35 : 1);
   scapeTo(scape.lifeLp.frequency, a.shut ? 1200 : 14000);
   sndGround = a.ground || "";
@@ -3303,20 +3366,54 @@ function scapeDrips() {
       ? { type: "bandpass", freq: 500 + Math.random() * 700, q: 3, dur: 0.05, gain: (0.04 + Math.random() * 0.05) * 0.7 * SCAPE_VOL, atk: 0.002 }
       : { type: "bandpass", freq: 2200 + Math.random() * 3000, q: 4, dur: 0.03, gain: (0.03 + Math.random() * 0.05) * 0.7 * SCAPE_VOL, atk: 0.002 });
   }
-  scapeEvery(a && a.rain === 2 ? 40 : 90, a && a.rain === 2 ? 160 : 320, scapeDrips);
+  var pace = 1.5 - (scape ? scape.rainNow : 0.5);   // heavier spells, closer drops
+  scapeEvery((a && a.rain === 2 ? 40 : 90) * pace, (a && a.rain === 2 ? 160 : 320) * pace, scapeDrips);
 }
 // The hearth: a low roar under it and a crackle on top, never in rhythm.
+// One snap: soft, not a click (rome, 2026-10-14: the sharp ones popped the
+// speakers, and a third of the level was too quiet to hear): band-passed low
+// with a 6 ms onset, at the old level. The scale softens the ones in a shower.
+function fireSnap(t, scale) {
+  SND._burst(t, { type: "bandpass", freq: 900 + Math.random() * 1400, q: 1.2, dur: 0.05 + Math.random() * 0.04,
+    gain: (0.06 + Math.random() * 0.12) * SCAPE_VOL * (scale || 1), atk: 0.006, out: scape.firePan });
+}
+// SPELLS, NOT A PACE (2026-11-22): a fire is busy for a while (snaps close
+// together, often in runs) and then settles to a snap now and then, and how
+// long either lasts is never the same twice. On average it is about as busy as
+// the even pace it had (three times slower than at first, rome 2026-10-14).
 function scapeCrackle() {
+  var a = scapeAmb, now = Date.now();
+  if (now > scape.fireSpellEnd) {
+    scape.fireBusy = Math.random() < 0.4;
+    scape.fireSpellEnd = now + (scape.fireBusy ? 4000 + Math.random() * 9000 : 6000 + Math.random() * 16000);
+  }
+  if (a && a.fire) {
+    var t = actx.currentTime + 0.01, n = Math.random() < (scape.fireBusy ? 0.45 : 0.12) ? 2 + Math.floor(Math.random() * 3) : 1;
+    for (var i = 0; i < n; i++) fireSnap(t + i * (0.015 + Math.random() * 0.04), 1);
+  }
+  if (scape.fireBusy) scapeEvery(100, 650, scapeCrackle);
+  else scapeEvery(450, 2600, scapeCrackle);
+}
+// NOW AND THEN SOMETHING HAPPENS IN IT: a log settles (a low knock, a shower of
+// snaps, and the fire flares) or sap boils out of a split end in a thin hiss
+// that sputters. Rare, and at no set time.
+function scapeFireEvent() {
   var a = scapeAmb;
   if (a && a.fire) {
-    var t = actx.currentTime + 0.01, n = Math.random() < 0.25 ? 2 + Math.floor(Math.random() * 3) : 1;
-    for (var i = 0; i < n; i++) SND._burst(t + i * (0.015 + Math.random() * 0.04),
-      // soft snaps, not clicks (rome, 2026-10-14: the sharp ones popped the
-      // speakers, and a third of the level was too quiet to hear): band-passed
-      // low with a 6 ms onset, at the old level
-      { type: "bandpass", freq: 900 + Math.random() * 1400, q: 1.2, dur: 0.05 + Math.random() * 0.04, gain: (0.06 + Math.random() * 0.12) * SCAPE_VOL, atk: 0.006, out: scape.firePan });
+    var t = actx.currentTime + 0.02;
+    if (Math.random() < 0.55) {
+      SND._burst(t, { type: "lowpass", freq: 140 + Math.random() * 80, q: 0.8, dur: 0.35, gain: 0.16 * SCAPE_VOL, atk: 0.012, out: scape.firePan });
+      var k = 3 + Math.floor(Math.random() * 6);
+      for (var i = 0; i < k; i++) fireSnap(t + 0.08 + Math.random() * 0.9, 0.7);
+      scape.fireFlare = 0.2 + Math.random() * 0.2;
+    } else {
+      var d = 0.5 + Math.random() * 1.2;
+      SND._burst(t, { type: "bandpass", freq: 2600 + Math.random() * 1800, q: 2.5, dur: d, gain: (0.012 + Math.random() * 0.012) * SCAPE_VOL, atk: 0.08, sweep: 1800 + Math.random() * 1200, out: scape.firePan });
+      var m = 2 + Math.floor(Math.random() * 4);
+      for (var j = 0; j < m; j++) fireSnap(t + Math.random() * d, 0.4);
+    }
   }
-  scapeEvery(180, 1260, scapeCrackle); // three times slower than at first (rome, 2026-10-14)
+  scapeEvery(14000, 55000, scapeFireEvent);
 }
 // TIMBER TALKING: a stick-slip groan - a low reed of a tone, dragged unevenly
 // up or down a few semitones, through a narrow wooden resonance.
@@ -3540,7 +3637,8 @@ function lifeWarbler(v) {
 var CRICKETS = [[4300, -0.6], [4700, 0.15], [5100, 0.7]];
 function lifeCricket(v) {
   var c = CRICKETS[Math.floor(Math.random() * CRICKETS.length)], t = actx.currentTime + 0.01, g = 0.018 * v;
-  for (var i = 0; i < 3; i++) lifeNote(t + i * 0.03, c[0], c[0] * 0.98, 0.018, g, c[1], 0);
+  // two to four pulses a chirp, not always three (2026-11-22)
+  for (var i = 0, n = 2 + Math.floor(Math.random() * 3); i < n; i++) lifeNote(t + i * 0.03, c[0], c[0] * 0.98, 0.018, g * (0.8 + Math.random() * 0.2), c[1], 0);
 }
 // THE FROGS: a low purr each, from all round the water. Rain brings them up.
 function lifeFrog(a, v) {
@@ -3569,7 +3667,11 @@ function scapeSongs() {
 }
 function scapeNight() {
   var a = lifeNow(), lo = 900, hi = 1500;
-  if (a && a.hour !== "day") {
+  // THE CHORUS STOPS NOW AND THEN (2026-11-22): crickets and frogs all go quiet
+  // at once for a few seconds, the way they do, and then take it up again.
+  var hushed = Date.now() < scape.hushUntil;
+  if (!hushed && Math.random() < 0.012) scape.hushUntil = Date.now() + 2000 + Math.random() * 7000;
+  if (a && a.hour !== "day" && !hushed) {
     var v = lifeVol(a), slow = a.fog ? 1.6 : 1;
     if (a.life === "open" && !a.rain && !a.cold) { lifeCricket(v); lo = 150 * slow; hi = 450 * slow; }
     else if (a.life === "fen") { lifeFrog(a, v); lo = (a.rain ? 120 : 250) * slow; hi = (a.rain ? 500 : 900) * slow; }

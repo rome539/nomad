@@ -8713,6 +8713,27 @@ try {
     assert.match(g, /const feast = gatehouseFeast\(\);\n\s+if \(feast && FEAST_LINES\[feast\]\) head\.push\(FEAST_LINES\[feast\]\);/, 'the room says it');
   });
 
+  check('no steady sound comes round on a short loop, and the hearth is never on a clock (2026-11-22)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const bed = +pub.match(/var SCAPE_BED_S = (\d+), SCAPE_WHITE_S = (\d+);/)[1], white = +pub.match(/SCAPE_WHITE_S = (\d+);/)[1];
+    assert.ok(bed >= 15 && white >= 15 && bed !== white, `beds of ${bed}s and ${white}s`);
+    const build = pub.slice(pub.indexOf('function scapeBuild()'), pub.indexOf('function scapeBreathe()'));
+    assert.doesNotMatch(build, /scapeLoop\(SND\._noise\(\)/, 'no layer loops the two-second burst noise');
+    assert.match(build, /scapeFireEvent\(\)/, 'the hearth has its happenings');
+    assert.match(pub, /src\.start\(0, Math\.random\(\) \* buf\.duration\);/, 'each layer starts somewhere different in its bed');
+    const breathe = pub.slice(pub.indexOf('function scapeBreathe()'), pub.indexOf('function scapeApply()'));
+    assert.match(breathe, /scapeTo\(scape\.roar\.gain\.gain, a\.fire \? 0\.12 \* SCAPE_VOL \* fireNow/, 'the roar rises and sinks');
+    const crackle = pub.slice(pub.indexOf('function scapeCrackle()'), pub.indexOf('function scapeFireEvent()'));
+    assert.match(crackle, /if \(scape\.fireBusy\) scapeEvery\(/, 'the crackle has busy spells and quiet ones');
+    // ...and every other steady sound wanders, and the sea and the shore come in one wave at a time
+    for (const k of ['rain', 'falls', 'run', 'hum']) assert.match(breathe, new RegExp(`scapeWander\\("${k}"`), `the ${k} wanders`);
+    assert.match(breathe, /scapeWave\("wave"/, 'the sea is waves, not a clock');
+    assert.match(breathe, /scapeWave\("lapWave"/, 'the shore laps unevenly');
+    assert.doesNotMatch(breathe, /Math\.sin\(scape\.surfPhase/, 'no sine clock left on the water');
+    const amb = pub.slice(pub.indexOf('function startAmb()'), pub.indexOf('function stopAmb()'));
+    assert.match(amb, /src\.buffer = scapeWhite\(\)/, 'the half-sound bed is long too');
+  });
+
   check('a rat dressed for a feast is dressed in the picture and in the words alike, every feast (2026-11-22)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const art = JSON.parse(readFileSync(new URL('./deploy-artwork.json', import.meta.url), 'utf8'));
