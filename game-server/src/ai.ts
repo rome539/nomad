@@ -45,7 +45,7 @@ import {
   ALARM_CALLERS, ALARM_CALL_WORDS, ALARM_HEEDS, WINDS_UP, WINDUP_MS, LORE_LINE, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
   MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, SMALL_PREY, HUNGER_MAX, HUNGER_FLOOR, mealOf, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
-  NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
+  NAPPERS, NOCTURNAL, REST_LINES, FLEE_WIND_MIN, FLEE_WIND_MAX, FLEE_WIND_MS, FLEE_SHOWN_MS, NAP_ODDS, NAP_MIN_MS, NAP_MAX_MS, GORGE_NAP_ODDS, NAP_ODDS_DAY_OUT, NAP_ODDS_NIGHT_OUT, NAP_ODDS_MOON_OUT,
   MOON_PACK_HUNT_MULT, MOON_PACK_CALL_MULT, ALARM_MOON_ODDS,
   WATER_ROOMS, THIRST_MIN_MS, THIRST_MAX_MS, THIRST_RADIUS, THIRST_LATE_MS,
   RAT_AVOID_MS, WHISTLE_AVOID_MS, DINNER_LAUGH_ODDS, LURKER_DRIFT_MS, SUN_LINES, OPEN_LURKERS, LURKER_HUNT_RADIUS, LURKER_HUNT_DRIFT_MS, LURKER_CROWD, RAT_RIVALS, RIVAL_AVOID_MS, RIVAL_REST_MS, DARK_ROOMS, THIEVES,
@@ -56,7 +56,7 @@ import {
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT, DEEP_HEART, KINGS_ROOMS_DEEP,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, bodyOf, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
-  RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  FLIERS, RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
@@ -807,8 +807,19 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     // The key-bearer reads first: a deep-thing in the shallows is an OPPORTUNITY,
     // not an unfair spawn — its heart opens the descent while it's fresh.
     if (creature.surfaced) return "still streaked with the deep's black water — its cold heart is a key, while it beats";
-    if (winded(creature, Date.now())) return "blown, sides going like a bellows, out of running";
+    // THE WORDS SAY WHAT THE PICTURE DRAWS (2026-11-21): a text player reads
+    // every pose the page draws (chips.ts sendCtx), in the same order it
+    // wins there. Up, run in, knocked down, off-balance, nosing at the floor,
+    // listening: each was drawn with nothing said.
+    const now = Date.now();
+    if (FLIERS.has(creature.templateId) && airborne(creature, now)) {
+      return creature.target ? "wheeling overhead, out of reach" : "up off the ground, out of reach";
+    }
+    if (winded(creature, now)) return "blown, sides going like a bellows, out of running";
+    if (creature.fled && creature.fledAt && now - creature.fledAt < FLEE_SHOWN_MS) return "only just come in at speed, and still on the move";
+    if (FLIERS.has(creature.templateId) && creature.groundedUntil && now < creature.groundedUntil) return "knocked out of the air, floundering on the ground";
     if (creature.stunned) return "reeling and dazed";
+    if (creature.staggerUntil && now < creature.staggerUntil) return "thrown off-balance by its own wild swing";
     if (creature.bleedTicks && creature.bleedTicks > 0) return "bleeding freely, dark spatter on the stone";
     if (creature.rouseAt && Date.now() < creature.rouseAt && WINDS_UP[creature.templateId]) return WINDS_UP[creature.templateId].state;
     if (creature.rouseAt && Date.now() < creature.rouseAt) return creature.templateId === DROWNED_GOD ? "risen to the head in the black water, looking at you, not yet coming" : "winding up to spring, hackles high";
@@ -863,6 +874,10 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     // it on no legs at all. The taxonomy to fix it already exists, because the
     // combat layer has always known a bird has a bill and a snake has neither:
     // BEAKS and COILS.
+    if (creature.eyeing) {
+      const it = z.world!.itemTemplates.get(creature.eyeing)?.name;
+      return it ? `nosing at ${it} on the ground` : "nosing at something on the ground";
+    }
     if (creature.wateringTo) {
       return BEAKS.has(creature.templateId) ? "making for water on foot, in that awkward walk a big bird has"
         : COILS.has(creature.templateId) ? "pouring itself downhill toward water"
@@ -873,6 +888,7 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
         ? "casting after a scent, nose to the ground"
         : "moving toward something only it has heard";
     }
+    if (creature.curious) return "gone still, listening to something it heard";
     // The food web made visible: a hungry predator eyes a weaker thing sharing
     // its room — the tell that lets a player USE predation (bait a scrap, slip past).
     if (creature.hunger >= HUNGRY_AT && !HOLLOW.has(tmpl.id)) {

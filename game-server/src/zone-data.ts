@@ -13419,6 +13419,72 @@ export const GATEHOUSE_ROOM: Partial<Record<Region, string>> = {
   mountain: "A turf-roofed room dug back into the hillside, low enough to hold its heat and warmer than it has any right to be. The keeper's hatch is shut in the far wall; a bench runs under it, and the fire keeps its turf. The mountain is on the other side of the door: a long way down, and a longer way up, and neither of them going anywhere.",
 };
 
+// THE FEAST IS IN THE WORDS AS WELL AS THE PICTURE (2026-11-21). The page
+// hangs a feast's dressing over the gatehouse picture by the date
+// (public.ts GATEHOUSE_FEASTS); the room's words never knew, so the picture
+// had garlands and the text had none. This is the same table, kept equal to
+// the page's by a regression check: [from month, from day, to month, to day],
+// UTC, both ends included, and a window may wrap the new year. A feast goes in
+// here only when its dressing is painted, and in both places at once.
+export const GATEHOUSE_FEASTS: Record<string, [number, number, number, number]> = {
+  candlemas: [2, 1, 2, 7],
+  ladyday:   [3, 20, 3, 26],
+  mayday:    [4, 30, 5, 6],
+  midsummer: [6, 20, 6, 26],
+  lammas:    [7, 31, 8, 6],
+  harvest:   [9, 21, 10, 5],
+  halloween: [10, 24, 11, 1],
+  yule:      [12, 17, 1, 1],
+};
+// What the dressing is, said as the picture shows it. The four not yet painted
+// (candlemas, ladyday, mayday, lammas) are written to the prompts their
+// pictures will be made from, and wait here until those pictures exist.
+export const FEAST_LINES: Record<string, string> = {
+  midsummer: "It is dressed for midsummer: garlands of green leaves and white and yellow flowers run along every beam, a wreath of them hangs on the door and another over the hatch, and more flowers lie strewn along the tables and across the floor.",
+  harvest: "It is dressed for the harvest: garlands of leaves gone red and gold run along the beams under a great wreath of them, a string of little banners with the wheat-sheaf on them hangs across the room, and the tables are spread with red runners, pumpkins, baskets of red apples and loaves.",
+  halloween: "It is dressed for the turn of the year into the dark: bunches of drying herbs, corn and straw hang from every beam, a five-pointed star of bound twigs hangs from the middle of the ceiling, and hollowed pumpkins grin on the tables with candles burning inside them.",
+  yule: "It is dressed for Yule: evergreen boughs run the length of every beam, caught up with red bows, a wreath with a red bow hangs on the door and another over the hatch, holly and its berries lie along red runners on the tables, and a red hanging with a white fir tree worked on it covers part of the wall.",
+  candlemas: "It is dressed for Candlemas: a long row of lit white candles stands along the mantel and another along the ledge under the hatch, a cross woven of green rushes is on the door, and jugs of snowdrops stand among lit candles on the tables.",
+  ladyday: "It is dressed for Lady Day: big pots of daffodils stand on the floor by the walls, tall jars of pussy willow stand beside the door, the long table at the back has baskets of eggs dyed pale blue, pink and yellow, and bunches of primroses lie on the benches.",
+  mayday: "It is dressed for May Day: swags of coloured ribbons run from beam to beam across the room with their ends hanging down, crowns of flowers hang on the pegs on the walls, and jugs of bluebells stand on the barrels.",
+  lammas: "It is dressed for Lammas: sheaves of wheat stand upright against the walls, a great pile of round loaves is heaped on the long table at the back, two sickles hang crossed on the wall, and jugs of ale stand on the barrels.",
+};
+/** The feast on the gatehouse today, or "" (the same test as the page's gatehouseFeast). */
+export function gatehouseFeast(now = Date.now()): string {
+  const d = new Date(now), md = (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  for (const [name, f] of Object.entries(GATEHOUSE_FEASTS)) {
+    const a = f[0] * 100 + f[1], b = f[2] * 100 + f[3];
+    if (a <= b ? (md >= a && md <= b) : (md >= a || md <= b)) return name;
+  }
+  return "";
+}
+
+// THE RATS DRESSED FOR THE FEASTS (2026-11-22). While a feast is on, the page
+// draws these rats from a sheet of their own made for it (public.ts
+// FEAST_SHEETS); this is what that picture shows, said where the creature is
+// seen, so the words carry it too. Read off the drawn sheets: every rat wears
+// the same thing for a feast except at Halloween, where each has its own.
+const RAT_FEAST_DRESS: Record<string, string> = {
+  candlemas: "with a stub of white candle stuck on its back",
+  ladyday: "with a yellow primrose behind one ear",
+  mayday: "with a red ribbon tied in a bow round its middle",
+  midsummer: "with a ring of yellow flowers round its neck",
+  lammas: "with a ring of plaited wheat round its neck, two ripe ears standing up from it",
+  harvest: "with a little doll of plaited straw tied on its back",
+  yule: "with a sprig of holly and a red rag tied round its neck",
+};
+export const FEAST_COSTUMES: Record<string, Record<string, string>> = {
+  "rat": { ...RAT_FEAST_DRESS, halloween: "with a ragged white cloth over its head and back like a ghost, its eyes looking out through two holes cut in it" },
+  "fleet-rat": { ...RAT_FEAST_DRESS, halloween: "with the hollowed shell of a turnip over its head, its eyes looking out through two holes cut in it" },
+  "albino-rat": { ...RAT_FEAST_DRESS, halloween: "with a pair of black cloth bat wings strapped to its back" },
+};
+/** ", with …" for a creature dressed for today's feast, or "". */
+export function feastCostume(templateId: string, now = Date.now()): string {
+  const f = gatehouseFeast(now);
+  const c = f ? FEAST_COSTUMES[templateId]?.[f] : undefined;
+  return c ? `, ${c}` : "";
+}
+
 // ...and what you notice while you sit in it. Added to the shared pool below,
 // never replacing it — the keeper, the fire and the bench belong to every one
 // of these rooms, and only the walls change.

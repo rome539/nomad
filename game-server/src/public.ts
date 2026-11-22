@@ -10849,7 +10849,7 @@ var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "30";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "52";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "53";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10992,11 +10992,27 @@ var TERRAIN_PLATE = {
 // the room is its plain self. Every wanderer sees the same one on the same day,
 // because the date is the only input.
 var GATEHOUSE_FEASTS = {
+  candlemas: [2, 1, 2, 7],
+  ladyday:   [3, 20, 3, 26],
+  mayday:    [4, 30, 5, 6],
   midsummer: [6, 20, 6, 26],
+  lammas:    [7, 31, 8, 6],
   harvest:   [9, 21, 10, 5],
   halloween: [10, 24, 11, 1],
   yule:      [12, 17, 1, 1]
 };
+// THE RATS DRESS UP (2026-11-22). While a feast is on, these creatures are drawn
+// from the sheet of their own made for it ("rat-yule"), if one is shipped. Only
+// the picture changes: the creature keeps its own id everywhere else (its voice,
+// its poses, its shadow's place), because the frames are the same frames in the
+// same order. The server's look line names the same costume (zone-data
+// FEAST_COSTUMES), so the words and the picture agree.
+var FEAST_SHEETS = { "rat": 1, "fleet-rat": 1, "albino-rat": 1 };
+function feastSheet(id) {
+  if (!FEAST_SHEETS[id]) return id;
+  var f = gatehouseFeast(), s = f ? id + "-" + f : "";
+  return s && MOB_ANIM[s] && MOB_SPRITE[s] ? s : id;
+}
 var FEAST_FORCE = "";   // the preview panel sets this to look at a feast out of season
 function gatehouseFeast() {
   if (FEAST_FORCE) return FEAST_FORCE === "none" ? "" : FEAST_FORCE;
@@ -15486,7 +15502,7 @@ function fxMobs(box) {
   if (!mobsEl) return out;
   var els = [].slice.call(mobsEl.querySelectorAll(".mob:not(.dead)")).concat([].slice.call(mobsEl.querySelectorAll(".mob[data-loot]")));
   for (var i = 0; i < els.length && out.length < FX_MOBS; i++) {
-    var el = els[i], loot = el.dataset.loot, id = loot ? "loot:" + loot : el.dataset.id;
+    var el = els[i], loot = el.dataset.loot, id = loot ? "loot:" + loot : el.dataset.sheet || el.dataset.id;
     var spec = loot ? { n: 1 } : id && MOB_ANIM[id];
     if (!spec) continue;
     var tx = fxMobTex[id];
@@ -15918,6 +15934,14 @@ var MOB_SPRITE = {
   "brood-rat": 3,             // 0.20
   "fleet-rat": 3,             // 0.15
   "albino-rat": 3,            // 0.15
+  // THE RATS DRESSED FOR THE FEASTS (2026-11-22; FEAST_SHEETS). Each is its own
+  // rat redrawn with the costume, held to the rat's body as shipped: measured as
+  // body length over frame height on idle, move-a and move-b against the live
+  // strip, taken through mobVh's curve. A costume that adds height (wheat ears,
+  // a doll, wings) makes the frame taller, so its number goes up to keep the rat.
+  "rat-candlemas": 3.11, "rat-ladyday": 3, "rat-mayday": 3, "rat-midsummer": 3, "rat-lammas": 4.56, "rat-harvest": 3.24, "rat-halloween": 2.66, "rat-yule": 3,
+  "fleet-rat-candlemas": 3.02, "fleet-rat-ladyday": 2.67, "fleet-rat-mayday": 2.96, "fleet-rat-midsummer": 3.03, "fleet-rat-lammas": 3.99, "fleet-rat-harvest": 3.19, "fleet-rat-halloween": 3.64, "fleet-rat-yule": 2.99,
+  "albino-rat-candlemas": 3.13, "albino-rat-ladyday": 3.02, "albino-rat-mayday": 2.99, "albino-rat-midsummer": 3.05, "albino-rat-lammas": 3.92, "albino-rat-harvest": 4.18, "albino-rat-halloween": 3.27, "albino-rat-yule": 3.01,
   "rat-king": 24,             // a boss, sized with the old grey: a rat bigger than any rat should be (rome: 11 read too small)
   "fever-rat": 11,            // the rat king's body at 24, measured body to body THROUGH mobVh's curve (17, matched as if linear, drew it a fifth too big)
   "grey-heron": 13,           // 1.00  standing; the same as the feral goat at 1.00
@@ -16142,6 +16166,30 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "rat-yule":               { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "rat-midsummer":          { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "rat-mayday":             { n: 8, aspect: 1.693, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "rat-lammas":             { n: 8, aspect: 1.399, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "rat-ladyday":            { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "rat-harvest":            { n: 8, aspect: 1.628, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "rat-halloween":          { n: 8, aspect: 1.785, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "rat-candlemas":          { n: 8, aspect: 1.661, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat-yule":         { n: 8, aspect: 1.567, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat-midsummer":    { n: 8, aspect: 1.561, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat-mayday":       { n: 8, aspect: 1.577, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat-lammas":       { n: 8, aspect: 1.377, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat-ladyday":      { n: 8, aspect: 1.653, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat-harvest":      { n: 8, aspect: 1.517, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat-halloween":    { n: 8, aspect: 1.447, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "fleet-rat-candlemas":    { n: 8, aspect: 1.561, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat-yule":        { n: 8, aspect: 1.449, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat-midsummer":   { n: 8, aspect: 1.439, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat-mayday":      { n: 8, aspect: 1.454, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat-lammas":      { n: 8, aspect: 1.288, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat-ladyday":     { n: 8, aspect: 1.452, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat-harvest":     { n: 8, aspect: 1.259, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat-halloween":   { n: 8, aspect: 1.398, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "albino-rat-candlemas":   { n: 8, aspect: 1.427, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-hush":       { n: 8, aspect: 1.704, f: {"idle":0,"alert":1,"listen":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "capercaillie":   { n: 9, aspect: 1.144, f: {"idle":0,"up":1,"glide":2,"landing":3,"alert-alarm":4,"attack":5,"graze":6,"rest":7,"death":8,"down":2} },
   "water-vole":   { n: 8, aspect: 1.1, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -16616,7 +16664,7 @@ function paintMobs(ids, doing, dead) {
   // them stay cold through the moment the sky went over.
   var bag = viewMode === "image" ? lootBag(mobLoose) : null;
   var chestsHere = viewMode === "image" ? mobChests : [];
-  var key = bodies.join(",") + "|" + (bag ? "bag:" + bag.name + "|" : "") + (chestsHere.length ? "ch:" + chestsHere.join(",") + "|" : "") + (lastRed ? "R|" : "")
+  var key = (typeof gatehouseFeast === "function" ? gatehouseFeast() : "") + "|" + bodies.join(",") + "|" + (bag ? "bag:" + bag.name + "|" : "") + (chestsHere.length ? "ch:" + chestsHere.join(",") + "|" : "") + (lastRed ? "R|" : "")
     + list.map(function (e) { return e.id; }).join(",");
   // Sleep is NOT part of the key: a creature bedding down must not reflow the
   // row, which would throw away every animation running in it. It is applied
@@ -16665,7 +16713,7 @@ function paintMobs(ids, doing, dead) {
   for (var d1 = 0; d1 < bodies.length; d1++) {
     var bid = bodies[d1];
     if (UNSEEN[bid]) continue;          // nothing was drawn, so nothing lies there
-    var bspec = MOB_ANIM[bid], bvh = mobVh(bid);
+    var bsheet = feastSheet(bid), bspec = MOB_ANIM[bsheet], bvh = mobVh(bsheet);
     var bel = document.createElement("div");
     bel.className = "mob dead";
     bel.style.height = boxPct(bvh);
@@ -16678,7 +16726,7 @@ function paintMobs(ids, doing, dead) {
       bel.dataset.fell = String(at.x);
       if (at.stood && !moreCame) { bel.dataset.stood = "1"; bel.dataset.depth = String(at.depth); }
     }
-    bel.style.backgroundImage = "url(/mob/" + bid + ".webp?v=" + MOB_V + ")";
+    bel.style.backgroundImage = "url(/mob/" + bsheet + ".webp?v=" + MOB_V + ")";
     bel.style.backgroundSize = (bspec.n * 100) + "% 100%";
     bel.style.backgroundPositionX = (bspec.f.death * 100 / (bspec.n - 1)) + "%";
     // The same rule as the living, applied once: a body never animates, so this
@@ -16738,7 +16786,7 @@ function paintMobs(ids, doing, dead) {
     // (2026-09-30: the quicksand has since left the roster altogether - the flat
     // itself takes your leg now - so UNSEEN is empty. The rule stays.)
     if (UNSEEN[id]) continue;
-    var slot = order[k].idx, vh = mobVh(id), h = boxPct(vh);
+    var sheet = feastSheet(id), slot = order[k].idx, vh = mobVh(sheet), h = boxPct(vh);
     // NOTHING PUTS ITS FEET THROUGH THE PROSE (rome, 2026-09-08: the drake might
     // be too big). Centring on the horizon is right up to about the size of a
     // man and then stops being: at 75.7vh the drake's feet land at 93% with
@@ -16750,7 +16798,7 @@ function paintMobs(ids, doing, dead) {
     // Expressed as a fraction of the element's OWN height, because that is what
     // a percentage translate means.
     var lift = (vh - MAN_VH) / 2 / vh;   // see the note on blift above
-    var spec = MOB_ANIM[id];
+    var spec = MOB_ANIM[sheet];
     if (!spec) {
       var im = document.createElement("img");
       im.src = "/mob/" + id + ".webp?v=" + MOB_V;
@@ -16765,6 +16813,7 @@ function paintMobs(ids, doing, dead) {
     var el = document.createElement("div");
     el.className = "mob";
     el.dataset.id = id;   // the room's effects read it to throw this creature's shadow
+    if (sheet !== id) el.dataset.sheet = sheet;   // ...from the picture it is drawn in
     el.style.height = h;
     if (lift) el.style.transform = "translateY(" + (-lift * 100).toFixed(1) + "%)";
     // WIDTH IS STATED, NOT DERIVED. A strip window only shows one clean frame
@@ -16787,7 +16836,7 @@ function paintMobs(ids, doing, dead) {
     var redEyes = lastRed && MOB_EYES[id];
     if (redEyes) { el.dataset.red = "1"; el.style.setProperty("--mob-base", "url(/mob/" + id + ".webp?v=" + MOB_V + ")"); }
     el.style.backgroundImage = (redEyes ? "url(/mob/" + id + ".eyes.webp?v=" + MOB_V + "), " : "")
-      + "url(/mob/" + id + ".webp?v=" + MOB_V + ")";
+      + "url(/mob/" + sheet + ".webp?v=" + MOB_V + ")";
     el.style.backgroundSize = redEyes
       ? (spec.n * 100) + "% 100%, " + (spec.n * 100) + "% 100%"
       : (spec.n * 100) + "% 100%";

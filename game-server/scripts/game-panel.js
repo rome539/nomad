@@ -148,7 +148,7 @@
   // THE GATEHOUSE'S FEASTS go by the real date, so without this you would wait
   // months to see three of them. "by date" is what a player gets today.
   var feast = mk("select", btnCss);
-  [["", "feast: by date"], ["none", "feast: none"], ["midsummer", "midsummer"], ["harvest", "harvest"], ["halloween", "halloween"], ["yule", "yule"]].forEach(function (x) {
+  [["", "feast: by date"], ["none", "feast: none"], ["candlemas", "candlemas"], ["ladyday", "lady day"], ["mayday", "may day"], ["midsummer", "midsummer"], ["lammas", "lammas"], ["harvest", "harvest"], ["halloween", "halloween"], ["yule", "yule"]].forEach(function (x) {
     var o = document.createElement("option"); o.value = x[0]; o.textContent = x[1]; feast.appendChild(o); });
   feast.onchange = function () { paint(); };
 

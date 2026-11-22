@@ -28,6 +28,9 @@ const code = grab("MOB_SPRITE")+"\n"+grab("MOB_ANIM")+"\n"+block("MAN_VH")+"\n"+
   +block("NOT_AN_IDLE")+"\n"+fn("mobActs")+"\n"
   +block("ROOTED")+"\n"
   +grab("MOB_EYES")+"\n"
+  // the feasts dress the rats (2026-11-22): the real calendar and the real swap
+  +grab("GATEHOUSE_FEASTS")+"\n"+block("FEAST_SHEETS")+"\n"+fn("feastSheet")+"\n"+block("FEAST_FORCE")+"\n"+fn("gatehouseFeast")+"\n"
+  +'ctx.setFeast=function(f){ FEAST_FORCE=f; };\n'
   +'var viewMode="image", lastMobs="", anims=[], animTimer=null, stillness=false, MOB_V="13";\n'
   // The floor bag and the chests ride the same paint (2026-10-12/13).
   +block("CHEST_ART")+"\n"+'var LOOT_BAGS=[], mobLoose=0, mobChests=[], LOOT_V="1";\n'+fn("lootBag")+"\n"
@@ -193,6 +196,18 @@ function mkLift(id){
   return ctx.anims()[0].lift;
 }
 
+
+// A FEAST DRESSES THE RAT IN THE PICTURE (2026-11-22): its own strip for the
+// feast, at the size measured for that strip, and the plain rat with no feast.
+made.length=0; ctx.clearAnims(); ctx.setFeast("yule"); ctx.paintMobs(['rat','grey-wolf'],null,[]);
+const yr=made.find(e=>e.dataset&&e.dataset.id==='rat'), yw=made.find(e=>e.dataset&&e.dataset.id==='grey-wolf');
+t('on a feast the rat is drawn in its feast strip', yr && yr.style.backgroundImage.indexOf('/mob/rat-yule.webp')>0, yr && yr.style.backgroundImage);
+t('...at that strip\'s own size', yr && yr.dataset.h===ctx.mobVh('rat-yule').toFixed(2));
+t('...and a creature with no costume is untouched', yw && yw.style.backgroundImage.indexOf('/mob/grey-wolf.webp')>0);
+made.length=0; ctx.clearAnims(); ctx.setFeast("none"); ctx.paintMobs(['rat'],null,[]);
+const nr=made.find(e=>e.dataset&&e.dataset.id==='rat');
+t('with no feast the rat is its plain self', nr && nr.style.backgroundImage.indexOf('/mob/rat.webp')>0, nr && nr.style.backgroundImage);
+ctx.setFeast("");
 
 console.log(fail?"\n"+fail+" FAILED":"\nall pass");
 process.exit(fail?1:0);

@@ -149,7 +149,7 @@ import { FORGE_STOCK,
   BOLT_TIRE_MS, BOLT_HOLD_ODDS, BOLT_HOLD,
   SHELTER_ROOMS, YEW_ROOM, GIBBET_ROOM,
   WAKE_NOISE, RARITY_RANK,
-  HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP,
+  HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, feastCostume,
   SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_KIND_ROOM, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT, CHILL_MEND_MULT,
@@ -8701,7 +8701,11 @@ export class ZoneDO implements DurableObject {
       + ` (${names.length} ${names.length === 1 ? "piece" : "pieces"} — all of it falls where it falls.)`;
   }
 
+  // What it carries, and first what it is dressed in for a feast (zone-data FEAST_COSTUMES).
   public bearsClause(creature: Creature): string {
+    return feastCostume(creature.templateId) + this.carriesClause(creature);
+  }
+  private carriesClause(creature: Creature): string {
     if (!creature.carries?.length) return "";
     // A hoarder can be wearing eight things, and eight "and"s would bury the
     // room line. It gets a WEIGHT instead of a manifest — you can see it's laden

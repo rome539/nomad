@@ -27,7 +27,7 @@ import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STU
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, GLUT_FREE, GLUT_FLOOR, GLUT_EASE_MS, GLUT_EASE_SHARE, CIGARETTES, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, FENCE_ALWAYS, FENCE_MATS, TORCH_ITEM,
   BOUNTY_TABLE, BOUNTY_BOARD_SIZE, BOUNTY_CHURN_MIN_MS, BOUNTY_CHURN_MAX_MS, DICE_RULES,
   MAP_ITEMS, FULL_MAP, DETAILED_MAP, SLOT_WORD,
-  GATEHOUSE_BARRED, GATEHOUSE_NOARG, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, SOUP_ITEM, SOUP_WARM_MS, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
+  GATEHOUSE_BARRED, GATEHOUSE_NOARG, gatehouseFeast, FEAST_LINES, GATEHOUSE_AMBIENCE, GATEHOUSE_ROOM, GATEHOUSE_BAND_AMBIENCE, DEEP_ROOMS, BOX_WORD, SOUP_ITEM, SOUP_WARM_MS, FOOD_KEEPS , MAP_BAND_OF, DEN_CAP,
   GATEHOUSE_RAIN, GATEHOUSE_AFTER_RAIN, GATEHOUSE_FOG, GATEHOUSE_COLD, GATEHOUSE_CROWS, GATEHOUSE_NIGHT, GATEHOUSE_DAY,
   BOARD_MAX_LEN, BOARD_LIFE_MS, BOARD_CAP,
   POSES, COURTESIES, WAVE_ARMED, DANCE_ALONE, DANCE_ALONE_ROOM, KEEN_EMPTY_SELF, KEEN_EMPTY_ROOM, SING_SELF, SING_ROOM,
@@ -3044,6 +3044,9 @@ function gatehouseParts(z: ZoneDO, session: Session, arriving: boolean): { head:
     GATEHOUSE_ROOM[band]
       ?? "A low room behind the gate, warm and close. The keeper's hatch is shut in the far wall; a bench runs under it, and the brazier keeps its coals. The dungeon is on the other side of a very old door, and it stays there.",
   ];
+  // The feast the picture is dressed for, in the words too (zone-data GATEHOUSE_FEASTS).
+  const feast = gatehouseFeast();
+  if (feast && FEAST_LINES[feast]) head.push(FEAST_LINES[feast]);
   const fixtures: string[] = [];
   const lines: string[] = [];
   // The wall chart, plastered by the door: the players' own map, in whatever

@@ -2805,12 +2805,19 @@ export async function cmdInventory(z: ZoneDO, session: Session): Promise<void> {
   z.send(session, out.join("\n"));
 }
 
+// WHO GIVES NAMES, NOT PLACES (2026-11-21). Where everyone stood was a free
+// map of every other player; only these two keys still see the rooms.
+export const WHO_PLACES_KEYS = new Set<string>([
+  "acee4b2c6111c160a8eb3b68da327ea3242b41136cda46d376af762d768db612", // Irongate
+  "aacc7f29a6b00fde2381cca237a37777598a103f1ea12e3221fe4e5c586f51c3", // Lunapilot
+]);
 export function cmdWho(z: ZoneDO, session: Session): void {
   const world = z.world!;
   const awake = [...z.sessions.values()].filter((s) => !s.away);
+  const places = WHO_PLACES_KEYS.has(session.pubkey);
   const lines = [`Awake in the Door (${awake.length}):`];
   for (const s of awake) {
-    lines.push(`  ${s.name} — ${world.rooms.get(s.roomId)?.name ?? s.roomId}`);
+    lines.push(places ? `  ${s.name} — ${world.rooms.get(s.roomId)?.name ?? s.roomId}` : `  ${s.name}`);
   }
   z.send(session, lines.join("\n"));
 }
