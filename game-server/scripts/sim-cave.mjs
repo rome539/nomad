@@ -61,6 +61,17 @@ if (scenario === 'measure') {
     const onGround = ownRows.filter((s) => md.settlesOn(line, s.room_id)).length;
     log(`  ${line}: ${homes.length} homes for ${ownRows.length} rows (${onGround} rows already on its ground)${eats ? `, ${fed} with prey within 3 rooms` : ''}${own ? `, ${grazed} with its own feeding ground within 3 rooms` : ''}`);
   }
+  // LAND THAT FITS (living-regions rule 13): how many homes 4 rooms apart each land
+  // holder's ground gives, against how many holders it needs room for (a pack is one).
+  log('\nland, homes 4 rooms apart (greedy) against what needs one:');
+  for (const line of zd.CAVE_ROAMERS) {
+    if (!zd.LAND_HOLDERS.has(line) && !zd.GROUND_HOLDERS.has(line)) continue;
+    const homes = ai.livingHomes(z, line, 'cave'), apart = [];
+    for (const h of homes) if (apart.every((o) => z.roomDist(h, o) >= 4)) apart.push(h);
+    const n = W.mobSpawns.filter((s) => (z.variantBase.get(s.template_id) ?? s.template_id) === line && z.regionOf(s.room_id) === 'cave').length;
+    const g = zd.CAVE_GROUPS.get(line), need = g ? Math.ceil(n / ((g.min + g.max) / 2)) : n;
+    log(`  ${line}: ${apart.length} apart for ${need}${g ? ' packs' : ''} (${(apart.length / need).toFixed(1)}x)`);
+  }
   const reach = new Map(); const q = [...W.entryRooms]; for (const g of q) reach.set(g, 0);
   for (let i = 0; i < q.length; i++) for (const e of W.exits.get(q[i]) ?? []) if (!e.key_item && !reach.has(e.to_room)) { reach.set(e.to_room, 0); q.push(e.to_room); }
   log('\ncave: rooms behind a keyed way only: ' + ([...W.rooms.keys()].filter((r) => z.regionOf(r) === 'cave' && !reach.has(r)).join(', ') || 'none'));

@@ -2683,6 +2683,7 @@ export class ZoneDO implements DurableObject {
     if (!this.isDark(session.roomId)) return true;
     if (this.carriesLight(session)) return true;
     if (this.roomLit(session.roomId)) return true;
+    if (cave.lampLights(this, session.roomId)) return true; // the lamp-man's open lamp (cave.ts)
     return this.roomHasBearer(session.roomId, session);
   }
 
@@ -5039,7 +5040,7 @@ export class ZoneDO implements DurableObject {
             const lurker = LURKERS.has(creature.templateId);
             if (lurker) creature.hidden = false; // it uncoils to wind up — unseen no longer
             this.send(prey, lurker
-              ? `${cap(tmpl.name)} uncoils from the dark despite your light — starved past caring, it fixes on you. It hasn't sprung yet. (get out, or hit first)`
+              ? `${cap(tmpl.name)} uncoils from the dark${this.litFor(prey) ? " despite your light" : ""} — starved past caring, it fixes on you. It hasn't sprung yet. (get out, or hit first)`
               : creature.hunger < STARVING_AT
               ? `${cap(tmpl.name)}, hungry, fixes on you — not a guard's warning but a predator's appetite. It hasn't sprung yet. (get out, or hit first)`
               : `${cap(tmpl.name)}, gaunt and starving, fixes on you — not a guard's warning but a predator's hunger. It hasn't sprung yet. (get out, or hit first)`);
@@ -8360,6 +8361,9 @@ export class ZoneDO implements DurableObject {
       else if (this.isDark(room.id) && !this.carriesLight(session) && this.roomHasBearer(room.id, session)) {
         lines.push("Somebody else's light holds the dark off this room.");
       }
+      else if (this.isDark(room.id) && !this.carriesLight(session) && cave.lampLights(this, room.id)) {
+        lines.push("The lamp-man's lamp is open, and its yellow light lies over everything here.");
+      }
       const curing = this.curingCount(room.id);
       const shownCure: Record<string, number> = {};
       // Loose loot is COLLECTED, not spilled line-by-line: on entry a big pile
@@ -8739,7 +8743,7 @@ export class ZoneDO implements DurableObject {
       if (!t) continue;
       // A beast drags everything in its jaws; only something with hands wields or wears.
       const verb = SCAVENGERS.has(creature.templateId) ? "dragging"
-        : t.slot === "weapon" ? "wielding" : t.slot === "" ? "dragging" : "clad in";
+        : t.slot === "weapon" ? "wielding" : isLantern(t.id) ? "holding up" : t.slot === "" ? "dragging" : "clad in";
       const names = byVerb.get(verb) ?? new Map<string, number>();
       names.set(t.name, (names.get(t.name) ?? 0) + 1);
       byVerb.set(verb, names);
@@ -9575,7 +9579,7 @@ export class ZoneDO implements DurableObject {
           // not the plain dark. See nightLitPicture.
           // ...and a campfire burning where you stand (rome, 2026-10-29: he lit
           // one in a dark room and the picture stayed dark).
-          torch: !seesArt(session.pubkey) ? undefined : (this.carriesLight(session) || den.hearthWarm(this, session) || campfire.warmsYou(this, session) || this.nightLitPicture(session)) ? 1 : 0,
+          torch: !seesArt(session.pubkey) ? undefined : (this.carriesLight(session) || den.hearthWarm(this, session) || campfire.warmsYou(this, session) || this.nightLitPicture(session) || cave.lampLights(this, session.roomId)) ? 1 : 0,
           // WHICH SKY, WHEN AN HOUR OWNS MORE THAN ONE. Not a choice made here:
           // just the day count, handed over so the client can index its own
           // table with it. The server stays out of the art the way it does with

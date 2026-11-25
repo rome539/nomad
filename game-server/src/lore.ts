@@ -9,7 +9,7 @@ import type { Region, World, Exit } from "./world";
 import type { Session } from "./zone-types";
 import type { CarriedItem, JournalRow } from "./world";
 import { journalLoad, journalStudy, creditAccount, creditChart, journalTraitsLoad, loadContainer, deedsLoad, setItemJournalId, mapInkLoad, mapInkAdd, setKeeperTold } from "./world";
-import { hashSeed, isNight, mulberry32, nameMatches } from "./zone-util";
+import { cap, hashSeed, isNight, mulberry32, nameMatches } from "./zone-util";
 import { pick, chance } from "./rng";
 import { uuid } from "./rng";
 import * as den from "./den";
@@ -734,6 +734,9 @@ export async function cmdStudy(z: ZoneDO, session: Session, arg: string): Promis
   const visible = living && !(living.hidden && LURKERS.has(living.templateId) && !living.target) && !z.mossUnseen(living, session) ? living : null;
   const corpse = visible ? null : study.findCorpse(z, session.roomId, ask.dead ? ask.rest : arg);
   if (!visible && !corpse) return z.send(session, "Nothing by that name is here to study.");
+  // A body something is eating is its meal, not your page.
+  const eater = corpse ? study.eaterOf(z, session.roomId, corpse.tmpl.id) : undefined;
+  if (eater) return z.send(session, `${cap(z.world!.mobTemplates.get(eater.templateId)?.name ?? "something")} is eating it.`);
   const tmpl = visible ? z.world!.mobTemplates.get(visible.templateId)! : corpse!.tmpl;
   const doing: study.Behaviour = visible ? study.behaviourNow(z, visible) : "dead";
   const rows = await journalLoad(z.env.DB, journal.journalId);

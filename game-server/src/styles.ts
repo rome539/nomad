@@ -20,7 +20,7 @@ import type { CarriedItem, ItemTemplate } from "./world";
 import {
   SWARMS, SWARM_STEP, SWARM_MAX_OTHERS, RAT_KING_SWARM_BONUS, STRIKERS, STRIKER_DODGE, STRIKER_DODGE_BARE,
   FLIERS, FLIER_KIND, FLIER_DIVE_ODDS, FLIER_DIVE_OPEN, MOBBER_WHEEL_ODDS, GROUND_LIFT_ODDS, GROUND_DROP_ODDS, HUNTER_CLIMB_ODDS, FLIER_DOWN_HITS, FLIER_GROUNDED_MS, PINCHERS, PIN_ODDS, PINNED_DMG_MULT,
-  HOLLOW, GRAVE_FLESH, HOLLOW_EDGE_MULT, HOLLOW_BLUNT_MULT, LURKERS, OPEN_LURKERS, DARK_ROOMS, SENTINEL_ROOMS, LURKER_FADE_ODDS, LURKER_DROP_MULT,
+  HOLLOW, GRAVE_FLESH, HOLLOW_EDGE_MULT, HOLLOW_BLUNT_MULT, LURKERS, OPEN_LURKERS, BREAKS_OFF, DARK_ROOMS, SENTINEL_ROOMS, LURKER_FADE_ODDS, LURKER_DROP_MULT,
   CUTTHROATS, FEINT_ODDS, FOLK, FOLK_GUARD_AT, FOLK_RECKLESS_AT, STANCE, COMBAT_ROUND_MS,
   WEAKEST_HUNTERS, WEAKEST_SWITCH_GAP, TURNING_BOARS, BOAR_TURN_AT, BLUFFERS, BLUFF_HOLD_MS, BLUFF_LEAVE_ODDS, BLUFF_REARM_MS,
   STALKERS, STALK_STILL_MS, STALK_GIVEUP_MS, STALK_RANGE,
@@ -159,7 +159,9 @@ export function beforeAttack(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
     }
     // NOT THE CAVE LION (rome, 2026-11-12): it faded mid-fight; a lion in a fight
     // stays in the fight, and lurks again only once it is over (ai.lurkerDrifts).
-    if (!OPEN_LURKERS.has(id) && !z.litFor(victim) && chance(LURKER_FADE_ODDS)) {
+    // Nor the cave cougar (2026-11-24): it leaves a fight only when the fight turns
+    // against it (BREAKS_OFF, cave.ts), never at random.
+    if (!OPEN_LURKERS.has(id) && !BREAKS_OFF.has(id) && !z.litFor(victim) && chance(LURKER_FADE_ODDS)) {
       creature.hidden = true;
       creature.joinedOpenly = false; // back in the dark: no longer the one that walked in
       // ...AND IT LEAVES THE ROOM (rome, 2026-11-12): back to lurking, it goes off

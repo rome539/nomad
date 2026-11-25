@@ -3790,7 +3790,7 @@ function sndWatch() {
 // voice of their own get what they would actually make: the eels and the
 // followers are water and footsteps, the hollow wardens are their armour.
 var VOICE_FAMILY = {
-  dog: "masterless-dog lead-dog drove-dog a-fold-dog marsh-hound a-lymer the-last-dog the-drove-master mole-hound",
+  dog: "masterless-dog lead-dog drove-dog a-fold-dog marsh-hound a-lymer the-last-dog the-drove-master",
   twohound: "two-hound",
   threehound: "three-hound",
   wolf: "grey-wolf dire-wolf hill-wolf lead-wolf the-old-grey",
@@ -3798,7 +3798,7 @@ var VOICE_FAMILY = {
   coyote: "coyote",
   hyena: "grave-hyena",
   direhyena: "dire-hyena",
-  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king fever-rat water-vole grubbet cave-bat",
+  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king fever-rat water-vole",
   gull: "great-gull black-backed-gull",
   oystercatcher: "oystercatcher",
   chough: "mountain-chough",
@@ -3809,20 +3809,20 @@ var VOICE_FAMILY = {
   vulture: "brooding-vulture carrion-vulture great-vulture bone-breaker the-bone-dropper",
   owl: "eagle-owl tawny-owl",
   bittern: "bittern",
-  adder: "fen-viper gill-adder stone-adder the-gravid-adder pale-salamander",
-  eel: "silver-eel ford-eel conger old-conger river-gulper",
-  crab: "wrack-crab devil-crab cave-crayfish stone-mites",
+  adder: "fen-viper gill-adder stone-adder the-gravid-adder",
+  eel: "silver-eel ford-eel conger old-conger",
+  crab: "wrack-crab devil-crab",
   greatcrab: "the-great-crab",
   greatdevilcrab: "the-great-devil-crab",
   seal: "grey-seal bull-seal",
-  stoat: "ermine the-dancer polecat",
+  stoat: "ermine the-dancer",
   otter: "otter dog-otter",
   badger: "glutton the-old-glutton",
   boar: "wild-boar old-boar",
   deer: "roe-deer white-roe red-hind",
   stag: "red-stag wood-stag",
   goat: "feral-goat old-billy",
-  cat: "lynx wildcat the-tom cave-cougar",
+  cat: "lynx wildcat the-tom",
   beast: "cave-lion",
   bear: "the-baited-bear the-chain-breaker brown-bear",
   hare: "mountain-hare snow-hare",
@@ -3832,9 +3832,9 @@ var VOICE_FAMILY = {
   drover: "the-drover",
   eelcutter: "the-eel-cutter",
   fowler: "the-fowler",
-  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk the-sapper the-cook digger the-lamp-man",
+  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk the-sapper the-cook",
   boneknight: "bone-knight",
-  hulk: "drowned-hulk stone-sleeper",
+  hulk: "drowned-hulk",
   drownedgod: "drowned-god",
   stalker: "pale-stalker",
   gaunt: "the-gaunt",
@@ -3847,10 +3847,14 @@ var VOICE_FAMILY = {
   cantor: "marrow-cantor",
   king: "forgotten-king marrow-king",
   drowned: "the-miller the-drowned the-drowned-ferryman the-mire-walker",
-  pale: "pale-crawler cave-spider stone-brood",
+  pale: "pale-crawler",
   steps: "the-follower something-ahead the-reed-walker the-hush",
   root: "root-thing verdigris-thing",
-  drake: "the-drake the-pale-drake"
+  drake: "the-drake the-pale-drake",
+  // THE CAVE UNDER THE WOOD (2026-11-24): each its own voice, none borrowed.
+  cavecougar: "cave-cougar", molehound: "mole-hound", grubbet: "grubbet", salamander: "pale-salamander",
+  cavespider: "cave-spider", cavebat: "cave-bat", gulper: "river-gulper", digger: "digger", lampman: "the-lamp-man",
+  brood: "stone-brood", sleeper: "stone-sleeper", polecat: "polecat", crayfish: "cave-crayfish", mites: "stone-mites"
 };
 var VOICE_OF = {};
 Object.keys(VOICE_FAMILY).forEach(function (f) { VOICE_FAMILY[f].split(" ").forEach(function (id) { VOICE_OF[id] = f; }); });
@@ -4461,6 +4465,102 @@ var VOICES = {
     else if (m === 1) { VOX.step(t, 0.45, o); VOX.step(t + 0.18, 0.5, o); VOX.hiss(t + 0.3, { type: "bandpass", f: 1200, q: 1.5, d: 0.4, g: 0.3, a: 0.02 }, o); }
     else { VOX.step(t, 0.45, o); VOX.blip(t + 0.3, 80, 40, 0.3, 0.35, o); }
   },
+  // THE CAVE'S OWN (2026-11-24).
+  cavecougar: function (t, m, o) {
+    // The cougar screams: a long breathy wail that rises, holds and breaks, nothing like a lynx's yowl.
+    if (m === 0) { VOX.voc(t, { f: [[0, 520], [0.35, 980], [0.9, 900], [1.5, 430]], d: 1.55, vib: [9, 22], fm: [[1100, 2], [2500, 3]], n: 0.55, g: 0.9, a: 0.06 }, o); }
+    else if (m === 1) { VOX.hiss(t, { type: "bandpass", f: 2400, q: 0.8, d: 0.3, g: 0.9, a: 0.005 }, o); VOX.voc(t + 0.22, { f: [[0, 140], [0.18, 210], [0.5, 120]], d: 0.5, r: [36, 0.8], fm: [[500, 2], [1300, 3]], n: 0.6, g: 1.1, a: 0.01 }, o); }
+    else { VOX.voc(t, { f: [[0, 880], [0.3, 1050], [1.4, 260]], d: 1.45, vib: [7, 30], fm: [[1000, 2], [2300, 3]], n: 0.6, g: 0.85, a: 0.02 }, o); }
+  },
+  molehound: function (t, m, o) {
+    // Blind: it snuffles and whines at the air, and its bite is a chatter of teeth.
+    var sniff = function (at) { VOX.hiss(at, { type: "bandpass", f: 1500, q: 1.4, d: 0.07, g: 0.5, a: 0.01 }, o); };
+    if (m === 0) { sniff(t); sniff(t + 0.11); sniff(t + 0.2); VOX.voc(t + 0.4, { w: "triangle", f: [[0, 900], [0.3, 1150], [0.6, 820]], d: 0.62, vib: [11, 25], fm: [[1300, 3]], n: 0.15, g: 0.55, a: 0.04 }, o); }
+    else if (m === 1) { VOX.voc(t, { f: [[0, 170], [0.35, 150]], d: 0.38, r: [55, 0.9], fm: [[600, 3], [1400, 3]], n: 0.5, g: 1, a: 0.02 }, o); VOX.clicks(t + 0.3, { f: 1700, k: 5, gap: 0.035, q: 3, d: 0.025, g: 0.6 }, o); }
+    else { VOX.voc(t, { w: "triangle", f: [[0, 1200], [0.2, 1350], [1.0, 500]], d: 1.0, vib: [8, 35], fm: [[1400, 3]], n: 0.2, g: 0.7, a: 0.01 }, o); }
+  },
+  grubbet: function (t, m, o) {
+    // Fat and wet: a squeal goes up and another answers it; it grinds when it fights.
+    var squeal = function (at, f, g) { VOX.voc(at, { f: [[0, f], [0.12, f * 1.35], [0.3, f * 0.9]], d: 0.32, r: [60, 0.4], fm: [[f * 1.6, 3]], n: 0.25, g: g, a: 0.01 }, o); };
+    if (m === 0) { squeal(t, 1400, 0.7); squeal(t + 0.55, 1250, 0.45); }
+    else if (m === 1) { VOX.voc(t, { f: [[0, 600], [0.3, 520]], d: 0.32, r: [110, 0.9], fm: [[1200, 2]], n: 0.6, g: 0.9, a: 0.005 }, o); VOX.clicks(t + 0.1, { f: 900, k: 6, gap: 0.04, q: 2, d: 0.03, g: 0.35 }, o); }
+    else { squeal(t, 1600, 0.8); VOX.hiss(t + 0.3, { type: "lowpass", f: 500, d: 0.4, g: 0.35, a: 0.03 }, o); }
+  },
+  salamander: function (t, m, o) {
+    // Almost nothing: a wet tick off the stone and a drip.
+    var drip = function (at, f) { VOX.blip(at, f, f * 1.6, 0.05, 0.35, o); };
+    if (m === 0) { VOX.clicks(t, { f: 2400, k: 2, gap: 0.08, q: 2, d: 0.02, g: 0.25 }, o); drip(t + 0.3, 900); }
+    else if (m === 1) { VOX.blip(t, 600, 180, 0.07, 0.6, o, "triangle"); VOX.hiss(t + 0.02, { type: "bandpass", f: 1800, d: 0.12, g: 0.25, a: 0.004 }, o); }
+    else { VOX.hiss(t, { type: "bandpass", f: 1200, sw: 400, d: 0.5, g: 0.2, a: 0.02 }, o); drip(t + 0.4, 700); drip(t + 0.9, 650); }
+  },
+  cavespider: function (t, m, o) {
+    // A great many dry legs on stone, quicker than claws, and the fangs meeting.
+    if (m === 0) { VOX.clicks(t, { f: 1300, k: 16, gap: 0.022, q: 2, d: 0.012, g: 0.22 }, o); VOX.hiss(t + 0.1, { type: "bandpass", f: 5000, d: 0.45, g: 0.08, a: 0.05 }, o); }
+    else if (m === 1) { VOX.hiss(t, { type: "highpass", f: 4200, d: 0.28, g: 0.55, a: 0.004 }, o); VOX.clicks(t + 0.24, { f: 2100, k: 2, gap: 0.05, q: 4, d: 0.03, g: 0.8 }, o); }
+    else { VOX.clicks(t, { f: 1200, k: 14, gap: 0.03, slow: 1.22, q: 2, d: 0.012, g: 0.22 }, o); }
+  },
+  cavebat: function (t, m, o) {
+    // Thin chirps falling fast, the way a bat throws its voice ahead of it.
+    var chirp = function (at, hi, g) { VOX.blip(at, 7200 * hi, 4200 * hi, 0.025, g, o, "sine"); };
+    if (m === 0) { for (var i = 0; i < 5; i++) chirp(t + i * 0.07 + Math.random() * 0.02, 1 + Math.random() * 0.1, 0.3); }
+    else if (m === 1) { VOX.voc(t, { w: "triangle", f: [[0, 4200], [0.08, 5200], [0.22, 3600]], d: 0.24, r: [140, 0.5], fm: [[4500, 3]], n: 0.2, g: 0.45, a: 0.004 }, o); MOVES.wings(t + 0.15, o, 3, 0.12); }
+    else { chirp(t, 1, 0.35); VOX.voc(t + 0.08, { w: "triangle", f: [[0, 4800], [0.4, 2000]], d: 0.42, fm: [[3500, 2]], g: 0.35, a: 0.005 }, o); }
+  },
+  gulper: function (t, m, o) {
+    // A throat the size of a barrel under the water: a slow low gurgle, and the gulp.
+    var gulp = function (at, g) { VOX.blip(at, 140, 38, 0.32, g, o); VOX.hiss(at, { type: "lowpass", f: 380, d: 0.35, g: g * 0.5, a: 0.01 }, o); };
+    if (m === 0) { VOX.voc(t, { w: "sine", f: [[0, 62], [1.1, 55]], d: 1.15, r: [9, 0.7], g: 0.8, a: 0.25 }, o); for (var i = 0; i < 5; i++) VOX.blip(t + 0.2 + i * 0.18 + Math.random() * 0.08, 160 + Math.random() * 80, 320, 0.06, 0.35, o); }
+    else if (m === 1) { VOX.splash(t, 0.35, o); gulp(t + 0.18, 1.1); }
+    else { VOX.voc(t, { w: "sine", f: [[0, 70], [1.8, 34]], d: 1.8, r: [6, 0.8], g: 0.8, a: 0.05 }, o); for (var j = 0; j < 8; j++) VOX.blip(t + 0.3 + j * 0.2, 220, 420, 0.05, 0.25, o); }
+  },
+  digger: function (t, m, o) {
+    // A dead man at the work: the pick on stone, and a dry breath with nothing behind it.
+    var pick = function (at, g) { VOX.keyContact(at, g, o); VOX.blip(at, 240, 150, 0.05, g * 0.5, o, "triangle"); };
+    var rasp = function (at, d) { VOX.hiss(at, { type: "bandpass", f: 950, q: 1.3, d: d, g: 0.32, a: 0.08 }, o); };
+    if (m === 0) { pick(t, 0.8); pick(t + 0.42, 0.7); rasp(t + 0.7, 0.7); }
+    else if (m === 1) { rasp(t, 0.25); pick(t + 0.2, 1.1); }
+    else { rasp(t, 1.1); VOX.clicks(t + 0.6, { f: 900, k: 7, gap: 0.06, slow: 1.2, q: 2, d: 0.03, g: 0.3 }, o); pick(t + 1.2, 0.6); }
+  },
+  lampman: function (t, m, o) {
+    // The lamp: its bail creaking as it swings, the shutter's clack, and a breath like a wick drawing.
+    var creak = function (at) { VOX.voc(at, { w: "triangle", f: [[0, 1300], [0.18, 1500]], d: 0.2, r: [28, 0.9], fm: [[1600, 5]], g: 0.3, a: 0.03 }, o); };
+    var shutter = function (at, g) { VOX.keyContact(at, g, o); VOX.keyContact(at + 0.035, g * 0.7, o); };
+    if (m === 0) { creak(t); creak(t + 0.55); VOX.hiss(t + 0.9, { type: "bandpass", f: 620, sw: 450, d: 0.9, g: 0.22, a: 0.2 }, o); }
+    else if (m === 1) { shutter(t, 1); VOX.hiss(t + 0.08, { type: "bandpass", f: 800, d: 0.3, g: 0.4, a: 0.005 }, o); }
+    else { shutter(t, 0.8); VOX.ring(t + 0.35, 0.35, o); VOX.hiss(t + 0.5, { type: "bandpass", f: 600, sw: 220, d: 1.6, g: 0.28, a: 0.05 }, o); }
+  },
+  brood: function (t, m, o) {
+    // Stone that walks: grit grinding under it and a crack when it strikes.
+    var grind = function (at, d, f, g) { VOX.hiss(at, { type: "bandpass", f: f, q: 1.1, d: d, g: g, a: 0.06 }, o); VOX.clicks(at, { f: 700, k: Math.round(d * 20), gap: 0.05, q: 1, d: 0.03, g: 0.14 }, o); };
+    if (m === 0) grind(t, 0.9, 420, 0.4);
+    else if (m === 1) { SND._burst(t, { freq: 1400, q: 0.7, dur: 0.08, gain: 0.7 * SCAPE_VOL, atk: 0.001, out: o }); VOX.blip(t, 110, 60, 0.15, 0.7, o); grind(t + 0.1, 0.3, 500, 0.3); }
+    else { grind(t, 1.4, 350, 0.45); VOX.clicks(t + 0.8, { f: 600, k: 10, gap: 0.05, slow: 1.15, q: 1, d: 0.04, g: 0.3 }, o); }
+  },
+  sleeper: function (t, m, o) {
+    // A hill waking: a rumble you feel more than hear, stone grinding on stone, and a boom.
+    if (m === 0) { VOX.voc(t, { w: "sine", f: [[0, 38], [1.6, 44], [2.2, 36]], d: 2.3, r: [5, 0.6], g: 1.2, a: 0.5 }, o); VOX.hiss(t + 0.4, { type: "bandpass", f: 260, q: 1, d: 1.6, g: 0.4, a: 0.3 }, o); }
+    else if (m === 1) { VOX.blip(t, 95, 30, 0.5, 1.3, o); SND._burst(t, { freq: 700, q: 0.6, dur: 0.3, gain: 0.8 * SCAPE_VOL, atk: 0.002, out: o }); }
+    else { VOX.voc(t, { w: "sine", f: [[0, 50], [3.0, 26]], d: 3.0, r: [4, 0.7], g: 1.3, a: 0.2 }, o); VOX.clicks(t + 1.2, { f: 500, k: 18, gap: 0.06, slow: 1.08, q: 1, d: 0.05, g: 0.35 }, o); }
+  },
+  polecat: function (t, m, o) {
+    // Low chuckling chatter, rougher and slower than the ermine, and a spitting scream.
+    if (m === 0) { for (var i = 0; i < 6; i++) VOX.voc(t + i * 0.09, { f: [[0, 900], [0.05, 760]], d: 0.06, r: [70, 0.6], fm: [[1500, 3]], n: 0.4, g: 0.55, a: 0.004 }, o); }
+    else if (m === 1) { VOX.hiss(t, { type: "bandpass", f: 2600, d: 0.18, g: 0.6, a: 0.004 }, o); VOX.voc(t + 0.12, { f: [[0, 1500], [0.1, 1900], [0.35, 1300]], d: 0.38, r: [95, 0.8], fm: [[2000, 2]], n: 0.6, g: 0.8, a: 0.005 }, o); }
+    else { VOX.voc(t, { f: [[0, 1300], [0.6, 700]], d: 0.6, r: [60, 0.5], fm: [[1600, 2]], n: 0.4, g: 0.6, a: 0.01 }, o); }
+  },
+  crayfish: function (t, m, o) {
+    // Shell in water: a soft tick under the surface and a bubble going up.
+    if (m === 0) { VOX.clicks(t, { f: 1500, k: 4, gap: 0.12, q: 2, d: 0.02, g: 0.25 }, o); VOX.bubbles(t + 0.2, 2, 0.4, o); }
+    else if (m === 1) { VOX.clicks(t, { f: 2200, k: 1, q: 4, d: 0.03, g: 0.9 }, o); VOX.splash(t + 0.05, 0.12, o); }
+    else { VOX.clicks(t, { f: 1400, k: 5, gap: 0.1, slow: 1.3, q: 2, d: 0.02, g: 0.2 }, o); VOX.bubbles(t + 0.3, 4, 1.0, o); }
+  },
+  mites: function (t, m, o) {
+    // Hundreds of them: a dry fizz that swells and settles, like sand poured on stone.
+    var fizz = function (at, d, g) { VOX.clicks(at, { f: 5200, k: Math.round(d * 60), gap: 0.016, q: 1, d: 0.01, g: g }, o); VOX.hiss(at, { type: "highpass", f: 6000, d: d, g: g * 0.4, a: d * 0.4 }, o); };
+    if (m === 0) fizz(t, 0.8, 0.06);
+    else if (m === 1) fizz(t, 0.4, 0.12);
+    else { VOX.clicks(t, { f: 5000, k: 30, gap: 0.02, slow: 1.06, q: 1, d: 0.01, g: 0.06 }, o); }
+  },
   root: function (t, m, o) {
     var creak = function (at, d, f) { VOX.voc(at, { f: [[0, f], [d, f * 1.25]], d: d, r: [18, 0.95], fm: [[500, 6], [1200, 8]], g: 1.4, a: 0.1 }, o); };
     var crumble = function (at) { SND._burst(at, { freq: 300, dur: 0.6, gain: 0.4 * SCAPE_VOL, atk: 0.05, out: o }); };
@@ -4592,7 +4692,9 @@ var MOVE_STYLE = {
   gull: "wings", oystercatcher: "wings", chough: "wings", ptarmigan: "wings", heron: "wings", crow: "wings", eagle: "wings", vulture: "wings", owl: "wings", bittern: "boom",
   adder: "slither", eel: "water", seal: "water", drowned: "water", crab: "crab", greatcrab: "shell", greatdevilcrab: "shell",
   armour: "heavyboots", bone: "rattle", cantor: "rattle", king: "rattle", root: "creak", pale: "slither",
-  human: "boots", woodward: "creak", burner: "boots", holdingkeeper: "keys", steps: "boots", drake: "bigwings"
+  human: "boots", woodward: "creak", burner: "boots", holdingkeeper: "keys", steps: "boots", drake: "bigwings",
+  cavecougar: "pad", molehound: "pad", grubbet: "scurry", salamander: "slither", cavespider: "crab", cavebat: "wings", gulper: "water",
+  digger: "boots", lampman: "boots", brood: "shell", sleeper: "heavy", polecat: "scurry", crayfish: "crab", mites: "scurry"
 };
 // ...and the few whose line is about something else entirely. The lion makes
 // no sound of its own: what carries is the birds leaving. The bear is its chain.
@@ -4761,7 +4863,22 @@ var IDLE = {
     VOX.hiss(t, { type: "lowpass", f: 300, d: .5, g: .15, a: .15 }, o);
   },
   root: function (t, o) { VOX.voc(t, { f: [[0, 55], [0.6, 62]], d: 0.6, r: [16, 0.95], fm: [[500, 6]], g: 0.8, a: 0.1 }, o); },
-  drake: function (t, o) { VOX.voc(t, { f: [[0, 55], [1.2, 50]], d: 1.2, r: [20, 0.9], fm: [[250, 1.5]], n: 0.8, g: 0.8, a: 0.3 }, o); }
+  drake: function (t, o) { VOX.voc(t, { f: [[0, 55], [1.2, 50]], d: 1.2, r: [20, 0.9], fm: [[250, 1.5]], n: 0.8, g: 0.8, a: 0.3 }, o); },
+  // THE CAVE'S OWN, at rest (2026-11-24).
+  cavecougar: function (t, o) { VOX.voc(t, { f: [[0, 70], [0.5, 66]], d: 0.55, r: [24, 0.8], fm: [[350, 2]], n: 0.3, g: 0.35, a: 0.12 }, o); VOX.voc(t + 0.7, { f: [[0, 68], [0.5, 64]], d: 0.5, r: [24, 0.8], fm: [[350, 2]], n: 0.3, g: 0.3, a: 0.12 }, o); },
+  molehound: function (t, o) { for (var i = 0; i < 4; i++) VOX.hiss(t + i * 0.12, { type: "bandpass", f: 1400 + i * 60, q: 1.4, d: 0.06, g: 0.3, a: 0.01 }, o); },
+  grubbet: function (t, o) { VOX.clicks(t, { f: 800, k: 7, gap: 0.07, q: 2, d: 0.03, g: 0.18 }, o); },
+  salamander: function (t, o) { VOX.blip(t, 850, 1400, 0.05, 0.25, o); },
+  cavespider: function (t, o) { VOX.clicks(t, { f: 1300, k: 5, gap: 0.03, q: 2, d: 0.012, g: 0.15 }, o); },
+  cavebat: function (t, o) { for (var i = 0; i < 3; i++) VOX.blip(t + i * 0.09, 7000, 4500, 0.02, 0.2, o); },
+  gulper: function (t, o) { for (var i = 0; i < 3; i++) VOX.blip(t + i * 0.3 + Math.random() * 0.1, 140 + Math.random() * 60, 280, 0.07, 0.3, o); },
+  digger: function (t, o) { VOX.keyContact(t, 0.45, o); VOX.blip(t, 240, 150, 0.05, 0.2, o, "triangle"); },
+  lampman: function (t, o) { VOX.keyContact(t, 0.2, o); VOX.hiss(t + 0.15, { type: "bandpass", f: 2200, q: 2, d: 0.25, g: 0.1, a: 0.05 }, o); },
+  brood: function (t, o) { VOX.hiss(t, { type: "bandpass", f: 400, q: 1.1, d: 0.45, g: 0.18, a: 0.1 }, o); },
+  sleeper: function (t, o) { VOX.voc(t, { w: "sine", f: [[0, 36], [1.4, 34]], d: 1.4, r: [4, 0.6], g: 0.7, a: 0.4 }, o); },
+  polecat: function (t, o) { for (var i = 0; i < 3; i++) VOX.voc(t + i * 0.1, { f: [[0, 850], [0.05, 740]], d: 0.05, r: [70, 0.6], fm: [[1500, 3]], n: 0.4, g: 0.3, a: 0.004 }, o); },
+  crayfish: function (t, o) { VOX.clicks(t, { f: 1500, k: 2, gap: 0.15, q: 2, d: 0.02, g: 0.18 }, o); },
+  mites: function (t, o) { VOX.clicks(t, { f: 5200, k: 20, gap: 0.018, q: 1, d: 0.01, g: 0.04 }, o); }
 };
 // Quiet versions retain each body's material, not a shared human breath.
 ["direhyena", "boneknight", "mason", "drover", "eelcutter", "fowler", "hollowworker", "hulk", "drownedgod", "gaunt"].forEach(function (family) {
@@ -5066,6 +5183,8 @@ function print(text, cls, who, pk, voiced) {
     // zone-data): the mark comes off and the line is drawn as a telling.
     var loreLine = lines[i].charAt(0) === "\u0003";
     if (loreLine) lines[i] = lines[i].slice(1);
+    // ...and a mark inside a block sent whole (a study's read) is never drawn as a box.
+    lines[i] = lines[i].split("\u0003").join("");
     // classify and the sound picker read the PLAIN line: a rarity marker is
     // painting, not content, and a control character in the middle of a phrase
     // must never change which class or which sound a line gets.
@@ -10951,7 +11070,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "135";      // /mob/      strips and their eye layers
+var MOB_V  = "136";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
@@ -16299,8 +16418,8 @@ var MOB_SPRITE = {
   "the-gaunt": 34,
   // THE CAVE UNDER THE WOOD (mig 409, 2026-11-24). First numbers, set off the
   // nearest sibling already on screen; to be looked at in the game and moved.
-  "cave-cougar": 15,          // a cat under the cave lion at 19
-  "mole-hound": 18,           // a long-legged hound, over the grey wolf's 13 (rome: a bit small at 13)
+  "cave-cougar": 15,          // a cat under the cave lion at 19; the redraw (2026-11-24) measured 0.987 of the first body at 15, kept
+  "mole-hound": 15.5,         // a long-legged hound, over the grey wolf's 13 (rome: a bit small at 13, too big at 18)
   "river-gulper": 12,         // a fish as long as a man, the bull seal's 12
   "cave-spider": 11,          // legs that would span a cartwheel (rome: a bit small at 8)
   "cave-bat": 5.5,            // fist-sized with the wings open (rome: a bit small at 4)
@@ -16355,7 +16474,7 @@ var MOB_ANIM = {
   "digger":            { n: 9, aspect: 0.937, f: {"idle":0,"call":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"snatch-escape":7,"death":8} },
   "cave-spider":       { n: 7, aspect: 1.336, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"feed":5,"death":6} },
   "cave-crayfish":     { n: 8, aspect: 1.123, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
-  "cave-cougar":       { n: 9, aspect: 1.363, f: {"idle":0,"lurk":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"rest":7,"death":8} },
+  "cave-cougar":       { n: 9, aspect: 1.504, f: {"idle":0,"lurk":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"rest":7,"death":8} },
   "cave-bat":          { n: 8, aspect: 1.061, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"sweep":5,"rest":6,"death":7} },
   "rat-yule":               { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-midsummer":          { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },

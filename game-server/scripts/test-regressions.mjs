@@ -48,7 +48,7 @@ try {
         "export {PREYS_ON, PACK_PREY, SMALL_PREY, SMALL_EATERS, mealOf, HUNGER_FLOOR} from './zone-data';",
         "export {CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS} from './zone-data';",
         "export {CROSSING_GROUND, CROSSING_SETTLES} from './crossing-ground';",
-        "export {CAVE_GROUND, CAVE_SETTLES} from './cave-ground';", "export {CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, SCAVENGERS as CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, HOLLOW as CAVE_TEST_HOLLOW, GRAVE_FLESH as CAVE_TEST_GRAVE} from './zone-data';", "export {hungers} from './ai';",
+        "export {CAVE_GROUND, CAVE_SETTLES} from './cave-ground';", "export {CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, SCAVENGERS as CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, HOLLOW as CAVE_TEST_HOLLOW, GRAVE_FLESH as CAVE_TEST_GRAVE} from './zone-data';", "export {hungers} from './ai';", "export {RUNNERS as CAVE_T_RUNNERS, SURPLUS_KILLERS as CAVE_T_SURPLUS} from './zone-data';",
         "export {ROAD_GROUND, ROAD_SETTLES} from './road-ground';", "export {WOOD_GROUND, DEN_GROUND} from './wood-ground';", "export {GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS} from './zone-data';", "export {OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES} from './fortress-ground';", "export {OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD} from './zone-data';", "export {ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, SQUADS} from './zone-data';", "export * as squadsMod from './squads';", "export {packmates} from './ai';", "export * as manhunterMod from './manhunter';", "export {huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED} from './zone-data';",
         "export * as beasts from './beasts';",
         "export * as caveMod from './cave';",
@@ -120,7 +120,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { caveMod, LANTERNS, STAYS_HOME_BOXES, CAVE_COOK, CAVE_CURE, CAVE_FAT, applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, packQuarryId, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, roomWater, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, biteOf, bodyErrand, rangePack, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary, rehome, alarmBark, windsUp, lurkerFoundBy, hallFogged, foggy, cmdWho, WHO_PLACES_KEYS, GATEHOUSE_FEASTS, FEAST_LINES, gatehouseFeast, FEAST_COSTUMES, feastCostume, CAVE_GROUND, CAVE_SETTLES, CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, CAVE_TEST_HOLLOW, CAVE_TEST_GRAVE, hungers } = await import(pathToFileURL(output));
+  const { caveMod, LANTERNS, STAYS_HOME_BOXES, CAVE_COOK, CAVE_CURE, CAVE_FAT, applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, packQuarryId, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, roomWater, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, biteOf, bodyErrand, rangePack, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary, rehome, alarmBark, windsUp, lurkerFoundBy, hallFogged, foggy, cmdWho, WHO_PLACES_KEYS, GATEHOUSE_FEASTS, FEAST_LINES, gatehouseFeast, FEAST_COSTUMES, feastCostume, CAVE_GROUND, CAVE_SETTLES, CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, CAVE_TEST_HOLLOW, CAVE_TEST_GRAVE, hungers, CAVE_T_RUNNERS, CAVE_T_SURPLUS } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -5808,7 +5808,7 @@ try {
     assert.match(ai, /creature\.wateringTo \?\? quarry \?\? stalk \?\? carrion \?\? landed/);
     assert.match(ai, /const within = quarry \|\| stalk \|\| carrion \? exits\.filter/);
     // ...and it never fades into the dark in the middle of a fight
-    assert.match(readFileSync(new URL('../src/styles.ts', import.meta.url), 'utf8'), /if \(!OPEN_LURKERS\.has\(id\) && !z\.litFor\(victim\) && chance\(LURKER_FADE_ODDS\)\) \{/);
+    assert.match(readFileSync(new URL('../src/styles.ts', import.meta.url), 'utf8'), /if \(!OPEN_LURKERS\.has\(id\) && !BREAKS_OFF\.has\(id\) && !z\.litFor\(victim\) && chance\(LURKER_FADE_ODDS\)\) \{/);
   });
 
   check('a lurker that goes back to lurking leaves the room, the fight over (2026-11-12)', () => {
@@ -8933,6 +8933,69 @@ try {
     assert.equal(lamp.aloft, undefined); assert.equal(lamp.target, 'me'); assert.equal(lamp.roomId, 'a', 'back at your side');
     assert.ok(blow(lamp) > 1, 'and the first blow back is out of the dark');
     assert.match(said.join('|'), /A lamp opens in the dark at your side/);
+  });
+
+  check('the lamp-man\'s open lamp lights the room in words and picture, a carried lamp is held up, and the mole hound is 15.5 (2026-11-24)', () => {
+    const z = { creatures: new Map([['l', { templateId: 'the-lamp-man', roomId: 'a', hp: 90 }]]) };
+    assert.ok(caveMod.lampLights(z, 'a'), 'his lamp lights his room');
+    assert.ok(!caveMod.lampLights(z, 'b'), 'and not the next');
+    z.creatures.get('l').aloft = Date.now();
+    assert.ok(!caveMod.lampLights(z, 'a'), 'shuttered, it lights nothing');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /if \(cave\.lampLights\(this, session\.roomId\)\) return true;/, 'you can see by it');
+    assert.match(zone, /this\.nightLitPicture\(session\) \|\| cave\.lampLights\(this, session\.roomId\)\) \? 1 : 0,/, 'and the picture shows it lit');
+    assert.match(zone, /isLantern\(t\.id\) \? "holding up"/, 'a lamp is held up, not dragged');
+    assert.match(readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8'), /"mole-hound": 15\.5,/);
+  });
+
+  check('every cave creature speaks in its own voice, none borrowed from another family, and a study read shows no stray mark (2026-11-24)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const fams = pub.slice(pub.indexOf('var VOICE_FAMILY = {'), pub.indexOf('var VOICE_OF = {};'));
+    const own = { cavecougar: 'cave-cougar', molehound: 'mole-hound', grubbet: 'grubbet', salamander: 'pale-salamander', cavespider: 'cave-spider', cavebat: 'cave-bat', gulper: 'river-gulper', digger: 'digger', lampman: 'the-lamp-man', brood: 'stone-brood', sleeper: 'stone-sleeper', polecat: 'polecat', crayfish: 'cave-crayfish', mites: 'stone-mites' };
+    for (const [fam, id] of Object.entries(own)) {
+      assert.ok(fams.includes(fam + ': "' + id + '"'), id + ' has a family of its own');
+      assert.equal((fams.match(new RegExp('[ "]' + id + '[ "]', 'g')) || []).length, 1, id + ' is in no other family');
+      assert.ok(new RegExp('\\n  ' + fam + ': function \\(t, m, o\\)').test(pub), fam + ' has its calls');
+      assert.ok(new RegExp('\\n  ' + fam + ': function \\(t, o\\)').test(pub), fam + ' has its idle');
+    }
+    assert.match(pub, /lines\[i\] = lines\[i\]\.split\("\\u0003"\)\.join\(""\);/, 'the lore mark is taken out wherever it lands');
+  });
+
+  check('a cave cougar in a fight stays in it unless it is hurt, and the lurker line names your light only when you have one (2026-11-24)', () => {
+    const styles = readFileSync(new URL('../src/styles.ts', import.meta.url), 'utf8');
+    assert.match(styles, /if \(!OPEN_LURKERS\.has\(id\) && !BREAKS_OFF\.has\(id\) && !z\.litFor\(victim\) && chance\(LURKER_FADE_ODDS\)\)/, 'the random fade passes over the cougar');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /uncoils from the dark\$\{this\.litFor\(prey\) \? " despite your light" : ""\}/);
+  });
+
+  check('a body something is eating cannot be studied, and the chip does not offer it (2026-11-24)', () => {
+    const lore = readFileSync(new URL('../src/lore.ts', import.meta.url), 'utf8');
+    assert.match(lore, /const eater = corpse \? study\.eaterOf\(z, session\.roomId, corpse\.tmpl\.id\) : undefined;\n  if \(eater\) return/, 'the study refuses');
+    assert.match(readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8'), /!studiedIn\(session, id, "dead"\) && !study\.eaterOf\(z, session\.roomId, id\)/, 'and the chip is not offered');
+    const src = readFileSync(new URL('../src/study.ts', import.meta.url), 'utf8');
+    assert.match(src, /export function eaterOf\(z: ZoneDO, roomId: string, templateId: string\)/);
+  });
+
+  check('the cave lives by the living-regions rules: hound packs hold ground and hunt together, hunters hold land and settle by prey, prey keeps out of fights, the polecat kills for sport (2026-11-24)', () => {
+    assert.ok(GROUND_HOLDERS.has('mole-hound') && GROUND_DRIVEN.has('polecat'), 'the hound packs hold their ground and run the polecat off it');
+    assert.ok(PACK_HUNTERS.has('mole-hound') && PACK_QUARRY.has('grubbet') && PACK_QUARRY.has('cave-cougar') && PACK_STAGS.has('cave-cougar'), 'and close on a colony, or the cougar, together');
+    for (const id of ['cave-cougar', 'polecat', 'cave-spider']) assert.ok(LAND_HOLDERS.has(id), id + ' holds land');
+    for (const id of ['cave-cougar', 'mole-hound', 'cave-spider', 'polecat']) assert.ok(SETTLES_BY_PREY.has(id), id + ' settles by its prey');
+    assert.ok(CAVE_T_RUNNERS.has('grubbet'), 'a grubbet bolts');
+    for (const id of ['cave-bat', 'stone-mites', 'cave-crayfish']) assert.ok(shiesNoise(id), id + ' keeps out of a fight');
+    assert.ok(CAVE_T_SURPLUS.has('polecat'), 'a fed polecat kills for sport');
+  });
+
+  check('the cave spiders have room to hold land: six rows spread over silk, roofs and foxfire, ids kept (mig 411, 2026-11-24)', () => {
+    const sql = readFileSync(new URL('../migrations/411_the_spiders_spread_out.sql', import.meta.url), 'utf8');
+    const moves = [...sql.matchAll(/UPDATE mob_spawns SET room_id = '([a-z-]+)' WHERE id = '(spawn-cave-spider@[a-z-]+)';/g)];
+    assert.equal(moves.length, 3, 'three rows move');
+    const kinds = new Map(CAVE_SETTLES).get('cave-spider');
+    for (const [, to, id] of moves) {
+      assert.ok(kinds.some((k) => (CAVE_GROUND[k] ?? []).includes(to)), to + ' is spider ground');
+      assert.ok(!/INSERT/.test(sql), 'no new rows, so no ids shift');
+      assert.match(readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8'), new RegExp('\\["' + id + '", "'), id + ' takes its standing spider with it');
+    }
   });
 
   check('the cave bats roost on any high roof and over the river, a spider takes a bat only in its web, and the roost goes out at dusk with nobody near (2026-11-24)', () => {

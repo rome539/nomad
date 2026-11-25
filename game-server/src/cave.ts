@@ -207,6 +207,14 @@ export function dragsKill(z: ZoneDO, creature: Creature, owed: number): boolean 
   return true;
 }
 
+/** The lamp-man's lamp lights the room he stands in, until he shutters it (then he is off the map). */
+export function lampLights(z: ZoneDO, roomId: string): boolean {
+  for (const c of z.creatures.values()) {
+    if (LAMP_MEN.has(c.templateId) && c.roomId === roomId && c.hp > 0 && c.aloft === undefined) return true;
+  }
+  return false;
+}
+
 /** Can this hunter take this prey here? Only on the ground named for it (CATCHES_ONLY_ON). */
 export function catchesHere(z: ZoneDO, hunter: Creature, prey: Creature): boolean {
   const line = (id: string) => z.variantBase.get(id) ?? id;

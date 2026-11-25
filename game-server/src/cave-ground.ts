@@ -127,7 +127,7 @@ export const CAVE_SETTLES: [string, string[]][] = [
   ["mole-hound", ["gallery", "rough", "bones", "hollow", "roots"]],
   ["grubbet", ["bones", "camp", "roost", "buried", "workings"]],
   ["pale-salamander", ["river", "foxfire", "wet"]],
-  ["cave-spider", ["silk", "roost"]],
+  ["cave-spider", ["silk", "roost", "dripstone", "ledge", "hollow", "foxfire"]], // its silk, and the roofs and wet walls (2026-11-24: six homes four apart)
   ["cave-bat", ["roost", "dripstone", "gallery", "ledge", "hollow", "river"]], // any high roof, and over the river where the midges are
   ["polecat", ["bones", "rough", "roots", "gallery"]], // the holes in the rock round the grubbets
   ["cave-crayfish", ["river"]],

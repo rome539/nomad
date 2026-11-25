@@ -2767,8 +2767,8 @@ export function groupOf(line: string, region?: string): { min: number; max: numb
 // gives up its home and draws a new one; GROUND_KILL_ODDS of the time it is caught.
 // Either way a pack wolf takes any fresh kill it finds it on, and so does a lone
 // wolf, which holds no ground and only chases it off the meal.
-export const GROUND_HOLDERS = new Set(["hill-wolf", "grey-wolf"]); // the wood's packs hold theirs too (2026-11-17)
-export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox", "coyote", "the-hush"]); // ...and the hush, the wood's middle hunter (mig 405) // ...against the coyotes
+export const GROUND_HOLDERS = new Set(["hill-wolf", "grey-wolf", "mole-hound"]); // the wood's packs hold theirs too (2026-11-17); the cave's hound packs (2026-11-24)
+export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox", "coyote", "the-hush", "polecat"]); // the polecat off the hound packs' ground (2026-11-24) // ...and the hush, the wood's middle hunter (mig 405) // ...against the coyotes
 // HOLDING LAND (rome, 2026-11-07). These hunters keep their home and the rooms
 // round it (TERRITORY_RADIUS) as their own. A new one does not settle on the land
 // of another of its kind, or of a bigger hunter that eats the same food, while
@@ -2783,17 +2783,18 @@ export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox
 // (The crossing's gulls and seals hunt, but live as flocks and herds do, apart.)
 export const FLOCKS = new Set<string>(["mountain-chough", "great-gull", "grey-seal"]);
 export const SPREAD_ROOSTS = new Set<string>(["scarp-raven", "carrion-vulture", "bone-breaker"]);
-export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder", "tawny-owl", "the-hush", "cave-cougar", "polecat"]); // otter, heron, adder: the road (2026-11-13); the tawny owl: the wood (2026-11-17)
+export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder", "tawny-owl", "the-hush", "cave-cougar", "polecat", "cave-spider"]); // otter, heron, adder: the road (2026-11-13); the tawny owl: the wood (2026-11-17)
 export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a bite in first
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
 // together, so the two a hind needs are in the room at once.
 export const PACK_QUARRY = new Set(["red-stag", "red-hind", "feral-goat",
   "grey-seal", "conger",
-  "wild-boar", "wood-stag"]); // the wood's packs (2026-11-17): two take a boar, three the stag (PACK_PREY) // the marsh hounds' big game (rome, 2026-11-12), as the stag is the wolves'
+  "wild-boar", "wood-stag",
+  "grubbet", "cave-cougar"]); // the cave's hound packs close on a grubbet colony, or the cougar (2026-11-24) // the wood's packs (2026-11-17): two take a boar, three the stag (PACK_PREY) // the marsh hounds' big game (rome, 2026-11-12), as the stag is the wolves'
 // WHO HUNTS AS A PACK. The hill wolves, and the marsh hounds, which gang up on a
 // seal or a conger as the wolves do on a stag; the hounds still hold no ground.
-export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog", "drove-dog", "grave-hyena", "grey-wolf"]); // the road dog packs close on a goat together (2026-11-13), and the open ground's hyena packs (2026-11-14)
+export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog", "drove-dog", "grave-hyena", "grey-wolf", "mole-hound"]); // the cave's hounds (2026-11-24) // the road dog packs close on a goat together (2026-11-13), and the open ground's hyena packs (2026-11-14)
 // ...AND THE STAG, MORE OFTEN THE BIGGER THE PACK (rome, 2026-11-11: nothing ever
 // set out after a stag, which died only when three wolves happened into its
 // room; a pack of five should mostly go after the big game). A pack picking its
@@ -2802,7 +2803,7 @@ export const PACK_HUNTERS = new Set(["hill-wolf", "marsh-hound", "masterless-dog
 // otherwise for the nearest hind or goat, as before.
 export const PACK_STAG_ODDS: Record<number, number> = { 3: 1 / 3, 4: 0.5, 5: 0.8 };
 // The wood's stag is the grey wolves' as the red stag is the hill wolves' (2026-11-17).
-export const PACK_STAGS = new Set(["red-stag", "wood-stag"]);
+export const PACK_STAGS = new Set(["red-stag", "wood-stag", "cave-cougar"]); // the cougar is the hound packs' big game: a pack of three goes for it one time in three, four half the time (2026-11-24)
 // THE PACK KEEPS TO ITS BIG GAME (rome, 2026-11-18: of thirty roe killed in the wood,
 // the wolves took twenty-four, and two boar and two stags). The pack's hunt for a
 // boar or a stag was already there, but any wolf that met a roe on the way took it
@@ -2878,7 +2879,7 @@ export const FLIGHT_LOOK_MS = 60_000; // a hungry bird that found nothing looks 
 // The road's otter lives by its rats, which stay put (2026-11-13). Not the gill adder:
 // every road rat is nearer a gate than an adder's rows let it live, so only two of its
 // homes have one in reach, and making it settle by them would pile the adders there.
-export const SETTLES_BY_PREY = new Set(["lynx", "fen-viper", "otter"]);
+export const SETTLES_BY_PREY = new Set(["lynx", "fen-viper", "otter", "cave-cougar", "mole-hound", "cave-spider", "polecat"]); // the cave's hunters (2026-11-24)
 export const SETTLES_BY_GRAZING = new Set(["mountain-hare", "ptarmigan"]);
 // THE FORTRESS RATS LIVE BY THEIR SCRAPS (2026-11-14). A rat eats the muck of the
 // warrens, the carrion ground and the open ground's middens (FORAGE_ROOMS), and the
@@ -2940,13 +2941,13 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // walks toward a brawl or joins one: the noise sends them away, as it does a
 // runner. The hedgehog the same: it curls, it does not come to look.
 export const NOISE_SHY = new Set(["red-stag", "wood-stag", "feral-goat", "old-billy", "hedgehog",
-  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
-  "cave-crayfish",
+  // the cave's crayfish, and its bats and stone-mites (2026-11-24)
+  "cave-crayfish", "cave-bat", "stone-mites",
   "wrack-crab", "ford-eel", // the crossing's crab and eel keep out of a fight too (rome, 2026-11-12)
   "wood-sloth"]); // and the sloth: it was hauling itself over to a fight and joining it (rome, 2026-11-18)
 export const RUNNERS = new Set(["fleet-rat", "roe-deer", "water-vole",
-  // the cave's creatures (mig 409, 2026-11-24)
-  "pale-salamander",
+  // the cave's creatures (mig 409, 2026-11-24); the grubbet bolts as the fleet rat does (2026-11-24)
+  "pale-salamander", "grubbet",
   // THE MOUNTAIN, TIER FOUR (mig 233). It shouts and it goes; it does not fight
   // and it never joins one.
   "mountain-chough",
@@ -6659,8 +6660,8 @@ export const PRICKLY: Record<string, number> = { "hedgehog": 2 };
 // ...AND THE MOUNTAIN'S CATS KILL FOR SPORT TOO (rome, 2026-11-11): the wildcat,
 // its rare blood the tom, the lynx and the cave lion, by the same rule.
 export const SURPLUS_KILLERS = new Set(["hill-fox", "snow-fox", "the-raiding-fox", "the-blue-fox",
-  // the cave's creatures (mig 409, 2026-11-24)
-  "cave-cougar",
+  // the cave's creatures (mig 409, 2026-11-24), and the polecat, fed (2026-11-24)
+  "cave-cougar", "polecat",
   "wildcat", "the-tom", "lynx", "cave-lion"]);
 export const SURPLUS_ODDS = 0.25;
 export const SURPLUS_REARM_MS = 2 * 3_600_000;
@@ -6740,6 +6741,10 @@ export const PRICK_LINES = [
   "The spines drive into your fist and stay there",
 ];
 export const DEN_MOVES = new Map<string, string>([
+  // mig 411: three cave spiders, out of the middle cave's silk to the upper cave and the foxfire
+  ["spawn-cave-spider@the-hanging-silk", "the-hanging-silk"],
+  ["spawn-cave-spider@the-spiders-gallery", "the-spiders-gallery"],
+  ["spawn-cave-spider@the-roost-edge", "the-roost-edge"],
   // mig 392: three congers, off the open channels and up the marsh creeks where the hounds walk
   ["spawn-conger@the-green-water#312", "the-green-water"],
   ["spawn-conger@the-deep-mark#313", "the-deep-mark"],

@@ -396,7 +396,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     if (firstMob) suggest.push(`study ${chipName(world.mobTemplates.get(firstMob.templateId)!.name)}`);
     // And a body on the floor whose dead the book has not read (study.ts).
     else if (!stale) {
-      const body = [...(z.traces.get(session.roomId) ?? [])].reverse().map((tr) => study.corpseKind(z, tr)).find((id) => id && !studiedIn(session, id, "dead"));
+      const body = [...(z.traces.get(session.roomId) ?? [])].reverse().map((tr) => study.corpseKind(z, tr)).find((id) => id && !studiedIn(session, id, "dead") && !study.eaterOf(z, session.roomId, id));
       if (body) {
         suggest.push(`study dead ${chipName(world.mobTemplates.get(body)!.name)}`);
         // The body the chip names is one the picture shows: in place of the

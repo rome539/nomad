@@ -121,6 +121,14 @@ export function findCorpse(z: ZoneDO, roomId: string, arg: string): { tr: Trace;
   return null;
 }
 
+/** The creature here eating a body of this kind, if one is (2026-11-24: a body
+ *  under a feeding animal is not yours to turn over and use up). */
+export function eaterOf(z: ZoneDO, roomId: string, templateId: string): Creature | undefined {
+  const base = (id: string) => z.variantBase.get(id) ?? id;
+  return z.creaturesInRoom(roomId).find((c) => (c.eatingOn === "kill" || c.eatingOn === "carrion")
+    && !!c.eatingWhat && base(c.eatingWhat) === base(templateId) && ai.eatingNow(c));
+}
+
 // The study uses the body up: turned over, opened and read, there is nothing
 // left on the floor worth a scavenger's time, or a picture.
 export function useUp(z: ZoneDO, roomId: string, tr: Trace): void {
