@@ -189,6 +189,11 @@ export interface World {
   mobVariants: MobVariant[];
 }
 
+// A running zone reads this ONCE, when it wakes, and wakes onto a new world only
+// when the build changes; the build is made from src/, not from the database. So
+// a ship that is only rows (a door taken out, a room reworded) reaches nobody
+// until something in src/ changes with it. Mig 413 (2026-11-25) shipped alone and
+// sat unseen behind the old map; this note is what carried it.
 export async function loadWorld(db: D1Database, zone: string): Promise<World> {
   const rooms = (await db.prepare("SELECT * FROM rooms WHERE zone = ?").bind(zone).all<Room>())
     .results ?? [];
