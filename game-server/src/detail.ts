@@ -7331,7 +7331,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-ring-of-nine": {
     "ring|stones|stone|nine|tenth|joints|joint|floor":
-      "Nine stones, as alike as nine coins, each in its own joint, round the tenth in the middle. Each is the size of a table and too heavy to think of moving. The room is cold, and the air in it is never still.",
+      "Nine stones, as alike as nine coins, each in its own joint, round the tenth in the middle. Each is the size of a table and sits heavy in its joint. The room is cold, and the air in it is never still.",
   },
   "the-west-hall": {
     "hall|scratches|scratch|walls|track|floor":
@@ -7455,7 +7455,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-box-chamber": {
     "box|lid|slab|keyhole|stone|chamber":
-      "The box is of the dressed stone, and the joint between lid and box is so fine it might be one stone with a line drawn on it. The keyhole is cut clean through the slab, small and exact. Kneel and look along the floor: the room was built round the box, not the box set in the room.",
+      "The box is of the dressed stone, and the joint between lid and box is so fine it might be one stone with a line drawn on it. There is no keyhole and no hasp: nothing holds the slab down but its own weight. Kneel and look along the floor: the room was built round the box, not the box set in the room.",
   },
   "the-worn-floor": {
     "floor|hollows|hollow|dips|wall":

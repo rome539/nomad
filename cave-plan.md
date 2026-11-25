@@ -199,7 +199,7 @@ cave is about.
   is said, but the air has moved.
 - **Behind it: the under-stone**, a small hidden part (about 6-8 rooms, NOT counted
   in the 200; extra on top of them) where the older people's own things lie: the box on the dressed
-  stone (opened with the sleeper's key) moves here, with the best of the
+  stone (opened with the sleeper's key) moves here (DONE 2026-11-25, mig 412: the Box Chamber; the ring itself built the same day in cave.ts), with the best of the
   bottom's epics and the strongest evidence of the older people. The sleeper is
   NOT behind it; the boss stays reachable without the puzzle.
 

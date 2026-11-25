@@ -974,7 +974,12 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const placed = carving.lookPlaced(z, session, arg);
     // A CLOSE LOOK IS THE WORLD SPEAKING (rome, 2026-11-07): the lore look, as the last hand on found gear.
     if (placed) return z.send(session, placed, "lore");
-    const feature = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
+    const found = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
+    // the breathing stone shows under a close look, in the ring and in the oaks over it
+    // (cave.ts); neither room keeps a region's record, so the chronicle reads nothing here
+    const sign = session.roomId === cave.RING_OAKS && /oak|ring|ground|tree|leaves/.test(arg) ? cave.oaksLine(z, Date.now())
+      : session.roomId === cave.RING_ROOM && /ring|stone|floor|joint|nine/.test(arg) ? cave.ringLine(z, session, Date.now()) : null;
+    const feature = found && sign ? found + " " + sign : found;
     // A region's record reads its newest rows under its own close look (chronicle.ts).
     if (feature) return z.send(session, feature + await chronicle.under(z, session.roomId, feature), "lore");
   }
@@ -1285,6 +1290,10 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = fals
       // be worked out, not read off a refusal.
       return z.send(session, "The hatch overhead will not move. It has no lock to force and no latch to turn, and it does not answer to any hand.", "dmgin");
     }
+  } else if (exit.key_item === cave.RING_KEY && !z.openDoors.has(doorKey)) {
+    // THE BREATHING STONE (cave.ts): the way down is a stone of the ring, pried up.
+    // The way back up from under it is never shut, so nobody is sealed below.
+    if (session.roomId === cave.RING_ROOM) return z.send(session, cave.RING_SHUT, "dmgin");
   } else if (exit.key_item === BEAST_PATH_KEY) {
     // A KNOWN ANIMAL PATH: no door, no key. It was only found here because you
     // have seen it used; walk on.

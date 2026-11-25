@@ -7,7 +7,11 @@ const end = ai.indexOf('} else if (!silent)', start);
 const boss = new Function('z', 'world', 'roomId', 'silent', 'SURFACE_BANDS', 'FORTRESS_BANDS', ai.slice(start, end));
 const timerStart = zone.indexOf('    for (const [key, at] of this.doorCloseAt)');
 const timerEnd = zone.indexOf('\n\n    // Bodies and appetites', timerStart);
-const timer = new Function('now', 'FORTRESS_BANDS', zone.slice(timerStart, timerEnd));
+const timer0 = new Function('now', 'FORTRESS_BANDS', 'cave', zone.slice(timerStart, timerEnd));
+// the breathing stone shares the clock (2026-11-25): its door settles with its own line
+const settled = [];
+const cave = { RING_DOOR: 'the-ring-of-nine:down', ringSettles: (z) => settled.push(z) };
+const timer = function (now, bands) { return timer0.call(this, now, bands, cave); };
 const surface = new Set(['wood']), fortress = new Set(['deep']);
 const world = {exits: new Map([['door', [{dir:'down',to_room:'boss',key_item:'heart'}]]])};
 function fixture(open=true) {
@@ -23,4 +27,6 @@ z=fixture();respawn(z,true);assert.equal(z.lines.length,0);assert.equal(z.openDo
 z=fixture(false);z.regionOf=()=> 'wood';respawn(z);assert.equal(z.lines.length,1,'surface boss keeps its return announcement');
 z=fixture();timer.call(z,99,fortress);assert.equal(z.lines.length,0);assert.equal(z.openDoors.size,1,'timer cannot close early');
 timer.call(z,100,fortress);z.openDoors.add('door:down');z.doorCloseAt.set('door:down',200);timer.call(z,200,fortress);assert.equal(z.lines.length,2,'a later real closure gets its own announcement');
-console.log('Deep door: both closure orders, closed state, catch-up, surface boss, and reopening pass.');
+z=fixture(false);z.openDoors.add(cave.RING_DOOR);z.doorCloseAt.set(cave.RING_DOOR,50);timer.call(z,50,fortress);
+assert.equal(settled.length,1,'the ring\'s stone settles on its own clock');assert.equal(z.lines.length,0,'the ring does not grind shut like the deep\'s iron door');assert.ok(!z.openDoors.has(cave.RING_DOOR),'the stone stays up');
+console.log('Deep door: both closure orders, closed state, catch-up, surface boss, reopening, and the ring\'s stone pass.');

@@ -1820,6 +1820,18 @@ const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/exactly the way the magenta background is/g, "the same way the background is keyed")
   .replace(/#FF00FF|(?<!no )magenta/gi, "transparent");
 
+// A SOLID GREEN BACKGROUND (2026-11-25), for a creature with pink or red-violet in
+// it: the magenta key is a hue test and takes the pink with the ground (the pale
+// salamander's gills). Not transparent, which was tried and looked wrong. The
+// cutter sees a green sheet by its border and keys green instead of magenta.
+const GREEN_BG = new Set(["pale-salamander"]);
+const greenBg = (s) => !GREEN_BG.has(id) ? s : s
+  .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g, "Pure solid #00FF00 GREEN everywhere outside the creature.")
+  .replace(/CLEAR EMPTY MAGENTA/g, "CLEAR EMPTY GREEN")
+  .replace(/empty magenta/g, "empty green")
+  .replace(/exactly the way the magenta background is/g, "exactly the way the green background is")
+  .replace(/#FF00FF/g, "#00FF00").replace(/(?<!no )MAGENTA/g, "GREEN").replace(/(?<!no )magenta/g, "green");
+
 const THROWAWAY = poses.filter((p) => p[0] === "_");
 // THE WORD "OPAQUE" IS OUT OF THE MAGENTA LINE (rome, 2026-09-21: it kept
 // fouling the sheets). "Pure opaque solid magenta" reads to a generator as an
@@ -1833,7 +1845,7 @@ const THROWAWAY = poses.filter((p) => p[0] === "_");
 // put it INSIDE the template literal below - so the note about removing a word
 // from the prompt was itself printed into all 22 prompts. Everything from here
 // to the end of that literal is prompt text, not source.
-console.log(clearBg(`# ${id} — ${poses.length} poses, ${COLS}x${ROWS} sheet at ${W}x${H}
+console.log(greenBg(clearBg(`# ${id} — ${poses.length} poses, ${COLS}x${ROWS} sheet at ${W}x${H}
 # after generating:
 #   node scripts/cut-mob-sheet.mjs <sheet.png> ${id} ${poses.join(" ")}${THROWAWAY.length ? `
 #   rm ${THROWAWAY.map((p) => `output/*/${id}/${p}.png`).join(" ")}   # BEFORE building — the builder packs every png it finds` : ""}
@@ -1853,4 +1865,4 @@ ${WHAT_IT_IS}${worked() ? ALONE_WORKED : ALONE_ANIMAL}Create ${poses.length} ful
 Reading order left to right, top row then bottom row:
 ${poses.map((p, i) => `${i + 1}. ${WORDING[p] || (LINES[id] && LINES[id][p]) || SAY[p] || p.replace(/-/g, " ")}`).join("\n")}
 
-No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human.${MANSHAPED[id] || LIVING_MEN.has(id) ? "" : " Do not make the animal a dragon hybrid."}`));
+No invented magic, no armour on animals, no fire, smoke, dust, trails, glows, scenery, cast shadows, text, grid lines, labels, borders, humans except when the specified subject is human.${MANSHAPED[id] || LIVING_MEN.has(id) ? "" : " Do not make the animal a dragon hybrid."}`)));

@@ -4283,7 +4283,7 @@ try {
   check('a sheet drawn on transparency is keyed by its alpha, so its haze is not creature (2026-10-27)', () => {
     const cut = readFileSync(new URL('./cut-mob-sheet.mjs', import.meta.url), 'utf8');
     assert.match(cut, /const ALPHA_FLOOR = 32;/);
-    assert.match(cut, /return sheetRaw\.data\[i \+ 3\] >= ALPHA_FLOOR && Math\.min\(/, 'the cell finder skips the haze');
+    assert.match(cut, /return sheetRaw\.data\[i \+ 3\] >= ALPHA_FLOOR && \(CLEAR_SHEET \|\| spillOf\(/, 'the cell finder skips the haze (and, since 2026-11-25, keys no clear sheet)');
     assert.match(cut, /if \(data\[p \+ 3\] < ALPHA_FLOOR\) \{ data\[p\] = data\[p\+1\] = data\[p\+2\] = data\[p\+3\] = 0; continue; \}/, 'and the key clears it');
   });
 
@@ -5293,6 +5293,73 @@ try {
       assert.match(pub, new RegExp('u === "' + k + '"'), 'the page has no small sounds for ' + k);
     }
     assert.match(pub, /"midge", "air", "whistle"\]\.forEach\(function \(k\) \{ fadeGain/, 'sound off must fade the cave air too');
+  });
+  check('pink parts survive the cut: a clear sheet is never keyed, and a green sheet is keyed by green (2026-11-25, the salamander\'s gills)', () => {
+    const cut = readFileSync(new URL('./cut-mob-sheet.mjs', import.meta.url), 'utf8');
+    assert.match(cut, /const CLEAR_SHEET = clearPx \/ \(sheetRaw\.data\.length \/ \(SC \* 7\)\) > 0\.2;/, 'the cutter no longer tells a clear sheet from a magenta one');
+    assert.match(cut, /if \(CLEAR_SHEET\) \{ kept\+\+; continue; \}[^\n]*\n\s*const r = data\[p\], g = data\[p \+ 1\], b = data\[p \+ 2\];\n\s*const spill = spillOf\(r, g, b\);/, 'the hue key runs on a clear sheet');
+    assert.match(cut, /\(CLEAR_SHEET \|\| spillOf\(/, 'the ink finder keys a clear sheet');
+    // ...and a creature with pink in it is drawn on solid green, keyed by green (rome's choice, not transparent)
+    assert.match(cut, /const spillOf = \(r, g, b\) => GREEN_SHEET \? Math\.min\(g - r, g - b\) : Math\.min\(r - g, b - g\);/, 'the cutter no longer keys green');
+    assert.match(cut, /const spill = spillOf\(r, g, b\);/, 'the cell key does not follow the sheet\'s ground');
+    const prompt = readFileSync(new URL('./mob-prompt.mjs', import.meta.url), 'utf8');
+    assert.match(prompt, /const GREEN_BG = new Set\(\["pale-salamander"\]\);/, 'the salamander is back on magenta, which eats its gills');
+    assert.doesNotMatch(prompt.match(/const CLEAR_BG = new Set\(\[[^\]]*\]/)[0], /pale-salamander/, 'the salamander was put on transparency, which rome ruled out');
+  });
+  check('the diggers\' strongboxes in the cave are drawn, and the stone box is drawn as stone, never wood or iron (2026-11-25)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const art = zd.slice(zd.indexOf('export const CACHE_ART'), zd.indexOf('};', zd.indexOf('export const CACHE_ART')));
+    for (const box of ['box-first-camp', 'box-cold-camp', 'box-deep-camp']) assert.match(art, new RegExp('"' + box + '": "box"'), box + ' has no picture');
+    assert.match(art, /"box-stone": "stone"/, 'the stone box is drawn as a wooden chest or an iron box, or not at all');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    for (const n of ['stone-shut', 'stone-open']) {
+      assert.match(pub, new RegExp('"' + n + '": \\{ vh: [0-9.]+, aspect: [0-9.]+ \\}'), n + ' has no size');
+      assert.ok(existsSync(new URL('../public/loot/' + n + '.webp', import.meta.url)), n + '.webp is missing');
+    }
+  });
+  check('the stone box the sleeper\'s key opens stands in the Box Chamber, under the Ring of Nine, as the plan always had it (2026-11-25)', () => {
+    const mig = readFileSync(new URL('../migrations/412_the_box_goes_under.sql', import.meta.url), 'utf8');
+    assert.match(mig, /UPDATE caches\s+SET room_id = 'the-box-chamber',\s+key_item = '',[^;]*WHERE id = 'box-stone';/, 'the box is not moved under the stone, or still asks for the sleeper\'s key behind the ring');
+    assert.doesNotMatch(mig.match(/UPDATE caches[^;]*;/)[0], /keyhole/, 'the box still has a keyhole in its words');
+    assert.match(mig, /UPDATE rooms\s+SET description = '[^']*no keyhole[^']*'\s+WHERE id = 'the-box-chamber';/, 'the room still shows a keyhole');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const DOOR_PRIZE_BOXES = new Set\(\[[^\]]*"box-stone"/, 'the ring\'s box can roam off or come up empty');
+    const under = readFileSync(new URL('../regions/the-cave-4.rooms', import.meta.url), 'utf8');
+    assert.match(under, /^## the-box-chamber \| The Box Chamber\n[^\n]*no keyhole/m, 'the Box Chamber is gone, or its words still have a keyhole');
+    assert.match(under, /^> up the-ring-of-nine key:breathing-stone/m, 'the under-stone is no longer behind the ring');
+    const later = readdirSync(new URL('../migrations/', import.meta.url)).filter((f) => +f.slice(0, 3) > 412 && /box-stone/.test(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8')));
+    assert.deepEqual(later, [], 'a later migration moves the stone box again: check it is meant');
+  });
+  check('the Ring of Nine opens: pry the stone the air comes up under, a wrong one moves the air, and the room and the oaks show the same stone (2026-11-25)', () => {
+    const out = [];
+    const z = { openDoors: new Set(), doorCloseAt: new Map(), send: (s, t) => out.push(t), roomFeed() {}, roomSound() {}, carriesLight: () => false };
+    const me = { roomId: caveMod.RING_ROOM, name: 'me', pubkey: 'me' };
+    const now = Date.UTC(2026, 10, 25, 12);
+    const nth = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
+    const right = caveMod.ringStone(z, now);
+    for (let t = 0; t < 200; t++) { const k = caveMod.ringStone({}, now + t * 40 * 60_000); assert.ok(Number.isInteger(k) && k >= 0 && k <= 8, 'the stone came out as ' + k); }
+    assert.match(caveMod.ringLine(z, me, now), new RegExp('\\b' + nth[right] + '\\b'), 'the room does not show the breathing stone');
+    assert.match(caveMod.oaksLine(z, now), new RegExp('\\b' + nth[right] + ' oak'), 'the oaks above do not show the same one');
+    assert.equal(caveMod.pryRing(z, me, 'chest', now), false, 'a pry about something else is not the ring\'s');
+    const wrong = (right + 4) % 9;
+    assert.equal(caveMod.pryRing(z, me, nth[wrong] + ' stone', now), true);
+    assert.ok(!z.openDoors.has(caveMod.RING_DOOR), 'a wrong stone opened the way');
+    assert.doesNotMatch(out.at(-1), /wrong|another|moves|air/, 'a wrong stone explains itself');
+    let moved = false;
+    for (let k = 0; k < 6 && !moved; k++) { if (caveMod.ringStone(z, now) !== right) moved = true; else caveMod.pryRing(z, me, 'stone ' + (((right + 1) % 9) + 1), now); }
+    assert.ok(moved, 'wrong pries never move the air, so trying every stone would work');
+    const now2 = caveMod.ringStone(z, now);
+    assert.equal(caveMod.pryRing(z, me, 'the ' + nth[now2] + ' stone', now), true);
+    assert.ok(z.openDoors.has(caveMod.RING_DOOR) && z.doorCloseAt.get(caveMod.RING_DOOR) > now, 'the right stone does not open the way down for a while');
+    assert.equal(caveMod.ringLine(z, me, now), null, 'the sign still shows with the stone already up');
+    assert.ok(caveMod.ringStone({}, now + 40 * 60_000 * 3) !== undefined, 'the stone turns over through the day');
+    const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    assert.match(verbs, /exit\.key_item === cave\.RING_KEY && !z\.openDoors\.has\(doorKey\)\) \{[^]*?if \(session\.roomId === cave\.RING_ROOM\) return z\.send\(session, cave\.RING_SHUT/, 'the way down is not the ring\'s own');
+    assert.ok(verbs.indexOf('cave.RING_KEY') < verbs.indexOf('A black iron door bars the way ${dir}. It wants'), 'the ring falls through to the iron-door line');
+    assert.doesNotMatch(caveMod.RING_SHUT, /door|key/, 'the ring talks about a door or a key');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(zone, /if \(cave\.pryRing\(this, session, arg, Date\.now\(\)\)\) return;/, 'pry does not reach the ring');
+    assert.match(zone, /if \(key === cave\.RING_DOOR\) \{ cave\.ringSettles\(this\); continue; \}/, 'the stone never settles, or settles with the deep door\'s iron line');
   });
   check('the cave bat hangs from the top of the picture on every floor line, rank and row scale (2026-11-25)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');

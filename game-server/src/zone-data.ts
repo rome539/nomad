@@ -4880,7 +4880,8 @@ export const DREAMS: Record<string, string[]> = {
 // wall. A stale id here does not throw — it silently drops the riddle door's
 // box out of BOTH laws at once, so the box walks out of the sealed room it is
 // the whole point of and can come up empty when you finally reach it.
-export const DOOR_PRIZE_BOXES = new Set(["reliquary", "box-kept", "box-glade", "box-cave", "box-armory"]);
+// ...and box-stone (2026-11-25), under the Ring of Nine: the breathing stone is its door.
+export const DOOR_PRIZE_BOXES = new Set(["reliquary", "box-kept", "box-glade", "box-cave", "box-armory", "box-stone"]);
 // BOXES THAT ARE PART OF THEIR ROOM STAY IN IT (2026-11-19). The reeve's box is a
 // space cut under a board by his hearth; roaming, it turned up in an open field as
 // "a box under the floor". It stays home as the door boxes do; its house is neither
@@ -4908,7 +4909,7 @@ export const PRIZE_EMPTY_LINES: Record<string, string> = {
 // or an iron strongbox, each drawn shut and sprung. A cache missing from this
 // table is part of the place itself - a niche, a cavity, a pit, a cache under a
 // stone - and draws nothing: a box on the floor would give it away.
-export const CACHE_ART: Record<string, "chest" | "box"> = {
+export const CACHE_ART: Record<string, "chest" | "box" | "stone"> = {
   "box-armory": "chest", "box-bounds": "chest", "box-burner": "chest", "box-cave": "chest",
   "box-pans": "chest", "box-farnoust": "chest", "box-lodge": "chest", "box-mill": "chest",
   "box-solar": "chest", "box-sutlers": "chest", "box-bothy": "chest", "box-chapel": "chest",
@@ -4918,6 +4919,9 @@ export const CACHE_ART: Record<string, "chest" | "box"> = {
   "slabs-locker": "box", "box-shelter": "box", "box-abyss": "box", "box-deep": "box",
   "box-glade": "box", "box-relic": "box", "reliquary": "box",
   "box-crack": "box", // the bricked-up niche: a chest like any other (rome, 2026-10-14)
+  // the diggers' strongboxes in the cave's three camps (2026-11-25: they had no picture),
+  // and the box of dressed stone under the Ring of Nine, drawn as itself: no lock on it
+  "box-first-camp": "box", "box-cold-camp": "box", "box-deep-camp": "box", "box-stone": "stone",
 };
 // THE BURNER LOOKS UP. He is the one thing in the wood that is not hostile and
 // not a shopkeeper, and until now he ignored a person walking into his clearing

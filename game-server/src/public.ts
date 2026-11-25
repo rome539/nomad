@@ -11226,7 +11226,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "137";      // /mob/      strips and their eye layers
+var MOB_V  = "138";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "77";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
@@ -16669,7 +16669,7 @@ var MOB_ANIM = {
   "stone-brood":       { n: 9, aspect: 1.568, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "river-gulper":      { n: 8, aspect: 1.491, f: {"idle":0,"alert":1,"hold":2,"attack":3,"sweep":4,"move-a":5,"move-b":6,"death":7} },
   "polecat":           { n: 8, aspect: 1.54, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "pale-salamander":   { n: 8, aspect: 1.904, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "pale-salamander":   { n: 8, aspect: 1.974, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "mole-hound":        { n: 9, aspect: 1.034, f: {"idle":0,"listen":1,"alert":2,"rest":3,"feed":4,"move-a":5,"move-b":6,"attack":7,"death":8} },
   "grubbet":           { n: 8, aspect: 1.141, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "digger":            { n: 9, aspect: 0.937, f: {"idle":0,"call":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"snatch-escape":7,"death":8} },
@@ -17162,7 +17162,11 @@ var mobLoose = 0;
 // standing here, wood or iron, shut or sprung. One scale for all four so the
 // lid of an open one adds height and the chest itself stays the same size.
 var CHEST_ART = { "chest-shut": { vh: 16.0, aspect: 1.616 }, "chest-open": { vh: 22.6, aspect: 1.168 },
-  "box-shut": { vh: 15.7, aspect: 1.402 }, "box-open": { vh: 22.1, aspect: 0.992 } };
+  "box-shut": { vh: 15.7, aspect: 1.402 }, "box-open": { vh: 22.1, aspect: 0.992 },
+  // the box of dressed stone under the Ring of Nine (2026-11-25): a little longer than
+  // the iron box, its open slab pushed back over the far edge; both from one sheet, so
+  // one scale (the open picture is 483 px tall to the shut one's 428)
+  "stone-shut": { vh: 14.8, aspect: 1.624 }, "stone-open": { vh: 16.7, aspect: 1.540 } };
 var mobChests = [];
 function lootBag(n) {
   for (var i = 0; i < LOOT_BAGS.length; i++) if (n >= LOOT_BAGS[i].at) return LOOT_BAGS[i];

@@ -110,10 +110,28 @@ console.log(`${meta.width}x${meta.height} → ${COLS}x${ROWS} grid, cells ${cw}x
 const ALPHA_FLOOR = 32;
 const sheetRaw = await sharp(sheet).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 const SW = sheetRaw.info.width, SH = sheetRaw.info.height, SC = sheetRaw.info.channels;
+// A SHEET DRAWN ON REAL TRANSPARENCY IS NEVER KEYED (2026-11-25). The magenta key
+// is a hue test, and it takes anything pink or red-violet whatever is behind it:
+// on the pale salamander's clear sheet it would have cut the pink gills away just
+// as it did on magenta. So when a good share of the sheet is already empty, the
+// background is the alpha and the hue key is not run at all.
+let clearPx = 0;
+for (let i = 3; i < sheetRaw.data.length; i += SC * 7) if (sheetRaw.data[i] < ALPHA_FLOOR) clearPx++;
+const CLEAR_SHEET = clearPx / (sheetRaw.data.length / (SC * 7)) > 0.2;
+if (CLEAR_SHEET) console.log("  a clear sheet: the background is its alpha, no magenta key");
+// A SOLID GREEN SHEET IS KEYED BY GREEN (2026-11-25). A creature with pink in it
+// is drawn on #00FF00 (mob-prompt.mjs GREEN_BG), and the key is the same hue test
+// turned round: alpha drops wherever min(g-r, g-b) > 30, and the green spill on an
+// edge comes off the green channel. The sheet says which it is by its own border.
+let bR = 0, bG = 0, bB = 0, bN = 0;
+for (let x = 0; x < SW; x += 5) for (const y of [0, SH - 1]) { const i = (y * SW + x) * SC; bR += sheetRaw.data[i]; bG += sheetRaw.data[i + 1]; bB += sheetRaw.data[i + 2]; bN++; }
+const GREEN_SHEET = !CLEAR_SHEET && bG / bN > 150 && bR / bN < 110 && bB / bN < 110;
+if (GREEN_SHEET) console.log("  a green sheet: keyed by green, not magenta");
+// how far a pixel leans toward the ground's colour (above 30 is ground)
+const spillOf = (r, g, b) => GREEN_SHEET ? Math.min(g - r, g - b) : Math.min(r - g, b - g);
 const sInk = (x, y) => {
   const i = (y * SW + x) * SC;
-  return sheetRaw.data[i + 3] >= ALPHA_FLOOR && Math.min(sheetRaw.data[i] - sheetRaw.data[i + 1],
-                                              sheetRaw.data[i + 2] - sheetRaw.data[i + 1]) <= 30;
+  return sheetRaw.data[i + 3] >= ALPHA_FLOOR && (CLEAR_SHEET || spillOf(sheetRaw.data[i], sheetRaw.data[i + 1], sheetRaw.data[i + 2]) <= 30);
 };
 const boxes = [];            // boxes[row][col] = {x0,x1}
 for (let r = 0; r < ROWS; r++) {
@@ -198,8 +216,9 @@ for (let i = 0; i < poses.length; i++) {
   let kept = 0;
   for (let p = 0; p < data.length; p += 4) {
     if (data[p + 3] < ALPHA_FLOOR) { data[p] = data[p+1] = data[p+2] = data[p+3] = 0; continue; }
+    if (CLEAR_SHEET) { kept++; continue; } // nothing to key: what has alpha is the creature
     const r = data[p], g = data[p + 1], b = data[p + 2];
-    const spill = Math.min(r - g, b - g);
+    const spill = spillOf(r, g, b);
     // THIN THINGS SURVIVE THE KEY (--soft, 2026-10-20). Anything past 30 of
     // spill went, and on the keeper of the holding that was his fingers: two or
     // three pixels wide, pale, and every one of them half the magenta behind it,
@@ -207,6 +226,15 @@ for (let i = 0; i < poses.length; i++) {
     // a MIX - the figure over pure magenta - takes the magenta's share as the
     // pixel's transparency, and puts back the colour that was under it. Only what
     // is nearly all magenta still goes.
+    if (SOFT && spill > 30 && GREEN_SHEET) {
+      const a = 1 - spill / 255;
+      if (a < 0.2) { data[p] = data[p+1] = data[p+2] = data[p+3] = 0; continue; }
+      data[p] = Math.max(0, Math.min(255, Math.round(r / a)));
+      data[p+1] = Math.max(0, Math.min(255, Math.round((g - 255 * (1 - a)) / a)));
+      data[p+2] = Math.max(0, Math.min(255, Math.round(b / a)));
+      data[p+3] = Math.round(255 * a);
+      kept++; continue;
+    }
     if (SOFT && spill > 30) {
       const a = 1 - spill / 255;
       if (a < 0.2) { data[p] = data[p+1] = data[p+2] = data[p+3] = 0; continue; }
@@ -217,7 +245,8 @@ for (let i = 0; i < poses.length; i++) {
       kept++; continue;
     }
     if (spill > 30) { data[p] = data[p+1] = data[p+2] = data[p+3] = 0; continue; }
-    if (spill > 0) { data[p] = Math.max(0, r - spill); data[p+2] = Math.max(0, b - spill); }
+    if (spill > 0 && GREEN_SHEET) data[p+1] = Math.max(0, g - spill);
+    else if (spill > 0) { data[p] = Math.max(0, r - spill); data[p+2] = Math.max(0, b - spill); }
     kept++;
   }
   // ...AND THEN THROW AWAY WHAT BELONGS TO THE NEXT CELL.

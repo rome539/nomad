@@ -326,3 +326,80 @@ export function doing(z: ZoneDO, c: Creature): string | null {
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// THE BREATHING STONE (cave-plan.md, the Ring of Nine; built 2026-11-25). Its key
+// is the air. Cold comes up through the joints of only one of the nine stones, and
+// the stone keeps changing: it turns over through the day, and every wrong pry
+// moves the air to another. Trying every stone does not work and remembering does
+// not work; the only way down is to read the room each time. The room shows it in
+// a different way each turn (frost, dust, a whistle in one seam, a flame leaning),
+// and so do the nine oaks over it in the wood. Pry the right stone and it tilts up
+// on its edge over steps going down, open to anyone for a while; then it settles.
+// A wrong stone does not move and nothing is said about it.
+export const RING_ROOM = "the-ring-of-nine";
+export const RING_KEY = "breathing-stone";
+export const RING_DOOR = RING_ROOM + ":down";
+export const RING_OAKS = "the-standing-oaks";
+const RING_TURN_MS = 40 * 60_000;   // the air finds another stone this often on its own
+const RING_OPEN_MS = 4 * 60_000;    // how long the stone stands up on its edge
+const ORDINAL = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth"];
+const ringShift = new WeakMap<object, number>();
+
+/** Which of the nine (0 = the first round from the door) the air comes up under now. */
+export function ringStone(z: ZoneDO, now: number): number {
+  const slot = Math.floor(now / RING_TURN_MS), shift = ringShift.get(z) ?? 0;
+  let h = (slot * 2654435761 + shift * 40503 + 977) >>> 0;
+  h = (h ^ (h >>> 15)) >>> 0; h = Math.imul(h, 2246822519) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
+  return h % 9;
+}
+function ringTurn(now: number): number { return Math.floor(now / RING_TURN_MS); }
+
+/** What the ring shows while it is shut: one stone, a different sign each turn. */
+export function ringLine(z: ZoneDO, s: Session, now: number): string | null {
+  if (s.roomId !== RING_ROOM || z.openDoors.has(RING_DOOR)) return null;
+  const nth = ORDINAL[ringStone(z, now)];
+  if (z.carriesLight(s) && s.litSource !== "lantern" && s.litSource !== "brand") return `Your flame leans over and streams low toward the ${nth} stone round from the door.`;
+  switch ((ringTurn(now) + (ringShift.get(z) ?? 0)) % 3) {
+    case 0: return `Frost lies white along the joint of the ${nth} stone round from the door, and on none of the others.`;
+    case 1: return `Dust lifts off the joint of the ${nth} stone round from the door and drifts up, and settles, and lifts again.`;
+    default: return `A thin whistle comes out of one seam in the floor, round the ${nth} stone from the door.`;
+  }
+}
+
+/** ...and the oaks above show the same, to whoever looks closely in their ring. */
+export function oaksLine(z: ZoneDO, now: number): string {
+  return `Under the ${ORDINAL[ringStone(z, now)]} oak round from the way in, the ground is cold to the hand, and its leaves stir when there is no wind.`;
+}
+
+/** The stones' refusal at the way down: there is no door, only the floor. */
+export const RING_SHUT = "The nine stones lie flush and heavy in the floor, each in its joint. There is no way down.";
+
+/** `pry <stone>` in the ring. Returns false when the words are not about the stones. */
+export function pryRing(z: ZoneDO, s: Session, arg: string, now: number): boolean {
+  if (s.roomId !== RING_ROOM) return false;
+  const a = arg.toLowerCase().replace(/^(the|a)\s+/, "");
+  if (!/stone|slab|flag|ring|^\d$|^(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|middle)\b/.test(a)) return false;
+  if (z.openDoors.has(RING_DOOR)) { z.send(s, "One stone of the ring already stands up on its edge, and the steps go down under it."); return true; }
+  const num = a.match(/\b([1-9]|10)\b/);
+  let n = num ? +num[1] - 1 : ORDINAL.findIndex((o) => new RegExp("\\b" + o + "\\b").test(a));
+  if (/tenth|middle|centre|center/.test(a)) n = 9;
+  if (n < 0) { z.send(s, "Nine stones round a tenth, each the size of a table. Which one?"); return true; }
+  if (n === ringStone(z, now)) {
+    z.openDoors.add(RING_DOOR);
+    z.doorCloseAt.set(RING_DOOR, now + RING_OPEN_MS);
+    z.send(s, "You get your fingers under the edge of the stone where the cold comes up, and it comes: it tilts up on its edge, slow and heavy and smooth, and stands. Under it steps go down, and the cold pours up out of them into your face.", "unlock");
+    z.roomFeed(s.roomId, `${s.name} heaves at one of the nine stones, and it tilts up on its edge over steps going down.`, s.pubkey, false);
+    z.roomSound(s.roomId, "Stone grinds slowly on stone, {dir}.");
+    return true;
+  }
+  // a wrong stone does not move; the air goes somewhere else, and nothing says so
+  ringShift.set(z, (ringShift.get(z) ?? 0) + 1);
+  z.send(s, "You put your weight to the stone. It does not move.");
+  return true;
+}
+
+/** The stone settles back into its joint (from the zone's door clock). */
+export function ringSettles(z: ZoneDO): void {
+  z.roomFeedBands(new Set(["cave"]), "Somewhere in the dressed stone, a great stone settles into its joint with a sound like a held breath let go.", undefined, true, "grind");
+}

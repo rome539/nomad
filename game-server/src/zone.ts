@@ -3113,6 +3113,7 @@ export class ZoneDO implements DurableObject {
   // never wasted — a spent lock always gives up at least one thing.
   private async cmdUnlock(session: Session, arg: string): Promise<void> {
     const world = this.world!;
+    if (cave.pryRing(this, session, arg, Date.now())) return; // the breathing stone (cave.ts)
     // THE TIDE DOOR'S SILL (2026-08-28). 'pry'/'unlock'/'open' at the deep
     // mark works the tide door — the one lock in the world with no lock on it.
     // Naming the door always means the door; a bare pry means the door when
@@ -5932,6 +5933,7 @@ export class ZoneDO implements DurableObject {
       if (now < at) continue;
       this.doorCloseAt.delete(key);
       if (!this.openDoors.delete(key)) continue;
+      if (key === cave.RING_DOOR) { cave.ringSettles(this); continue; } // the breathing stone lies down again
       this.roomFeedBands(FORTRESS_BANDS, "Deep below, iron grinds slowly shut. The dark has taken back its door.", undefined, true, "grind");
     }
 
@@ -8365,6 +8367,9 @@ export class ZoneDO implements DurableObject {
       else if (this.isDark(room.id) && !this.carriesLight(session) && cave.lampLights(this, room.id)) {
         lines.push("The lamp-man's lamp is open, and its yellow light lies over everything here.");
       }
+      const ringSign = cave.ringLine(this, session, Date.now()); // the breathing stone shows itself (cave.ts)
+      if (ringSign) lines.push(ringSign);
+      else if (room.id === cave.RING_ROOM && this.openDoors.has(cave.RING_DOOR)) lines.push("One of the nine stones stands up on its edge, and steps go down under it into the cold.");
       const curing = this.curingCount(room.id);
       const shownCure: Record<string, number> = {};
       // Loose loot is COLLECTED, not spilled line-by-line: on entry a big pile
