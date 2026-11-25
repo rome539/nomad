@@ -212,6 +212,9 @@ export interface Soundscape {
   hour: string;    // "day" | "low" (dusk and dawn) | "night"
   fog: number;     // 1 = fog over this ground: everything that sings is quieter
   cold: number;    // 1 = the cold snap here: nothing with six legs calls
+  // THE CAVE'S OWN AIR (2026-11-25): what the place under the wood sounds like
+  // where no water or fire is heard, by its ground (CAVE_AIR). Empty everywhere else.
+  under: string;   // "" | "draught" | "roots" | "gallery" | "dripstone" | "roost" | "silk" | "glow" | "works" | "stone"
 }
 
 // THE PLACE AND ITS WEATHER, as plain facts. Split from the world on purpose:
@@ -236,6 +239,30 @@ export interface Weather {
   hour?: string;   // "day" | "low" | "night" - the world's clock
   fog?: boolean;   // fog lies here
   cold?: boolean;  // the cold snap is on this ground
+}
+
+// THE CAVE'S OWN AIR, by ground (2026-11-25). Before this most of the cave was the
+// deep's hum and nothing else. The draught in the cracks and the rough ways; earth and
+// roots that talk under the wood; the great dry galleries, where a stone settling far
+// off comes back to you; the calcite rooms, where every drop rings; a breath of air
+// up in the roost roofs; the silk, whose strands thrum in it; the glow rooms, hushed;
+// the diggers' props and the grit off their roofs; and the dressed stone, dead still,
+// where a knock comes back off flat walls. A room on no listed ground has the draught.
+export const CAVE_AIR: Record<string, string> = {
+  "cave-mouths": "draught", "cave-rough": "draught", "cave-wet": "draught", "cave": "draught", "cave-passage": "draught",
+  "cave-roots": "roots",
+  "cave-gallery": "gallery", "cave-dry-dark": "gallery", "cave-hollow": "gallery", "cave-ledge": "gallery", "cave-bones": "gallery", "cave-dark-river": "gallery",
+  "cave-dripstone": "dripstone",
+  "cave-roost": "roost",
+  "cave-silk": "silk",
+  "cave-glow-river": "glow", "cave-foxfire": "glow",
+  "cave-workings": "works", "cave-camp": "works", "cave-stopping": "works", "cave-deep-camp": "works",
+  "stone-way": "stone", "stone-buried": "stone", "stone-pillars": "stone", "stone-ring": "stone", "stone-scraped": "stone",
+  "stone-hollow": "stone", "stone-drowned": "stone", "under-stone": "stone",
+};
+export function caveAirOf(roomId: string, band: string, inside: boolean): string {
+  if (inside || band !== "cave") return "";
+  return CAVE_AIR[terrainOf(roomId, "", band)] ?? "draught";
 }
 
 export function soundscapeOf(p: Place, w: Weather): Soundscape {
@@ -303,6 +330,7 @@ export function soundscapeOf(p: Place, w: Weather): Soundscape {
     hour: w.hour === "low" || w.hour === "night" ? w.hour : "day",
     fog: w.fog ? 1 : 0,
     cold: w.cold ? 1 : 0,
+    under: caveAirOf(roomId, band, inside),
   };
 }
 
@@ -346,5 +374,5 @@ export function soundscapeFor(z: ZoneDO, s: Session): Soundscape {
 
 // One short string per soundscape, so the tick can tell a change with a compare.
 export function soundKey(a: Soundscape): string {
-  return `${a.leaves}${a.rain}${a.roof}${a.shut}${a.wind}${a.creak}${a.fire}${a.fireSide}${a.water}${a.loud}${a.ground}${a.hollow}${a.life}${a.hour}${a.fog}${a.cold}`;
+  return `${a.leaves}${a.rain}${a.roof}${a.shut}${a.wind}${a.creak}${a.fire}${a.fireSide}${a.water}${a.loud}${a.ground}${a.hollow}${a.life}${a.hour}${a.fog}${a.cold}${a.under}`;
 }

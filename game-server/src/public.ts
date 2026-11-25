@@ -1436,6 +1436,13 @@ export const PAGE = `<!doctype html>
      double and the creature standing on it lifts further, which is what puts it
      in the light rather than on it. Warm, and short of daylight: the flame is
      orange and it does not reach far. */
+  /* THE CAVE BY ITS OWN DARK, AND BY ITS OWN LIGHT (2026-11-24). Its night pictures are near black and
+     blue, not the open ground's, and creatures took the open night's grey-brown and stood out of them;
+     where the glow-worms and the foxfire light it they stand in green, and where the stone lights itself
+     in its cold grey. Measured in Chrome against the plates' own band: blue 218, green 161, stone 213. */
+  body[data-view="image"] #mobs.t-cave img, body[data-view="image"] #mobs.t-cave .mob { filter: brightness(.15) saturate(.3) sepia(.6) hue-rotate(182deg) saturate(1.8) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-cave-glow img, body[data-view="image"] #mobs.t-cave-glow .mob { filter: brightness(.34) saturate(.5) sepia(.8) hue-rotate(112deg) saturate(2) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
+  body[data-view="image"] #mobs.t-cave-stone img, body[data-view="image"] #mobs.t-cave-stone .mob { filter: brightness(.30) saturate(.35) sepia(.35) hue-rotate(180deg) saturate(1.3) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
   body[data-view="image"] #mobs.t-night-torch img, body[data-view="image"] #mobs.t-night-torch .mob { filter: brightness(.80) saturate(1.04) sepia(.22) hue-rotate(-14deg) drop-shadow(0 3px 6px rgba(0,0,0,.8)) var(--mobfog, ); }
   body[data-view="image"] #mobs.t-eclipse img, body[data-view="image"] #mobs.t-eclipse .mob { filter: brightness(.48) saturate(.45) contrast(1.06) drop-shadow(0 3px 6px rgba(0,0,0,.75)) var(--mobfog, ); }
   /* The full moon LIGHTS the ground — the scene brightens to 1.10 — and a
@@ -3243,7 +3250,11 @@ function scapeBuild() {
     run: scapeLoop(scapeWhite(), [scapeFilter("bandpass", 1100, 0.6), scapeFilter("lowpass", 3000)]),
     roar: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 240), scapeFilter("highpass", 40)], firePan),
     hum: scapeLoop(scapeBrown(), [scapeFilter("lowpass", 170), scapeFilter("highpass", 35)]),
-    gust: 0.4, gustTo: 0.4, surfPhase: 0, timers: [],
+    // THE CAVE'S OWN AIR (2026-11-25): one bed of moving air whose throat and level
+    // follow the ground (CAVE_AIR_BED), and a narrow whistle for a crack in a draught
+    air: scapeLoop(scapeBrown(), [scapeFilter("bandpass", 350, 1.5), scapeFilter("lowpass", 900)]),
+    whistle: scapeLoop(scapeWhite(), [scapeFilter("bandpass", 800, 28), scapeFilter("bandpass", 800, 28)]),
+    gust: 0.4, airGust: 0.4, airGustTo: 0.4, whistleOn: 0, gustTo: 0.4, surfPhase: 0, timers: [],
     // the hearth's own life: how hard it is drawing, a flare when a log catches,
     // and whether the crackle is in a busy spell or a quiet one
     fireLvl: 0.95, fireTo: 0.95, fireFlare: 0, fireBusy: false, fireSpellEnd: 0,
@@ -3254,7 +3265,7 @@ function scapeBuild() {
   // swell, the run of the water. Four times a second is plenty for levels
   // that glide over a second or more.
   scape.timers.push(setInterval(scapeBreathe, 250));
-  scapeDrips(); scapeCrackle(); scapeFireEvent(); scapeCreak(); scapeDrop(); scapeHeart(); scapeWinded(); scapeSongs(); scapeNight();
+  scapeDrips(); scapeCrackle(); scapeFireEvent(); scapeCreak(); scapeDrop(); scapeHeart(); scapeWinded(); scapeSongs(); scapeNight(); scapeUnder();
 }
 // NOTHING STEADY STAYS STEADY (2026-11-22). Rain, a fall, a stream, the stone's
 // own hum: each sat at one level, in one tone, for as long as you stood there.
@@ -3330,9 +3341,34 @@ function scapeBreathe() {
   scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * 0.7 * (a.roof ? 0.95 : 1) * SCAPE_VOL * (0.7 + 0.5 * scape.rainNow), 0.6);
   // the stone's hum swells and sinks so slowly you hardly hear it go
   var hw = scapeWander("hum", 0.01, 0.02);
-  scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL * (0.8 + 0.35 * hw) : 0, 0.8);
-  scapeTo(scape.hum.chain[0].frequency, 140 + 60 * hw, 0.8);
+  // the cave's hum by its ground: deeper and fuller in the dressed stone, hushed in the glow
+  var humAt = a.under === "stone" ? 1.25 : a.under === "glow" ? 0.6 : 1;
+  scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL * humAt * (0.8 + 0.35 * hw) : 0, 0.8);
+  scapeTo(scape.hum.chain[0].frequency, (a.under === "stone" ? 95 : 140) + 60 * hw, 0.8);
+  // THE CAVE'S AIR moves on a walk of its own, slower than the wind's
+  if (Math.random() < 0.05) scape.airGustTo = Math.random();
+  scape.airGust += (scape.airGustTo - scape.airGust) * 0.06;
+  var bed = CAVE_AIR_BED[a.under];
+  scapeTo(scape.air.gain.gain, bed ? bed[0] * SCAPE_VOL * (0.45 + 0.75 * scape.airGust) : 0, 0.8);
+  if (bed) { scapeTo(scape.air.chain[0].frequency, bed[1] + bed[2] * scape.airGust, 0.8); scapeTo(scape.air.chain[1].frequency, bed[3], 0.8); }
+  // a crack whistling: only in a draught, only while it lasts (scapeUnder starts it)
+  scape.whistleOn *= 0.96;
+  scapeTo(scape.whistle.gain.gain, a.under === "draught" ? 0.05 * SCAPE_VOL * scape.whistleOn * (0.5 + scape.airGust) : 0, 0.5);
 }
+// level, throat low, throat swing, top of the air, by ground. Measured against the
+// deep's hum, which is what all of it sat under before: the draught is the loudest
+// and still quieter than a stream; the dressed stone barely has air at all.
+var CAVE_AIR_BED = {
+  draught:   [0.075, 260, 260, 1100],
+  roots:     [0.04, 220, 160, 800],
+  gallery:   [0.028, 180, 120, 700],
+  dripstone: [0.022, 300, 140, 900],
+  roost:     [0.04, 700, 500, 2200],
+  silk:      [0.032, 320, 220, 1000],
+  glow:      [0.016, 400, 200, 1400],
+  works:     [0.03, 240, 160, 800],
+  stone:     [0.008, 160, 60, 500],
+};
 function scapeApply() {
   if (!scape || !scapeAmb) return;
   var a = scapeAmb;
@@ -3460,6 +3496,116 @@ function scapeDrop() {
     setTimeout(function () { try { fb.disconnect(); d.disconnect(); } catch (e) {} }, 2500);
   }
   scapeEvery(1200, 6000, scapeDrop);
+}
+// THE CAVE'S OWN SMALL SOUNDS (2026-11-25), each by its ground, each on its own
+// uneven gap. Nothing here is a creature: the cave's animals have their own voices.
+// A sound with the room giving it back: echo is the gap, fb how long it rings,
+// tone the top of what comes back (dressed walls give a quick flat flutter, a great
+// gallery a slow dark one).
+function caveEcho(echo, fb, tone) {
+  var d = actx.createDelay(1); d.delayTime.value = echo;
+  var g = actx.createGain(); g.gain.value = fb;
+  var lp = scapeFilter("lowpass", tone);
+  d.connect(lp); lp.connect(g); g.connect(d); lp.connect(aout());
+  setTimeout(function () { try { g.disconnect(); d.disconnect(); lp.disconnect(); } catch (e) {} }, 6000);
+  return d;
+}
+// a stone settling, a knock in the dark: low, short, and the room answers
+function caveKnock(t, lvl, echo, fb, tone) {
+  var e = caveEcho(echo, fb, tone);
+  SND._burst(t, { type: "lowpass", freq: 260 + Math.random() * 220, q: 1.2, dur: 0.12 + Math.random() * 0.1, gain: lvl * SCAPE_VOL, atk: 0.004, out: e });
+  SND._burst(t, { type: "lowpass", freq: 260 + Math.random() * 220, q: 1.2, dur: 0.12 + Math.random() * 0.1, gain: lvl * 0.7 * SCAPE_VOL, atk: 0.004 });
+}
+// grit or earth running down off a roof or a wall: a short shower of tiny ticks,
+// thinning out; dark for earth, bright for grit and sand
+function caveTrickle(t, bright, lvl) {
+  var n = 6 + Math.floor(Math.random() * 14), span = 0.4 + Math.random() * 1.4;
+  for (var i = 0; i < n; i++) {
+    var at = t + span * Math.pow(i / n, 1.6) + Math.random() * 0.03;
+    SND._burst(at, { type: "bandpass", freq: (bright ? 2600 : 900) + Math.random() * (bright ? 3000 : 900), q: 2, dur: 0.012 + Math.random() * 0.02,
+      gain: lvl * (1 - 0.6 * i / n) * (0.4 + Math.random() * 0.6) * SCAPE_VOL, atk: 0.001 });
+  }
+}
+// wood or root under load: the timber groan, slower and lower than a building's
+function caveGroan(t, lo, hi, lvl) {
+  var dur = 0.8 + Math.random() * 1.6, f0 = lo + Math.random() * (hi - lo), f1 = f0 * (0.8 + Math.random() * 0.35);
+  var o = actx.createOscillator(); o.type = "sawtooth";
+  o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f1, t + dur);
+  var bp = scapeFilter("bandpass", 350 + Math.random() * 450, 6);
+  var g = actx.createGain(); g.gain.setValueAtTime(0, t);
+  var steps = Math.round(dur * 16), peak = lvl * SCAPE_VOL;
+  for (var i = 1; i <= steps; i++) g.gain.linearRampToValueAtTime(peak * Math.sin(Math.PI * i / steps) * (0.35 + Math.random() * 0.65), t + dur * i / steps);
+  g.gain.linearRampToValueAtTime(0, t + dur + 0.05);
+  o.connect(bp); bp.connect(g); g.connect(aout());
+  o.start(t); o.stop(t + dur + 0.1);
+}
+// a ringing drop: a calcite room gives every drop back, high and long; a still
+// pool takes it low and soft
+function caveDrop(t, f, lvl, echo, fb) {
+  var e = caveEcho(echo, fb, f * 1.4);
+  var o = actx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.5, t + 0.05);
+  var g = actx.createGain(); g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(lvl * SCAPE_VOL, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0004, t + 0.22);
+  o.connect(g); g.connect(aout()); g.connect(e);
+  o.start(t); o.stop(t + 0.3);
+}
+// a silk strand plucked by the air: two close partials, a long thin fade, and now
+// and then the strand thrumming on for a moment
+function caveStrand(t) {
+  var f = 380 + Math.random() * 520, dur = 0.9 + Math.random() * 1.2, thrum = Math.random() < 0.35;
+  [1, 2.01].forEach(function (m, k) {
+    var o = actx.createOscillator(); o.type = "sine"; o.frequency.value = f * m;
+    var g = actx.createGain(); g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime((k ? 0.006 : 0.014) * SCAPE_VOL, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0002, t + dur);
+    if (thrum) {
+      var lfo = actx.createOscillator(); lfo.frequency.value = 6 + Math.random() * 4;
+      var lg = actx.createGain(); lg.gain.value = (k ? 0.003 : 0.007) * SCAPE_VOL;
+      lfo.connect(lg); lg.connect(g.gain); lfo.start(t); lfo.stop(t + dur);
+    }
+    o.connect(g); g.connect(aout()); o.start(t); o.stop(t + dur + 0.05);
+  });
+}
+function scapeUnder() {
+  var a = scapeAmb, u = a && a.under, t = actx.currentTime + 0.02, r = Math.random();
+  var gap = [9000, 30000];
+  if (u === "draught") {
+    if (r < 0.45) {
+      var wf = 600 + Math.random() * 700;
+      scape.whistleOn = 0.6 + Math.random() * 0.4;
+      scapeTo(scape.whistle.chain[0].frequency, wf, 0.3); scapeTo(scape.whistle.chain[1].frequency, wf, 0.3);
+    } else if (r < 0.75) caveTrickle(t, true, 0.03);
+    else caveKnock(t, 0.05, 0.18 + Math.random() * 0.1, 0.35, 900);
+    gap = [7000, 22000];
+  } else if (u === "roots") {
+    if (r < 0.5) caveGroan(t, 45, 90, 0.05); else caveTrickle(t, false, 0.045);
+    gap = [8000, 24000];
+  } else if (u === "gallery") {
+    if (r < 0.55) caveKnock(t, 0.06, 0.32 + Math.random() * 0.18, 0.5, 700); else caveTrickle(t, true, 0.022);
+    gap = [14000, 45000];
+  } else if (u === "dripstone") {
+    var k = Math.random() < 0.3 ? 2 : 1;
+    for (var i = 0; i < k; i++) caveDrop(t + i * (0.15 + Math.random() * 0.3), 1700 + Math.random() * 1900, 0.05, 0.36 + Math.random() * 0.12, 0.5);
+    gap = [1400, 4800];
+  } else if (u === "roost") {
+    caveTrickle(t, true, 0.018);
+    gap = [6000, 20000];
+  } else if (u === "silk") {
+    caveStrand(t);
+    gap = [6000, 20000];
+  } else if (u === "glow") {
+    caveDrop(t, 520 + Math.random() * 420, 0.035, 0.42 + Math.random() * 0.15, 0.45);
+    gap = [6000, 18000];
+  } else if (u === "works") {
+    if (r < 0.55) caveGroan(t, 75, 150, 0.045); else if (r < 0.9) caveTrickle(t, true, 0.035); else caveKnock(t, 0.04, 0.14, 0.3, 1000);
+    gap = [8000, 25000];
+  } else if (u === "stone") {
+    caveKnock(t, 0.055, 0.06 + Math.random() * 0.03, 0.55, 1300);
+    gap = [20000, 60000];
+  }
+  scapeEvery(gap[0], gap[1], scapeUnder);
 }
 // NEAR THE END THE HEART IS HEARD. Below a quarter of your health it comes in
 // under everything, and it quickens as the number falls.
@@ -3728,6 +3874,7 @@ function scapeSet(amb) {
     life: ["wood", "open", "fen"].indexOf(amb.life) >= 0 ? amb.life : "",
     hour: amb.hour === "low" || amb.hour === "night" ? amb.hour : "day",
     fog: +amb.fog || 0, cold: +amb.cold || 0,
+    under: CAVE_AIR_BED.hasOwnProperty(amb.under) ? amb.under : "",
   };
   // A SHELTERED PICTURE IS A ROOF TO THE EAR TOO (rome, 2026-10-13). The world
   // counts the Last Shelter, the Bounds House and the dens' buildings as open
@@ -3752,9 +3899,9 @@ function scapeStop() {
   var dying = scape;
   scape = null;
   for (var i = 0; i < dying.timers.length; i++) { clearTimeout(dying.timers[i]); clearInterval(dying.timers[i]); }
-  ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap", "midge"].forEach(function (k) { fadeGain(actx, dying[k].gain.gain, 0, AMB_FADE); });
+  ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap", "midge", "air", "whistle"].forEach(function (k) { fadeGain(actx, dying[k].gain.gain, 0, AMB_FADE); });
   setTimeout(function () {
-    ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap", "midge"].forEach(function (k) { try { dying[k].src.stop(); } catch (e) {} });
+    ["rain", "wind", "surf", "run", "roar", "hum", "leaves", "falls", "lap", "midge", "air", "whistle"].forEach(function (k) { try { dying[k].src.stop(); } catch (e) {} });
   }, AMB_FADE * 1000 + 60);
 }
 // SOUND OFF, THEN BACK ON, AND NOTHING (rome, 2026-10-26). The browser parks a
@@ -11072,11 +11219,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "136";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "77";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "31";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "54";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "40";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "68";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -12341,7 +12488,41 @@ var GATE_PLATE = {
 // listed here is layered; one that is not keeps the old single JPEG with a wash
 // over it, so the eight already shipped go on working untouched.
 //   scree: "day night",
+// THE CAVE'S CREATURES TAKE THEIR ROOM'S OWN LIGHT, with no torch (2026-11-24): the glow-worms'
+// and the foxfire's green, the stone's cold grey, the deep camp's fire; every other cave ground
+// its blue dark ("cave"). See t-cave.
+var CAVE_MOB_GRADE = { "cave-glow-river": "cave-glow", "cave-foxfire": "cave-glow", "cave-deep-camp": "night-torch",
+  "cave-glow-lake": "cave-glow", "cave-glow-tunnel": "cave-glow", "cave-bridge": "cave-glow", "cave-foxfire-props": "cave-glow", "cave-foxfire-hall": "cave-glow",
+  "stone-doors": "cave-stone", "stone-frost": "cave-stone", "stone-cells": "cave-stone", "stone-niches": "cave-stone",
+  "stone-way": "cave-stone", "stone-pillars": "cave-stone", "stone-scraped": "cave-stone", "stone-hollow": "cave-stone", "stone-ring": "cave-stone" };
+// THE CAVE'S SECOND PICTURES BY ROOM (2026-11-25). Seven of the cave's grounds held
+// from eleven to twenty-eight rooms on one picture. Each room here was read and
+// given the picture its words describe: the squeezes, the clawed beast ways, the
+// shaft, the domed sounding rooms, the white water, the black pools, the glow lake
+// and tunnel, the diggers' bridge, the glowing props, the foxfire halls, the
+// propped ways, the pick-cut ways, the ladders, the doorways and steps, the
+// frosted stone, the cells and the niched halls. Picture only: the room keeps its ground, so where
+// the animals live, what the place sounds like and its light are unchanged.
+// Keyed by the ground, then by the room's name (the name is what the room frame carries).
+var CAVE_ROOM_PLATE = {
+  "cave-rough": { "The Wind Crawl": "cave-squeeze", "The North Squeeze": "cave-squeeze", "The Cold Draught": "cave-squeeze", "The Narrow Neck": "cave-squeeze", "The Narrows": "cave-squeeze", "The Low Arch": "cave-squeeze", "The Tight Bend": "cave-squeeze", "The Blind Turn": "cave-squeeze", "The Dark Turn": "cave-squeeze", "The Cold Breath": "cave-squeeze", "The Whistling Hole": "cave-squeeze", "The Scored Wall": "cave-beast-ways", "The Bear's Stair": "cave-beast-ways", "The Bear Path": "cave-beast-ways", "The Scored Drop": "cave-beast-ways", "The Drag Way": "cave-beast-ways", "The Hauled Way": "cave-beast-ways", "The Hounds' Bed": "cave-beast-ways", "The Shaft Head": "cave-shaft", "The Bat Chimney": "cave-shaft" },
+  "cave-gallery": { "The Echo Gallery": "cave-dome", "The Sounding Room": "cave-dome", "The Four Ways": "cave-dome" },
+  "cave-dark-river": { "The Rapids": "cave-white-water", "The Falls Foot": "cave-white-water", "The Sump Mouth": "cave-black-pool", "The Under-Pool": "cave-black-pool", "The Deep Pool": "cave-black-pool" },
+  "cave-glow-river": { "The Long Pool": "cave-glow-lake", "The Wide Water": "cave-glow-lake", "The Still Reach": "cave-glow-lake", "The Salamander Pools": "cave-glow-lake", "The Glow Tunnel": "cave-glow-tunnel", "The Under-Spring": "cave-glow-tunnel", "The Rising Water": "cave-glow-tunnel", "The Deep Run": "cave-glow-tunnel", "The Diggers' Bridge": "cave-bridge" },
+  "cave-workings": { "The Bridge End": "cave-bridge", "The Propped Way": "cave-props", "The Sagging Props": "cave-props", "The Crushed Props": "cave-props", "The Pick Work": "cave-cut-way", "The Widened Squeeze": "cave-cut-way", "The Pick Marks": "cave-cut-way", "The Cut-Through": "cave-cut-way", "The Crossed Ways": "cave-cut-way", "The Wet Cut": "cave-cut-way", "The Carry Way": "cave-cut-way", "The Dry Stretch": "cave-cut-way", "The Ladder Foot": "cave-ladders", "The Broken Ladder": "cave-ladders", "The Diggers' Stair": "cave-ladders", "The Well Foot": "cave-ladders" },
+  "cave-foxfire": { "The Foxfire Cut": "cave-foxfire-props", "The Foxfire Wall": "cave-foxfire-props", "The Seep Hall": "cave-foxfire-hall", "The Foxfire Hall": "cave-foxfire-hall", "The Pale Pools": "cave-foxfire-hall" },
+  "stone-way": { "The South Road": "stone-niches", "The East Hall": "stone-niches", "The Carved Rings": "stone-niches", "The West Door": "stone-doors", "The Ring Door": "stone-doors", "The Side Arch": "stone-doors", "The North Steps": "stone-doors", "The East Steps": "stone-doors", "The Pale Steps": "stone-doors", "The Cold Passage": "stone-frost", "The Cold Pit": "stone-frost", "The Cold Cell": "stone-frost", "The South Cell": "stone-cells", "The Ante-Room": "stone-cells" },
+};
 var TERRAIN_SCENES = {
+  // THE CAVE'S SECOND PICTURES (2026-11-25): eighteen more, each for the rooms
+  // whose own words describe it (CAVE_ROOM_PLATE), all lit only by your light or
+  // the room's own.
+  "cave-squeeze": "night night-torch", "cave-beast-ways": "night night-torch", "cave-shaft": "night night-torch",
+  "cave-dome": "night night-torch", "cave-white-water": "night night-torch", "cave-black-pool": "night night-torch",
+  "cave-glow-lake": "night night-torch", "cave-glow-tunnel": "night night-torch", "cave-bridge": "night night-torch",
+  "cave-foxfire-props": "night night-torch", "cave-foxfire-hall": "night night-torch", "cave-props": "night night-torch",
+  "cave-cut-way": "night night-torch", "cave-ladders": "night night-torch", "stone-doors": "night night-torch",
+  "stone-frost": "night night-torch", "stone-cells": "night night-torch", "stone-niches": "night night-torch",
   // Eleven mountain grounds, 256 rooms between them — and since 2026-09-08 all
   // eleven carry a torch-lit night. The gully was the last one waiting; there is
   // no ground left on the mountain that goes dark under a flame.
@@ -12769,6 +12950,13 @@ var MOB_FLOOR = { "keep-passage": [14, 86] };
 // number only ever shows in the preview. It is here because a plate that
 // breaks the lock should say so wherever it is drawn.
 var MOB_LINE = {
+  // the cave's second pictures (2026-11-25), each read off its own floor: in front of
+  // the shaft, the pools, the falls, the bridge and the steps; clear of the river
+  // down the tunnel's right side and of the cells' benches
+  "cave-squeeze": 70, "cave-beast-ways": 74, "cave-shaft": 74, "cave-dome": 68, "cave-white-water": 74,
+  "cave-black-pool": 72, "cave-glow-lake": 74, "cave-glow-tunnel": 79, "cave-bridge": 76, "cave-foxfire-props": 70,
+  "cave-foxfire-hall": 70, "cave-props": 72, "cave-cut-way": 68, "cave-ladders": 72, "stone-doors": 75,
+  "stone-frost": 65, "stone-cells": 76, "stone-niches": 66,
   // THE CAVE UNDER THE WOOD (2026-11-22), read off the torch plates (same frame as
   // the night ones) where the open floor begins: low where the rock, the water's
   // edge, the roots or the stalagmites come down into the near ground.
@@ -14854,6 +15042,8 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
     if (!kind && gate && BANDS_WITH_PLATES[lastBand]) kind = BAND_FALLBACK[lastBand] || "";
     var list = kind ? TERRAIN_PLATE[kind] : null;
     var terr = (list && list.length) ? list[plateHash(lastRoomKey || kind) % list.length] : "";
+    // a cave room whose words describe one of the cave's second pictures takes it
+    if (terr && CAVE_ROOM_PLATE[kind] && CAVE_ROOM_PLATE[kind][lastRoomKey]) terr = CAVE_ROOM_PLATE[kind][lastRoomKey];
     // A feast dresses the gatehouse; guarded because the scene tests lift this
     // function on its own, without the table above.
     if (kind === "gatehouse" && terr && typeof gatehouseFeast === "function") {
@@ -14910,6 +15100,8 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       // was. Only the sea cave is dark enough for this to show, which is why it
       // survived every mountain ground and both crossing shores.
       if (indoors) mobHour = lit ? "" : tbase;
+      // ...and under the wood, the cave's own grade for its own dark or light (CAVE_MOB_GRADE).
+      if (!lit && mobHour === "night" && tbase === "night" && terr !== "cave-mouths" && /^(cave|stone|under-stone)(-|$)/.test(terr)) mobHour = CAVE_MOB_GRADE[terr] || "cave";
     } else {
       // Baked-sky interiors use the same decoded handoff as layered rooms.
       singleLayer = true;

@@ -5265,6 +5265,55 @@ try {
     assert.equal(step('the-rope-stage', 'crossing', { ...dry, rain: 2 }), 'wood', 'boards do not go to mud in the rain');
     assert.equal(roomSound.soundscapeOf({ roomId: 'the-listening-stand', band: 'wood', open: false, inside: true, floor: 'leaves' }, dry).ground, '', 'behind the gatehouse door is the plain step');
   });
+  check('the cave has its own air: every cave room is on a ground with a sound, and the page plays every kind (2026-11-25)', () => {
+    const ids = [];
+    for (const f of readdirSync(new URL('../regions/', import.meta.url)).filter((f) => /^the-cave-\d\.rooms$/.test(f))) {
+      let region = '';
+      for (const line of readFileSync(new URL('../regions/' + f, import.meta.url), 'utf8').split('\n')) {
+        const r = line.match(/^!region (\S+)/); if (r) region = r[1];
+        const m = line.match(/^## (the-[a-z0-9-]+)(.*)/); if (m && region === 'cave' && !/attachment/.test(m[2])) ids.push(m[1]); // the wood's own rooms the cave hangs off
+      }
+    }
+    assert.ok(ids.length > 200, 'the cave rooms were not read (' + ids.length + ')');
+    const dry = { rain: 0, windUp: false, snow: false, mud: false, seaUp: false, runUp: false };
+    const unlisted = ids.filter((id) => !roomSound.CAVE_AIR[terrainOf(id, '', 'cave')]);
+    assert.deepEqual(unlisted, [], 'cave rooms on a ground with no air of its own');
+    const air = (id) => roomSound.soundscapeOf({ roomId: id, band: 'cave', open: false, inside: false }, dry).under;
+    assert.equal(air('the-silk-hall'), 'silk');
+    assert.equal(air('the-pick-work'), 'works');
+    assert.equal(air('the-ring-of-nine'), 'stone');
+    assert.equal(roomSound.soundscapeOf({ roomId: 'the-heart-of-it', band: 'wood', open: true, inside: false }, dry).under, '', 'the cave air stays in the cave');
+    const a = roomSound.soundscapeOf({ roomId: 'the-silk-hall', band: 'cave', open: false, inside: false }, dry);
+    assert.notEqual(roomSound.soundKey(a), roomSound.soundKey({ ...a, under: 'stone' }), 'walking from the silk to the stone must resend the sound');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const bed = pub.slice(pub.indexOf('var CAVE_AIR_BED = {'), pub.indexOf('};', pub.indexOf('var CAVE_AIR_BED = {')));
+    for (const k of new Set(Object.values(roomSound.CAVE_AIR))) {
+      assert.match(bed, new RegExp('\\b' + k + ':'), 'the page has no air for ' + k);
+      assert.match(pub, new RegExp('u === "' + k + '"'), 'the page has no small sounds for ' + k);
+    }
+    assert.match(pub, /"midge", "air", "whistle"\]\.forEach\(function \(k\) \{ fadeGain/, 'sound off must fade the cave air too');
+  });
+  check('the cave second pictures: each named room is a real cave room on that ground, and each picture has its files, its floor and its light (2026-11-25)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const grab = (name) => { const i = pub.indexOf('var ' + name + ' = {'); return Function('return ' + pub.slice(pub.indexOf('{', i), pub.indexOf('\n};', i) + 2))(); };
+    const byRoom = grab('CAVE_ROOM_PLATE'), scenes = grab('TERRAIN_SCENES'), line = grab('MOB_LINE'), grade = grab('CAVE_MOB_GRADE');
+    const named = new Map();
+    for (const f of readdirSync(new URL('../regions/', import.meta.url)).filter((f) => /^the-cave-\d\.rooms$/.test(f)))
+      for (const m of readFileSync(new URL('../regions/' + f, import.meta.url), 'utf8').matchAll(/^## (the-[a-z0-9-]+) \| ([^\n]+)/gm)) named.set(m[2], m[1]);
+    let rooms = 0;
+    for (const [ground, list] of Object.entries(byRoom)) for (const [name, plate] of Object.entries(list)) {
+      rooms++;
+      assert.ok(named.has(name), name + ' is not a cave room name');
+      assert.equal(terrainOf(named.get(name), '', 'cave'), ground, name + ' is not on ' + ground + ', so its picture would never be asked for');
+      assert.equal(scenes[plate], 'night night-torch', plate + ' is not a scene');
+      assert.ok(line[plate] >= 60 && line[plate] <= 80, plate + ' has no floor line of its own');
+      for (const s of ['night', 'night-torch']) assert.ok(existsSync(new URL('../public/room-bg/' + plate + '-' + s + '.webp', import.meta.url)), plate + '-' + s + ' is missing');
+      if (/glow|foxfire|bridge/.test(plate)) assert.equal(grade[plate], 'cave-glow', plate + ' is lit by the glow, so what stands in it is too');
+      if (/^stone-/.test(plate)) assert.equal(grade[plate], 'cave-stone', plate + ' is lit by the stone');
+    }
+    assert.ok(rooms >= 60, 'the rooms were not read (' + rooms + ')');
+    assert.match(pub, /var terr = \(list && list\.length\)[^\n]*\n[^\n]*\n\s*if \(terr && CAVE_ROOM_PLATE\[kind\] && CAVE_ROOM_PLATE\[kind\]\[lastRoomKey\]\) terr = CAVE_ROOM_PLATE\[kind\]\[lastRoomKey\];/, 'the ground picture is not swapped for the room picture');
+  });
   check('the room fades out with its fog in it, so the fog comes and goes with the picture (2026-11-02)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const fade = pub.slice(pub.indexOf('function fadeScene()'), pub.indexOf('var lastCovered = false;'));
@@ -8996,6 +9045,25 @@ try {
       assert.ok(!/INSERT/.test(sql), 'no new rows, so no ids shift');
       assert.match(readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8'), new RegExp('\\["' + id + '", "'), id + ' takes its standing spider with it');
     }
+  });
+
+  check('a creature in the cave with no torch takes the cave\'s blue dark, green where the glow-worms and foxfire light it, the stone\'s grey and the camp\'s fire (2026-11-24)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    for (const g of ['cave', 'cave-glow', 'cave-stone']) assert.match(pub, new RegExp('#mobs\\.t-' + g + ' img, body\\[data-view="image"\\] #mobs\\.t-' + g + ' \\.mob \\{ filter: '), 't-' + g + ' is drawn');
+    const table = Function('return ' + pub.match(/var CAVE_MOB_GRADE = (\{[^}]*\});/)[1])();
+    // the cave's grounds are TERRAIN_SCENES, so the grade lives in the ground branch, after its indoors line
+    const branch = pub.match(/\n      if \(indoors\) mobHour = lit \? "" : tbase;\n[^\n]*\n      (if \(!lit && mobHour === "night" && tbase === "night" && terr !== "cave-mouths"[^\n]*)/);
+    assert.ok(branch, 'the grade is in the ground branch, where the cave is drawn');
+    assert.match(pub, /\n  "cave-roots": +"night night-torch",/, 'and the cave is a ground there');
+    const pick = Function('lit', 'mobHour', 'tbase', 'terr', 'CAVE_MOB_GRADE', branch[1] + ' return mobHour;');
+    assert.equal(pick(false, 'night', 'night', 'cave-roots', table), 'cave', 'the dark cave is blue');
+    assert.equal(pick(false, 'night', 'night', 'cave-glow-river', table), 'cave-glow', 'the glow-worms are green');
+    assert.equal(pick(false, 'night', 'night', 'cave-foxfire', table), 'cave-glow', 'so is the foxfire');
+    assert.equal(pick(false, 'night', 'night', 'stone-way', table), 'cave-stone');
+    assert.equal(pick(false, 'night', 'night', 'cave-deep-camp', table), 'night-torch', 'the camp is firelit');
+    assert.equal(pick(true, 'night', 'night', 'cave-roots', table), 'night', 'a torch keeps its own grade');
+    assert.equal(pick(false, 'night', 'night', 'cave-mouths', table), 'night', 'the mouths keep the wood\'s night');
+    assert.equal(pick(false, 'night', 'night', 'deep-dark', table), 'night', 'and nothing outside the cave changes');
   });
 
   check('the cave bats roost on any high roof and over the river, a spider takes a bat only in its web, and the roost goes out at dusk with nobody near (2026-11-24)', () => {
