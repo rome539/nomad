@@ -48,6 +48,8 @@ export const SIG = {
   longBleed: "sig-long-bleed",      // the-harvest: its cuts bleed five ticks
   unwearing: "sig-unwearing",       // the-filed-edge: never wears
   sureGrip: "sig-sure-grip",        // the-long-tooth: never fumbles
+  unfound: "sig-unfound",           // sleepers-flag: no creature finds your vitals (mig 410)
+  heldBreath: "sig-held-breath",    // swallowed-boots: a drowner never drags you under (mig 410)
 } as const;
 
 // The numbers the signatures move to. Each names the ordinary constant it beats.
@@ -94,6 +96,8 @@ export const SIG_TELL: Record<string, string> = {
   [SIG.longBleed]: "What it opens stays open (its cuts bleed longer).",
   [SIG.unwearing]: "Filed so many times there is nothing left to wear (never wears).",
   [SIG.sureGrip]: "It never turns in the hand (never fumbles).",
+  [SIG.unfound]: "Held over you it covers every place a blow could end it (no creature finds your vitals).",
+  [SIG.heldBreath]: "Whoever wore them went down into the black water and walked back up out of it (a drowner never drags you under).",
 };
 // The gear sheet's short "does" column (gate.ts, beside TRAIT_DOES): the bracket alone.
 export const SIG_DOES: Record<string, string> = Object.fromEntries(

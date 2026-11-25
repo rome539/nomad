@@ -59,6 +59,10 @@ export const RECORDS: Record<string, { room: string; feature: string; intro: str
     intro: "The strokes on the bottom step have started again, and beside the newest of them, words:" },
   mountain: { room: "the-high-cairn", feature: "cairn|stones",
     intro: "Fresh stones sit on the old courses, flat ones, each scratched on its face:" },
+  // The cave's is the diggers' own tally wall (2026-11-22): where their strokes
+  // stop, the newer lines go on in the same rock.
+  cave: { room: "the-tally-wall", feature: "tallies|tally|wall|strokes|marks|scratches",
+    intro: "Past where the diggers' strokes stop, newer lines are scratched into the rock, each by a different hand:" },
 };
 const RECORD_ROOMS = new Map(Object.entries(RECORDS).map(([region, r]) => [r.room, { region, ...r }]));
 export const RECORD_SHOWS = 5; // the newest this many; the rest are further down the bundle
@@ -231,6 +235,7 @@ export async function recordAt(z: ZoneDO, roomId: string): Promise<string> {
 const REGION_AT: Record<string, string> = {
   "": "in the fortress", out: "out on the waste", den: "in the old village", deep: "down in the deep",
   road: "out on the road", crossing: "out at the crossing", wood: "out in the wood", mountain: "up on the mountain",
+  cave: "down in the cave under the wood",
 };
 function rough(name: string): string {
   return name.length <= 4 ? name : name.slice(0, Math.ceil(name.length / 2)) + "-something";

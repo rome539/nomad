@@ -248,6 +248,19 @@ export const REGION_FEATURES: Record<string, FeatureTable> = {
     "sky|light|grey|cloud":
       "The light changes over the whole mile at once — cloud, moving — and every part of the crossing goes a different grey together. The far bank is never where it was an hour ago.",
   },
+  // ---- the cave under the wood (2026-11-22) -------------------------------
+  // WHAT IS TRUE IN EVERY ROOM OF IT, and only that: the air, which always moves
+  // and always goes up, and no sky. The rock, the water and the light differ from
+  // one depth to the next, so each room answers for its own; the dressed stone at
+  // the bottom answers "stone" itself and is never called rock.
+  cave: {
+    "air|draught|draft|breeze|breath|wind":
+      "It is moving, here as everywhere in this cave: a slow cold breath against your face, going up past you toward the wood. It never stops and it never turns round. Whatever it comes from is below you.",
+    "sky|cloud|clouds|weather":
+      "There is no sky down here. Somewhere over your head there is earth and roots and the wood, and over that the weather, and none of it reaches this far.",
+    "corpse|body|dead|remains":
+      "Nothing down here tidies the dead away but the rats, and the rats are slow and thorough. What they leave, the cold keeps.",
+  },
 };
 
 // The specific. Room-keyed, checked first, and every entry here is a noun that
@@ -6540,6 +6553,991 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
     "pit|hole|spoil|earth|thorn|bones|bone|fur|den":
       "The spoil round the pit was thrown up to one side only, the side toward the others, as if the next carts were expected from there. The sides are cut square and clean. The spade marks go all the way to the bottom, and the bottom is level, and nothing was ever put in it by a person.",
   },
+  // ---- THE CAVE UNDER THE WOOD (2026-11-22) ----------------------------------
+  // Every room answers a close look, in its own words. Evidence only, as the cave
+  // is written: nothing says what the stone is, who laid it, what lies on it, or
+  // which of the nine stones is breathing.
+  "the-root-hang": {
+    "roots|root|tangle|split|ladder":
+      "The roots are worn pale on their upper sides where hands and feet have taken them, and further down there are claw marks in the bark, in fours, going both ways. Earth falls off them in a thin rain when you touch them. They were never meant to hold anything up, and they have held a great deal.",
+  },
+  "the-root-curtain": {
+    "roots|root|curtain|hairs|tips":
+      "Hold your hand among them and you feel nothing, no wind at all, and still the tips lean up past your fingers toward the roof and settle back. They are drinking the air. It is wetter coming up out of the dark than anything that comes down from the wood.",
+  },
+  "the-ditch-sink": {
+    "hole|fall|water|slope|slime|stones":
+      "The hole is the ditch's own drain, and it has been one longer than the ditch has had a castle beside it. The rock round the top of it is cut back in places, and the cuts are old. Somebody once tried to make it wider, or to stop it up, and the water won.",
+  },
+  "the-ditch-water": {
+    "water|stream|bone|buckle|arrow|arrowhead|iron|leaves|bed":
+      "The buckle is bronze gone green, off a belt too broad for anybody living. The arrow's iron head is the long narrow kind made for going through mail. The bone is a man's finger. All of it came down the hole from the ditch, over a long time, a piece at a time.",
+  },
+  "the-silted-pipe": {
+    "pipe|silt|prints|tracks":
+      "The prints are a cat's, but no cat you know: each one wider than your palm, with no claw showing, and pressed deep at the front where it pushed off. They go both ways, and the ones going back are on top. It came up here to look at the light and went home.",
+  },
+  "the-wind-crawl": {
+    "crawl|pipe|air|wind|draught":
+      "Wet your finger and hold it up: the cold is all on the south side. It does not gust and it does not drop. Grit lies in little ridges along the floor of the crawl, every ridge leaning north, the way sand lies behind a stone in a stream.",
+  },
+  "the-pawed-sand": {
+    "sand|circles|prints|tracks|claws":
+      "The prints have no pads at all, only the four long claws and the hollow of a foot, and the circles are close together, a body's turning width. At the middle of them the sand is pressed flat where something sat a long time with its head up. Whatever it was listening for, it waited for it here.",
+  },
+  "the-breakdown": {
+    "blocks|block|heap|roof|gaps|gap":
+      "One of the blocks has slid since it fell: the rock under it is bright where it scraped, and there is a fresh crushed edge along its foot. The rest are furred with old grey dust. The heap is still settling, a little at a time, the way a woodpile does.",
+  },
+  "the-north-squeeze": {
+    "squeeze|walls|rock|polish|polished":
+      "The polished band is greasy to the touch and dark, and there is grey hair in the cracks along it, short and coarse. Lower down, near the floor, the rock is polished too, by something smaller going through faster and more often.",
+  },
+  "the-dripping-ledge": {
+    "ledge|drop|water|drip|patter":
+      "The drip has worn a hollow in the ledge the size of a cupped hand, and the hollow is always full. Below the edge the rock is streaked white where the overflow runs down. A sour smell of burrows comes up from the turn below, and it is strong.",
+  },
+  "the-rat-run": {
+    "run|floor|holes|hole|walls|bones|snouts|snout":
+      "The bones underfoot are mice and birds and the small bones of bigger things, broken into pieces a small thing can carry. The soft rock at the foot of the walls is scraped out in long grooves by claws, not for food: for the sake of digging. The grease on the floor is so old it has gone hard and shiny, like a varnished table.",
+  },
+  "the-rat-shelf": {
+    "shelf|holes|hole|droppings|husks|edge":
+      "The husks are beetles and snail shells and the dry skins of things, a grubbet colony's whole larder spilled. In the mouths of the holes there are tufts of grey fur, and one tuft of white. The shelf is warm to the hand where so many small bodies have lain along it.",
+  },
+  "the-gnawed-floor": {
+    "bones|bone|floor|teeth|marks":
+      "Every bone is picked white and every end is scored, and the marrow is gone out of the small ones through holes no wider than a straw. The big ones are whole: whatever cleaned them could not crack them. Something bigger brought these down and let the small ones finish.",
+  },
+  "the-taproot": {
+    "taproot|root|hole|air":
+      "The root has split the rock it goes through, and the split is lined with fine white hairs of root reaching out into the cold air coming up. The bark is wet. Put your ear to the hole and there is no sound in it at all, only the air going past, steady, as if the root itself were breathing out.",
+  },
+  "the-drip-stones": {
+    "straws|straw|stumps|stump|stone|stones|drops|drip|dripstone":
+      "The straws are hollow, each with a bead of water at its tip, and the stumps under them are ringed like the inside of a tree. Two of them have met and grown into one pillar, thin at the waist. That took longer than anything else down here has been alive.",
+  },
+  "the-cold-draught": {
+    "gap|passage|air|draught|draft|wind":
+      "The rock either side of the gap is dry and clean, scoured by the air, while the passage beyond it is damp. A flame held in it lies flat toward the roof and gutters. The draught does not change when you stand in it. It does not care that you are there.",
+  },
+  "the-four-ways": {
+    "passages|passage|ways|bowl|floor|air":
+      "The bowl is worn into the floor by feet coming in from all four ways and turning, and turning again. Three of the passages have dust on their floors and no air moving. The fourth has its floor swept clean, and that is where the cold comes from.",
+  },
+  "the-root-chimney": {
+    "chimney|shaft|roots|root|rock":
+      "The roots go down the shaft in a twist, holding to the rock with thin side roots driven into every crack. Far below, past where your light reaches, they are still going. No tree above could feed a root that long. These have been going down toward something for a very long time.",
+  },
+  "the-scored-wall": {
+    "wall|walls|scratches|scratch|marks|rock":
+      "The scratches are in pairs and threes, fine as a knife's, and all at the same height. Where the passage narrows they are on both walls at once. Something walks this way with its head down and its face to the rock, touching both sides, and it does not need to see.",
+  },
+  "the-blind-turn": {
+    "turn|corner|passage|echo|steps":
+      "At the corner the rock is cut in a curve so smooth it might have been turned on a wheel, and the sound runs round it and comes back. Stand still and listen: under your own echo, now and then, there is a step that is not yours, and then it stops when you listen for it.",
+  },
+  "the-clay-slide": {
+    "clay|bank|prints|tracks|slide":
+      "The prints are the same long-clawed feet as everywhere in this part of the cave, four or five animals, going down the clay together and spreading out at the foot. Not one of them slipped. Your own heel-marks are the only ones that skid.",
+  },
+  "the-echo-gallery": {
+    "gallery|roof|horn|echo|walls":
+      "The walls are smooth with an old water-polish, and the roof curves over so evenly the sound runs along it like a ball down a gutter. Clap once and it comes back three times, the last one from very far off. Anything at either end of this gallery has heard you already.",
+  },
+  "the-bone-spill": {
+    "bones|bone|jaw|legs|passage|marrow":
+      "The deer legs still have hide on the hoofs. The boar's jaw has its tusks, and the long bones of the man-sized thing are a man's: a thigh, cracked lengthwise, and the knob of a shoulder. They came out of the side passage the way a midden comes out of a door.",
+  },
+  "the-hounds-bed": {
+    "hollows|hollow|bed|beds|hair|dust|floor":
+      "The hollows are warm. The grey hair in them is coarse and short and smells of wet dog and something sourer. There are no bones here and no scraps: whatever sleeps in this room eats somewhere else and comes home clean.",
+  },
+  "the-rattling-way": {
+    "plates|slates|stone|stones|floor":
+      "The plates have split off the roof in sheets, and they lie loose on each other like spilled roofing. Some are snapped across, recently, by weight. A careful foot does not help: even standing still, one of them settles under you and ticks.",
+  },
+  "the-loose-stones": {
+    "stones|stone|slope|roof|rock":
+      "The new pieces split off a seam in the roof that runs the length of the passage, and the seam is open a finger's width in places. A trickle of grit comes down out of it while you look. It has come down all at once before, here: under the slope there are bigger blocks, grown over.",
+  },
+  "the-sounding-room": {
+    "dome|room|chamber|rock|sound":
+      "The dome is smooth and round as the inside of a bell, and its middle is a step to one side of the room's middle. Stand on that spot and you hear the whole cave at once, faintly: water a long way off, something walking, the air going up.",
+  },
+  "the-shale-floor": {
+    "shale|flakes|track|floor":
+      "The track is worn into the shale a hand deep, a trough of crushed flakes, and it forks at the far end and forks again. Where it is deepest there are claw marks in the crushed shale, close together, the stride of animals trotting. Off the track the flakes are whole.",
+  },
+  "the-sand-floor": {
+    "sand|claws|drag|marks|floor":
+      "The drag is the width of a deer's body, with hoof scrapes along one side where a leg trailed, and either side of it the prints of one big cat, walking backward, pulling. The drag goes toward the lip. Your own prints are the deepest in the room.",
+  },
+  "the-bat-chimney": {
+    "chimney|shaft|droppings|lip|rock":
+      "The droppings are bat, ankle-deep and dry on top, and full of the bright pieces of beetles' wings. The black on the rock is grease from fur, a great many bodies going up and down past the lip. Lean over and the warm air comes up into your face, sour, and the chittering under it never stops.",
+  },
+  "the-gnaw-hole": {
+    "hole|scraps|hide|hoof|ear|gristle":
+      "The ear is a roe's, and the hoof is a roe's, and the hide is a roe's. Something big killed it somewhere else and the grubbets have been dragging it in here a piece at a time. The scraps nearest the hole are freshest.",
+  },
+  "the-narrow-neck": {
+    "slot|neck|rock|passage|walls":
+      "The rock of the slot is scraped pale at chest height on both sides, and there is tawny hair caught in it, short and fine. A big cat comes through here often and turns its shoulders to do it. Past the slot the floor drops away into nothing your light can find.",
+  },
+  "the-lip": {
+    "lip|rock|scree|chamber|ledge|dark":
+      "The lip is worn smooth at its very edge, the way a doorstep is, and there are claw marks going over the edge onto the scree, not slipping. Throw a stone out and listen: it lands, and runs, and runs, and the sound comes back from a long way down and a long way across.",
+  },
+  "the-overhang": {
+    "overhang|ledge|dust|roof|drop":
+      "The dust on the ledge is pressed flat in a long shape the length of a man and more, with a sweep at one end where a tail lay. The rock above it is brushed clean of dust by a back. From here you can see the lip and nothing on the lip could see you.",
+  },
+  "the-thin-ledge": {
+    "ledge|scratches|marks|rock|wall|edge":
+      "The scratches start at the ledge's edge and run straight down the face, four lines each time, as wide apart as your spread fingers and deeper at the top, where the weight first came on. Something goes down this wall head first, by choice, onto whatever is below.",
+  },
+  "the-cats-lie": {
+    "hollow|fur|stone|bed|floor":
+      "The fur is a big cat's, tawny, and the hollow is shaped to a body that lies with its head on its paws looking out over the edge. There are no bones here. It eats on the floor below and comes up here to sleep where it can watch the whole of it. The stone is warm because it was here not long ago.",
+  },
+  "the-scree-slope": {
+    "scree|slope|stones|stone":
+      "The scree is sharp and new on top and old and packed lower down, so the slope has been growing from above for a long time. Across it, top to bottom, runs a groove where something heavy has been dragged down, many times, and the stones along it are dark.",
+  },
+  "the-hollow": {
+    "chamber|floor|roof|walls|air|dark|ledges":
+      "Hold a light up and the dark swallows it in every direction. The floor is gritty and dry, scuffed by feet and scored by dragging. The cold air comes up from the low end of the chamber and goes up past you, and on still nights in the wood above, this is where the wood's warmth goes.",
+  },
+  "the-fallen-slab": {
+    "slab|roof|gap|wall|scar|stone":
+      "The scar on the wall is where another slab let go, not long ago: the rock is pale and sharp, and its pieces lie at the foot of the wall, not yet grown over. The old slab's top is smooth and grey. The gap between slab and wall is worn by feet and claws both.",
+  },
+  "the-under-ledge": {
+    "ledge|carcass|roe|rock|floor|bones":
+      "The ledge overhead has a dark stain down its lip where things are dropped over and lie a while before they fall. Under it the floor is a litter of old meals: hair, hoof, the white of picked ribs. The grubbets come for what is left and the bones go to the side passage.",
+  },
+  "the-hollows-throat": {
+    "throat|rock|dust|air|floor":
+      "The dust rises off the floor in threads and goes up out of your light and does not come back. The throat's walls are smooth, polished by the air alone over more years than you can think of, and colder to the touch than the chamber's.",
+  },
+  "the-cold-well": {
+    "well|edge|handholds|holds|rock|cold":
+      "The handholds are worn to the shape of fingers, and some of them to the shape of claws. Frost stands on the rim on the side the air comes up strongest, in the middle of a cave that is never cold enough for frost. Your stone is still falling when you stop counting.",
+  },
+  "the-split-floor": {
+    "crack|split|floor|air":
+      "The crack's two lips match: a hump on one side, a hollow on the other, as if the floor were torn, not broken. Far down in it there is a faint sound of water. The air out of it is wet and cold and does not smell of the wood at all.",
+  },
+  "the-rubble-slope": {
+    "rubble|slope|earth|soil|stones|roots|root|tree":
+      "The root mass is an oak's, the whole bottom of a tree, and its trunk is up there in the wood, standing on nothing. Down the slope through the soil runs a smooth trough where things are dragged in, pressed hard, with deer hair along it.",
+  },
+  "the-drag-way": {
+    "groove|drag|floor|stains|hair|stone":
+      "The groove is a hand deep in the soft places and polished in the hard ones. The stains are blood gone black, laid one over another. The hair is roe and red deer and the bristles of young boar. Nothing is ever dragged the other way.",
+  },
+  "the-cougars-larder": {
+    "larder|bones|bone|hide|ribs|legs|heap|floor":
+      "Every neck bone here is bitten through the same way, from above and behind, a single bite. The bones are sorted, nearly: heads and legs to the back, ribs in front. Something eats here at leisure and keeps its kills where nothing it fears can reach them. The grubbets take what it leaves, and it lets them.",
+  },
+  "the-root-fall": {
+    "roots|root|curtain|roof|moss|soil|gap":
+      "The moss grows in a ring on the floor exactly as far as the light reaches, and stops. Under the roots the soil is still sifting down, a little at a time, and there is a heap of it on the floor with a hollow on top, where something lay out of the dark and watched the gap.",
+  },
+  "the-heave": {
+    "hole|roots|root|slope|earth|floor":
+      "The edges of the hole are rock and turf together, broken upward, so the floor of the wood came up and split from below. The roots across the gap are rubbed bare on their undersides by everything that comes and goes. The earth slope is printed with feet going both ways.",
+  },
+  "the-break-pool": {
+    "pool|water|stones|tracks|break":
+      "The tracks at the pool's edge are deer and badger and fox and, over them, the broad round prints of a big cat. The water is so clear the bottom looks dry until you put a hand in. It is very cold. Nothing grows in it.",
+  },
+  "the-wet-passage": {
+    "water|walls|sheets|film|floor":
+      "The water comes out of the rock in the roof as from a cracked jug, and runs down the walls and away. Below the film the floor is smooth and brown. The other sound, ahead and below, is a river: a great deal of water going somewhere fast.",
+  },
+  "the-weeping-crawl": {
+    "crawl|water|rock|roof":
+      "The rock weeps from every pore, cold drops that run down your neck. The water under your hands runs uphill against the crawl, toward the spring's throat, and the crawl is the spring's way out.",
+  },
+  "the-spring-throat": {
+    "throat|spring|water|rock":
+      "Looking down the throat you can see the water coming up, a slow swell of it out of the dark, pushing the sand on the bottom into little moving hills. The rock goes down out of sight under it. A river comes up here from somewhere below and is the mire's spring.",
+  },
+  "the-west-gallery": {
+    "gallery|floor|roof|beds|bed|draught":
+      "The beds of rock show in the walls like the pages of a shut book, grey and brown. One of them is gone, washed out, and the gallery is the gap it left. The floor is fine silt, rippled by water that ran here once and the ripples still sharp.",
+  },
+  "the-rimstone": {
+    "basins|basin|rims|rim|steps|stone|dust":
+      "The rims are thin and sharp, and a careless foot breaks them. Somebody before you broke three, and the breaks are old. The dust in the basins is fine and white, the last of the water's stone, and there are small prints across it from one basin to the next.",
+  },
+  "the-calcite-crawl": {
+    "crystal|crystals|crawl|fur":
+      "The crystals grow in clusters like frozen frost, every face flat and bright, and cut like glass. The tawny fur on them is a cat's, rubbed off a back, and there is a little dried blood with it: the crawl takes its toll of whatever goes through.",
+  },
+  "the-flowstone": {
+    "flowstone|wall|stone|ripples|folds":
+      "Under your light the honey colour has depth to it, layer on layer, the way old varnish has. Each ripple is a little wetter year among dry ones. Somewhere above, the water that made it has gone another way, and the wall has stopped growing.",
+  },
+  "the-curtains": {
+    "curtains|curtain|sheets|stone|folds":
+      "The curtains are banded red and gold and white along their edges, each band a different water. One of them is broken at the foot, the pieces still on the floor, as if something big pushed through between them. Tap one and the note goes on a long time.",
+  },
+  "the-bears-stair": {
+    "stair|steps|step|grooves|wall|rock":
+      "The grooves are fours, as long as your forearm, the deepest ones near the top where the stair comes up into the bear's cave. On the steps there is brown hair in the cracks. Whatever goes up and down here is the bear, and it has been going down into the cave for longer than anyone has known it was there.",
+  },
+  "the-cold-breath": {
+    "crack|wall|air|breath":
+      "The crack is no wider than a finger and runs back into the rock further than your light. The air comes out of it with no smell, not of rock, not of earth, not of water. It is the only air in the cave that smells of nothing.",
+  },
+  "the-whistling-hole": {
+    "hole|wall|rock|note|floor":
+      "The hole is round and smooth-lipped, as if bored, but it is the air that bored it. Its note goes through your teeth. The floor around it is clean of droppings and prints alike, as if nothing that hears it will stay.",
+  },
+  "the-bear-path": {
+    "path|hair|rubble|floor|rock":
+      "The rubble either side of the path is pushed back in two low banks, by shoulders, not by hands. The hair on the rock is a bear's, brown going grey at the tips. The path is the width of one animal and it has never shared it.",
+  },
+  "the-scored-drop": {
+    "drop|face|rock|marks|scratches|fours|gouges":
+      "The new gouges are clean-edged and bright; the old ones under them have gone grey and soft. Taken together they are thousands of climbs. At the foot the rock is scored in a fan, where something comes down the last of the drop in one jump and lands.",
+  },
+  "the-claw-floor": {
+    "floor|earth|hollows|heaps|bones":
+      "The hollows are dug fresh over old ones, earth thrown up in heaps all one way. The deer bones are big, cracked across by a single crushing bite, not gnawed. Something sleeps in a different hollow each night and digs a new one when the old one does not suit.",
+  },
+  "the-bears-wallow": {
+    "wallow|mud|hollow|hair|print":
+      "The mud is cold and smells of iron, and the print in it is a whole body, side and shoulder and the long marks of claws. The hair round the edge is brown and long. A bear rolls here, cooling or cleaning or both, and it has been doing it for years.",
+  },
+  "the-dark-turn": {
+    "turn|passage|walls|dark":
+      "Past the turn the walls are bare of any mark, no scratches, no polish, nothing: whatever uses the rest of the cave does not come round this corner often. The air up from below is colder here than anywhere above.",
+  },
+  "the-slick": {
+    "clay|floor|slope|marks|slick":
+      "The scrape marks at the bottom are claws dug in and dragged, many of them, and the long smear of something that came down sliding on its belly and did not mind. Above, the clay holds the print of your own hand where you caught yourself.",
+  },
+  "the-narrows": {
+    "narrows|walls|rock|passage":
+      "The rock either side is polished smooth at the height of your hips and again at the height of your knees, by bodies going through. The polish is greasy and dark. You fit, barely. Whatever made the lower polish fits easily.",
+  },
+  "the-shaft-head": {
+    "shaft|ledge|sides|marks|water":
+      "The water marks run down the shaft's sides in long brown streaks from the roof, so in some wet season water pours in here. The ledge is worn by feet into a path that goes round the shaft and down its side. Lean out and the air coming up takes the heat off your face.",
+  },
+  "the-ox-bow": {
+    "bend|walls|curve|marks|river|passage":
+      "The undercut on the outside of the bend is deep enough to sit in, and its roof is polished smooth by water that ran full. Pebbles lie in it, round and grey, left where the river dropped them. On the inside of the bend the floor is sand.",
+  },
+  "the-old-water-line": {
+    "line|walls|rock|water":
+      "Below the line the rock is washed and clean; above it there is a crust of white stone like hoarfrost. The line is level, perfectly, along both walls and as far as your light goes. The water stood here a long time, still, and then drained all at once.",
+  },
+  "the-dry-sink": {
+    "bowl|hole|sink|silt|pebbles":
+      "The silt in the hole is damp, and cold air comes up through it. Under your ear the water sounds close, closer than it should, and it never slackens. The river that once drained here is running below, in a new bed.",
+  },
+  "the-sand-bank": {
+    "bank|sand|holes|scrapes":
+      "The scrapes are short and deep, the work of big claws digging fast for something just under the surface. The holes have been visited since by grubbets: their splayed feet and their droppings in the bottom of each. Whatever was buried here, it was found.",
+  },
+  "the-listening-floor": {
+    "floor|rock|crack|water":
+      "Kneel and put your hand to the crack, and the wet air comes up cold and fast with the river's noise in it. The floor here is a skin of rock over the water, no thicker than a wall. In places it has broken already, further along, and the pieces are not on the floor.",
+  },
+  "the-wet-step": {
+    "step|ferns|fern|spores|drip|water":
+      "The ferns are small and pale, nearly white, their fronds uncurling toward the drip and the faint light that comes down the way from the fern hole. Nothing else grows. They live on what falls in from the wood above.",
+  },
+  "the-fern-hole": {
+    "hole|ferns|fern|moss|roots|floor|bank":
+      "The ferns hang over the edge of the hole in a green fringe, and drips run down them into the cave. The floor below is soft with fallen earth and leaves. Under it, close, the water is running, and the floor shakes faintly with it.",
+  },
+  "the-sound-hole": {
+    "hole|water|spray|rock|wall":
+      "The spray comes up the hole in gusts, and the green on the rock round it is slime and moss together, thick and slippery. Somewhere below there is a great weight of water going over a fall. The climb down is wet all the way.",
+  },
+  "the-hauled-way": {
+    "stripe|moss|hoof|blood|floor":
+      "The hoof is a roe's, torn off at the joint. The moss is ripped up in clumps, and further on the stripe is black with blood, a drag of it the width of a body, going east. It was alive when it came in through the ferns.",
+  },
+  "the-kill-hole": {
+    "pocket|remains|roe|skin|hide|bones|fur":
+      "The skin lies in a heap, turned inside out the way a cat leaves a kill, the inside licked clean. The bones that are left are cracked across the ends. The tufts of fur are tawny, shed while something lay here and ate and washed itself after.",
+  },
+  "the-low-arch": {
+    "arch|rock|stone|underside":
+      "The underside of the arch is polished to a shine and there are tawny hairs pressed into the grain of the rock. Something long goes under here low and slow, every day, its back just touching. It is the same height as yours, bent.",
+  },
+  "the-tight-bend": {
+    "bend|rock|corner|gloss":
+      "The gloss on the inside of the bend is the polish of shoulders turning, at a height no person's shoulders come to. There are claw marks on the floor where feet bunch to make the turn. Round the corner the draught picks up again, cold on your wet face.",
+  },
+  "the-sump-mouth": {
+    "wall|stone|water|river|sump":
+      "The wall goes down into the water sheer, and the water comes out from under it so smoothly the surface barely ripples. Hold a light low over it and you can see the rock go on down, and down, and then only black. It is colder than the air, which in this cave is saying a great deal.",
+  },
+  "the-black-water": {
+    "water|river|ledge|rock|walls":
+      "The ledge is a hand's width wider than your boots, and its edge is worn round by the water in high times. The rock above it is wet to a line over your head. Under the noise the river makes there is a lower sound, a knocking, of stones rolling along the bottom.",
+  },
+  "the-under-pool": {
+    "pool|water|shelf|rock|roof|surface":
+      "The shelf slopes into the water smooth as a slipway, and it is scored along its slope, in long sweeps, by something dragged into the pool or pulled itself out. The surface lifts, very slightly, and settles. Whatever is down there is long, and it is not in a hurry.",
+  },
+  "the-glow-reach": {
+    "lights|light|glow-worms|glowworms|worms|threads|thread":
+      "Each light is a grub no longer than a fingernail, lying in a little hammock of slime on the roof, with its threads hanging under it, beaded with sticky drops. The light is cold. It comes and goes slowly, brighter as the dark round you settles.",
+  },
+  "the-starry-roof": {
+    "roof|glow-worms|glowworms|worms|threads|curtains|stars|lights|light":
+      "The threads are beaded like dew on a web, and in them hang the small dry bodies of flies and moths and mayflies that came up the river in the dark toward what they took for the sky. The glow-worms are the only thing down here that lures anything. Move your light away and the whole roof brightens.",
+  },
+  "the-river-shingle": {
+    "shingle|stones|bank|water|river":
+      "The stones are worn round and smooth, every one, and some of them are not the cave's grey: there is red sandstone, and flint, and a piece of brick, carried down from the wood and rolled along the river's whole length. The water beside them is too deep to see the bottom.",
+  },
+  "the-river-bend": {
+    "nails|nail|marks|rock|undercut|fringe|glow-worms|glowworms":
+      "The nail holes are in a row across the rock, rusted out, with the stain of iron run down from each. A rope was made fast here once, across the river or along it. Under the undercut the glow-worms hang so thick their threads touch the water and are dragged.",
+  },
+  "the-diggers-bridge": {
+    "bridge|planks|plank|boards|board|baulks|timber":
+      "The baulks are oak, squared with an adze, and wedged into the rock with smaller wedges driven hard. The missing plank is in the river, jammed against a rock below, rotted through in the middle. The rest will hold one at a time. Somebody cut a mark into the end of each baulk, a small cross.",
+  },
+  "the-foxfire-wall": {
+    "timber|props|wood|rot|light|foxfire|glow|wall":
+      "The glow is in the rot itself, in the soft wet fibres of the wood, strongest where it is wettest. Break a piece off and it glows in your hand, then fades as it dries. The timber was squared once, and one piece still has a peg hole through it.",
+  },
+  "the-deep-run": {
+    "river|channel|water|ledge|bank":
+      "Look down from the ledge and the channel is deeper than the ledge is high. The current tugs at anything that touches it. Once, while you watch, something pale and long moves along the bottom against the current, slowly, and is gone into the dark upstream.",
+  },
+  "the-ford": {
+    "ford|stones|stepping|stepping stones|bed|water":
+      "The stepping stones are not the river's: they are squared blocks, set level with each other and a stride apart, by somebody who meant to cross here with a load more than once. The river has moved one a little, and it rocks.",
+  },
+  "the-long-pool": {
+    "pool|water|fish|shapes|shape":
+      "The fish hang in the clear water nose to the current, pale as candle wax, and where their eyes should be the skin goes smoothly over. Lower down the larger shape lies along the bottom like a sunk log, long as a boat, and it does not move while you watch it, and then it is not there.",
+  },
+  "the-deep-pool": {
+    "pool|bones|bone|shelf|water|edge":
+      "The man's bones are a ribcage and part of a spine, tumbled together, and with them a strap with a buckle and the iron rim of a lamp. The bones are clean and white and scored with long fine grooves. Nothing on land made those marks.",
+  },
+  "the-river-shelf": {
+    "shelf|ledge|rock|river|water":
+      "The shelf is polished down the middle by boots, people walking this way in single file, often, carrying loads; it is worn deepest where they set the loads down to rest. In the places you cannot see the bottom, the water is very still.",
+  },
+  "the-narrowing": {
+    "walls|river|water|rock|glow-worms|glowworms|threads":
+      "The water piles against the rock in a hump and the hump never moves. The few glow-worms left here have their threads tangled and blown along the roof. The roar ahead grows until it is not a sound but a pressure on your ears.",
+  },
+  "the-rapids": {
+    "rapids|rocks|staircase|spray|wall|river":
+      "The rocks are black and slick and the water goes over them white. Your hand on the wall finds a rope's groove, worn into an edge of rock, where somebody once fixed a line to get along here. The rope is gone.",
+  },
+  "the-falls-foot": {
+    "falls|fall|pool|lip|spray|hole":
+      "The spray goes up the hole in the roof and so does the noise, and up there, through rock, it comes out somewhere as a roar under the ground. The lip of the fall is smooth as a ewer's spout. The pool at the foot is churned white and there is no seeing into it.",
+  },
+  "the-falls-pool": {
+    "pool|foam|falls|water|glow-worms|glowworms":
+      "The foam drifts round the pool and off downstream in long lines. In the slack water at the edge, things have washed up: sticks, a bat's wing, a scrap of cloth worked into a rag, a peg of wood worn smooth. The pool brings up what the falls take down.",
+  },
+  "the-river-turn": {
+    "silt|tracks|prints|tail|river|roof":
+      "The prints are small and splay-toed, five fingers on each foot, with the line of a dragged tail wavering between them. They come out of the water and go along the silt and back in. Something slow and cold walks here when it pleases.",
+  },
+  "the-low-roof": {
+    "roof|rock|water|bank|line":
+      "The line on the rock overhead is the river's high water, and it is well above your head even where you stand. When the river comes up, this crawl is under it, and so is the way back. The rock over you is scoured clean by the flood.",
+  },
+  "the-silt-banks": {
+    "silt|banks|bank|tracks|prints|river":
+      "The tracks to the pools are the same small splay-toed feet and dragged tails as down by the turn, many of them, coming and going. Over them in places are bigger prints, four toes and claws, and those only go one way. The silt sucks at your boots and lets them go with a sound.",
+  },
+  "the-glow-tunnel": {
+    "tunnel|ledge|glow-worms|glowworms|light|roof|water":
+      "The tunnel is round because the water made it round, running full for longer than the cave has had a name. The ledge is the bottom of an older bed, and the river runs a stride below it now. The glow-worms' light is so even in here you cast no shadow at all.",
+  },
+  "the-wide-water": {
+    "lake|water|chamber|bank|surface":
+      "The swell comes up out in the middle, a slow round lift of the whole surface, and rings go out from it and reach the bank long after. Nothing breaks the water. The bank is printed at the edge with the small dragging-tailed feet, and nothing bigger, as if the bigger things here do not come out.",
+  },
+  "the-still-reach": {
+    "river|water|bank|passage|air":
+      "The water here is barely moving and it is perfectly clear, and in it you can see the bottom fall away into a crack that goes down out of sight. The cold air out of the side passage is a different cold from the river's: dry, and steady, and coming up.",
+  },
+  "the-rising-water": {
+    "water|river|bed|slope|roof":
+      "The water climbs the slope like a slow tide that never turns. Pebbles on the bed are pushed up it a little at a time and lie in ridges near the top. Whatever pushes the whole river uphill here is a long way below, and pushing hard.",
+  },
+  "the-under-spring": {
+    "water|shaft|passage|rock|roof":
+      "The water is so cold it numbs your chest, and it pushes at you, upward, gently, all the time. The glow-worms here hang close and their threads drift in the water's breath. The rock under your hand is smooth and slick with a fine green slime.",
+  },
+  "the-spring-foot": {
+    "shaft|spring|water|river|roof|throat":
+      "The water goes up the shaft in a solid column, silent, with a sound like breathing at its edges. On the rock beside it there are handholds, some cut, some only worn. Above, a long way up, there is a faint grey that is the mire.",
+  },
+  "the-roost-water": {
+    "water|slope|passage|way":
+      "The water coming down out of the roost is brown with droppings and warm, and it has stained the rock in a fan where it joins the river. The rustle from up the slope never stops. Every few breaths something small and dark drops out of the dark above and is gone.",
+  },
+  "the-guano-slope": {
+    "droppings|guano|slope|beetles|roof":
+      "The beetles are pale and blind and they cover the droppings in a moving skin, and where you step they boil away and come back. The heat comes off the slope like off a midden. Overhead the black is fur, and the fur is breathing.",
+  },
+  "the-north-roost": {
+    "bats|bat|roof|floor|droppings":
+      "The bats are small and brown and hang by their feet with their wings folded like little umbrellas, so close together they are one skin over the rock. Some are watching you: points of light from your own lamp. A few drop and flutter and hang again.",
+  },
+  "the-silk-hall": {
+    "silk|sheets|sheet|bats|web|webs":
+      "The silk is not a web: it is laid in sheets, layer on layer, the way cloth is woven, and it is sticky only at the edges. The dead bats in it have been sucked dry and are light as paper. Some of the sheets are new and white. Some are grey with age and dust.",
+  },
+  "the-wrapped-things": {
+    "bundles|bundle|boot|wrapping|silk":
+      "The boot is good leather, hobnailed, the kind the diggers wear, and there is still a foot in it. The man-sized bundle hangs by a thick cord of silk from the roof and turns, slowly, in the air going up. The small bundles are bats. The dog-sized ones might be anything.",
+  },
+  "the-bat-way": {
+    "passage|walls|wings|droppings|bones|way":
+      "The walls are polished dark by the brush of wings, from the floor to the roof, and the polish goes on up the passage toward the cave above. The bones underfoot are moths' and beetles', a crunching litter. At dusk this whole passage is full.",
+  },
+  "the-smoked-passage": {
+    "soot|roof|ashes|ash|fires|fire|bats":
+      "The fires were built of green wood and wet bracken, to smoke, not to burn. The bats in the ash died where they fell. Somebody wanted the roost out of the way and smoked it, more than once, and the bats came back each time.",
+  },
+  "the-ladder-foot": {
+    "ladders|ladder|rungs|rung|floor|lashings":
+      "The ladders are ash poles with oak rungs, pegged, and lashed to iron pins driven into the rock. The lashings have been renewed: the oldest are rotted to threads, and over them newer cord, and over that newer still. The floor at the foot is swept in a half circle, and the broom leans against the wall.",
+  },
+  "the-pick-work": {
+    "walls|wall|marks|picks|pick":
+      "The pick marks are all the same height because the men were all standing the same way, swinging the same stroke, and you can see where one man stopped and the next one started, a hand's breadth higher. It is the work of a gang, done to a measure.",
+  },
+  "the-first-camp": {
+    "hearth|stones|firewood|wood|cloth|sacks|pegs|lamp|niche|soot":
+      "The sacks are hessian, mended, and empty. The firewood is split oak, carried down from the wood a bundle at a time. The niche over the hearth is blackened in the exact shape of a lamp's flame, layer on layer of soot, from a light that was trimmed and set there every night.",
+  },
+  "the-lamp-store": {
+    "niche|shelves|shelf|jars|jar|oil|wicks|wick|glass|tallow|flint":
+      "The jars are sealed with wax pressed down by a thumb, the same thumb every time. The wicks are cut to one length. The empty place on the front shelf is clean of the dust that lies on everything else, so whatever lamp stands there was taken down lately and has not yet come back.",
+  },
+  "the-tally-wall": {
+    "tallies|tally|wall|strokes|marks|scratches":
+      "Each row is a man and each stroke is a day's work, by the look of them. The marks at the heads of the rows are small pictures: a hammer, a fish, a key, a crown, a ring. The long row's mark is a lamp.",
+  },
+  "the-barrow-run": {
+    "barrow|planks|plank|run|rut|stone|handles":
+      "The stone in the barrow is the same as the stone in the store, squared and dressed on its faces. The wheel is iron-tyred, and the tyre has worn a groove into every plank. The handles are dark with grip. The barrow was being pushed toward the stopping.",
+  },
+  "the-propped-way": {
+    "props|prop|posts|post|timber|beam|beams|roof":
+      "The props are oak, squared and pegged with oak pegs, no iron in them anywhere. On the cap-beams there are marks cut with a knife, a cross and a number in strokes. The fall the props were put in for is still on the floor at the end, grown over with a skin of stone.",
+  },
+  "the-sagging-props": {
+    "props|prop|posts|post|caps|beam|grit|roof":
+      "The split post creaks when the air moves, very softly, a sound like a door far off. The caps are bowed down in the middle like the backs of old horses. The grit comes down in little hisses, from more than one place at once. Do not touch them.",
+  },
+  "the-stone-store": {
+    "stone|stones|blocks|block|stack|dust":
+      "The blocks are the hard grey stone of the wood's quarries, dressed on five faces, with a mason's mark on each: a short line with a hook. Every one was carried down the ladders on a man's back. The dust on top of the stack is thick as felt.",
+  },
+  "the-widened-squeeze": {
+    "squeeze|wedges|wedge|hammer|crack|faces|rock":
+      "The hammer's handle is ash, gone grey, and its head is rusted to the colour of the rock. The wedges are driven halfway and their heads are burred from the blows. The next blow was never struck. The man who held this hammer set it down, neatly, and went.",
+  },
+  "the-cold-camp": {
+    "hearth|ash|pot|hook|woodpile|sacks":
+      "Whatever was in the pot boiled dry and burned. A spoon is still in it, set across the rim. The woodpile is the same split oak as the first camp's, stacked the same way, and it has not been touched since. The cold air comes through and takes the smell of old ash up with it.",
+  },
+  "the-sleeping-shelf": {
+    "shelf|bed|bracken|blankets|blanket|places|hollows":
+      "The blankets are wool, grey and brown, and every one is thrown back to the same side, the side nearest the way out. Under one of them, still, there is a shoe. Everybody who slept here got up at once.",
+  },
+  "the-water-butts": {
+    "butts|butt|water|dipper|line|lines|ledge|staves|hoops":
+      "The lines in the rock are cut with a chisel, level and neat, and the water in both butts is a hand below them and has left a ring higher up where it stood for a while. The dipper is copper, dented, and it has a name scratched on its handle that has been rubbed away by a thumb.",
+  },
+  "the-carry-way": {
+    "frame|straps|strap|walls|chips|stone|way":
+      "The carrying frame is a ladder-back of ash with a ledge at the foot for the load, and its straps are leather rotted to the colour of the rock. Its ledge is chipped where blocks were set on it, over and over. The chips on the floor are the same stone as the store's, broken off corners.",
+  },
+  "the-mortar-trough": {
+    "trough|mortar|trowel|hoe|sacks|sack|lime":
+      "The trowel's handle has rotted away and the blade stands in the mortar by itself, leaning, set like a gravestone. The mortar was mixed for a day's laying and went off in the trough. Whoever was mixing it stopped with the hoe in it and never came back to it.",
+  },
+  "the-pick-marks": {
+    "face|marks|pick|crack|handle|rock":
+      "The pick is driven into the rock to its eye and the handle stands out level, steady, as if a hand had only just let go of it. Put your hand near the crack the last stroke opened and the cold air comes out of it hard. The stroke broke into something, and the man who struck it put down nothing else.",
+  },
+  "the-first-stopping": {
+    "wall|stopping|stone|mortar|courses|course":
+      "The courses are laid to a line, pointed, and the stone is the store's, mason-marked. Whoever built it built it to last a long time. The high end is the newest work, the mortar on its top course still lumped where the next stone was never set.",
+  },
+  "the-carried-stone": {
+    "stone|stones|blocks|block|line|trail":
+      "The blocks get further apart down the passage, as if the men carrying them went a few steps further each time before they set them down, or as if they were setting them down and going. The last of them is on its edge, where it was let fall rather than set.",
+  },
+  "the-deep-camp": {
+    "fire|hearth|bedding|food|peg|box|lock|camp":
+      "The hearth is built of the store's cut stone, mason-marked, laid in a ring by somebody who knew how. The bedding is fresh bracken, brought down from the wood. The box is oak bound with iron, and its lock is old and good. The fire was fed not long ago.",
+  },
+  "the-stopping": {
+    "wall|stopping|stone|courses|gap|ladder":
+      "The wall is the best stonework in the country: every course true, every joint pointed, the stone mason-marked block by block. On the face of the top course somebody has cut a row of tally strokes and stopped in the middle of a group. The ladder at the gap is lashed to an iron pin, and its rungs are worn pale.",
+  },
+  "the-diggers-stair": {
+    "stair|steps|step|rope|pegs|rock":
+      "The steps are cut rough and fast, by men in a hurry, and the rope is pegged with iron pins every few steps. Halfway down, the rock of the walls changes: it stops being the cave's grey, broken and natural, and is something smoother, colder to the hand, as if it had been finished.",
+  },
+  "the-bridge-end": {
+    "post|hook|lantern|path|bridge":
+      "The lantern hook is wrought iron, bright on its inside curve where the lantern's handle has worn it, and the post is blackened above the hook by its smoke. The path off the bridge is worn into a trough by boots.",
+  },
+  "the-foxfire-cut": {
+    "props|prop|posts|post|caps|light|foxfire|glow|rot":
+      "Every post is soft as cheese and glows right through, its grain lit from inside like the veins in a leaf. One has already folded at the knee and leans on its neighbour. Touch one and your fingers come away glowing, faintly, for a while.",
+  },
+  "the-weeping-wall": {
+    "wall|water|sheet|rot|light|foxfire|glow|stream":
+      "The glow is thickest in the runnels where the water runs fastest, so the wall is lit in streaks like rain on a window. The water in the stream underfoot carries flecks of the glow away with it, little blue sparks going down toward the river.",
+  },
+  "the-seep-hall": {
+    "hall|walls|pools|pool|drips|drip|rot|light|foxfire|glow":
+      "The rot crusts the walls in a skin as thick as bark, and in the pools the light lies doubled. The drips fall through the blue light and make rings that catch it. It is the only place on this floor where you can see the whole of a room at once.",
+  },
+  "the-shaft-foot": {
+    "shaft|walls|marks|foxfire|glow|air":
+      "The water marks come down from far above, in long brown streaks, and end at the foxfire where the wet gathers at the bottom. The air goes up the shaft drawing hard, and a flame held here lies over toward the climb.",
+  },
+  "the-wet-ledge": {
+    "ledge|rope|pegs|peg|foxfire|edge|wall":
+      "The pegs are iron and rusted down to the thickness of a nail, and the rope between them is rotten. The ledge edge is worn round by feet that went along it in the glow. Below, the river runs fast and loud and has no bank.",
+  },
+  "the-glow-crawl": {
+    "crawl|roof|mud|marks|rot|light|glow":
+      "The marks in the mud are small hands and the dragging of tails, the salamanders going up and down between the pools and the river. The rot on the roof is close enough to smell: sweet, like old mushrooms.",
+  },
+  "the-pale-pools": {
+    "pools|pool|salamanders|salamander|water":
+      "The salamanders lie with their pink gills spread, so thin-skinned you can see their hearts going, slowly. They have no eyes, only a faint dark under the skin where eyes were once. They do not know you are there and they do not need to.",
+  },
+  "the-dark-stretch": {
+    "dust|floor|rock|dark":
+      "The dust is undisturbed except along a single path down the middle, where feet have kept it trodden. Off the path it is as soft and even as snow. Nothing grows in the dry, and nothing glows.",
+  },
+  "the-dry-gallery": {
+    "dust|bootprints|prints|tracks|feet|gallery":
+      "The bootprints are hobnailed, a gang's, all going west, none coming back this way. Over them, fresh, the long-clawed padless feet of the hounds go west too, following, nose down. The gallery holds the whole story in its dust.",
+  },
+  "the-crushed-props": {
+    "props|timbers|timber|heap|fall|rock|hand":
+      "The hand is grey with dust and the fingers are spread, as if pushing. The timbers over it are splintered at their middles, so the roof came down on the props at once and the props went all together. The way through at the side was cleared afterward, by others, around him.",
+  },
+  "the-cut-through": {
+    "passage|cut|walls|floor|rock":
+      "The walls are cut straight and square, plumb as a house wall, and the floor is level to a hair. The pick marks are the same short even strokes as everywhere on this floor. Water has already begun to put a skin of stone on the lower edge, the cave's slow way of taking it back.",
+  },
+  "the-broken-ladder": {
+    "ladder|rung|rungs|footholds|holds|marks|rock":
+      "The broken rung snapped in the middle, and the wood at the break is sound: it was not rot. It took a weight it was not made for. The footholds beside it are cut deep and sure, by somebody who did not trust a ladder again.",
+  },
+  "the-wet-cut": {
+    "cut|walls|stream|water|green":
+      "The green on the walls is a slime, and in it are the first faint threads of the rot that glows elsewhere. The stream has taken the boot marks out of the floor and laid silt in the corners. Another few years and this will be a cave again.",
+  },
+  "the-crossed-ways": {
+    "arrow|mark|door|wall|passages|passage|ways":
+      "The arrow is cut with a pick, deep, and it points down the cut way, toward the stopping. The mark beside it is a doorway, two uprights and a lintel, with a line drawn across the opening.",
+  },
+  "the-foxfire-hall": {
+    "hall|walls|rot|light|foxfire|glow|shaft|well":
+      "The glow is brightest low on the walls and fades toward the roof, so the hall is lit like a room at dusk with the lamp on the floor. The shaft in the middle draws the air up hard, and the glow round its foot is dim, as if the cold kept it down.",
+  },
+  "the-well-foot": {
+    "mark|ring|soot|wall|handholds|holds|well":
+      "The soot ring is drawn with a finger, and the line through it with a single stroke. It is fresh beside the old soot of lamps. The handholds go up into the dark, worn by hands, and here and there by claws.",
+  },
+  "the-dry-stretch": {
+    "hooks|hook|lamp-hooks|wall|dust|way":
+      "The hooks are wrought iron, each driven into a crack and wedged, each with soot on the rock above it. Somebody went along here every night and lit them, and somebody stopped. The dust under them has drips of old tallow in it.",
+  },
+  "the-dead-glow": {
+    "rot|walls|crust|blade|scrapes|scrape":
+      "The rot is dry and black and crumbles to the touch. The scrapes are knife cuts, short and many, in a patch about the height of a face. Under them the wall is pale. Whoever scraped it was looking for the light in it, and did not find it.",
+  },
+  "the-hanging-silk": {
+    "silk|threads|thread|passage":
+      "The threads are dry and strong and almost invisible, and every one of them is a line run back to something that will feel it move. You have touched a dozen already.",
+  },
+  "the-blue-passage": {
+    "passage|walls|light|glow|foxfire|rot|water":
+      "The glow comes and goes along the walls with the water, bright where it runs, dark where the rock is dry, so the passage is lit in patches like a road under passing cloud. Toward the east the walls grow a crust of droppings over the rot, and it dies.",
+  },
+  "the-roost-edge": {
+    "droppings|floor|wings|dark|foxfire":
+      "The droppings begin in a line where the glow stops, as if the bats would not come into the light. The rustle ahead is the sound of thousands of wings being folded and unfolded, never all still.",
+  },
+  "the-east-roost": {
+    "bats|bat|roof|silk|ropes|droppings|beetles":
+      "The silk ropes hang among the bats like bell-ropes, and in them the bats that are not moving are wrapped at the wings. The living ones hang right beside them and do not seem to mind. Something comes up here to feed at its leisure.",
+  },
+  "the-spiders-gallery": {
+    "silk|sheets|holes|hole|husks|gallery|floor":
+      "The holes in the silk are round and smooth-edged, the way a mouse-hole is in a hedge, and the silk round them is worn. Something big goes in and out of them often. The husks on the floor crunch, and the silk at the far end shivers each time they do.",
+  },
+  "the-egg-sacs": {
+    "sacs|sac|eggs|silk":
+      "The sacs are tight and faintly warm. The split one is empty, and its silk is torn outward, from inside. The fresh silk round the row is thick as a quilt, and laid recently.",
+  },
+  "the-roost-floor": {
+    "floor|droppings|chimney|bats":
+      "The droppings are warm and deep and full of the shine of beetle wings. The chimney's sides are polished black by bodies going up it. At dusk the floor shakes with the noise of them going, and the whole roost goes up the one shaft into the upper cave.",
+  },
+  "the-guano-banks": {
+    "banks|bank|droppings|mould|shapes|shape":
+      "The shapes in the mould are bats, mostly, and here and there something larger: a grubbet, a salamander, and one long shape with four legs folded under it that might once have been a hound. The mould has covered every one in the same soft grey fur.",
+  },
+  "the-well-passage": {
+    "boot|sole|dust|passage|walls":
+      "The boot is a digger's, hobnailed, the sole worn through at the ball of the foot. The laces are tied. Whoever lost it went on without it, and the prints in the dust beyond are one boot and one bare foot.",
+  },
+  "the-black-crawl": {
+    "crawl|rock|roof|air":
+      "The rock is bone dry and the crawl is smooth, polished by the water that made it long ago. It goes on, and on, and the only change is the air: wetter at the far end, and with the smell of water in it.",
+  },
+  "the-dry-pools": {
+    "pools|pool|beds|bed|plates|rims|rim|salamanders|salamander":
+      "The salamanders lie in the cracked beds as flat as pressed leaves, their gills spread, and their skins have gone like paper. The rims of the pools are white with the stone the water left. It dried slowly, and they did not leave.",
+  },
+  "the-glass-pool": {
+    "pool|water|bottom":
+      "The water is so still that your light shows the bottom perfectly, a floor of pale silt with a few round stones, and then a ring spreads out from nowhere you saw, and the pale thing is gone again.",
+  },
+  "the-lit-steps": {
+    "steps|step|stair|rot|light|glow|foxfire|edges":
+      "The rot grows along each step's edge where the wet runs off it, a thin blue line, so the stair shows like a ladder of light going down. The steps are natural, worn by water, but somebody has knocked the worst of them level.",
+  },
+  "the-spring-gallery": {
+    "gallery|walls|silt|ridges|river|glow|foxfire":
+      "The silt ridges lie across the floor in lines like the strandline on a beach, and the highest is above your knee. When the river comes up it fills this gallery, and the glow on the walls goes on shining under the water.",
+  },
+  "the-cold-sand": {
+    "sand|slope|prints|feet|river":
+      "The prints are the salamanders', thousands, small hands going down to the water and coming back. The sand is ribbed by the river and so cold it aches your palm. The river under the rock ahead is coming up hard.",
+  },
+  "the-salamander-pools": {
+    "pools|pool|salamanders|salamander|silt|footprints|prints|tracks|gills":
+      "The salamanders lie in the shallows with their pink gills open like flowers. The bigger footprints that come down to them are four-toed and clawed, and they stop at the edge of each pool, and there is a little swirl in the silt where something reached in.",
+  },
+  "the-old-sink": {
+    "hole|sink|rope|knob|lip":
+      "The rope is new beside everything else down here, hemp, tied off with a good knot, and it goes down the hole out of sight. The lip of the hole is scraped by the rope and by boots. Somebody goes down here, and comes back up.",
+  },
+  "the-stair-foot": {
+    "stone|stones|floor|flags|joints|joint|light|steps|walls":
+      "Kneel and look along the floor: the stones are so flat your light runs across them without a ripple. The diggers' last step is cut ragged into the rock above the first stone and stops there, the pick marks running out at the edge, as if the rock of the cave were only a covering laid over this.",
+  },
+  "the-spoil-heaps": {
+    "spoil|heaps|heap|rock|earth|shovel":
+      "The shovel is iron-shod ash, its blade worn bright at the edge and gone to rust behind the bright. The spoil is the cave's broken rock and the wood's earth, carried down to make room, and tipped here because here was where the stone began. The cold comes up through it in threads you can feel on your hand.",
+  },
+  "the-last-heading": {
+    "face|stone|tunnel|pick|tallies|tally|marks|row":
+      "The pick marks on the dressed face are no deeper than scratches on a slate, and the snapped point lies at the foot of them. The tallies beside it are the same hand as the long row on the tally wall above, and every one of them is crossed through with a single stroke.",
+  },
+  "the-first-flags": {
+    "flags|flag|stones|stone|floor|joints|joint|light":
+      "Put the blade of a knife to a joint and it will not go in. The cold comes up through the joint anyway, as through a sieve. The light is in the stone itself, even and faint, and your hand held flat over a flag is lit from below like a hand held over snow.",
+  },
+  "the-straight-way": {
+    "way|walls|wall|floor|roof|stone|line":
+      "The walls are dressed so fine your fingers find no tool marks at all, only the joints, and those run dead level as far as the light shows. Nothing has settled. Nothing has cracked. Whoever built it built it for a time longer than the wood above has been growing.",
+  },
+  "the-cold-road": {
+    "dust|lines|joints|floor|stone|cold":
+      "The dust moves along the floor in long thin lines like the lines a tide leaves on sand, each line fed from a joint, all running north. It is very fine and pale. Stand still and it builds against your boot on the south side.",
+  },
+  "the-cross-hall": {
+    "hall|corners|roof|walls|light|stone|shadows":
+      "The corners are square to a hair, and the roof is one flat stone after another, each fitted to the next. Hold up your hand: it casts no shadow on the floor. The light comes from everywhere at once and the hall has no dark side.",
+  },
+  "the-long-flags": {
+    "flags|flag|track|stone|floor|middle":
+      "The track is a shallow trough worn into the flags down the middle, smooth as the inside of a spoon, wider than a man's two feet together. It was not worn by feet. Nothing in it is scratched: it is polished, by a weight going over it, slowly, again and again.",
+  },
+  "the-sunk-flags": {
+    "flags|flag|joint|crack|floor|light|stone":
+      "The joint sings a low whistle with the air coming up through it. Hold a hand over it and the cold is like water. Along the joint's edges the stone looks brighter; whether it is the light or the frost that stands in the opening, you cannot tell.",
+  },
+  "the-rock-fall": {
+    "fall|rock|stone|roof|heap":
+      "The broken stone in the heap is the cave's rough grey, and pieces of the dressed roof lie among it, square-edged, their faces still flat and fine. The fall came from above, through the made roof. Under the heap there is no light at all.",
+  },
+  "the-cleared-way": {
+    "stones|stone|walls|row|flags|light":
+      "The fallen stones are set along the walls each on its broadest face, all turned the same way, nudged into place. There are no tool marks, no finger marks, only a polish on the stones' sides where they were pushed, as if by a shoulder or a snout.",
+  },
+  "the-south-road": {
+    "niches|niche|walls|road|stone|light":
+      "The niches are as deep as your forearm and square, each the same, each empty. Their floors are clean, swept by the air. Whatever was set in them was taken out, or never put in, and the road goes on south between them.",
+  },
+  "the-near-sink": {
+    "hole|rope|roof|silt|flags|light":
+      "The hole in the dressed roof is broken from above, the rough cave rock showing through it and the made stone's edges snapped. The rope is hemp, newer than anything else here. The silt on the flags is printed with boots, going to the rope and back.",
+  },
+  "the-sink-foot": {
+    "shaft|gravel|rope|knot|stone|rock":
+      "The gravel is the river's: round, mixed, carried down the sink when water still went this way. Under it, here and there, the dressed stone shows in patches, giving no light where the gravel covers it. The knot at the rope's end is a digger's, tied thick to give a hand something to hold.",
+  },
+  "the-west-door": {
+    "doorway|door|lintel|jambs|jamb|stone":
+      "The lintel is one stone, longer than a man, and the jambs are fitted to it so close there is no line where they meet, only a change in the grain. There is no rebate for a door, no hole for a bar. It was never meant to be shut.",
+  },
+  "the-pillared-way": {
+    "pillars|pillar|roof|stone|light|polish":
+      "The worn place on each pillar is at the height of your hip, a smooth patch the size of a hand. It is too low for a grown man's hand to rest on as he passes. It is about right for a child, or for a small people.",
+  },
+  "the-pillar-hall": {
+    "pillars|pillar|hall|floor|dust|flags|joints":
+      "Count the pillars and you lose count; the rows run off past the light in every direction. The floor between them is swept clean by the air, and the dust that moves goes all one way, north, as steady as a current.",
+  },
+  "the-north-steps": {
+    "steps|step|stone|air|cold":
+      "Each step is a single stone, and each is worn into a dip in the middle as a doorstep is, by many feet going up and down. The feet were small. The air down the steps smells of nothing at all: no stone, no wet, no rot.",
+  },
+  "the-cold-passage": {
+    "frost|joints|joint|walls|stone|light|cold":
+      "The frost in the joints is feathered and fine, and it grows out of the joint toward you, the way frost grows on a window from the cold side. Breathe on it and it does not melt. The light here is clearer, and colder, like light through ice.",
+  },
+  "the-hum": {
+    "hum|sound|walls|wall|stone|joints":
+      "Lay your palm flat on the wall and the hum is in your bones. It rises so slowly you only know it has risen when it is falling again. It is the air in the joints, everywhere at once, and it never quite stops.",
+  },
+  "the-ante-room": {
+    "floor|pattern|stones|stone|benches|bench|middle":
+      "The middle stone of the nine-round-one is worn into a shallow bowl, and the nine round it hardly at all. The benches are worn smooth at the front edge, the polish of people sitting and waiting, a great many times, a long time ago.",
+  },
+  "the-ring-door": {
+    "doorway|door|lintel|marks|ring|curve":
+      "The nine marks on the lintel are cut small and exact, each the same, round a tenth that is a little deeper than the rest. The air through the doorway pushes at you steadily. Nothing grows here and nothing has been scratched.",
+  },
+  "the-ring-of-nine": {
+    "ring|stones|stone|nine|tenth|joints|joint|floor":
+      "Nine stones, as alike as nine coins, each in its own joint, round the tenth in the middle. Each is the size of a table and too heavy to think of moving. The room is cold, and the air in it is never still.",
+  },
+  "the-west-hall": {
+    "hall|scratches|scratch|walls|track|floor":
+      "The scratches are low on the walls, at the height of your shin, in long sweeps, as if something walking close along the wall had dragged its side against it. The newest are pale as chalk. The track down the middle is damp.",
+  },
+  "the-brood-way": {
+    "skin|track|scratches|walls|floor|way":
+      "The skin is whole, a perfect grey glove of a thing, four legs and a long tail and a blunt head with no eyes, split down the back where its owner climbed out of it. It is damp. The scratches on the walls are everywhere at knee height, crossing and crossing.",
+  },
+  "the-brood-nests": {
+    "hollows|hollow|nests|nest|skins|skin|floor":
+      "The hollows are worn into the dressed stone itself, which nothing in this country could do in a lifetime, or ten. The skins in them are the length of a dog. Every hollow is turned to the west, toward the door at the end of the hall.",
+  },
+  "the-cracked-flags": {
+    "flags|flag|cracks|crack|floor|light":
+      "The cracks all run the same way, east to west, and they are old: their edges are worn round. The light comes up through them a little brighter than through the joints, and so does the cold. Whatever was dragged over these flags was heavier than the stone could bear.",
+  },
+  "the-pale-walls": {
+    "walls|wall|stone|track|scrapes|doorway":
+      "The walls are scraped bare as high as you can reach, the old grey skin of the stone gone and the fresh stone under it pale and clean. The scraping is broad and even, not claws: the rub of a body passing, a great many times, close on both sides.",
+  },
+  "the-sleepers-door": {
+    "doorway|door|jambs|jamb|stone|light":
+      "The jambs are worn round at knee height and polished to a gloss, on both sides at once, so whatever goes through fills the doorway wall to wall. The doorway is wider than any other here. Beyond it the stone is white, and the light off it is stronger.",
+  },
+  "the-worn-hollow": {
+    "hollow|flags|flag|stone|white|floor":
+      "The hollow is glass-smooth, and its shape is plain once you see it: a body lying on its belly with its legs drawn in and a long tail curled along one side. It is four times your length. The flags round it are white, and the cold comes up through their joints all round it, and nowhere else in the room.",
+  },
+  "the-cold-pit": {
+    "pit|lining|stone|scratches|dark":
+      "The scratches on the pit's lining are long and in fours, made upward, and they stop at the bottom of what your light can reach. The lining above them is clean. Whatever made them climbed, or tried to, and the cold out of the pit hurts the teeth.",
+  },
+  "the-back-way": {
+    "groove|bones|bone|way|floor|track":
+      "The bones in the groove are fish and grubbet and the long fine bones of salamanders, and one salamander's skull is the size of a horse's. All of it is picked clean. The groove goes south toward water, worn smooth by the same weight that made the track.",
+  },
+  "the-groove": {
+    "groove|track|walls|floor|stone":
+      "The groove is so deep and so smooth that water lies in the bottom of it in a long thin line. The walls either side are scraped pale to the height of your chest. It goes south, and the air comes along it from the south, wet.",
+  },
+  "the-black-water-hall": {
+    "water|hall|floor|groove|stone":
+      "The water is black and so still the surface holds your light like a sheet of iron. Under it you can just feel the groove with your foot. Now and then something moves out in it, slowly, a pale back breaking the surface and going down again.",
+  },
+  "the-pale-steps": {
+    "steps|step|stone|marks|water":
+      "The wet marks on the steps are the drag of a body and the prints of four broad feet, splay-toed, the size of your two hands. They go up out of the water and on. On the top step there is a smear of slime as long as you are tall.",
+  },
+  "the-carved-rings": {
+    "rings|ring|stones|carving|carvings|walls|hall|roof":
+      "Every carved stone is the same: nine rings round one, cut shallow and clean. The middle ring on each is worn, rubbed by fingers, a little deeper than the nine. The light off the roof is close enough to feel cold on your face.",
+  },
+  "the-south-hall": {
+    "bones|bone|heaps|heap|pillars|pillar|floor":
+      "The bones are small and dark, a short people's, the thigh bones no longer than your forearm. They are very old: they crumble at the edges if you touch them. Under the heaps the floor's light comes up through the gaps between them, so they lie in their own faint glow.",
+  },
+  "the-bone-pillars": {
+    "bones|bone|skulls|skull|pillars|pillar|courses":
+      "The bones are laid in courses as a dry wall is, long bones crossed, skulls set in the face, all looking west. They were put here by people who knew the dead and took their time. The cold comes up through the joints under them and goes up through the bones.",
+  },
+  "the-quiet-way": {
+    "way|walls|air|stone":
+      "Hold a flame here and it stands straight up. Wet a finger and no side of it cools. In all this cave it is the one place nothing comes up through the stone, and the quiet of it presses on your ears.",
+  },
+  "the-south-cell": {
+    "hand|hand-mark|mark|palm|stone|cell|floor":
+      "The hand is sunk a finger's depth into the stone, every crease of the palm sharp in it, as if the stone had been wax. Lay your own hand in it and it covers it to the wrist. The fingers are spread. The light comes up out of the print a little brighter than out of the rest.",
+  },
+  "the-east-hall": {
+    "niches|niche|walls|dust|prints|print|light":
+      "The prints in the dust are square and sharp-edged, each the size of a book, one to a niche. Whatever stood in them stood a long time, and was lifted out cleanly, all of them, and the dust has not begun to fill the prints.",
+  },
+  "the-pillared-east": {
+    "pillars|pillar|marks|pick|stone":
+      "The pick marks are the diggers': the same short even strokes as in the passages above. Each pillar is tried once at the height of a shoulder, and each try goes in no deeper than a thumbnail and stops. They went round every one.",
+  },
+  "the-east-way": {
+    "way|walls|wall|stone|light|air":
+      "Here and there along the walls the dressing stops and rough rock shows, as if the builders cared less here, or were building the back of something meant to be seen from the other side. The light is thin, and the air moves north along it quietly.",
+  },
+  "the-buried-hall": {
+    "hall|roof|rock|way|stone":
+      "The roof came down in one long sag, and its dressed stones hang like the boards of a broken floor before the rock above them. The way through is scraped low and wide and smooth, by a body, not by tools. It is the height of something lying flat and going on its belly.",
+  },
+  "the-cold-cell": {
+    "frost|walls|floor|shape|cell":
+      "The frost feathers stand out from the walls a finger long and ring faintly if you breathe on them. The shape melted into the floor's frost is long and low, with a tail, and smaller than the hollow in the white hall. It has only just begun to frost over.",
+  },
+  "the-sheet-water": {
+    "water|sheet|wall|floor|joints|light":
+      "The water comes out of the east wall's joints and runs across the floor, and it runs up the floor's slight slope toward the west, against its own weight, thin as glass. Lay a finger in it and the pull is gentle and steady, west.",
+  },
+  "the-drowned-flags": {
+    "water|flags|flag|joints|floor|stone":
+      "The water is black and over your knee, and under it the flags are smooth and the joints are sharp. Put your hand down to a joint and the cold coming up through it is colder than the water. Something brushes past your leg, slowly, and goes on.",
+  },
+  "the-east-road": {
+    "road|herringbone|flags|flag|stone|floor|light":
+      "The herringbone is laid so close the pattern seems drawn on one stone. It is the only floor down here laid in a pattern other than straight, and the only one with no track worn down it.",
+  },
+  "the-east-steps": {
+    "steps|step|mark|ring|line|scratch":
+      "The ring with the line through it is scratched with a knife point, the same mark as the soot ring at the foot of the Cold Well. Somebody came this way after the diggers stopped and left their mark: a ring, struck out.",
+  },
+  "the-side-arch": {
+    "arch|keystone|marks|ring|wall|steps":
+      "The keystone's nine-round-one is cut so finely the marks look pressed rather than carved, and the middle one is worn by fingers. The arch is the only curve along the whole straight way, as if it were the one door meant to be found.",
+  },
+  "the-under-steps": {
+    "steps|step|stone|edge|rock":
+      "The steps are cut out of the rock under the stone floors, not laid, and each is worn into a dip by small feet, deeper in the middle than at the edges. Above, the edge of the great stone stands on end against the dark, as square as the day it was cut.",
+  },
+  "the-low-gallery-under": {
+    "gallery|band|rings|ring|carving|walls|roof":
+      "The carved band runs at the height of your waist, which was the height of their eyes. Nine round one, again and again, every ring the same, no join where the carving began or ended. The walls give no light, and the dark under the stone is the plain dark of rock.",
+  },
+  "the-shelved-room": {
+    "shelves|shelf|bowls|bowl|figures|figure|rings|ring|dust":
+      "The bowls are black stone ground so thin your light shows through their edges. The little white figures are all the same beast, four-legged and long-tailed, every one lying on its belly with its legs drawn in. The bone rings are each the size of a finger, and each is cut with nine small marks round one.",
+  },
+  "the-box-chamber": {
+    "box|lid|slab|keyhole|stone|chamber":
+      "The box is of the dressed stone, and the joint between lid and box is so fine it might be one stone with a line drawn on it. The keyhole is cut clean through the slab, small and exact. Kneel and look along the floor: the room was built round the box, not the box set in the room.",
+  },
+  "the-worn-floor": {
+    "floor|hollows|hollow|dips|wall":
+      "The dips are worn by knees, side by side in pairs, small knees, many rows. The far wall is plain dressed stone with no mark on it at all, and the cold comes off its face as off a window in winter. Put a hand on it and the hand aches.",
+  },
+  "the-faces-down": {
+    "dead|bodies|body|bones|people|row|floor":
+      "They are small and dry and very old, their skin gone to leather on the bones, and each lies face to the stone with its palms flat beside it, pressed down. Not one hand is turned up. Whatever they were turned away from, or toward, it was down.",
+  },
+  "the-open-joint": {
+    "joint|stones|stone|floor|edges|cold|dark":
+      "The edges of the joint are worn into soft curves by hands pressing on them, palms flat, and the stone either side is polished where knees knelt. The cold out of the joint is steady as a river. Drop anything into it and you do not hear it land.",
+  },
+  // ---- THE WOOD'S NEW WAYS TO THE CAVE (2026-11-22, the-wood-to-the-cave.rooms) ----
+  "the-sunk-moss": {
+    "moss|hollow|bank|roots|root|wall":
+      "The moss is so deep and wet that it holds no print: it closes over a step and is smooth again by the time you look back. The roots in the bank are the great trees' of the Deep Roots, bared where the ground fell away from them, and water runs down them in threads.",
+  },
+  "the-under-bank": {
+    "bank|roots|root|gaps|gap|moss|water":
+      "Behind the gaps the dark goes back further than a bank should hold. The roots over you are furred with moss on top and bare and pale underneath, where nothing grows, and they drip steadily onto the path, which is worn into a groove by feet.",
+  },
+  "the-dark-behind": {
+    "space|hollow|roots|root|walls|earth|floor":
+      "The floor of the hollow is dry earth pressed flat, with a shallow bed scraped in it the size of a lying deer, and hair in the bed, red-brown. Something sleeps here out of the weather. The grey through the north roots is the Deep Roots, close enough to step through.",
+  },
+  "the-cut-line": {
+    "line|ride|coppice|stools|stool|trees|edge":
+      "The stools on the cut side are as broad as cartwheels, cut so many times the wood of them has grown into knuckles. On the other side of the line the oaks have never felt an axe. The ride between is kept open by feet only, and the feet are deer's and boar's now.",
+  },
+  "the-tally-posts": {
+    "posts|post|notches|notch|ride|tallies|tally":
+      "The notches go down each post in fives, the fifth cut across the four, exactly the way the rods in the Bounds House are cut. Each post carries one more group than the last. Somebody paced this line and counted it out loud with a knife, and nobody counted it again.",
+  },
+  "the-postern-gap": {
+    "gap|gateposts|gatepost|posts|stumps|bank|gate|postern":
+      "The gatepost stumps are oak, sunk in stone sockets, and one still has the iron of a hinge pin rusted into it. The bank either side is the old gatehouse ground's, turf over rubble. It was a small gate, a person's gate, for going out the back without anyone seeing.",
+  },
+  "the-back-road": {
+    "road|flint|metalling|turf|surface":
+      "Scuff the turf with a heel and the flint comes up under it, packed hard and set in a camber. The road is broad enough for one cart and no more, with a ditch on the wood side long silted up. It was built for hauling out, not for coming in.",
+  },
+  "the-sunk-paving": {
+    "paving|ruts|rut|stone|water|moss|crown":
+      "The ruts are worn into the paving stones themselves, smooth and round-bottomed, a cart's width apart. Water stands in them, clear, with leaves on the bottom. The weight that wore them was charcoal and timber, going up, for longer than anybody wrote down.",
+  },
+  "the-fallen-milestone": {
+    "milestone|stone|hole|verge|face":
+      "Somebody dug a trench along its side to lever it over, and gave up when it was half turned, and it fell back. The back of it is plain dressed stone with moss on it. Whatever is cut on its face is pressed into the earth, and the earth has grown grass over the edges.",
+  },
+  "the-road-bend": {
+    "road|bend|verges|verge|oaks|bank|gatehouse":
+      "The bend is cut into the slope, the road levelled on the downhill side with a dry wall gone to rubble under the grass. From here the gatehouse ground's bank is a green line along the sky, and below, the tops of the wood go on without a gap.",
+  },
+  "the-holloway-head": {
+    "holloway|banks|bank|road|roots|root":
+      "The banks are earth with stones through them, and the roots come out of them bare and grey, cut through in places where a wheel caught them. The road's paving shows in patches in the floor, and between the patches the floor is clay worn smooth.",
+  },
+  "the-deep-holloway": {
+    "holloway|cut|banks|bank|trees|tunnel|floor|road":
+      "The banks are higher than your head and overhang the road, held up by roots like the ribs of a basket. The floor is hard and dry and your steps go up the banks and come back. Along the tops there is a worn line in the grass where something walks the edge and looks down.",
+  },
+  "the-root-bridge": {
+    "bridge|roots|root|oaks|oak|bark|moss":
+      "The roots grew to each other and fused, and the join is a knot as big as a barrel. On the top of the bridge the bark is worn smooth and there are claw marks pressed into it, and hair caught in the crack of the knot: grey, and coarse.",
+  },
+  "the-rotted-cart": {
+    "cart|wheels|wheel|shafts|shaft|charcoal|load|bed":
+      "The charcoal is split oak, burned well, the kind the colliers of the wood made for the forge. The cart was loaded to the rails. The wheels are sunk to the hubs and the hubs have grown moss. Nobody came back for the load, and nobody came back for the cart.",
+  },
+  "the-washout": {
+    "washout|paving|slabs|slab|stones|banks|bank|road":
+      "The slabs are the road's, cut and squared, tumbled now among the stream's round stones, some on edge, some upside down with their tool marks showing. The stream that did it runs only after rain. Between rains you can walk the bed dry.",
+  },
+  "the-wet-lane": {
+    "lane|banks|bank|puddles|reeds|ruts|dark|roots":
+      "The puddles are full of tadpoles and the reeds grow in the ruts in two straight lines, the road's ghost. On the west bank the ground drops into a black space under roots, and it goes back further than your light can follow.",
+  },
+  "the-lanes-end": {
+    "reeds|water|paving|road|lane|frogs":
+      "The last paving stone goes down into the water at a slant and the reeds close over it. You can feel the road going on under the wet with your boot, a step, two steps, and then there is only mud. It reached the wood and stopped here, at the water.",
+  },
 };
 
 // Everything below is prose keyed off the same tables and read by lookFeature.
@@ -8042,6 +9040,22 @@ export const WOOD_DARK: Record<string, string> = {
 // It NEVER states a number the stat block already gives. Numbers are the stat
 // block's job and a page that says a thing twice is a page nobody reads twice.
 export const MOB_LORE: Record<string, string> = {
+  // ---- THE CAVE UNDER THE WOOD (mig 409, 2026-11-24). Evidence only for the brood and the sleeper:
+  // nothing says what they are (cave-plan.md, the story).
+  "cave-cougar": "The cougars came down out of the wood a long time ago and found that the cave kept the weather off and the deer could not follow. They hunt up top in the half-light and bring what they kill down the drag-ways, to eat it where nothing else will come for it. Down here they have learned the ledges over the Hollow the way a wood cat learns its trees, and they lie up on them over the floor. They break off a fight that has turned against them, which is why there are still so many of them.",
+  "mole-hound": "Nobody knows whose dogs they were. The diggers' tallies count hounds among what was carried down, and nothing in the tallies ever went back up. Generations in the dark have taken most of the coat and grown the eyes huge for what little light there is, and the ears with them, and a pack of them will stand a long time in a passage, heads up, listening, before it moves. They hunt the grubbets and the salamanders, and anything that comes down making a noise.",
+  "river-gulper": "The river comes in under the wood out of a sump nothing living has been through, and the gulpers came with it, or were always in it. They lie along the edges of the deep pools, where the bottom drops away, and take what comes to drink or to cross. Whatever they cannot swallow they hold under until they can.",
+  "cave-spider": "The spiders live where the bats are, and on them. The silk halls on the river floor are larders as much as webs: most of what hangs wrapped in them is bats, and some of it is not. They have grown to the size the cave let them, which is larger than anyone above would believe.",
+  "cave-bat": "Every dusk the roosts empty up through the upper cave and out of the mouths into the wood, and every dawn they come back. In the roosts they hang packed close, and when one drops the rest come after it.",
+  "digger": "The holding sent them down when the fever came, to follow the cold air to where it rose and wall it up. Their tallies are on the walls and their stone is still stacked where they carried it. The work stopped as all the holding's work stopped, mid-stroke, and they died at it, and they are still down here, between the camps and the stopping, as if the word to stop had never come down to them. They know what a light is worth in the dark, and what a pack carried down from above might have in it.",
+  "stone-brood": "They lie on the dressed stone between the river and the Worn Hollow, and nowhere else. They have the same blind head and the same loose hide as the thing in the Hollow, and they turn toward it while they rest. Where they come from is not written down anywhere.",
+  "stone-sleeper": "It lies in the Worn Hollow, where the dressed stone is worn into a dish the shape of its body, deep enough that it has lain there longer than the stone has been anything else. The cold air comes up through the joints all round it. The diggers' tallies stop short of its room. That is all anyone knows of it, and all the stone says.",
+  "the-lamp-man": "He kept the diggers' lamps: filled them, trimmed them, and carried the oil and the wicks down to the camps. He died down here with them, and he still walks the upper cave between the mouths and the first camp with one lamp lit, and he knows better than anyone what it is to be without one.",
+  "grubbet": "Nobody brought them down. They dig, and they have dug the soft rock of the upper cave into burrows from the cougars' larder to the bat roosts, and they eat whatever the hunters leave, the diggers' crumbs and the guano under the roosts. They live packed together in colonies that squeal at everything, and everything in the cave eats them.",
+  "polecat": "The polecats came down after the grubbets, the way a polecat follows anything that lives in a hole. They live in the cracks of the upper cave and kill more than they eat, and they leave the rest lying for the hounds. When one is cornered the stink of it fills a passage, and everything else in the cave knows to keep out of it.",
+  "cave-crayfish": "They live under the stones of the river's shallows and eat whatever the river brings down and whatever dies in it. They have been in the dark so long they have lost their eyes and their colour, and they feel their way with feelers longer than their bodies. They hold on: a hand put into the shallows comes out with one on it.",
+  "stone-mites": "They live only in the dressed stone, in the joints where the cold air comes up, and nowhere else in the world. The diggers' tallies do not mention them. They come out when the air rises strongest and go back in when it falls.",
+  "pale-salamander": "They live in the still pools of the river floor, in the light of the foxfire and the glow-worms, and they grow very slowly and very old. They eat what drifts into the pools. Everything on the river floor that hunts eats them, and they have never learned to hurry.",
   "water-vole": "Everything on the marsh eats it, and it knows. It lives along the creek banks in burrows with a door under the water and a door in the grass, and it is never further than one jump from the first. The cut reed stems lying at an angle on the bank, each one bitten off clean at the same slant, are the sign of it; so is the plop that comes a moment before you see anything at all. The viper waits at the grass door, the bittern stands over the water one, and the hounds dig. It breeds as if it had read the arithmetic.",
   // ---- THE OPEN GROUND (mig 194). The first place a player meets the idea the
   // whole world runs on, so it is said plainly here and elaborated later.

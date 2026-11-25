@@ -1085,6 +1085,10 @@ export function mealOf(eaterHp: number, meat: number): number {
   return STOMACH_MEAL * Math.max(0, meat) / Math.max(1, eaterHp);
 }
 export const SMALL_PREY = new Set([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat", "cave-crayfish", "stone-mites",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "grubbet", "pale-salamander", "cave-bat",
   // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
   "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
@@ -1397,6 +1401,10 @@ export const ECO_SLOWEST = 4;      // hardest case: an empty den takes 4x as lon
 // Only the living eat. The hollow do not hunger and are not food, so the deep's
 // bone-things keep the flat clock they always had.
 export const ECO_LINES = new Set([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat", "cave-crayfish", "stone-mites",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar", "mole-hound", "cave-spider", "cave-bat", "grubbet", "pale-salamander", "stone-brood",
   // THE HUSH (mig 405, 2026-11-19): the wood's middle hunter
   "the-hush",
   // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
@@ -1799,6 +1807,22 @@ export const ROT_MS = 4 * 3_600_000; // food on the floor keeps this long, then 
 // gets its own voice through the walls — the deep ones especially, so the dark
 // below is never just "something moves."
 export const MOVE_SOUNDS: Record<string, string> = {
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat": "Something small and quick runs {dir} through the loose stones, and a rank smell comes after it.",
+  "cave-crayfish": "A small clicking {dir} in the shallows, and the water stirs.",
+  "stone-mites": "A faint dry hiss {dir}, like sand poured slowly over stone.",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar": "A scatter of grit falls {dir}, and nothing after it.",
+  "mole-hound": "Claws click {dir} on stone, quick, and stop, and come on again.",
+  "river-gulper": "Something heavy turns over in the water {dir}, and the water slaps the rock.",
+  "cave-spider": "A dry rustle {dir}, like a hand drawn over cloth.",
+  "cave-bat": "A flutter of leathery wings {dir}, and a thin squeak.",
+  "digger": "Boots scrape {dir} on stone, and something iron knocks against the rock.",
+  "stone-brood": "Something drags itself {dir} over flat stone, slowly, belly down.",
+  "stone-sleeper": "The stone {dir} makes a long low sound, as if something very heavy had shifted its weight on it.",
+  "the-lamp-man": "Steps {dir}, measured, and the small creak of a lamp swinging on its bail.",
+  "grubbet": "Something fat scrabbles {dir}, and a squeal goes up and is answered.",
+  "pale-salamander": "A small sound of water {dir}, as if something had slid into it.",
   "water-vole": "A small plop {dir}, and a ring spreading on the water.",
   "rat-king": "Something heavy drags itself {dir}, and a great many small claws hurry along with it.",
   rat: "Claws skitter {dir}.",
@@ -1914,6 +1938,21 @@ export const MOVE_SOUNDS: Record<string, string> = {
 // a careful boot, beasts = breathing). Hidden lurkers make no sound at all —
 // silence is what an ambush sounds like.
 export const STILL_SOUNDS: Record<string, string> = {
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat": "a quick chittering, and the scrape of claws in a narrow hole",
+  "cave-crayfish": "a small clicking under the stones of the shallows",
+  "stone-mites": "a hiss so faint it could be the cold air in the joints of the stone",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar": "slow breathing, low down, and the tick of a tail against stone",
+  "mole-hound": "sniffing, quick and wet, and the click of claws turning on stone",
+  "cave-spider": "nothing, and then a faint dry ticking, like a fingernail on silk",
+  "cave-bat": "a thin squeaking overhead, and the dry rustle of a wing being folded",
+  "digger": "the dry creak of stiff leather, and stone dust being knocked off a pick",
+  "stone-brood": "slow breathing through teeth, like air drawn over the edge of a stone",
+  "stone-sleeper": "breathing so slow you count between the breaths, and the cold air moving with it",
+  "the-lamp-man": "the faint hiss of a lamp wick burning, and nothing else",
+  "grubbet": "snuffling, a scrabble of claws in loose grit, and squeals passed back and forth",
+  "pale-salamander": "nothing but water dripping into still water",
   "water-vole": "a dry crunching, very small and very steady, of something eating a reed stem",
   "rat-king": "a wet, rattling breath, and the squeak of rats answering it",
   "three-hound": "slow, enormous breathing — three sets of lungs working as one",
@@ -2243,6 +2282,13 @@ export const MOUTHS = [
   // deliberately NOT one — it's the deep's hideaway, and things crawling out of
   // it would ruin the one place nothing can follow you.
   "the-sump", "the-undertow",
+  // THE CAVE UNDER THE WOOD (mig 409, 2026-11-24). A refill surfaces at the mouth
+  // nearest its home, so the cave keeps its own at each depth, or every cave animal
+  // would be born in the wood and walk down. Each is a hole or crack a thing could
+  // come out of unseen, by its own words; none is one of the six ways in.
+  "the-split-floor", "the-whistling-hole", "the-gnaw-hole", "the-dry-sink", // the upper cave
+  "the-sump-mouth", "the-black-crawl", "the-well-foot",                     // the river floor
+  "the-cold-pit", "the-rock-fall",                                          // the dressed stone
 ];
 
 // The warden walks its rounds — it always has ("armor... still walking its
@@ -2419,7 +2465,10 @@ export function patrolRoute(templateId: string, home?: string): string[] | undef
 // Creatures with nothing inside. They do not bleed (broken remains, not blood),
 // do not hunger, and no smell of food moves them. The rat is the only thing
 // down here that's honestly alive.
-export const HOLLOW = new Set(["skeleton", "bone-knight", "warden", "warden-surface", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor",
+export const HOLLOW = new Set([
+  // the cave's diggers and their lamp-man (mig 409, 2026-11-24): the holding's men, dead at the work they were sent down to do
+  "digger", "the-lamp-man",
+  "skeleton", "bone-knight", "warden", "warden-surface", "warden-captain", "forgotten-king", "drowned-god", "marrow-king", "marrow-cantor",
   "twice-dead", "thrice-dead", "last-watchman",
   // The east road's institution, still working (mig 188). A clerk with his hand
   // out and a warden walking a distance — the same joke as the drill, told out
@@ -2473,11 +2522,15 @@ export const GRAVE_FLESH = new Set(["twice-dead", "thrice-dead", "last-watchman"
   // there is, so every weapon keeps its killing spot on them
   "the-drowned-ferryman", "the-pilot", "the-scaffold-hand", "the-refuge-man", "the-miller",
   // the cook (mig 353) is a dried man in an apron, not bare bone: every weapon finds him
-  "the-cook"]); // the watchman is a dried MAN in kit, not bare bone — every weapon finds him
+  "the-cook",
+  // the cave's diggers and their lamp-man (mig 409, 2026-11-24): dried men in their leather, not bare bone
+  "digger", "the-lamp-man"]); // the watchman is a dried MAN in kit, not bare bone — every weapon finds him
 
 // Behavior families — creatures that DO a thing, not just fight:
 // THIEVES snatch an unsealed item on a hit and run; kill them to get it back.
 export const THIEVES = new Set([
+  // the cave's creatures (mig 409, 2026-11-24)
+  "digger",
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-bone-dropper
   "the-old-raven", "the-raiding-fox", "the-bone-dropper",
 "cutpurse", "cutthroat", "footpad", "wayman",
@@ -2657,6 +2710,18 @@ export const WOOD_GROUPS = new Map<string, { min: number; max: number; lone: num
   // six of them, so three pairs. One whose other dies goes on alone (groups.tick).
   ["the-hush", { min: 2, max: 2, lone: 0 }],
 ]);
+// THE CAVE UNDER THE WOOD LIVES TOO (mig 409, 2026-11-24), the seventh living region,
+// built with its creatures (cave-plan.md, step three). The cougars, the hounds, the rats,
+// the salamanders, the spiders, the bats, the polecats, the crayfish and the stone-mites roam it; the hounds hunt in packs and the
+// bats hang in company, and the grubbets live in colonies. Left where they are: the gulpers (drowners hold their water),
+// the diggers (dead men) at their camps and the stopping, the lamp-man, the brood on the dressed
+// stone and the sleeper. Ground: cave-ground.ts.
+export const CAVE_ROAMERS = new Set(["cave-cougar", "mole-hound", "grubbet", "pale-salamander", "cave-spider", "cave-bat", "polecat", "cave-crayfish", "stone-mites"]);
+export const CAVE_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
+  ["mole-hound", { min: 3, max: 4, lone: 0.1 }], // packs of three and four (cave-plan.md)
+  ["cave-bat", { min: 3, max: 6, lone: 0.1 }],    // the roosts hang in company
+  ["grubbet", { min: 3, max: 6, lone: 0.1 }],     // colonies, packed into the burrows they dig
+]);
 export const DEN_ROAMERS = new Set(["masterless-dog", "roe-deer"]);
 export const DEN_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
   ["masterless-dog", { min: 2, max: 4, lone: 0.2 }],
@@ -2681,6 +2746,7 @@ export const LIVING_REGIONS: Record<string, { roamers: Set<string>; groups: Map<
   deep: { roamers: DEEP_ROAMERS, groups: DEEP_GROUPS },
   wood: { roamers: WOOD_ROAMERS, groups: WOOD_GROUPS },
   den: { roamers: DEN_ROAMERS, groups: DEN_GROUPS },
+  cave: { roamers: CAVE_ROAMERS, groups: CAVE_GROUPS },
 };
 /** With a region: that region if the line roams there. Without one: the first living
  *  region the line roams in (a line may roam in more than one, as the goat does). */
@@ -2717,7 +2783,7 @@ export const GROUND_DRIVEN = new Set(["hill-fox", "wildcat", "ermine", "snow-fox
 // (The crossing's gulls and seals hunt, but live as flocks and herds do, apart.)
 export const FLOCKS = new Set<string>(["mountain-chough", "great-gull", "grey-seal"]);
 export const SPREAD_ROOSTS = new Set<string>(["scarp-raven", "carrion-vulture", "bone-breaker"]);
-export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder", "tawny-owl", "the-hush"]); // otter, heron, adder: the road (2026-11-13); the tawny owl: the wood (2026-11-17)
+export const LAND_HOLDERS = new Set(["lynx", "glutton", "wildcat", "hill-fox", "snow-fox", "ermine", "hill-eagle", "eagle-owl", "fen-viper", "bittern", "otter", "grey-heron", "gill-adder", "tawny-owl", "the-hush", "cave-cougar", "polecat"]); // otter, heron, adder: the road (2026-11-13); the tawny owl: the wood (2026-11-17)
 export const LAND_BITE_ODDS = 0.25; // of a run-off, the share where it gets a bite in first
 // A HUNGRY PACK GOES AFTER BIG GAME (rome, 2026-11-07). Two or more hungry wolves of
 // one pack pick one hind or goat within this many rooms of home and close on it
@@ -2874,9 +2940,13 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 // walks toward a brawl or joins one: the noise sends them away, as it does a
 // runner. The hedgehog the same: it curls, it does not come to look.
 export const NOISE_SHY = new Set(["red-stag", "wood-stag", "feral-goat", "old-billy", "hedgehog",
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "cave-crayfish",
   "wrack-crab", "ford-eel", // the crossing's crab and eel keep out of a fight too (rome, 2026-11-12)
   "wood-sloth"]); // and the sloth: it was hauling itself over to a fight and joining it (rome, 2026-11-18)
 export const RUNNERS = new Set(["fleet-rat", "roe-deer", "water-vole",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "pale-salamander",
   // THE MOUNTAIN, TIER FOUR (mig 233). It shouts and it goes; it does not fight
   // and it never joins one.
   "mountain-chough",
@@ -3009,6 +3079,8 @@ export const RARITY_RANK: Record<string, number> = { common: 0, uncommon: 1, rar
 // SCAVENGERS roam the dungeon eating its dead (blood/remains litter), healing
 // and — past BOLD — losing their nerve entirely: they stop fleeing and hit harder.
 export const SCAVENGERS = new Set([
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar", "mole-hound", "stone-brood",
   // mig 247, the mountain's rare blood: the-blue-fox, the-bone-dropper, the-old-glutton
   "the-blue-fox", "the-bone-dropper", "the-old-glutton",
 "grave-hyena", "dire-hyena", "grey-wolf", "dire-wolf", "coyote",
@@ -3065,6 +3137,10 @@ export const HUNTS_NOT_CARRION = new Set(["grave-hyena", "dire-hyena"]);
 // or gorge itself bold into a threat (all of that stays gated on SCAVENGERS).
 // The bone rooms clean their own dead; the rat just doesn't starve in them.
 export const VERMIN = new Set([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "cave-crayfish", "stone-mites",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "grubbet",
   "rat-king", // their king eats as they do: the warrens' dead, and the muck of the rooms when there is nothing dead
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer
   "the-old-raven", "the-raiding-fox", "the-dancer",
@@ -3455,6 +3531,10 @@ export const FEVER_RAT_AMBIENT = [
 // not (the aggro loop skips sleepers), so the same room at night is a thing
 // you can creep past, or open on. Same creature, opposite problem, by the hour.
 export const NAPPERS = new Set([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar", "mole-hound", "cave-bat", "grubbet", "stone-brood", "pale-salamander",
   // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
   "capercaillie",
   // THE HUSH (2026-11-19): it lies up as the other hunters do, by day's rule
@@ -3563,6 +3643,8 @@ export const NAPPERS = new Set([
 // the joke the original line was written for, and it forages on the tide rather
 // than the hour. The birds are not here for the obvious reason.
 export const NOCTURNAL = new Set([
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-bat",
   // mig 247, the mountain's rare blood: the-raiding-fox, the-tom, the-old-glutton
   "the-raiding-fox", "the-tom", "the-old-glutton",
 "otter", "dog-otter", "conger", "old-conger", "ford-eel", "silver-eel", "wrack-crab", "devil-crab", "bittern",
@@ -3837,6 +3919,15 @@ export const POSES: Record<string, { self: string; room: string; read: string; e
   },
 };
 export const REST_LINES: Record<string, string> = {
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat": "curled tight in a crack in the rock, the masked face tucked under its tail",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar": "stretched along the stone with its tail laid over its feet, its eyes shut to slits",
+  "mole-hound": "curled nose to tail, but the ears still turning, one and then the other",
+  "cave-bat": "hung upside down from the rock, wrapped in its own wings, squeaking in its sleep",
+  "grubbet": "packed in a heap with the rest of its colony, its snout twitching in its sleep",
+  "stone-brood": "lying flat on the stone with its blunt head laid on its forefeet, breathing slowly",
+  "pale-salamander": "lying flat and still on the bottom of the shallow water, its gills folded close",
   "water-vole": "hunched in a round of flattened reed at the water's edge, a brown ball with its nose tucked in",
   "the-baited-bear": "lying on its side in the road like a fallen wall, the chain pooled beside it, breathing slowly",
   "brown-bear": "curled in a bed of trodden bracken with its back to you, the whole hill of it rising and falling",
@@ -4197,6 +4288,8 @@ export const RAVEN_NEST_CAP = 4;      // a pool holds about four before the rave
 // that was itself summoned, and the call rides its own channel so nothing
 // cascades.
 export const PACK_CALLERS = new Set([
+  // the cave's creatures (mig 409, 2026-11-24)
+  "mole-hound", "digger",
   // mig 247, the mountain's rare blood: the-last-dog
   "the-last-dog",
 "grey-wolf", "dire-wolf", "coyote", "masterless-dog", "lead-dog",
@@ -4740,7 +4833,9 @@ export const DOOR_PRIZE_BOXES = new Set(["reliquary", "box-kept", "box-glade", "
 // hideaway or a gate. The boxes that roam were rewritten to fit any room (mig 406).
 export const STAYS_HOME_BOXES = new Set(["reeves-floor",
   "cairn-cache", "cleft-cache", "ridge-cache", "box-icehouse", "box-toll",
-  "box-tollshell", "box-ruin", "box-relay", "box-chapel", "carts-strongbox"]);
+  "box-tollshell", "box-ruin", "box-relay", "box-chapel", "carts-strongbox",
+  // the diggers' camps and the stone box keep their rooms (mig 410, 2026-11-24)
+  "box-first-camp", "box-cold-camp", "box-deep-camp", "box-stone"]);
 // ...EXCEPT THE BELL'S, NOW AND THEN (rome, 2026-10-26). The issue chest
 // refills for every ringing (mig 341), so it is twice a day, not once, and an
 // empty one now and then is the price of that: the last issue already given out
@@ -5301,6 +5396,60 @@ const OWN_GRAVID_ADDER_LINES = [
   "The gravid adder rubs its old skin away against the stone, and the stone takes it, and the new scales come up bright as water. The year turns, and the adder turns with it, the way it always has.",
 ];
 export const WITNESSED_LINES: Record<string, string[]> = {
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat": [
+    "The polecat goes into a crack in the rock head first and comes out of another a yard away, and looks at you as if you had missed something.",
+    "The polecat stops with one forepaw up and its masked face turned to a burrow mouth, and goes perfectly still.",
+  ],
+  "cave-crayfish": [
+    "The crayfish walks backward under a stone and leaves its two claws outside, open.",
+    "Two crayfish meet in the shallows and lock claws, and neither lets go, and they go round and round in the silt.",
+  ],
+  "stone-mites": [
+    "The grey film on the flags draws back into the joints all at once, as if the stone had breathed in.",
+    "The mites pour along the line of a joint toward where the cold air comes up strongest, and thicken there.",
+  ],
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar": [
+    "The cougar lies along the edge of the shelf with one forepaw hanging over the drop, and watches the floor below, where nothing moves, for a long time.",
+    "The cougar washes one paw slowly, and then the other, and then its face with the backs of both, and the paws come away dark.",
+  ],
+  "mole-hound": [
+    "The hound stops in the middle of the floor with its head up and turned, and waits, and every hound with it waits too. Then all of them go on at once, the same way.",
+    "A drip falls somewhere off in the dark and the hound's head goes round to it, and stays there long after the drip has stopped.",
+  ],
+  "river-gulper": [
+    "The water at the edge stirs and goes still. A long pale shape under it turns, without hurry, and lies along the edge again.",
+    "Something breaks the surface out in the dark water, a fin or a back, and goes down again without leaving a ring.",
+  ],
+  "cave-spider": [
+    "The spider walks a strand from one wall to the other, laying silk behind it, and comes back along the same strand, laying more.",
+    "Something wrapped in the silk moves. The spider goes over to it and touches it with one foreleg, and it stops moving.",
+  ],
+  "cave-bat": [
+    "The bat shifts on the rock, unfolds one wing, shakes it and folds it again, squeaking.",
+    "The bat drops off the rock and goes round the chamber once, close over your head, and hangs itself up again in the same place.",
+  ],
+  "digger": [
+    "The digger looks at the rock in front of him for a long time, then lifts the pick and puts it into the rock, once, and looks again.",
+    "The digger counts something on his fingers, his jaw working without a sound, and starts again from the beginning, and gets the same number.",
+  ],
+  "stone-brood": [
+    "The stone-brood lies with its head against the joint between two flags, breathing in the cold air that comes up through it.",
+    "The stone-brood turns its blind head slowly toward the west and holds it there, as if listening to something a long way off.",
+  ],
+  "the-lamp-man": [
+    "The lamp-man stops and trims his wick with his fingers, and the light steadies, and he goes on.",
+    "The lamp-man lifts his lamp and looks down the passage ahead of him, as if it might have changed since he last walked it.",
+  ],
+  "grubbet": [
+    "The grubbet roots along the foot of the wall with its snout, shoving the grit aside, eats something out of it, and roots on.",
+    "Two grubbets meet snout to snout in a burrow mouth and squeal at each other until one of them backs in.",
+  ],
+  "pale-salamander": [
+    "The salamander walks along the bottom of the pool very slowly, one foot and then the next, and stops, and does not move again.",
+    "The salamander's gills open and close, pink against the white of it, and a little cloud of silt lifts where it lies.",
+  ],
   "water-vole": [
     "The water vole sits up on the bank with a reed stem held in both hands and eats it from the bottom, steadily, the stem getting shorter and shorter until it has eaten the whole thing and looks about for another.",
   ],
@@ -5417,6 +5566,13 @@ export const OPEN_LURKERS = new Set(["cave-lion"]);
 // Effect: predators thin the herds the brood-mothers swell, and a player can
 // throw bait to start a scrap and slip past. Read/applied in ai.ts (predation).
 export const PREYS_ON = new Map<string, Set<string>>([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  ["polecat", new Set(["grubbet", "pale-salamander"])], // 16hp 2-4 over a grubbet (12, 2-3)
+  // the cave's creatures (mig 409, 2026-11-24)
+  ["cave-cougar", new Set(["grubbet", "pale-salamander", "mole-hound", "cave-bat", "polecat", "roe-deer", "wild-boar", "capercaillie", "hedgehog"])], // 46hp 5-9 over a lone hound (30, 3-6) and the boar (34, 3-6); the wood's game it hunts up top
+  ["mole-hound", new Set(["grubbet", "pale-salamander", "cave-bat", "polecat"])], // 30hp 3-6 over a bat (9, 1-3) and a polecat (16, 2-4)
+  ["cave-spider", new Set(["cave-bat", "grubbet", "pale-salamander", "cave-crayfish"])], // 36hp 3-7 over a bat (9, 1-3)
+  ["stone-brood", new Set(["grubbet", "pale-salamander", "stone-mites"])], // 40hp 4-8 over the mites (14, 1-2)
   // THE VILLAGES ARE AN EASY MEAL (rome, 2026-11-04): the Dens and the two
   // hamlets are rat-heavy, and the hunters around them take rats now - the dogs
   // and the tawny owl by the wood, the hounds and gulls on the Crossing, the
@@ -5716,6 +5872,8 @@ for (const h of BROOD_RAT_HUNTERS) PREYS_ON.get(h)!.add("brood-rat");
 // boar's OWN prey list. Walk in on one wolf and a boar and you know how that
 // ends. Walk in on four wolves and a boar and you do not.
 export const PACK_PREY = new Map<string, Map<string, number>>([
+  // the cave's creatures (mig 409, 2026-11-24)
+  ["mole-hound", new Map([["cave-cougar", 2]])], // two hounds (60hp, 6-12) take a cougar (46, 5-9)
   ["grey-wolf", new Map([["wild-boar", 2], ["old-boar", 3], ["grave-hyena", 2], ["feral-goat", 2], ["great-gull", 2], ["wood-stag", 3]])], // one wolf yields a carcass to a hyena; two do not — and the goat and the gull are both a fair match for one wolf, which is what the pack is FOR
   ["coyote", new Map([["feral-goat", 2], ["wildcat", 2], ["red-hind", 3]])], // a goat or a wildcat takes two of them, a hind the whole pack
   ["dire-wolf", new Map([["old-boar", 2]])],
@@ -5868,6 +6026,19 @@ export const BEAST_PATH_GROUND: Record<string, { through: string; outOf: string 
 // would read them - the shape of the foot and the gait - never the name; telling
 // a fox's line from a cat's round pads is the skill.
 export const TRACK_PRINTS: Record<string, string> = {
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat": "small five-toed prints in pairs, bounding, the paired prints close together and the gaps between them long",
+  "cave-crayfish": "fine scratches in the wet silt at the water's edge, and a cast claw",
+  "stone-mites": "a grey bloom on the flags along the joints, thinner where something has walked through it",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar": "round pads as big as your palm with no claw marks, set one before the other, the hind foot laid in the fore, and here and there the long swept mark of a tail",
+  "mole-hound": "long-toed dog prints, three and four sets together, every claw showing, wandering in loops as if following a sound and not a scent",
+  "cave-spider": "nothing on the floor, but a line of silk at knee height across the way, and another above it",
+  "digger": "nailed boot soles over each other, going one way heavy and coming back light",
+  "stone-brood": "a smooth trough pressed into the dust, with splayed four-toed prints either side of it",
+  "the-lamp-man": "a single line of boot prints, evenly spaced, and a dark spot of lamp oil every few steps",
+  "grubbet": "short splayed prints with long claw scrapes ahead of the toes, many of them, going in and out of holes",
+  "pale-salamander": "four-toed prints the size of a fingernail on the wet sand, going into the water and not coming out",
   "water-vole": "tiny star-shaped prints along the soft edge of the bank, and a runway pressed through the grass to the water",
   "rat-king": "a rat's print the size of a hand, a tail dragged heavy through the muck, and a hundred small ones all around it",
   "mountain-hare": "long hind feet set ahead of the small front ones, in bounds",
@@ -5925,6 +6096,10 @@ export const CROWS_DEAD_MIN_HP = 10;
 // something in PREYS_ON really hunts is sorted; a test holds it. Anything not
 // listed is middling - a roe, a goat, a fox, a dog, a wolf.
 export const KILL_SMALL = new Set([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat", "cave-crayfish", "stone-mites",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "grubbet", "pale-salamander", "cave-bat",
   // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
   "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
@@ -5971,6 +6146,8 @@ export const BREAK_LINES = [
 // for them starvation has nowhere to go but your torchlight. (three-hound is a
 // SENTINEL and takes the room on its own terms — it stays out.)
 export const STARVE_HUNTERS = new Set([
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar", "mole-hound",
   // mig 247, the mountain's rare blood: the-blue-fox, the-tom, the-old-glutton
   "the-blue-fox", "the-tom", "the-old-glutton",
 "dire-hyena", "grave-hyena", "albino-rat", "pale-crawler", "pale-stalker", "masterless-dog", "lead-dog", "grey-wolf", "dire-wolf", "coyote",
@@ -6095,6 +6272,10 @@ export const SCAVENGER_BOLD_AT = 3; // corpses eaten before it turns bold
 // hollow have nothing on them at all (ai.edibleBody).
 const MAN = 28;
 export const BODY_SIZE = new Map<string, number>([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  ["polecat", 2], ["cave-crayfish", 1], ["stone-mites", 1],
+  // the cave's creatures (mig 409, 2026-11-24)
+  ["grubbet", 2], ["pale-salamander", 1], ["cave-bat", 1], ["cave-spider", 6],
   // the rats and the voles
   ["rat", 1], ["fleet-rat", 1], ["water-vole", 1], ["brood-rat", 2], ["fever-rat", 2], ["albino-rat", 3], ["rat-king", 8],
   // the small furred things
@@ -6170,6 +6351,8 @@ export const KING_WORDS: Record<string, string[]> = {
   ],
 };
 export const DROWNERS = new Set(["the-drowned", "drowned-hulk", "drowned-god", "the-mire-walker",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "river-gulper",
   // THE MILLER (mig 188) is the first drowned thing on the SURFACE, and he is
   // here on purpose: the Crossing is the great water, and the seize-and-hold
   // that makes deep water frightening should be a law this country already has
@@ -6202,7 +6385,7 @@ export const BLOWN_TAKEN_MULT = 1.5;
 // HEAVIES are huge and fresh at the start: a landed blow can knock you down
 // (your next swing is lost). Every blow it lands tires it, and a tired one hits
 // softer and knocks nobody down. Rest puts it back to fresh.
-export const HEAVIES = new Set(["the-baited-bear", "brown-bear", "cave-lion", "glutton", "the-old-glutton", "the-gaunt", "the-chain-breaker"]);
+export const HEAVIES = new Set(["the-baited-bear", "brown-bear", "cave-lion", "glutton", "the-old-glutton", "the-gaunt", "the-chain-breaker", "stone-sleeper"]);
 export const HEAVY_KNOCK_ODDS = 0.3;    // while fresh; a guarded stance halves it, worn mass shrugs it like a stun
 // PACKS work together. The animals you are not swinging at come in from the
 // side and bite harder - while the lead one is alive to hold them to it. The lead
@@ -6222,12 +6405,14 @@ export const PACK_FLANK_MULT = 1.4;
 export const PACK_LEADERLESS_MS = 10 * 60_000;
 // SWARMS are strength in numbers: every other one on you makes this one's bite
 // worse, so each one killed takes a piece of the rest with it.
-export const SWARMS = new Set(["rat", "fleet-rat", "brood-rat", "albino-rat", "wrack-crab", "devil-crab"]);
+export const SWARMS = new Set(["rat", "fleet-rat", "brood-rat", "albino-rat", "wrack-crab", "devil-crab", "grubbet"]);
 export const SWARM_STEP = 0.25;         // per other swarm-mate on the same victim
 export const SWARM_MAX_OTHERS = 4;
 // STRIKERS are too quick for slow steel: a heavy weapon misses one far more than
 // a light one. When it bites you it is committed, and your next swing can't miss.
 export const STRIKERS = new Set(["gill-adder", "fen-viper", "stone-adder", "the-gravid-adder", "ford-eel", "silver-eel",
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat",
   "ermine", "hill-fox", "snow-fox", "the-blue-fox", "the-raiding-fox", "wildcat", "the-tom", "the-dancer", "lynx", "otter", "dog-otter"]);
 export const STRIKER_DODGE = [0.4, 0.15, 0];  // by weapon speed 1 / 2 / 3+
 export const STRIKER_DODGE_BARE = 0.15;
@@ -6299,7 +6484,7 @@ export const STALK_GIVEUP_MS = 5 * 60_000;
 export const STALK_RANGE = 5;
 // PINCHERS take an arm instead of dragging you under: the seize hold (you can't
 // run, and you tear loose the same way), and your blows are weak while it has you.
-export const PINCHERS = new Set(["the-great-crab", "the-great-devil-crab"]);
+export const PINCHERS = new Set(["the-great-crab", "the-great-devil-crab", "cave-crayfish"]);
 export const PIN_ODDS = 0.2;
 export const PINNED_DMG_MULT = 0.6;
 // THE HOLLOW never run and feel nothing: an edge skates off bone, weight breaks
@@ -6319,6 +6504,60 @@ export const FOLK = new Set(["the-sapper", "the-cook", "the-bellfounder", "the-c
   "the-salt-widow", "the-drove-master", "rag-and-bone"]);
 export const FOLK_GUARD_AT = 0.5;       // share of its health
 export const FOLK_RECKLESS_AT = 0.2;
+
+// THE CAVE UNDER THE WOOD FIGHTS IN ITS OWN WAYS (cave-plan.md step 4, cave.ts,
+// 2026-11-24). Each answers the state of the fight or the light, never a clock.
+// The mole hounds' ears: footfalls and fights carry to them this many rooms off,
+// and a footfall brings one on at these odds (a light tread scales them down).
+export const HEARS_FAR = new Set(["mole-hound"]);
+export const HEAR_ROOMS = 2;
+export const FOOTFALL_HEED_ODDS = 0.5;
+// ...and their eyes, made for no light at all: a flame in their faces takes the
+// weight out of their bite.
+export const LIGHT_DAZZLED = new Set(["mole-hound"]);
+export const DAZZLED_MULT = 0.7;
+// WHAT GOES FOR YOUR LIGHT: on a landed blow, the odds it puts the flame out. The
+// lamp-man shutters a lantern as well; the rest only take an open flame.
+export const LIGHT_TAKERS = new Map<string, number>([["cave-bat", 0.15], ["digger", 0.2], ["the-lamp-man", 0.4]]);
+export const LANTERN_TAKERS = new Set(["the-lamp-man"]);
+// A cat that breaks off when the fight turns on it, back into the dark, once
+// until it is whole again.
+export const BREAKS_OFF = new Set(["cave-cougar"]);
+export const BREAK_OFF_AT = 0.4;
+// ...and drags what it kills outside the cave down into it, to eat at home.
+export const KILL_DRAGGERS = new Set(["cave-cougar"]);
+// A bite that holds, and the longer it holds the worse it goes.
+export const HOLD_BITERS = new Set(["cave-spider"]);
+export const HOLD_BITE_ODDS = 0.3;
+export const HOLD_STEP = 0.25;            // each blow it lands while it has you, this much more
+export const HOLD_MAX = 2;                // ...up to twice the bite
+// The diggers call, and the ones in earshot come.
+export const CALLERS = new Set(["digger"]);
+export const CALL_ROOMS = 2;
+export const CALL_EVERY_MS = 30_000;
+// THE LAMP-MAN. Hurt, he shutters his lamp and is gone, and comes back on you out
+// of the dark from another way; a fire in the room he cannot put out takes that
+// away. In your dark his first blow is the worst and yours go wide.
+export const LAMP_MEN = new Set(["the-lamp-man"]);
+export const SHUTTER_AT = 0.5;            // first shutter, as a share of his health...
+export const SHUTTER_STEP = 0.25;         // ...and again each time he loses this much more
+export const SHUTTER_BACK_MS: [number, number] = [15_000, 35_000];
+export const LAMP_RETURN_ROOMS = 2;
+export const DARK_FIRST_MULT = 1.5;
+export const DARK_MISS_ODDS = 0.25;
+// THE BATS GO OUT (cave-plan.md event 2). At dusk every bat makes for the nearest
+// mouth and at dawn for its roost, and while they are moving they nip at anyone
+// in their way and go through an open flame.
+export const FLIGHT_BATS = new Set(["cave-bat"]);
+// CAUGHT ONLY IN THE WEB (2026-11-24). A hunter named here takes the prey named
+// with it only in rooms of the cave ground listed: a spider catches a bat in its
+// own silk, never on the open rock.
+export const CATCHES_ONLY_ON = new Map<string, Map<string, string[]>>([
+  ["cave-spider", new Map([["cave-bat", ["silk"]]])],
+]);
+export const FLIGHT_NIP_EVERY_MS = 6000;
+export const FLIGHT_NIP_ODDS = 0.35;
+export const FLIGHT_SNUFF_ODDS = 0.2;
 
 export const SEIZE_ODDS = 0.2;        // soft: a blow only sometimes takes hold
 export const SEIZE_BREAK_ODDS = 0.5;  // soft: about half the time you wrench loose each beat
@@ -6349,6 +6588,8 @@ export const FERRY_DRAG_MAX = 3;      // and never more than three rooms — a f
 // you never catch sight of. It lives in the lying cores, so it finds you at
 // exactly the moment you have stopped knowing the way back.
 export const LURKERS = new Set(["pale-crawler", "pale-stalker", "the-follower", "something-ahead", "root-thing",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar",
   // THE HIGH GROUND (mig 245). The first LARGE animal in the world to wait
   // unseen — every other lurker is a thin thing in the dark, and the whole
   // shock of this one is that ninety-six hit points were in the room with you
@@ -6418,6 +6659,8 @@ export const PRICKLY: Record<string, number> = { "hedgehog": 2 };
 // ...AND THE MOUNTAIN'S CATS KILL FOR SPORT TOO (rome, 2026-11-11): the wildcat,
 // its rare blood the tom, the lynx and the cave lion, by the same rule.
 export const SURPLUS_KILLERS = new Set(["hill-fox", "snow-fox", "the-raiding-fox", "the-blue-fox",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar",
   "wildcat", "the-tom", "lynx", "cave-lion"]);
 export const SURPLUS_ODDS = 0.25;
 export const SURPLUS_REARM_MS = 2 * 3_600_000;
@@ -6607,6 +6850,8 @@ export const FIREKEEPERS = new Set(["charcoal-burner"]);
 // for. This fixes the tell and leaves what they are alone; promoting either to
 // HOLLOW outright stays a separate call.
 export const PROVISIONED = new Set([
+  // the cave's creatures (mig 409, 2026-11-24): the sleeper lies where it lies (the diggers and the lamp-man are dead: HOLLOW)
+  "stone-sleeper",
   // mig 247, the mountain's rare blood: the-last-dog, the-one-who-stayed, the-butter-wife
   "the-last-dog", "the-one-who-stayed", "the-butter-wife",
 "charcoal-burner", "the-woodward", "the-keeper-of-the-holding",
@@ -7386,9 +7631,17 @@ export const COILS = new Set([
   "stone-adder",
 ]);
 export const SMALL_BITE = new Set([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "cave-crayfish", "stone-mites",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "grubbet", "cave-bat",
   "rat", "fleet-rat", "brood-rat", "albino-rat", "wrack-crab", "devil-crab",
 ]);
 export const BITERS = new Set([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "polecat", "stone-mites",
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar", "mole-hound", "river-gulper", "cave-spider", "cave-bat", "stone-brood", "stone-sleeper", "grubbet",
   // THE HUSH (2026-11-19): what opens you is teeth, not a blow
   "the-hush",
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer, the-blue-fox, the-tom, the-old-glutton
@@ -7468,6 +7721,8 @@ export const DRAKE_ROUSED_MS = 30 * 60_000;
 // without the mechanics coming with it.
 export const SUMMIT_BOSSES = new Set<string>([SUMMIT_BOSS, "the-pale-drake"]);
 export const AGGRESSIVE = new Set([
+  // the cave's creatures (mig 409, 2026-11-24)
+  "digger", "stone-brood", "stone-sleeper", "the-lamp-man",
   "rat-king", // the warrens are its, and so is whoever walks in
   // mig 247, the mountain's rare blood: the-one-who-stayed, the-tom, the-pale-drake
   "the-one-who-stayed", "the-tom", "the-pale-drake",
@@ -8063,6 +8318,39 @@ export const FIRE_ITEMS = new Set<string>([]);
 // without a lit light source and you see NOTHING — no room, no exits, no way to
 // map it. A torch reveals it. (057; search/flood/map-blackout are follow-ons.)
 export const DARK_ROOMS = new Set([
+  // THE CAVE UNDER THE WOOD (2026-11-22): every room past the six mouths that
+  // no light of its own reaches. The whole upper cave; on the river floor the dry
+  // stretches where nothing glows (the diggers' road, the roosts, the pools under
+  // rock); at the bottom, wherever spoil, a fall or standing water covers the
+  // stone; and all of the under-stone. Lit rooms say what lights them.
+  "the-root-hang", "the-root-curtain", "the-ditch-water", "the-silted-pipe", "the-wind-crawl",
+  "the-pawed-sand", "the-breakdown", "the-north-squeeze", "the-dripping-ledge", "the-rat-run",
+  "the-rat-shelf", "the-gnawed-floor", "the-taproot", "the-drip-stones", "the-cold-draught", "the-four-ways",
+  "the-root-chimney", "the-scored-wall", "the-blind-turn", "the-clay-slide", "the-echo-gallery",
+  "the-bone-spill", "the-hounds-bed", "the-rattling-way", "the-loose-stones", "the-sounding-room",
+  "the-shale-floor", "the-sand-floor", "the-bat-chimney", "the-gnaw-hole", "the-narrow-neck", "the-lip",
+  "the-overhang", "the-thin-ledge", "the-cats-lie", "the-scree-slope", "the-hollow", "the-fallen-slab",
+  "the-under-ledge", "the-hollows-throat", "the-cold-well", "the-split-floor", "the-rubble-slope",
+  "the-drag-way", "the-cougars-larder", "the-wet-passage", "the-weeping-crawl", "the-west-gallery",
+  "the-rimstone", "the-calcite-crawl", "the-flowstone", "the-curtains", "the-bears-stair", "the-cold-breath",
+  "the-whistling-hole", "the-bear-path", "the-scored-drop", "the-claw-floor", "the-bears-wallow",
+  "the-dark-turn", "the-slick", "the-narrows", "the-shaft-head", "the-ox-bow", "the-old-water-line",
+  "the-dry-sink", "the-sand-bank", "the-listening-floor", "the-wet-step", "the-sound-hole", "the-hauled-way",
+  "the-kill-hole", "the-low-arch", "the-tight-bend", "the-sump-mouth", "the-black-water", "the-under-pool",
+  "the-deep-pool", "the-rapids", "the-falls-foot", "the-river-turn", "the-low-roof", "the-silt-banks",
+  "the-spring-foot", "the-roost-water", "the-guano-slope", "the-north-roost", "the-silk-hall",
+  "the-wrapped-things", "the-bat-way", "the-smoked-passage", "the-ladder-foot", "the-pick-work",
+  "the-first-camp", "the-lamp-store", "the-tally-wall", "the-barrow-run", "the-propped-way",
+  "the-sagging-props", "the-stone-store", "the-widened-squeeze", "the-cold-camp", "the-sleeping-shelf",
+  "the-water-butts", "the-carry-way", "the-mortar-trough", "the-pick-marks", "the-first-stopping",
+  "the-carried-stone", "the-stopping", "the-diggers-stair", "the-bridge-end", "the-dark-stretch",
+  "the-dry-gallery", "the-crushed-props", "the-cut-through", "the-broken-ladder", "the-wet-cut",
+  "the-crossed-ways", "the-well-foot", "the-dry-stretch", "the-dead-glow", "the-hanging-silk",
+  "the-roost-edge", "the-east-roost", "the-spiders-gallery", "the-egg-sacs", "the-roost-floor",
+  "the-guano-banks", "the-well-passage", "the-black-crawl", "the-dry-pools", "the-glass-pool",
+  "the-cold-sand", "the-old-sink", "the-spoil-heaps", "the-last-heading", "the-rock-fall", "the-sink-foot",
+  "the-black-water-hall", "the-buried-hall", "the-drowned-flags", "the-under-steps", "the-low-gallery-under",
+  "the-shelved-room", "the-box-chamber", "the-worn-floor", "the-faces-down", "the-open-joint",
   // THE BEAR CAVES (mig 319): every room behind a mouth. The mouths keep the
   // day, the way the sea cave's does.
   "the-ridge-cave-drop", "the-ridge-cave-fork", "the-ridge-cave-pocket", "the-ridge-cave-squeeze", "the-ridge-cave",
@@ -8293,6 +8581,13 @@ export const RAT_KING_KEEPER_LINES = [
 // Resolved to room ids at world load by terrain (OWN_FORAGE_ROOMS); a creature
 // not named keeps the band rule.
 export const OWN_FORAGE_GROUNDS: Record<string, Set<string>> = {
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "cave-crayfish": new Set(["cave-glow-river", "cave-dark-river"]), // the river's bed and what dies in it
+  "stone-mites": new Set(["stone-way", "stone-scraped", "stone-pillars", "stone-buried"]), // the joints of the dressed stone
+  // the cave's creatures (mig 409, 2026-11-24)
+  "grubbet": new Set(["cave-bones", "cave-camp", "cave-deep-camp", "cave-stopping", "cave-roost", "stone-buried"]), // the leavings, the camps, the guano, the spoil
+  "pale-salamander": new Set(["cave-glow-river", "cave-dark-river", "cave-foxfire", "cave-wet"]), // what drifts into the pools
+  "cave-bat": new Set(["cave-glow-river", "cave-dark-river"]), // the midges over the river
   "brown-bear": new Set(["wet", "heath", "glade", "holding"]),
 };
 export const OWN_FORAGE_ROOMS = new Map<string, Set<string>>();
@@ -8485,6 +8780,8 @@ export const CONDITION_THICK_AFTER_MS = 2 * 3_600_000;   // held this long befor
 // takes it from the air or the reeds, not the bears that mostly forage, not a
 // sentinel on its post.
 export const THICK_HUNTERS = new Set<string>([
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar", "mole-hound",
   "grey-wolf", "hill-wolf", "lead-wolf", "dire-wolf", "coyote",
   "drove-dog", "masterless-dog", "lead-dog", "marsh-hound", "a-lymer",
   "grave-hyena", "dire-hyena", "hill-fox", "snow-fox",
@@ -8533,6 +8830,10 @@ export const CRAG_ROOMS = new Set<string>(MOUNTAIN_GROUND.crag);
 // animal before it is anything else. Named here so the next grazer is one line
 // and not a hunt through ai.ts.
 export const GRAZERS = new Set<string>([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  "cave-crayfish", "stone-mites",
+  // the cave's creatures (mig 409, 2026-11-24): the rats on the leavings and the guano, the salamanders on what drifts into the pools, the bats on the midges over the river
+  "grubbet", "pale-salamander", "cave-bat",
   // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
   "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
@@ -9099,17 +9400,18 @@ export const WOOD_RULES: [string, RegExp][] = [
   ["cave-passage", /^the-(ridge-cave-(drop|fork|squeeze)|oak-cave-(crawl|neck)|wall-cave-(passage|turn)|boundary-cave-slope)$/],
   ["cave", /^the-(ridge|oak|wall|boundary|pile)-cave(-[a-z]+)?$/],
   // beneath the sunken wood: the dark under the root-ceiling. No sky and no weather, so it takes night and night-torch only
-  ["under-roots", /^the-(black-loam|buried-lane|clay-shelf|drip-line|flint-floor|last-light|low-sump|lower-ditch|old-course|still-pool|tree-fall|under-roots)$/],
+  ["under-roots", /^the-(black-loam|buried-lane|clay-shelf|drip-line|flint-floor|last-light|low-sump|lower-ditch|old-course|still-pool|tree-fall|under-roots|dark-behind)$/],
   // the wood that fell in, walled by raw earth banks
-  ["sunken", /^the-(bottom-of-it|buried-wall|cold-seep|earth-fall|fern-pit|green-dark|lost-stand|old-ditch|slip|sunken-wood|under-eaves|white-roots)$/],
+  // + the Gatehouse Road's holloway and the hollow under the Deep Roots (2026-11-22, the wood's new ways to the cave)
+  ["sunken", /^the-(bottom-of-it|buried-wall|cold-seep|earth-fall|fern-pit|green-dark|lost-stand|old-ditch|slip|sunken-wood|under-eaves|white-roots|sunk-moss|under-bank|holloway-head|deep-holloway|root-bridge|rotted-cart|washout)$/],
   // the moated manor gone to ruin (its Hall Floor has a picture of its own)
   ["holding", /^the-(chapel-shell|dovecote|fish-house|gate-arch|icehouse|kitchen-range|solar|stable-range|well-court|wolf-pits)$/],
   // where the wood gives out into gorse, sand and scrub
   ["heath", /^the-(broken-ground|dry-heath|flint-scatter|gorse-brake|grey-scrub|heath-edge|pale-grass|rabbit-warren|sand-cut|stunted-oaks|thorn-waste|wind-gap)$/],
   // alder and willow standing in water, the mire, and the ponds and ditches dug into it
-  ["wet", /^the-(alder-carr|black-alders|black-mud|black-pool|brown-water|drinking-pool|drowned-holly|drowned-roots|eel-ditch|far-mire|far-south-turning|fishponds|flooded-ride|frog-chorus|heronry|leaning-alders|low-mist|mire-edge|moat-bank|moss-floor|old-pond|osier-beds|quaking-ground|reed-break|rush-bed|sedge-flat|silted-pond|sodden-ground|south-ride|spring-head|standing-water|stew-pond|still-air|sunk-fence|wet-hollow|willow-break|willow-margin|withy-hut)$/],
+  ["wet", /^the-(alder-carr|black-alders|black-mud|black-pool|brown-water|drinking-pool|drowned-holly|drowned-roots|eel-ditch|far-mire|far-south-turning|fishponds|flooded-ride|frog-chorus|heronry|leaning-alders|low-mist|mire-edge|moat-bank|moss-floor|old-pond|osier-beds|quaking-ground|reed-break|rush-bed|sedge-flat|silted-pond|sodden-ground|south-ride|spring-head|standing-water|stew-pond|still-air|sunk-fence|wet-hollow|willow-break|willow-margin|withy-hut|wet-lane|lanes-end)$/],
   // open grass inside the wood: clearings, lawns and the cut rides
-  ["glade", /^the-(deer-lawn|empty-ride|first-clearing|flood-meadow|long-glade|north-marches|north-ride|open-canopy|sunken-lawn|west-ride|white-ride)$/],
+  ["glade", /^the-(deer-lawn|empty-ride|first-clearing|flood-meadow|long-glade|north-marches|north-ride|open-canopy|sunken-lawn|west-ride|white-ride|cut-line|tally-posts)$/],
   // THE WOOD SPLIT FURTHER (rome, 2026-10-27): six grounds out of the plain
   // wood, each named room by room from what the room says it is.
   // the worked wood: felling, stumps, saw pit, cord stacks, skid road
@@ -9117,7 +9419,7 @@ export const WOOD_RULES: [string, RegExp][] = [
   // the cut and coppiced wet: withy beds, willow stools, soaking pits
   ["wood-osier", /^the-(withy-holt|cut-osiers|soaking-pit|willow-stools|bundle-ground|wet-ride|pollard-line|holt-drain|osier-carr|peeling-bank|basket-ground|withy-drain)$/],
   // the castle's outer works the wood grew back over: ditches, banks, footings
-  ["wood-bailey", /^the-(paved-road|road-ruts|outer-ditch|counterscarp|barbican-footings|killing-ground|guard-footings|pay-stone|mounting-block|outer-bailey|bailey-wall|rampart-walk|old-palisade|ward-ditch|turning-bay|tilt-yard|horse-pond|boundary-cross)$/],
+  ["wood-bailey", /^the-(paved-road|road-ruts|outer-ditch|counterscarp|barbican-footings|killing-ground|guard-footings|pay-stone|mounting-block|outer-bailey|bailey-wall|rampart-walk|old-palisade|ward-ditch|turning-bay|tilt-yard|horse-pond|boundary-cross|postern-gap|back-road|sunk-paving|fallen-milestone|road-bend)$/],
   // the colliers' floors and the old fire
   ["wood-burnt", /^the-(charcoal-flat|burnt-stand|charcoal-ring|old-burn|burners-flat)$/],
   // holly, yew and the dark under them
@@ -9128,6 +9430,46 @@ export const WOOD_RULES: [string, RegExp][] = [
   ["wood", /^the-(ant-hills|ash-heap|ash-stand|badger-ground|blind-corner|boar-ground|boundary-oak|bracken-edge|bracken-sea|bramble-margin|broken-avenue|charcoal-hut|close-dark|close-ground|crooked-stand|crow-roost|deer-fence|deer-path|dry-gully|eaves|fallen-giant|gnawed-stand|grey-lie|fallen-wall|far-hollow|far-north-turning|fox-earths|grey-thicket|hollow-beeches|hornbeam-row|hunters-stand|keepers-approach|last-oaks|leaning-wood|lichen-wood|lightning-split|lime-kiln|listening-stand|mast-fall|nettle-glade|north-turning|old-coppice|orchard-gone-wild|park-pale|picked-bones|pine-dark|poachers-camp|pollard-row|same-tree|south-turning|stone-pile|sunken-ditch|swallowing|thin-soil|timber-stack|turned-ground|turning|turning-leaves|white-ground|windfall)$/],
   // everything else in the wood is the wood
   ["wood", /^/],
+];
+// THE CAVE UNDER THE WOOD OWNS ITS GROUND (2026-11-22), named room by room as
+// the wood's is, from what each room says it is (cave-plan.md, "Plates"). Every
+// room is named, so there is no catch-all: a room added later and left off this
+// list fails test-terrain-covers instead of quietly taking some other ground.
+// Dark grounds take night and night-torch; the mouths keep the day as well; the
+// grounds that light themselves (glow-worms, foxfire, the camp fire, the stone's
+// own light) take their own lit picture as night, and the torch handed back.
+export const CAVE_RULES: [string, RegExp][] = [
+  // the upper cave
+  ["cave-roots", /^the-(root-hang|root-curtain|taproot|root-chimney|rubble-slope)$/],
+  ["cave-mouths", /^the-(ditch-sink|root-fall|heave|break-pool|spring-throat|fern-hole)$/],
+  ["cave-wet", /^the-(ditch-water|silted-pipe|wet-passage|weeping-crawl|bears-wallow|slick|wet-step|sound-hole)$/],
+  ["cave-rough", /^the-(wind-crawl|breakdown|north-squeeze|dripping-ledge|cold-draught|scored-wall|blind-turn|clay-slide|hounds-bed|rattling-way|loose-stones|bat-chimney|narrow-neck|drag-way|bears-stair|cold-breath|whistling-hole|bear-path|scored-drop|dark-turn|narrows|shaft-head|hauled-way|low-arch|tight-bend)$/],
+  ["cave-gallery", /^the-(pawed-sand|four-ways|echo-gallery|sounding-room|shale-floor|sand-floor|west-gallery|ox-bow|old-water-line|dry-sink|sand-bank|listening-floor)$/],
+  ["cave-bones", /^the-(rat-run|rat-shelf|gnawed-floor|bone-spill|gnaw-hole|cougars-larder|claw-floor|kill-hole)$/],
+  ["cave-dripstone", /^the-(drip-stones|rimstone|calcite-crawl|flowstone|curtains)$/],
+  ["cave-ledge", /^the-(lip|overhang|thin-ledge|cats-lie)$/],
+  ["cave-hollow", /^the-(scree-slope|hollow|fallen-slab|under-ledge|hollows-throat|cold-well|split-floor)$/],
+  ["cave-dark-river", /^the-(sump-mouth|black-water|under-pool|deep-pool|rapids|falls-foot|river-turn|low-roof|silt-banks|spring-foot|cold-sand)$/],
+  // the river floor
+  ["cave-glow-river", /^the-(glow-reach|starry-roof|river-shingle|river-bend|diggers-bridge|deep-run|ford|long-pool|river-shelf|narrowing|falls-pool|glow-tunnel|wide-water|still-reach|rising-water|under-spring|salamander-pools)$/],
+  ["cave-foxfire", /^the-(foxfire-wall|foxfire-cut|weeping-wall|seep-hall|shaft-foot|wet-ledge|glow-crawl|pale-pools|foxfire-hall|blue-passage|lit-steps|spring-gallery)$/],
+  ["cave-roost", /^the-(roost-water|guano-slope|north-roost|bat-way|roost-edge|east-roost|roost-floor|guano-banks)$/],
+  ["cave-silk", /^the-(silk-hall|wrapped-things|hanging-silk|spiders-gallery|egg-sacs)$/],
+  ["cave-workings", /^the-(smoked-passage|ladder-foot|pick-work|lamp-store|tally-wall|barrow-run|propped-way|sagging-props|stone-store|widened-squeeze|water-butts|carry-way|mortar-trough|pick-marks|carried-stone|diggers-stair|bridge-end|crushed-props|cut-through|broken-ladder|wet-cut|crossed-ways|well-foot|dry-stretch)$/],
+  ["cave-camp", /^the-(first-camp|cold-camp|sleeping-shelf)$/],
+  ["cave-stopping", /^the-(first-stopping|stopping)$/],
+  ["cave-deep-camp", /^the-(deep-camp)$/],
+  ["cave-dry-dark", /^the-(dark-stretch|dry-gallery|dead-glow|well-passage|black-crawl|dry-pools|glass-pool|old-sink)$/],
+  // the dressed stone
+  ["stone-way", /^the-(stair-foot|first-flags|straight-way|cold-road|cross-hall|long-flags|sunk-flags|cleared-way|south-road|near-sink|west-door|north-steps|cold-passage|hum|ante-room|ring-door|cold-pit|pale-steps|carved-rings|quiet-way|south-cell|east-hall|east-way|cold-cell|sheet-water|east-road|east-steps|side-arch)$/],
+  ["stone-buried", /^the-(spoil-heaps|last-heading|rock-fall|sink-foot|buried-hall)$/],
+  ["stone-pillars", /^the-(pillared-way|pillar-hall|south-hall|bone-pillars|pillared-east)$/],
+  ["stone-ring", /^the-(ring-of-nine)$/],
+  ["stone-scraped", /^the-(west-hall|brood-way|brood-nests|cracked-flags|pale-walls|sleepers-door|back-way|groove)$/],
+  ["stone-hollow", /^the-(worn-hollow)$/],
+  ["stone-drowned", /^the-(black-water-hall|drowned-flags)$/],
+  // the under-stone
+  ["under-stone", /^the-(under-steps|low-gallery-under|shelved-room|box-chamber|worn-floor|faces-down|open-joint)$/],
 ];
 // THE DENS OWN THEIR GROUND (rome, 2026-09-30). Sixty rooms, the smallest region,
 // on three grounds of their own and one borrowed: the street (the hamlet plate,
@@ -9518,6 +9860,16 @@ export const ART_ROOMS = new Set<string>([
 // of its own; each paints its region's open ground (siege-lines, fort-waste) with
 // the rain drawn falling on it. So they are open ground to the world too, and the
 // rain, the wind and the dark come into them as they do on the ground around.
+// THE CAVE'S SIX MOUTHS (2026-11-22): daylight comes down into each from an
+// opening overhead, so its picture keeps the wood's hour (day, night, the torch)
+// the way a roof in open country does, and keeps the weather off its floor. The
+// words never name the hour: they say whatever light the wood has.
+// THE CAVE'S STANDING WATER (2026-11-22): the drowned stone is drawn dry and the
+// page lays the water over it, always, at the depth the room's words give it
+// (events.roomWater, 1-3): a hand deep in the Black Water Hall, over the knee
+// on the Drowned Flags.
+export const CAVE_STANDING_WATER: Record<string, number> = { "the-black-water-hall": 1, "the-drowned-flags": 2 };
+export const CAVE_MOUTHS = new Set<string>(["the-ditch-sink", "the-root-fall", "the-heave", "the-break-pool", "the-spring-throat", "the-fern-hole"]);
 export const ROOF_SHOWS_OUTSIDE = new Set<string>(["the-mine-mouth", "the-village-smithy"]);
 export const INDOOR_ROOMS = new Set<string>([
   // THE BEAR CAVES (mig 319): every room behind a mouth. The mouths keep the
@@ -10567,6 +10919,20 @@ export const LANTERN_FAT_MS = 30 * 60_000;      // what one lump of fat burns fo
 export const LANTERN_WELL_MS = 3 * LANTERN_FAT_MS; // the well holds three
 export const LANTERN_WEAR = 5;                  // per lighting: twenty lightings to a mend
 export const LANTERN_MEND_IRON = 1;             // bars of forge iron the bench wants for it
+// EVERY LANTERN (the cave's two lamps, mig 410, 2026-11-24). Each burns fat out of a
+// well; `burn` is how fast against the hooded lantern, so a lump lasts
+// LANTERN_FAT_MS / burn and the well holds three of those. `belt`: it hangs at
+// the belt, so it takes no hand (a shield keeps its guard, a two-handed weapon
+// leaves it lit). `steady`: no blow puts it out.
+export const LANTERNS: Record<string, { burn: number; belt?: boolean; steady?: boolean }> = {
+  [LANTERN_ITEM]: { burn: 1 },
+  "belt-lamp": { burn: 2, belt: true },
+  "lamp-mans-lamp": { burn: 0.5, steady: true },
+};
+export function isLantern(id: string | undefined): boolean { return !!id && id in LANTERNS; }
+/** What one lump of fat burns for in this lantern, and what its well holds. */
+export function lumpMs(id: string | undefined): number { return LANTERN_FAT_MS / (LANTERNS[id ?? ""]?.burn ?? 1); }
+export function wellMs(id: string | undefined): number { return LANTERN_WELL_MS / (LANTERNS[id ?? ""]?.burn ?? 1); }
 export const FAT_ITEM = "fat";
 // WHAT GIVES FAT (on top of what each already drops): the deep's crawler, the
 // steady supply, comes back every seventy seconds; the seals and the boars
@@ -10577,6 +10943,8 @@ export const FAT_DROPS: Record<string, number> = {
   "bull-seal": 0.35,
   "wild-boar": 0.2,
   "old-boar": 0.3,
+  // the cave's dead men carried the camp's fat down for the lamps (mig 410)
+  "digger": 0.3, "the-lamp-man": 0.5,
 };
 // THE DEN'S MATERIALS OFF A KILL (rome, 2026-10-28: the keeper should not be
 // the only place they come from). Cut from the body like the fat, on top of
@@ -10584,6 +10952,8 @@ export const FAT_DROPS: Record<string, number> = {
 // horn from what carries horn, tusk, antler or shell, and from the walking dead.
 // The bigger the animal, the likelier.
 export const LEATHER_DROPS: Record<string, number> = {
+  // the cave's creatures (mig 409, 2026-11-24)
+  "cave-cougar": 0.3, "mole-hound": 0.2, "stone-brood": 0.25,
   "roe-deer": 0.25, "white-roe": 0.3, "red-hind": 0.35, "red-stag": 0.5, "wood-stag": 0.5,
   "wild-boar": 0.35, "old-boar": 0.5, "feral-goat": 0.3, "old-billy": 0.45,
   "grey-wolf": 0.25, "hill-wolf": 0.3, "dire-wolf": 0.4, "lead-wolf": 0.4,
@@ -10716,6 +11086,10 @@ export const WARDHIDE_WOUND_ODDS = 0.5;
 // entry here falls back to every-hit (openWound), so a future one is never
 // silently declawed — but every current bleeder is listed.
 export const BLEED_ODDS = new Map<string, number>([
+  // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
+  ["polecat", 0.10], ["stone-mites", 0.08],
+  // the cave's creatures (mig 409, 2026-11-24)
+  ["cave-cougar", 0.15], ["mole-hound", 0.15], ["river-gulper", 0.10], ["cave-spider", 0.10], ["cave-bat", 0.08], ["stone-brood", 0.15], ["stone-sleeper", 0.20], ["grubbet", 0.10],
   ["rat-king", 0.15],            // a rat's filthy teeth, a king's size
   ["rat", 0.10],           // scabby rat — filthy teeth, a wound now and then
   // The east road (mig 188). The adder is the outlier in the whole table and is
@@ -10925,6 +11299,8 @@ export const VITALS_HOUND = 1 / 5000; // the sentinel's tiny pierce-only vitals 
 // fells the wood or opens the drowned. Not every boss is equal. The Drowned
 // God is not here and never falls this way.
 export const BIG_VITALS: Record<string, { by: "point" | "edge" | "blunt"; oneIn: number }> = {
+  // the cave's creatures (mig 409, 2026-11-24)
+  "stone-sleeper":             { by: "point", oneIn: 2500 },  // as the great devil crab: a point between the folds of its hide
   "rat-king":                  { by: "point", oneIn: 1500 },  // 1 in 100, ~15 hits: the first boss, the easiest throat
   "fever-rat":                 { by: "point", oneIn: 1500 },  // as the rat king: same hide, same hp, same throat
   "the-great-crab":            { by: "point", oneIn: 1800 },  // 1 in 100 fights, ~18 hits
@@ -11947,6 +12323,7 @@ export const CURE_RECIPES: Record<string, string> = {
   "goat-haunch":  "smoked-haunch", // 8 → 12, keeping
   "boar-side":    "smoked-haunch", // 13 → 12: you trade a point of heal for a meal that travels
   "hare-carcass": "dried-meat",    // 7 → 8, keeping
+  "grubbet-haunch": "dried-meat",  // the cave's (mig 410): a burrower the size of a rabbit, the rat's call (4 → 8, keeping)
 };
 // ---- the fire: a catch cooked where you caught it -------------------------
 //
@@ -12003,6 +12380,9 @@ export const COOK_RECIPES: Record<string, string> = {
   "cockles":         "boiled-cockles",    //  3 -> 8
   "limpets":         "roast-limpets",     //  2 -> 7
   "windfall-apples": "baked-apples",      //  5 -> 10
+  // THE CAVE'S WATER THINGS (mig 410): out of the river and onto the fire.
+  "dead-salamander": "roast-salamander",  //  3 -> 7
+  "crayfish-tail":   "roast-crayfish",    //  2 -> 6
   // NOT HERE, on purpose: salt-fish, smoked-haunch, dried-meat, hardtack — all
   // FOOD_KEEPS, all already through a fire or a barrel. And no raw MEAT: the
   // haunches are the racks' business and always have been. This is the fire on
@@ -12159,6 +12539,16 @@ export const AMBIENCE: Partial<Record<Region, string[]>> = {
   // being told that nothing grows at this height. They have moved to the `high`
   // quarter, which owns them (QUARTER_AMBIENCE, detail.ts); the six tiers each
   // have their own voice now and this is the fallback under all of them.
+  // THE CAVE UNDER THE WOOD (2026-11-22): what is true in every room of it. The
+  // air moves, always up and always cold; the rock is silent and the dark is not.
+  cave: [
+    "The air moves past you, cold, going up. It has been going up the whole time you have been down here.",
+    "Somewhere a long way off a stone drops, and you count before it lands, and it lands a long time later.",
+    "A drop of water falls from the roof into the dark and does not make a sound you can place.",
+    "The cold comes up through your boots from the rock, the way it would from a floor laid over ice.",
+    "Something small runs across the rock just past where you can see, and stops, and listens to you listening.",
+    "Your own breathing comes back to you off the rock, a little late.",
+  ],
   mountain: [
     "Loose scree shifts somewhere above you, runs a little way, and stops.",
     "The wind hunts along the rock face, finds a gap, and howls through it.",
@@ -12304,6 +12694,21 @@ export const REST: Partial<Record<Region, RestFlavor>> = {
   },
   // The mountain: scale and cold. Rock, scree, frost, and the hint — kept rare
   // and never named — that something very large has been up here a long time.
+  // THE CAVE UNDER THE WOOD (2026-11-22): cold rock, the dark, and the air going up past you.
+  cave: {
+    hurt: [
+      "You settle with your back to the cold rock and let the dark close in round your light. Wounds close slowly here — any effort ends it.",
+      "You sit where the floor is dry and breathe against the cold air coming up past you. The ache dulls, a little — any effort ends it.",
+      "You crouch against the wall with your light between your knees and go still. Blood stops where it was running — any effort ends it.",
+      "You lower yourself onto the rock and listen to the dark while the hurt eases — any effort ends it.",
+    ],
+    whole: [
+      "You sit against the rock, whole, and let the dark go on round you without you — any effort ends it.",
+      "You lower yourself onto the cold floor with nothing to mend and listen to the cave breathe up past you — any effort ends it.",
+      "You put your back to the wall and go still, unhurt. Somewhere water drips, and you count it — any effort ends it.",
+      "You settle on the rock with your light beside you, in no hurry, while the cold air goes by — any effort ends it.",
+    ],
+  },
   mountain: {
     hurt: [
       "You settle with your back to the cold rock and let the wind find every wound. They close slowly here — any effort ends it.",
@@ -12377,6 +12782,7 @@ export const GROUND: Partial<Record<Region, string[]>> = {
   out: ["the grass", "the packed earth", "the turf"],
   road: ["the paving", "the packed earth", "the mud"],
   wood: ["the leaf-mould", "the soft earth", "the roots"],
+  cave: ["the rock", "the cold rock", "the cave floor"],
   mountain: ["the rock", "the scree", "the bare stone"],
   den: ["the grass", "the packed earth", "the turf"],
   crossing: ["the shingle", "the wet shingle", "the tideline mud"],
@@ -12391,6 +12797,7 @@ export const CARVE_MEDIUM: Partial<Record<Region, string[]>> = {
   out: ["the old stone", "the ruin's stone"],
   road: ["the milestone", "the paving", "a fence post"],
   wood: ["the bark", "a smooth trunk"],
+  cave: ["the rock", "the cave wall"],
   mountain: ["the rock", "a boulder"],
   den: ["a doorpost", "a timber", "the soft stone"],
   crossing: ["a stake", "the dressed stone", "driftwood"],
@@ -12404,6 +12811,7 @@ export const REST_TRACE: Partial<Record<Region, string[]>> = {
   out: ["A patch of grass lies pressed flat, sat in not long ago."],
   road: ["A place in the verge is pressed flat, sat in not long ago."],
   wood: ["A nest of leaf-mould is pressed flat against a root, sat in not long ago."],
+  cave: ["A place on the rock is scuffed clear of grit, sat in not long ago."],
   mountain: ["A hollow in the scree is smoothed, sat in not long ago."],
   den: ["A patch of grass by a wall is pressed flat, sat in not long ago."],
   crossing: ["A place on the shingle is kicked flat, sat in not long ago."],
@@ -12426,6 +12834,7 @@ export const THROW_LAND: Partial<Record<Region, string[]>> = {
   out: ["{w} thuds into the grass", "{w} clips a stone and spins off into the turf"],
   road: ["{w} cracks against the paving", "{w} thuds into the verge"],
   wood: ["{w} thuds into the leaf-mould", "{w} cracks against a trunk"],
+  cave: ["{w} cracks against the rock", "{w} skitters away across the cave floor"],
   mountain: ["{w} cracks against the rock", "{w} skitters down the scree"],
   den: ["{w} thuds into the grass", "{w} cracks against a wall"],
   crossing: ["{w} clatters across the shingle", "{w} grinds into the wet shingle"],
@@ -12439,6 +12848,7 @@ export const METAL_FALL: Partial<Record<Region, string[]>> = {
   out: ["Metal thuds into the grass, {dir}."],
   road: ["Metal clatters on the paving, {dir}.", "Metal thuds into the verge, {dir}."],
   wood: ["Metal thuds into the leaf-mould, {dir}."],
+  cave: ["Metal rings on rock, {dir}, and the cave gives it back twice."],
   mountain: ["Metal clatters on rock, {dir}."],
   den: ["Metal thuds into the earth, {dir}."],
   crossing: ["Metal clatters on the shingle, {dir}."],
@@ -12494,6 +12904,7 @@ export const DROWN_GROUND: Partial<Record<Region, string>> = {
   out: "on dry grass, under all that open sky",
   road: "in the dry dust of the road",
   wood: "on dry leaf-mould, a hand's breadth of it",
+  cave: "on dry rock, with a whole river running somewhere in the dark under you",
   mountain: "on dry rock, in air too thin to have drowned anybody",
   den: "on dry grass, in somebody's old street",
   crossing: "on dry shingle, with a mile of water going past behind you",
@@ -12509,6 +12920,7 @@ export const FOOTFALL: Partial<Record<Region, string[]>> = {
   out: ["Grass rustles under your foot", "A twig snaps under your boot"],
   road: ["Gravel grits under your foot", "A stone turns under your boot"],
   wood: ["A twig snaps under your foot", "Leaf-mould gives under your boot"],
+  cave: ["Grit crunches under your foot", "A loose stone turns under your boot and rattles off into the dark"],
   mountain: ["Scree shifts under your foot", "A stone turns under your boot"],
   den: ["Grass rustles under your foot", "Gravel grits under your boot"],
   crossing: ["Shingle grits under your foot", "Shell cracks under your boot"],
@@ -12525,6 +12937,7 @@ export const HEARD_EMPTY: Partial<Record<Region, string[]>> = {
   out: ["nothing — wind in the grass, and rooks going up off the ruin", "nothing — the wind, and a long way of open ground"],
   road: ["nothing — wind, and a long way of open ground", "nothing — the wind down the road, and a bird far off"],
   wood: ["nothing — leaves, and the wood working somewhere further off", "nothing — the birds, stopping and starting, further off"],
+  cave: ["nothing — the air going up past the rock, and a drip somewhere", "nothing — the dark, and your own blood in your ears"],
   mountain: ["nothing — wind off the rock, and the cold under it", "nothing — the wind, and stone settling somewhere above"],
   den: ["nothing — grass, and somewhere a shutter or a hurdle knocking on its own", "nothing — the grass, and a shutter answering itself down the street"],
   crossing: ["nothing — water, and the tide going one way or the other", "nothing — the water moving, and a bird a long way out"],
@@ -12939,6 +13352,7 @@ export const REGION_LABELS: Record<string, string> = {
   den: "Assart End", // the old village (rome, 2026-11-04: renamed from the Dens)
   mountain: "The Mountain",
   crossing: "The Crossing",
+  cave: "The Cave", // under the wood (2026-11-22)
 };
 
 // THE HAMLETS ARE GREEN ON THE MAP (rome, 2026-11-04), as Assart End is: the

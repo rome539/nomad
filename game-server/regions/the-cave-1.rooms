@@ -1,0 +1,478 @@
+# THE CAVE UNDER THE WOOD, THE UPPER CAVE (one floor down). Natural cave, made
+# by water a long time ago and left dry. The plan is cave-plan.md at the repo
+# root: wild ground, the cougars' and the mole hounds' ground, and only the air
+# is wrong. It always moves, always up, always cold.
+#
+# THE MOUTHS. Six ways in from the wood, each its own landing here:
+#   the Under-Roots      -> the Root Hang        (north-east, near the Timber Stack)
+#   the Ridge Cave       -> the Bear's Stair     (north-west, behind the bear's bed)
+#   the Buckled Ground   -> the Heave            (the middle, where the floor broke)
+#   the Ferny Bank       -> the Fern Hole        (south-west)
+#   the Spring Mire      -> the Spring's Throat  (south, a wet crawl)
+#   the Ward Ditch       -> the Ditch Sink       (far north, by the Gate Arch; the
+#                           sixth, added 2026-11-22 so the cave has one separate
+#                           way in per 40 rooms, and a passage south to the Root End)
+# The Heave, the Fern Hole, the Spring's Throat and the Ditch Sink take the light
+# from outside;
+# every other room is dark. A mouth's words never name the hour: they say the
+# light comes from above, whatever light the wood has.
+#
+# SIX WAYS DOWN to the river floor: the Root Chimney, the Bat Chimney, the Cold
+# Well, the Shaft Head, the Sound Hole and the Spring's Throat.
+#
+# Written as squares by a generator: every door here agrees with the map.
+
+!region cave
+!floor -1
+
+## the-under-roots | attachment
+!existing
+> down the-root-hang
+
+## the-ward-ditch | attachment
+!existing
+> down the-ditch-sink
+
+## the-buckled-ground | attachment
+!existing
+> down the-heave
+
+## the-spring-mire | attachment
+!existing
+> down the-spring-throat
+
+## the-ridge-cave | attachment
+!existing
+> down the-bears-stair
+
+## the-ferny-bank | attachment
+!existing
+> down the-fern-hole
+
+## the-root-hang | The Root Hang
+The roots of the Under-Roots come down through a split in the rock and hang into the dark below it, a tangle of them as thick as your arm, earth still on them. You climb down them as you would a ladder. The floor is stone, and the air coming past you goes up the way you came, cold on the back of your neck.
+> up the-under-roots
+> west the-root-curtain
+> south the-taproot
+
+## the-root-curtain | The Root Curtain
+Fine roots hang from the roof to the floor in a curtain, hundreds of them, white and soft and finer than hair at the tips. They move. There is no wind you can feel, but they lean all one way, toward the roof, and settle back, and lean again.
+> east the-root-hang
+> west the-rat-shelf
+
+## the-ditch-sink | The Ditch Sink
+The water at the bottom of the ditch above finds a hole in the rock and comes down through it here in a thin green fall, and you come down with it, on a slope of slime and stones. What light the ditch has comes down the hole after you and lies on the wet. The water runs away south along the floor into the dark.
+> up the-ward-ditch
+> south the-ditch-water
+
+## the-ditch-water | The Ditch Water
+The ditch's water runs along the floor here in a shallow stream, green with the stuff it brings down from above, over a bed of rotten leaves and the things that fell into the ditch and were carried down: a bone, a buckle, the iron head of an arrow. The cold air goes the other way, up past you toward the hole.
+> north the-ditch-sink
+> south the-silted-pipe
+
+## the-silted-pipe | The Silted Pipe
+A round pipe of rock, smooth as a drain, worn by water that ran full in it once, and now half-filled with grey silt the stream has dropped. You go along the top of the silt bent double. The silt holds the prints of something that came this way on four feet and went back.
+> north the-ditch-water
+> south the-wind-crawl
+
+## the-wind-crawl | The Wind Crawl
+The pipe pinches to a crawl and the air comes through it hard from the south, cold, into your face, so that you crawl against it with your eyes half shut. It never slackens. Whatever is breathing out down there has a long breath.
+> north the-silted-pipe
+> south the-pawed-sand
+
+## the-pawed-sand | The Pawed Sand
+A little chamber floored with dry sand, and the sand pawed over and over by feet with long claws and no pads, round and round in circles, as if something had stood here a long while turning its head to listen. The circles are fresh on top of old ones.
+> north the-wind-crawl
+> south the-breakdown
+
+## the-breakdown | The Breakdown
+The roof of a chamber came down here long ago in blocks the size of carts, and the way on goes through the heap of them, over and under, in gaps between blocks that lean on each other. Some of them have moved since they fell. You can see where.
+> north the-pawed-sand
+> south the-north-squeeze
+
+## the-north-squeeze | The North Squeeze
+A squeeze between two walls of rock that lean together overhead, so narrow you go through with your arms in front of you and your head turned. The rock is polished at the height of your hips by many bodies going through low and fast. Yours is not one of them.
+> north the-breakdown
+> south the-dripping-ledge
+
+## the-dripping-ledge | The Dripping Ledge
+A ledge over a short drop, with water dripping onto it from the roof in a steady patter and running off its edge. Below the ledge the passage turns east, and there is a sour smell of burrows.
+> north the-north-squeeze
+> east the-rat-run
+
+## the-rat-run | The Burrow Run
+A low run of rock going south toward the shelf where the grubbets dig, its floor black and greasy and printed thick with small splayed feet, and the soft rock at the foot of the walls scraped out by claws. Little bones crunch underfoot. Every hole in the wall has a snout in it.
+> west the-dripping-ledge
+> south the-rat-shelf
+
+## the-rat-shelf | The Burrow Shelf
+A shelf of rock along one wall at the height of your knee, its edge black and greasy with the passing of fat small bodies. The floor under it is droppings and the husks of things, and burrows go back into the soft rock under the shelf, each as wide as a rabbit's, too many to count.
+> east the-root-curtain
+> north the-rat-run
+> south the-gnawed-floor
+
+## the-gnawed-floor | The Gnawed Floor
+Bones lie about the floor here, small ones and some not small, and every one of them has been gone over by teeth too small to crack it, the ends scored fine as a file would score them. Nothing has been left on them. Nothing has been left at all.
+> north the-rat-shelf
+> south the-four-ways
+
+## the-taproot | The Taproot
+One root comes down out of the roof here that is not like the others: a single taproot, as thick as a man, going straight down through a hole in the floor that it has made for itself in the rock. Cold air comes up round it out of the hole, steady as breath, and you cannot see how far it goes.
+> north the-root-hang
+> south the-drip-stones
+
+## the-drip-stones | The Drip Stones
+Water comes through the roof here a drop at a time and has been coming a long while: thin stone straws hang down from the roof where it drips, and fat stumps of stone have grown up off the floor to meet them. Some have met. The drops fall all round you in no rhythm you can follow.
+> north the-taproot
+> west the-cold-draught
+> south the-root-chimney
+
+## the-cold-draught | The Cold Draught
+The passage pinches here to the width of your shoulders and the air comes through the gap hard, cold enough to make your eyes water, out of the lower ground and away up toward the roots. Anything light you hold out flutters toward the roof.
+> east the-drip-stones
+> west the-four-ways
+
+## the-four-ways | The Four Ways
+Four passages meet in a low round room with a floor worn into a shallow bowl. All four look the same: round, dark, the height of a stooping man. Only one of them has the cold air coming out of it.
+> north the-gnawed-floor
+> east the-cold-draught
+> south the-scored-wall
+
+## the-root-chimney | The Root Chimney
+The last of the roots go down here into a chimney in the floor, a round shaft polished by water long gone, and the roots go down it too, far past where any tree could reach, holding to the rock all the way down. They are the only way to climb it. The air comes up it cold and does not stop.
+> north the-drip-stones
+> south the-clay-slide
+> down the-ladder-foot
+
+## the-scored-wall | The Scored Wall
+The walls here are scored at knee height, both sides, all along the passage: shallow scratches in their hundreds, the marks of something low passing close to the rock and touching it as it goes. Something that feels its way. The scratches go on into the dark ahead.
+> north the-four-ways
+> south the-blind-turn
+
+## the-blind-turn | The Blind Turn
+The passage turns back on itself here so hard you cannot see one leg of it from the other. Sound does strange things at the corner. Your own steps come back to you a beat late, from the wrong side, and then do not stop when you stop.
+> north the-scored-wall
+> east the-echo-gallery
+> south the-sounding-room
+> west the-narrow-neck
+
+## the-clay-slide | The Clay Slide
+A bank of wet clay runs down from the chimney's foot, slick and grey, and you go down it on your heels whether you mean to or not. The clay keeps prints. There are a great many prints in it, of feet with long claws and no sign of a pad that hesitated.
+> north the-root-chimney
+> west the-echo-gallery
+> south the-bone-spill
+
+## the-echo-gallery | The Echo Gallery
+A long gallery with a high arched roof, smooth as the inside of a horn. A word spoken here runs away along it and comes back from both ends, and any sound at all hangs in it for a long time. Anything listening could hear you from a long way off.
+> west the-blind-turn
+> east the-clay-slide
+
+## the-bone-spill | The Bone Spill
+Bones spill out of a side passage across the floor here like a load tipped off a cart: deer legs, a boar's jaw, the long bones of something the size of a man. They have been cracked for the marrow by teeth bigger than a dog's. The smell of the passage they came out of is thick and sour.
+> north the-clay-slide
+> east the-hounds-bed
+> south the-rattling-way
+
+## the-hounds-bed | The Hounds' Bed
+A low chamber at the end of the side passage, its floor trodden into hollows the size of a curled dog, four or five of them, warm with use. Grey hair is matted into the dust. It is a place to sleep, and nothing that sleeps here needs a light to find it.
+> west the-bone-spill
+
+## the-rattling-way | The Rattling Way
+Loose plates of stone cover the floor here, thin as slates, and they shift and clatter under every step however you put your feet down. There is no quiet way across. Somewhere off in the dark the clatter is answered, once, by something moving.
+> north the-bone-spill
+> west the-loose-stones
+
+## the-loose-stones | The Loose Stones
+The roof has been shedding stone here, a little at a time, and the floor is a slope of it, broken and sharp. Some of it is newer than the rest, pale at the edges where it split. You look up. The roof looks the same as the roof anywhere else.
+> east the-rattling-way
+> west the-shale-floor
+
+## the-sounding-room | The Sounding Room
+A round chamber with a dome of smooth rock, where every sound gathers in the middle and stays. A drop of water falling sounds like a stone. Your breathing sounds like someone else's, close beside you. Standing still is the only way to hear anything that is not you.
+> north the-blind-turn
+> south the-shale-floor
+
+## the-shale-floor | The Shale Floor
+Thin grey shale underfoot, broken into flakes that crunch like frost. A track has been worn down the middle of it by many feet, all going the same few ways, all low to the ground, and none of them stopped to look about. They knew where they were going without looking.
+> east the-loose-stones
+> north the-sounding-room
+> south the-sand-floor
+
+## the-sand-floor | The Sand Floor
+Dry sand, fine and pale, laid down by water that has been gone a very long time. It holds every mark: the scored lines of claws, a drag where something heavy was pulled across it, and your own feet, very loud in it, very easy to follow.
+> north the-shale-floor
+> south the-bat-chimney
+
+## the-bat-chimney | The Bat Chimney
+A chimney opens in the floor here, a ragged shaft going down, and the rock all round its lip is black and slick and the floor deep in droppings that smell of ammonia. The air coming up it is warmer than the cave's and carries a thin high chittering, very far down, from a great many throats.
+> north the-sand-floor
+> west the-gnaw-hole
+> down the-roost-floor
+
+## the-gnaw-hole | The Gnaw Hole
+A low hole in the side of the passage, with a fan of chewed scraps spread out from its mouth: hide, gristle, a hoof, the tip of an ear. Small eyes catch what light there is from back inside it and are gone.
+> east the-bat-chimney
+> south the-cougars-larder
+
+## the-narrow-neck | The Narrow Neck
+The passage closes to a slot you turn sideways to pass, the rock pressing your chest and back. On the far side the walls fall away all at once and the air changes: wider, colder, moving, the feel of a great deal of empty dark ahead.
+> east the-blind-turn
+> west the-lip
+
+## the-lip | The Lip
+You come out on a lip of rock high in the wall of a chamber too big for any light to cross. Below is a long fall of scree going down into the dark. A thin ledge runs off along the wall to one side, and the way down is the scree or nothing.
+> east the-narrow-neck
+> west the-overhang
+> south the-scree-slope
+
+## the-overhang | The Overhang
+The ledge goes under an overhang here and you go along it bent, the roof at your back and the drop at your elbow. The ledge is wide enough for a person and no more. It is wide enough for an animal that lies flat and waits, and the dust on it is lain in.
+> east the-lip
+> west the-thin-ledge
+
+## the-thin-ledge | The Thin Ledge
+The ledge narrows to a foot's width with the chamber below it. Long scratches run down the rock from the ledge's edge into the dark, in fours, as if something had gone over it and down the wall on purpose, many times. Below, out of sight, something has fallen with a crack, or landed.
+> east the-overhang
+> west the-cats-lie
+> south the-fallen-slab
+
+## the-cats-lie | The Cat's Lie
+The ledge ends in a hollow in the wall, dry, out of the draught, with a view down over the whole floor of the chamber for anything that could see in the dark. The floor of the hollow is padded with shed fur, tawny and short, and the stone is warm under your hand.
+> east the-thin-ledge
+
+## the-scree-slope | The Scree Slope
+A long slope of loose scree going down from the lip to the chamber floor, every stone of it ready to go. You go down it in a slide of rattling stone that does not stop when you do and runs on below you into the dark. Everything down there knows you are coming.
+> north the-lip
+> west the-hollow
+
+## the-hollow | The Hollow
+The floor of the great chamber. The roof is out of sight and the walls are out of sight and the dark goes off in every direction. The air moves here as it moves nowhere else, a slow cold river of it rising past you toward a roof you cannot see. Ledges run along the walls above, where you cannot see them either.
+> east the-scree-slope
+> west the-fallen-slab
+> south the-under-ledge
+
+## the-fallen-slab | The Fallen Slab
+A slab of the roof as big as a house lies broken on the chamber floor, fallen a long time ago, its top grown over with stone. It leans against the wall, and between them there is a gap you can climb up toward the ledges. Above you, on the wall, there is a fresh pale scar.
+> north the-thin-ledge
+> east the-hollow
+> south the-hollows-throat
+
+## the-under-ledge | The Under-Ledge
+The chamber floor runs in under a long ledge that juts from the wall overhead, and you walk with the rock low over you and the open dark on your other side. Old bones lie half under the ledge, a roe's ribs and legs picked white, as if they had been dropped from above.
+> north the-hollow
+> west the-hollows-throat
+> south the-cold-well
+
+## the-hollows-throat | The Hollow's Throat
+The chamber narrows at its west end into a throat of rock, and all the air in the great hollow seems to come from the west and go out up past you. Fine dust lifts off the floor and drifts upward and does not come down.
+> north the-fallen-slab
+> east the-under-ledge
+> west the-west-gallery
+
+## the-cold-well | The Cold Well
+A round well in the chamber floor, black, the edge of it smooth, and the cold coming up out of it hard enough to lift your hair. Drop a stone and you hear it for a long time. There are handholds worn in the rock going down, made by nothing but the shape of the rock and a great many hands.
+> north the-under-ledge
+> south the-split-floor
+> down the-well-foot
+
+## the-split-floor | The Split Floor
+The floor here has split along its length, a crack a stride wide running away ahead of you with the dark going down in it. You walk with a foot on each side. Air comes up out of the crack all along it, cold, and smells of wet stone a long way down.
+> north the-cold-well
+> south the-rubble-slope
+
+## the-rubble-slope | The Rubble Slope
+Earth and broken stone have come down through the roof here and spread in a slope across the passage: soil, stones, roots, a whole tree's worth of root mass, still moist. The wood has come into the cave. Something has been dragged down the slope through it, often.
+> north the-split-floor
+> east the-drag-way
+> west the-root-fall
+
+## the-drag-way | The Drag Way
+A smooth groove runs along the floor here, worn by something heavy pulled along it again and again, and the stone on either side is spotted with old dark stains. Tufts of red-brown deer hair are caught on the rough places. The groove goes one way: in.
+> west the-rubble-slope
+> east the-cougars-larder
+
+## the-cougars-larder | The Cougar's Larder
+A dead end where the drag way stops, the floor heaped with the bones of what was dragged down it: roe and young boar, ribs and skulls, a fawn's legs, scraps of dry hide, every neck bitten through. Some of it is old. Some of it is not. Small things have been at all of it.
+> north the-gnaw-hole
+> west the-drag-way
+
+## the-root-fall | The Root Fall
+Tree roots hang through a broken roof here in a curtain, with soil still sifting down through them, and through the gap above them comes a little of whatever light is in the wood. Enough to see the roots by. The cave floor is green with moss where it reaches and black beyond.
+> east the-rubble-slope
+> west the-heave
+
+## the-heave | The Heave
+The roots of the Buckled Ground heaved the floor of the wood up until it broke, and here is where it broke through: a ragged hole overhead with roots across it and whatever light the wood has coming down past them, and a slope of fallen earth to climb. The cave goes off from the foot of the slope in three directions into the dark.
+> east the-root-fall
+> up the-buckled-ground
+> north the-curtains
+> south the-break-pool
+
+## the-break-pool | The Break Pool
+Rain that comes in through the break above runs down here and lies in a clear shallow pool on the cave floor, so still you can see every stone in the bottom of it. Animal tracks go to its edge from every side. Whatever light comes in at the break reaches it, and goes no further.
+> north the-heave
+> south the-wet-passage
+
+## the-wet-passage | The Wet Passage
+Water runs down the walls here in sheets and over the floor in a film you splash through. It is all going one way, away from the break, and it is louder than it should be. Under the noise of it, from somewhere ahead and below, comes the sound of more water.
+> north the-break-pool
+> south the-weeping-crawl
+
+## the-weeping-crawl | The Weeping Crawl
+The roof comes down and you go on hands and knees through cold water, the rock weeping on your back, the passage climbing. Ahead there is a sound of water welling up.
+> north the-wet-passage
+> south the-spring-throat
+
+## the-spring-throat | The Spring's Throat
+The spring of the Spring Mire comes up here from below: a round throat in the rock full of water rising, cold enough to stop your breath, welling up and spilling over and running away up a crawl toward the mire. Down the throat, under the water, the rock goes on down, and the water is coming from somewhere.
+> north the-weeping-crawl
+> up the-spring-mire
+> down the-spring-foot
+
+## the-west-gallery | The West Gallery
+A broad gallery running west, its floor flat and its roof low and even, as if the rock were laid in beds and the water took out one of them. The draught runs along it toward the hollow at your back, steady, smelling of wet stone.
+> east the-hollows-throat
+> west the-rimstone
+> south the-flowstone
+
+## the-rimstone | The Rimstone
+The floor is built up into steps of stone basins, rim over rim, each lipped with a wall of stone no higher than your ankle, each dry and floored with dust. The water that made them is gone. You step from basin to basin.
+> east the-west-gallery
+> west the-calcite-crawl
+
+## the-calcite-crawl | The Calcite Crawl
+A low crawl lined with white crystal, every face of it glittering at any light you bring and leaping with it, so the passage seems to move as you move. Fur is caught on the sharp crystals here and there, tawny and short, at the height of a crawling back.
+> east the-rimstone
+> west the-narrows
+
+## the-flowstone | The Flowstone
+A wall of stone that looks as if it were poured: smooth, rippled, folded over on itself, the colour of old honey, running down from the roof to the floor as if it had been flowing yesterday and stopped. Your hand on it comes away dry.
+> north the-west-gallery
+> south the-curtains
+
+## the-curtains | The Curtains
+Thin sheets of stone hang from the roof here in folds, like cloth hung up to dry, so thin that any light behind them shines through red and gold. Knock one and it rings. Behind them the passage goes on down toward the heave and the break.
+> south the-heave
+> north the-flowstone
+
+## the-bears-stair | The Bear's Stair
+The back of the bear's bed in the Ridge Cave goes on down here in a broken stair of rock, every step polished on its edge by something heavy going up and down it for a long time. Long grooves score the wall beside it as high as you can reach. Cold air comes up the stair from below and goes past you into the bear's cave.
+> up the-ridge-cave
+> east the-cold-breath
+> south the-scored-drop
+
+## the-cold-breath | The Cold Breath
+The air here comes out of a crack in the wall at the height of your face, a steady breath of it, colder than the rest of the cave, smelling of nothing at all. Hold your hand to the crack and it is like holding it to winter.
+> west the-bears-stair
+> east the-whistling-hole
+
+## the-whistling-hole | The Whistling Hole
+The draught goes through a hole in a thin wall of rock here and the hole sings: a long low note that rises when the air comes harder and sinks when it eases, and never stops. Animals do not lie up near it. The floor is clean.
+> west the-cold-breath
+> south the-bear-path
+
+## the-bear-path | The Bear Path
+A path worn smooth through the rubble of the floor, wide and deep, the path of something heavy that has gone along it the same way for years. Coarse brown hair is snagged on the rock at shoulder height. The path goes on south into the dark.
+> north the-whistling-hole
+> south the-dark-turn
+
+## the-scored-drop | The Scored Drop
+The floor drops a man's height here, and the rock face you climb down is scored all over in long fours, gouged deep, old marks and new over them. Whatever made them climbs up and down here often, and does not need a handhold.
+> north the-bears-stair
+> south the-claw-floor
+
+## the-claw-floor | The Claw Floor
+A wide floor of packed earth, churned up and dug over, hollows scraped in it the size of a bed, the earth thrown up in heaps. Deer bones lie about it, bitten across. The smell of bear is everywhere here and not old.
+> north the-scored-drop
+> east the-bears-wallow
+> south the-shaft-head
+
+## the-bears-wallow | The Bear's Wallow
+A hollow in the floor where water seeps in and lies in a slick of mud, rolled in and churned, with long brown hair caught all round its edge. The mud holds the print of something enormous lying down in it. The print is still wet.
+> west the-claw-floor
+> east the-dark-turn
+
+## the-dark-turn | The Dark Turn
+The passage turns here and goes down, and the dark seems thicker past the turn than before it, as if the cave had stopped bothering with you. The walls are close. The air comes up past you from below and is colder than it has been.
+> north the-bear-path
+> west the-bears-wallow
+> south the-slick
+
+## the-slick | The Slick
+The floor tilts here and is coated in a film of wet clay as slippery as ice, and you go down it on your back as often as your feet. At the bottom it levels. There are scrape marks in the clay of everything else that has come down it the same way.
+> north the-dark-turn
+> east the-narrows
+
+## the-narrows | The Narrows
+The walls come in on both sides until you go through sideways, and stay that way for longer than you like. You cannot turn round here. You cannot see what is ahead of you or behind you, and the draught blows past your face toward the way you came.
+> east the-calcite-crawl
+> west the-slick
+
+## the-shaft-head | The Shaft Head
+The floor opens in a shaft going down, wide as a well, its sides streaked with old water marks, and the cold comes up it like a breath held a long time and let go. There is a ledge round the top of it and a way down its side, steep and wet.
+> north the-claw-floor
+> south the-ox-bow
+> down the-shaft-foot
+
+## the-ox-bow | The Ox-Bow
+The passage loops round on itself in a long bend, the walls cut smooth and undercut on the outside of the curve where a river once ran hard round it. The river is gone. It left its marks at the height of your head.
+> north the-shaft-head
+> west the-old-water-line
+> south the-tight-bend
+
+## the-old-water-line | The Old Water Line
+A line runs along both walls at the height of your shoulder, stained and smooth, where water stood once for a long time. Below the line the rock is clean. Above it, it is crusted and rough. Down here the river was a long time drying.
+> east the-ox-bow
+> west the-dry-sink
+
+## the-dry-sink | The Dry Sink
+A bowl in the floor where the old water drained away down a hole in its middle, the hole choked now with silt and pebbles. Put your ear to it and you can hear water below, far down, running fast.
+> east the-old-water-line
+> south the-sand-bank
+
+## the-sand-bank | The Sand Bank
+A bank of sand dropped by the old river runs along one wall, soft and deep. Something has dug into it in a dozen places, short scrapes, and left the holes open. Something smaller has been in the holes since.
+> north the-dry-sink
+> south the-listening-floor
+
+## the-listening-floor | The Listening Floor
+The floor is thin rock here, and under it, loud and very near, water is running. You can feel it through your feet. In places the floor rings hollow, and in one place there is a crack you could put a hand into and feel the wet air coming up.
+> north the-sand-bank
+> south the-wet-step
+
+## the-wet-step | The Wet Step
+A step down in the floor, slick with wet, where the way from the fern hole meets the way from the river's old bed. Water drips from the roof here and fern spores have come in on the air and grown in the drip, pale and small and nearly white.
+> north the-listening-floor
+> west the-fern-hole
+> south the-sound-hole
+> east the-hauled-way
+
+## the-fern-hole | The Fern Hole
+The bank of ferns above has fallen in here, and the hole is hung with fern and moss and roots, and what light the wood has comes down through them. The floor below it is soft and wet. The sound of water running is very loud, and comes from under your feet.
+> east the-wet-step
+> up the-ferny-bank
+
+## the-sound-hole | The Sound Hole
+A hole in the floor going down, and out of it the roar of water, so loud here you cannot hear yourself. Spray comes up it. The rock round the hole is wet and green and the way down it is a climb down a wet wall, toward the noise.
+> north the-wet-step
+> down the-falls-foot
+
+## the-hauled-way | The Hauled Way
+Something heavy has been hauled along the floor here from the fern hole, and the moss that grows in the wet near the hole is torn up in a long stripe going east. A hoof has been left in the stripe. Further on, the stripe is blood.
+> west the-wet-step
+> east the-kill-hole
+
+## the-kill-hole | The Kill Hole
+A pocket off the passage where the hauled way ends, and in it what is left of what was hauled: a roe's bones, and its skin turned inside out in a heap. The bones are scattered and some carried off. Shed tawny fur lies on the floor in tufts.
+> west the-hauled-way
+> north the-low-arch
+
+## the-low-arch | The Low Arch
+A low arch of rock you stoop under, the stone of it bright and smooth on the underside where something has rubbed past it going under, low and long, many times. Your shoulders touch it either side.
+> south the-kill-hole
+> north the-tight-bend
+
+## the-tight-bend | The Tight Bend
+The passage doubles back so sharply here you have to fold yourself round the corner. On the inside of the bend the rock is worn to a gloss at knee height. Around the corner the air moves again.
+> north the-ox-bow
+> south the-low-arch

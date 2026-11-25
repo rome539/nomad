@@ -27,6 +27,7 @@ import * as beasts from "./beasts";
 import { cap, isNight, isFullMoon, isBloodMoon, fullMoonTonight, morphOf } from "./zone-util";
 import * as events from "./events";
 import * as styles from "./styles";
+import * as cave from "./cave";
 import * as whiteroe from "./whiteroe";
 import * as groups from "./groups";
 import * as squads from "./squads";
@@ -812,6 +813,8 @@ export function creatureTell(z: ZoneDO, creature: Creature, viewer: string): str
     // wins there. Up, run in, knocked down, off-balance, nosing at the floor,
     // listening: each was drawn with nothing said.
     const now = Date.now();
+    const caveSays = cave.doing(z, creature); // a kill being dragged down, a bat at the roof (cave.ts)
+    if (caveSays) return caveSays;
     if (FLIERS.has(creature.templateId) && airborne(creature, now)) {
       return creature.target ? "wheeling overhead, out of reach" : "up off the ground, out of reach";
     }
@@ -2388,6 +2391,7 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       // rush, no miss, it never knew.
       const moss = MOSS_HIDDEN[c.templateId];
       if (moss && chance(moss)) continue;
+      if (!cave.catchesHere(z, creature, c)) continue; // the spider takes a bat only in its web
       // A CULLER takes the weakest in the room, not the first: the hurt, the
       // slow and the old are what it is for (CULLERS).
       if (CULLERS.has(creature.templateId)) {
@@ -2459,10 +2463,14 @@ export async function predation(z: ZoneDO, creature: Creature, now: number): Pro
       preyFalls(z, victim, vt, creature.templateId);
       const fedFrom4 = creature.hunger;
       creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(bodyOf(tmpl.id, tmpl.max_hp), bodyOf(vt.id, vt.max_hp))); // by body (BODY_SIZE): its own weight is two hours fed
-      ate(creature, undefined, undefined, fedFrom4 - creature.hunger, undefined, victim.templateId);
+      // ...unless it takes it home: the cave cougar drags its kill down (cave.ts).
+      const dragged = cave.dragsKill(z, creature, fedFrom4 - creature.hunger);
+      if (dragged) creature.prey = vt.name;
+      else ate(creature, undefined, undefined, fedFrom4 - creature.hunger, undefined, victim.templateId);
       creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
       if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
-      z.roomFeed(creature.roomId, `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`, undefined, false);
+      z.roomFeed(creature.roomId, dragged ? `${cap(tmpl.name)} runs down ${vt.name}, takes it by the neck, and starts to drag it away.`
+        : `${cap(tmpl.name)} runs down ${vt.name} and tears into it.`, undefined, false);
       z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.", undefined, undefined, false, { mob: creature.templateId, act: "fight" });
       z.fxFed(creature.roomId, creature.templateId);   // "tears into it" — so show it
       z.refreshRoomCtx(creature.roomId);
@@ -2536,10 +2544,13 @@ export async function worryPrey(z: ZoneDO, creature: Creature, now: number): Pro
     preyFalls(z, victim, vt, creature.templateId);
     const fedFrom5 = creature.hunger;
     creature.hunger = Math.max(HUNGER_FLOOR, creature.hunger - mealOf(bodyOf(tmpl.id, tmpl.max_hp), bodyOf(vt.id, vt.max_hp))); // by body (BODY_SIZE): its own weight is two hours fed
-    ate(creature, undefined, undefined, fedFrom5 - creature.hunger, undefined, victim.templateId);
+    const dragged = cave.dragsKill(z, creature, fedFrom5 - creature.hunger); // the cave cougar takes it home (cave.ts)
+    if (dragged) creature.prey = vt.name;
+    else ate(creature, undefined, undefined, fedFrom5 - creature.hunger, undefined, victim.templateId);
     creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(2, Math.round(vt.max_hp / 6)));
     if (SCAVENGERS.has(creature.templateId)) creature.fed = (creature.fed ?? 0) + 1;
-    z.roomFeed(creature.roomId, `${cap(tmpl.name)} finishes it, and stands over what is left.`, undefined, false);
+    z.roomFeed(creature.roomId, dragged ? `${cap(tmpl.name)} finishes it, takes it by the neck, and starts to drag it away.`
+      : `${cap(tmpl.name)} finishes it, and stands over what is left.`, undefined, false);
     z.roomSound(creature.roomId, "A short, wet scuffle ends somewhere {dir}.", undefined, undefined, false, { mob: creature.templateId, act: "fight" });
     z.fxFed(creature.roomId, creature.templateId);   // it is standing over a kill; show it
     z.refreshRoomCtx(creature.roomId);

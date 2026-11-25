@@ -84,6 +84,8 @@ export const PAGE = `<!doctype html>
        crossing is a 45% blue - the two could not be confused.
        It is stone and snow, and it has no colour in it, which is the region. */
     --stone: #d3d6d8;
+    /* THE CAVE UNDER THE WOOD (rome's pick, 2026-11-24): wet clay, the cave's floor. */
+    --clay: #b07f5f;
     --name-s: 55%; /* key-coloured names: saturation/lightness, reset per theme from its ground (applyThemeColors) */
     --name-l: 70%;
     --border: #3a3020;
@@ -3788,7 +3790,7 @@ function sndWatch() {
 // voice of their own get what they would actually make: the eels and the
 // followers are water and footsteps, the hollow wardens are their armour.
 var VOICE_FAMILY = {
-  dog: "masterless-dog lead-dog drove-dog a-fold-dog marsh-hound a-lymer the-last-dog the-drove-master",
+  dog: "masterless-dog lead-dog drove-dog a-fold-dog marsh-hound a-lymer the-last-dog the-drove-master mole-hound",
   twohound: "two-hound",
   threehound: "three-hound",
   wolf: "grey-wolf dire-wolf hill-wolf lead-wolf the-old-grey",
@@ -3796,7 +3798,7 @@ var VOICE_FAMILY = {
   coyote: "coyote",
   hyena: "grave-hyena",
   direhyena: "dire-hyena",
-  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king fever-rat water-vole",
+  rat: "rat fleet-rat brood-rat albino-rat hedgehog rat-king fever-rat water-vole grubbet cave-bat",
   gull: "great-gull black-backed-gull",
   oystercatcher: "oystercatcher",
   chough: "mountain-chough",
@@ -3807,20 +3809,20 @@ var VOICE_FAMILY = {
   vulture: "brooding-vulture carrion-vulture great-vulture bone-breaker the-bone-dropper",
   owl: "eagle-owl tawny-owl",
   bittern: "bittern",
-  adder: "fen-viper gill-adder stone-adder the-gravid-adder",
-  eel: "silver-eel ford-eel conger old-conger",
-  crab: "wrack-crab devil-crab",
+  adder: "fen-viper gill-adder stone-adder the-gravid-adder pale-salamander",
+  eel: "silver-eel ford-eel conger old-conger river-gulper",
+  crab: "wrack-crab devil-crab cave-crayfish stone-mites",
   greatcrab: "the-great-crab",
   greatdevilcrab: "the-great-devil-crab",
   seal: "grey-seal bull-seal",
-  stoat: "ermine the-dancer",
+  stoat: "ermine the-dancer polecat",
   otter: "otter dog-otter",
   badger: "glutton the-old-glutton",
   boar: "wild-boar old-boar",
   deer: "roe-deer white-roe red-hind",
   stag: "red-stag wood-stag",
   goat: "feral-goat old-billy",
-  cat: "lynx wildcat the-tom",
+  cat: "lynx wildcat the-tom cave-cougar",
   beast: "cave-lion",
   bear: "the-baited-bear the-chain-breaker brown-bear",
   hare: "mountain-hare snow-hare",
@@ -3830,9 +3832,9 @@ var VOICE_FAMILY = {
   drover: "the-drover",
   eelcutter: "the-eel-cutter",
   fowler: "the-fowler",
-  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk the-sapper the-cook",
+  hollowworker: "the-tide-warden the-scaffold-hand the-salt-widow the-refuge-man the-pilot the-toll-clerk the-sapper the-cook digger the-lamp-man",
   boneknight: "bone-knight",
-  hulk: "drowned-hulk",
+  hulk: "drowned-hulk stone-sleeper",
   drownedgod: "drowned-god",
   stalker: "pale-stalker",
   gaunt: "the-gaunt",
@@ -3845,7 +3847,7 @@ var VOICE_FAMILY = {
   cantor: "marrow-cantor",
   king: "forgotten-king marrow-king",
   drowned: "the-miller the-drowned the-drowned-ferryman the-mire-walker",
-  pale: "pale-crawler",
+  pale: "pale-crawler cave-spider stone-brood",
   steps: "the-follower something-ahead the-reed-walker the-hush",
   root: "root-thing verdigris-thing",
   drake: "the-drake the-pale-drake"
@@ -8580,6 +8582,8 @@ function mapRegionColor(region, isGate, isHamlet) {
   // the game read as more dungeon. Same bug the road and the crossing each hit
   // in their turn, and the same fix: give it its own entry.
   if (region === "mountain") return mapCssVar("--stone");
+  // THE CAVE UNDER THE WOOD is wet clay (2026-11-24; it was the mountain's grey).
+  if (region === "cave") return mapCssVar("--clay");
   // No colour for the mountain until the mountain exists — the cream I first
   // gave it was the overworks exactly.
   return mapCssVar("--gold"); // the halls / default
@@ -8644,7 +8648,7 @@ var MAP_BANDS = [
 // these are the only names on the paper (rome, 2026-10-10: the map should name
 // the regions on far zoom), so they hold a readable size there and the quarters
 // wait until you come in close enough to tell them apart.
-var MAP_MAJOR_REGIONS = { sky: 1, out: 1, upper: 1, warrens: 1, deep: 1, road: 1, eastroad: 1, wood: 1, den: 1, mountain: 1, crossing: 1, salthamlet: 1, shieling: 1 };
+var MAP_MAJOR_REGIONS = { sky: 1, out: 1, upper: 1, warrens: 1, deep: 1, road: 1, eastroad: 1, wood: 1, den: 1, mountain: 1, crossing: 1, salthamlet: 1, shieling: 1, cave: 1 };
 var MAP_FAR_SCALE = 0.35;
 var MAP_FAR_BELOW = { shieling: 1 }; // the Shieling hamlet lies below the mountain's name
 var MAP_REGION_LABELS = {
@@ -8658,6 +8662,7 @@ var MAP_REGION_LABELS = {
   den: "ASSART END", // the old village (rome, 2026-11-04: renamed from the Dens)
   mountain: "THE MOUNTAIN",
   crossing: "THE CROSSING",
+  cave: "THE CAVE",
   // THE WOOD'S SEVEN QUARTERS. It is 170 rooms — 42% of the world — and it
   // carried one caption while the fortress's 110 carried five, so the biggest
   // region on the paper was the one that told you least about where you were.
@@ -10457,6 +10462,7 @@ function applyThemeColors(c) {
   document.body.dataset.themeTone = lightGround ? "light" : "dark";
   document.documentElement.style.colorScheme = lightGround ? "light" : "dark";
   document.documentElement.style.setProperty("--tide", lightGround ? "#426595" : "#6f93c9");
+  document.documentElement.style.setProperty("--clay", lightGround ? "#7a4e33" : "#b07f5f");
   document.documentElement.style.setProperty("--name-s", lightGround ? "62%" : "55%");
   document.documentElement.style.setProperty("--name-l", lightGround ? "24%" : "70%");
   // Rarity adapts to the ground like names. Green and gold need deeper ink
@@ -10950,8 +10956,8 @@ var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "65";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "30";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "53";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "31";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "54";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -10983,6 +10989,7 @@ var BAND_PLATE = {
   // rooms — with nothing. That is not a gap to paper over with the nearest
   // wrong picture. It is the argument for the real per-terrain set.
   deep: "torch",         // no sky down here; the light is one you carry
+  cave: "torch",         // nor in the cave under the wood (2026-11-22)
   upper: "torch",
   gate: "torch",
   warrens: "warrens",
@@ -11086,6 +11093,17 @@ var TERRAIN_PLATE = {
   glacier: ["glacier"], ridge: ["ridge"], towers: ["towers"],
   "road-oaks": ["road-oaks"], "road-hedges": ["road-hedges"], "road-moor": ["road-moor"], "road-gill": ["road-gill"],
   "marsh-samphire": ["marsh-samphire"], "marsh-carr": ["marsh-carr"], "marsh-dyke": ["marsh-dyke"], "ferry-hard": ["ferry-hard"],
+  // THE CAVE UNDER THE WOOD (2026-11-22): twenty-seven grounds (zone-data CAVE_RULES).
+  "cave-roots": ["cave-roots"], "cave-mouths": ["cave-mouths"], "cave-wet": ["cave-wet"],
+  "cave-rough": ["cave-rough"], "cave-gallery": ["cave-gallery"], "cave-bones": ["cave-bones"],
+  "cave-dripstone": ["cave-dripstone"], "cave-ledge": ["cave-ledge"], "cave-hollow": ["cave-hollow"],
+  "cave-dark-river": ["cave-dark-river"], "cave-glow-river": ["cave-glow-river"], "cave-foxfire": ["cave-foxfire"],
+  "cave-roost": ["cave-roost"], "cave-silk": ["cave-silk"], "cave-workings": ["cave-workings"],
+  "cave-camp": ["cave-camp"], "cave-stopping": ["cave-stopping"], "cave-deep-camp": ["cave-deep-camp"],
+  "cave-dry-dark": ["cave-dry-dark"], "stone-way": ["stone-way"], "stone-buried": ["stone-buried"],
+  "stone-pillars": ["stone-pillars"], "stone-ring": ["stone-ring"], "stone-scraped": ["stone-scraped"],
+  "stone-hollow": ["stone-hollow"], "stone-drowned": ["stone-drowned"],
+  "under-stone": ["under-stone"],
 };
 // THE GATEHOUSE KEEPS THE YEAR (rome, 2026-09-27). Four dressings of the same
 // room, painted over the same picture, each hung for a stretch of the real
@@ -11167,7 +11185,7 @@ var TERRAIN_NEAR = {
 // ...and on the road it is the road. ROAD_RULES ends in a catch-all so no road
 // room reaches this by having no terrain; it is here for the other caller, a
 // road gate whose plate has not been cut yet.
-var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-kept-road", wood: "wood", den: "the-dens" };
+var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-kept-road", wood: "wood", den: "the-dens", cave: "cave-rough" };
 // WHICH BANDS OWN PICTURES AT ALL. Add a band here only once plates exist for
 // it — this is the one line that stops a region wearing another region's face.
 // AND THE CROSSING JOINS IT (2026-09-12). This one line is what the region's
@@ -11187,7 +11205,8 @@ var BAND_FALLBACK = { mountain: "mountainside", crossing: "shell", road: "the-ke
 // on the edge for a ship and invisible in the game.
 // AND THE WOOD JOINS IT (2026-09-29), in the same ship as its plates.
 // ...AND THE DENS (2026-09-30), in the same ship as theirs.
-var BANDS_WITH_PLATES = { mountain: 1, crossing: 1, road: 1, wood: 1, den: 1 };
+// ...AND THE CAVE UNDER THE WOOD (2026-11-22), in the same change as its plates.
+var BANDS_WITH_PLATES = { mountain: 1, crossing: 1, road: 1, wood: 1, den: 1, cave: 1 };
 // THE FOURTEEN DOORS. A gate is the one room in its region that is not its
 // region: a specific built thing, with a keeper's shuttered hatch in the wall of
 // it, standing on whatever ground happens to be there. No terrain rule can see
@@ -12299,6 +12318,37 @@ var TERRAIN_SCENES = {
   "marsh-carr":   "day night night-torch snow",
   "marsh-dyke":   "day night night-torch snow",
   "ferry-hard":   "day night night-torch snow",
+  // THE CAVE UNDER THE WOOD (2026-11-22). No hour and no weather below the wood:
+  // night and night-torch, the night being the room by its own light where it has
+  // one (glow-worms, foxfire, the camp fire, the stone). The mouths take the wood's
+  // hour as well (zone-data CAVE_MOUTHS).
+  "cave-roots":        "night night-torch",
+  "cave-mouths":       "day night night-torch",
+  "cave-wet":          "night night-torch",
+  "cave-rough":        "night night-torch",
+  "cave-gallery":      "night night-torch",
+  "cave-bones":        "night night-torch",
+  "cave-dripstone":    "night night-torch",
+  "cave-ledge":        "night night-torch",
+  "cave-hollow":       "night night-torch",
+  "cave-dark-river":   "night night-torch",
+  "cave-glow-river":   "night night-torch",
+  "cave-foxfire":      "night night-torch",
+  "cave-roost":        "night night-torch",
+  "cave-silk":         "night night-torch",
+  "cave-workings":     "night night-torch",
+  "cave-camp":         "night night-torch",
+  "cave-stopping":     "night night-torch",
+  "cave-deep-camp":    "night night-torch",
+  "cave-dry-dark":     "night night-torch",
+  "stone-way":         "night night-torch",
+  "stone-buried":      "night night-torch",
+  "stone-pillars":     "night night-torch",
+  "stone-ring":        "night night-torch",
+  "stone-scraped":     "night night-torch",
+  "stone-hollow":      "night night-torch",
+  "stone-drowned":     "night night-torch",
+  "under-stone":       "night night-torch",
 };
 // AND THE SAME GROUND WITH THE SEA OVER IT. A twin of the plate, not a layer on
 // top of one, and the layer is what this replaces (rome, 2026-09-11).
@@ -12600,6 +12650,14 @@ var MOB_FLOOR = { "keep-passage": [14, 86] };
 // number only ever shows in the preview. It is here because a plate that
 // breaks the lock should say so wherever it is drawn.
 var MOB_LINE = {
+  // THE CAVE UNDER THE WOOD (2026-11-22), read off the torch plates (same frame as
+  // the night ones) where the open floor begins: low where the rock, the water's
+  // edge, the roots or the stalagmites come down into the near ground.
+  "cave-roots": 66, "cave-mouths": 63, "cave-wet": 66, "cave-rough": 70, "cave-gallery": 63, "cave-bones": 67,
+  "cave-dripstone": 72, "cave-ledge": 68, "cave-hollow": 72, "cave-dark-river": 70, "cave-glow-river": 72,
+  "cave-foxfire": 67, "cave-roost": 67, "cave-silk": 70, "cave-workings": 69, "cave-camp": 70, "cave-stopping": 72,
+  "cave-deep-camp": 69, "cave-dry-dark": 66, "stone-way": 66, "stone-buried": 68, "stone-pillars": 63,
+  "stone-ring": 60, "stone-scraped": 65, "stone-hollow": 70, "stone-drowned": 69, "under-stone": 66,
   // THE TWO HAMLETS (2026-11-04), read off their day plates: the street, the
   // common and the salt common start low, past the cots, the creek and the
   // fence; the furrows and the in-field are walkable nearly from the lock.
@@ -15103,7 +15161,8 @@ var FLOOD_GROUND = {
   "the-breathing-hall": { walls: [.576, 3.8, 4, .25], hz: .52, keepLut: 1, scale: 1.5 }, // scale: 40 draws as 60 did; // the sea cave's rule: the walls stand on their foot line (where the back wall meets the floor, under the benches; down at the sides), the floor keeps its depth map and runs back to that wall
   "tideway-throat": { walls: [.348, 1.42, 2], dim: 1 }, // the tunnel walls stand on their feet, back to the far end; in the unlit dark the water is as dark as the room (no lit sheet in a black tunnel)
   "tideway-works": { water: [.45, .43], dim: 1 }, // the pool along the back wall gives the flood its colour; in the unlit dark the water is as dark as the room
-  "sea-cave": { walls: [.454, 1.55] }, // the cave walls stand on their own feet, which run from the corners to the far end (the depth map blurs them into the floor and the water climbed them)
+  "sea-cave": { walls: [.454, 1.55] },
+  "stone-drowned": { dim: 1 }, // the cave's drowned stone (2026-11-22): drawn dry, its standing water laid over it; dark ground, so the water is as dark as the room // the cave walls stand on their own feet, which run from the corners to the far end (the depth map blurs them into the floor and the water climbed them)
   "marsh": { water: [0.33, 0.58], lift: 1.15 }, // the channel's lightest water, a step lighter (rome: the marsh flood has to be lighter)
   "ferry-hard": { water: [0.6, 0.627] },
   "causeway": { water: [0.9, 0.55] },
@@ -16238,6 +16297,22 @@ var MOB_SPRITE = {
   "the-cook": 30,           // a man standing: his idle at 29.2, the nomad's at 29.5
   "the-chainman": 31,      // 28 until his redraw came out smaller
   "the-gaunt": 34,
+  // THE CAVE UNDER THE WOOD (mig 409, 2026-11-24). First numbers, set off the
+  // nearest sibling already on screen; to be looked at in the game and moved.
+  "cave-cougar": 15,          // a cat under the cave lion at 19
+  "mole-hound": 18,           // a long-legged hound, over the grey wolf's 13 (rome: a bit small at 13)
+  "river-gulper": 12,         // a fish as long as a man, the bull seal's 12
+  "cave-spider": 11,          // legs that would span a cartwheel (rome: a bit small at 8)
+  "cave-bat": 5.5,            // fist-sized with the wings open (rome: a bit small at 4)
+  "digger": 30,               // a man standing, as the cook
+  "the-lamp-man": 31,         // a man standing, tall
+  "stone-brood": 11,          // the length of a big dog, drawn low in every pose
+  "stone-sleeper": 15,        // just bigger than its brood (rome: far too big at 34)
+  "polecat": 4,               // no bigger than a cat, long and low
+  "cave-crayfish": 5.5,       // as long as a hand (rome: too small at 3)
+  "stone-mites": 7,           // a spread of mites (rome: too small at 4)
+  "grubbet": 5.5,             // the size of a rabbit (rome: a bit small at 4)
+  "pale-salamander": 3,       // as long as a forearm
 };
 
 // WHAT A CREATURE DOES WHILE YOU STAND THERE. A sprite with an entry here is not
@@ -16268,6 +16343,20 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "the-lamp-man":      { n: 9, aspect: 0.953, f: {"idle":0,"trim-the-wick":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"shutter":7,"death":8} },
+  "stone-sleeper":     { n: 8, aspect: 1.802, f: {"idle":0,"alert":1,"rest":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "stone-mites":       { n: 8, aspect: 1.73, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "stone-brood":       { n: 9, aspect: 1.568, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "river-gulper":      { n: 8, aspect: 1.491, f: {"idle":0,"alert":1,"hold":2,"attack":3,"sweep":4,"move-a":5,"move-b":6,"death":7} },
+  "polecat":           { n: 8, aspect: 1.54, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "pale-salamander":   { n: 8, aspect: 1.904, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "mole-hound":        { n: 9, aspect: 1.034, f: {"idle":0,"listen":1,"alert":2,"rest":3,"feed":4,"move-a":5,"move-b":6,"attack":7,"death":8} },
+  "grubbet":           { n: 8, aspect: 1.141, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "digger":            { n: 9, aspect: 0.937, f: {"idle":0,"call":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"snatch-escape":7,"death":8} },
+  "cave-spider":       { n: 7, aspect: 1.336, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"feed":5,"death":6} },
+  "cave-crayfish":     { n: 8, aspect: 1.123, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "cave-cougar":       { n: 9, aspect: 1.363, f: {"idle":0,"lurk":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"rest":7,"death":8} },
+  "cave-bat":          { n: 8, aspect: 1.061, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"sweep":5,"rest":6,"death":7} },
   "rat-yule":               { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-midsummer":          { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-mayday":             { n: 8, aspect: 1.693, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -16577,6 +16666,7 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
   "work-the-face",      // the sapper, a handful of chalk at a time, still going east
   "hone-the-blade",     // the cook, the cleaver down the steel before the meal goes out
   "wipe-the-blade",     // ...and wiped flat on the apron, and back to work
+  "trim-the-wick",      // the lamp-man, the hook at the wick (mig 409, 2026-11-24)
   // THE TEN REDRAWN (2026-10-17), named here before the sheets come back - a
   // second piece of their own work, so the idle has two things in it:
   "test-the-joint",     // the bridge mason, tapping a joint that closed two centuries ago
@@ -16634,7 +16724,10 @@ var CALM_POSES = ["bask","listen","watch","hold-ground",
 // sends it: it scoops only in an empty room, so nobody is ever there to see it.
 var EVENT_POSES = ["hold-the-salute", "rise", "take-hold", "lift-you-clear", "take-it-up",
                    "lay-on-the-hand", "guard-the-kill", "stand-from-the-throne", "call-the-dark",
-                   "call-the-rats"]; // the rat king rearing to scream its rats out of the walls (ai.bossPhase)
+                   "call-the-rats", // the rat king rearing to scream its rats out of the walls (ai.bossPhase)
+                   // THE CAVE'S (cave.ts, 2026-11-24): a digger calling the others, the
+                   // gulper with hold of you, the lamp-man shutting his lamp to go.
+                   "call", "hold", "shutter"];
 var GAIT_HZ = 5;            // gait poses alternate this fast...
 var GAIT_HZ_SLOW = 2;       // ...except the old glutton, which lumbers
 var WINGBEAT_HZ = 4;        // and wings beat this fast...
@@ -16652,6 +16745,12 @@ var HOP = 0.16;             // how far a hare or the dancer leaves the ground, o
 // together); crows and ravens fight on foot, and the words say so.
 var SWOOPERS = { "eagle-owl": 1, "tawny-owl": 1, "hill-eagle": 1, "eyrie-holder": 1, "bone-breaker": 1, "the-bone-dropper": 1, "great-gull": 1, "black-backed-gull": 1 };
 var SWOOP_HOVER = 0.55, SWOOP_DIP = 0.2;
+// THE BAT HANGS FROM THE ROOF (mig 409, 2026-11-24). Its rest, its idle and its
+// alert are drawn hanging head down, and drawn on the floor line they hung from
+// nothing. So it lives up where the roof is, a share of the frame above its line,
+// at its own size, and comes down only dead.
+var ROOF_HANGERS = { "cave-bat": 1 };
+var ROOF_RISE = 45;
 var LEAP_S = 0.7;
 var LEAP_EVERY_S = 5;
 var leapAt = function (t, slot) {
@@ -16705,7 +16804,9 @@ var MOB_EYES = {
   // The sapper joined the dead on 2026-10-27 and his redraw carries the marker.
   "the-sapper": 1,
   // ...and the cook (2026-10-30), drawn with it from the start.
-  "the-cook": 1
+  "the-cook": 1,
+  // ...and the cave's dead (mig 409, 2026-11-24), the diggers and the lamp-man.
+  "digger": 1, "the-lamp-man": 1
 };
 
 var IDLE_MS = 1400;      // how long one idle frame is held...
@@ -17598,9 +17699,12 @@ function poseAt(a, now) {
       if (wing) name = wing;
     }
   }
+  var roof = typeof ROOF_HANGERS !== "undefined" && ROOF_HANGERS[a.id] && a.phase !== "death"
+    && typeof MOB_SPRITE !== "undefined" && MOB_SPRITE[a.id];
+  if (roof) air = ROOF_RISE / mobVh(a.id);
   if (a.phase !== "hit") a.rot = 0;
   if (f[name] === undefined) name = "idle";
-  s *= 1 - AIR_SHRINK * Math.min(1, air / lift);
+  if (!roof) s *= 1 - AIR_SHRINK * Math.min(1, air / lift);
   return { k: f[name], x: x, air: air, s: s };
 }
 function runAnims() {

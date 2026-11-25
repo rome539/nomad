@@ -8,7 +8,7 @@ import { FOOD_FLIERS, SALT_HAMLET_ROOMS, SHIELING_HAMLET_ROOMS, roamsIn } from "
 
 const DAY_MS = 24 * 3_600_000;
 type Kills = Record<string, Record<string, number>>;
-export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Kills; crossingKills?: Kills; roadKills?: Kills; outKills?: Kills; upperKills?: Kills; deepKills?: Kills; woodKills?: Kills; denKills?: Kills }
+export interface Tally { since: number; moved?: number; flights: number; chases: number; caught: number; stolen: number; kills: Kills; crossingKills?: Kills; roadKills?: Kills; outKills?: Kills; upperKills?: Kills; deepKills?: Kills; woodKills?: Kills; caveKills?: Kills; denKills?: Kills }
 type Event = "moved" | "flights" | "chases" | "caught" | "stolen";
 
 const SHOWN = [
@@ -33,7 +33,9 @@ const WOOD_SHOWN = [
   "roe-deer", "wood-stag", "wild-boar", "hedgehog", "wood-sloth", "grey-wolf", "coyote", "tawny-owl", "scarp-raven", "brown-bear", "the-baited-bear", "the-hush", "capercaillie",
 ];
 const DEN_SHOWN = ["rat", "roe-deer", "masterless-dog"];
-const ALL_SHOWN = new Set([...SHOWN, ...CROSSING_SHOWN, ...ROAD_SHOWN, ...OUT_SHOWN, ...UPPER_SHOWN, ...DEEP_SHOWN, ...WOOD_SHOWN, ...DEN_SHOWN]);
+// THE CAVE UNDER THE WOOD (mig 409, 2026-11-24): its roamers, and the gulpers, diggers and brood that keep their places.
+const CAVE_SHOWN = ["cave-cougar", "mole-hound", "grubbet", "pale-salamander", "cave-spider", "cave-bat", "river-gulper", "digger", "stone-brood", "polecat", "cave-crayfish", "stone-mites"];
+const ALL_SHOWN = new Set([...SHOWN, ...CROSSING_SHOWN, ...ROAD_SHOWN, ...OUT_SHOWN, ...UPPER_SHOWN, ...DEEP_SHOWN, ...WOOD_SHOWN, ...DEN_SHOWN, ...CAVE_SHOWN]);
 const lineOf = (z: ZoneDO, id: string): string => ALL_SHOWN.has(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
 const onMountain = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "mountain";
 
@@ -143,7 +145,7 @@ function mountainLines(z: ZoneDO, now: number): string[] {
 
 // What a living region's section shows: its packs, its herds, its lines against
 // their limit, and what was killed and by what.
-interface RegionView { title: string; words: string[]; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" | "outKills" | "upperKills" | "deepKills" | "woodKills" | "denKills" }
+interface RegionView { title: string; words: string[]; region: string; shown: string[]; packs: { line: string; label: string; hamlet?: string[] }[]; herds: string[]; kills: "crossingKills" | "roadKills" | "outKills" | "upperKills" | "deepKills" | "woodKills" | "denKills" | "caveKills" }
 const CROSSING_VIEW: RegionView = {
   title: "THE CROSSING", words: ["crossing"], region: "crossing", shown: CROSSING_SHOWN, kills: "crossingKills",
   packs: [{ line: "marsh-hound", label: "Marsh hounds", hamlet: SALT_HAMLET_ROOMS }],
@@ -179,7 +181,12 @@ const DEN_VIEW: RegionView = {
   packs: [{ line: "masterless-dog", label: "Masterless dogs" }],
   herds: ["roe-deer"],
 };
-const VIEWS = [CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW, WOOD_VIEW, DEN_VIEW];
+const CAVE_VIEW: RegionView = {
+  title: "THE CAVE", words: ["cave", "the cave"], region: "cave", shown: CAVE_SHOWN, kills: "caveKills",
+  packs: [{ line: "mole-hound", label: "Mole hounds" }],
+  herds: ["cave-bat"],
+};
+const VIEWS = [CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW, WOOD_VIEW, DEN_VIEW, CAVE_VIEW];
 
 function regionLines(z: ZoneDO, now: number, v: RegionView): string[] {
   const world = z.world!;

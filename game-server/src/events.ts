@@ -89,7 +89,7 @@ import {
   FEVER_TELEGRAPH_MS, FEVER_ACTIVE_MIN_MS, FEVER_ACTIVE_MAX_MS, FEVER_AFTERMATH_MS, FEVER_BANDS, FEVER_GRAVES, FEVER_RISES, FEVER_EVERY_MIN_MS, FEVER_EVERY_MAX_MS, FEVER_FIRST_MIN_MS, FEVER_FIRST_MAX_MS, FEVER_RAIN_SOON_MIN_MS, FEVER_RAIN_SOON_MAX_MS, FEVER_RAT_HOLD_MS, FEVER_RAT_HOME, FEVER_COUGH_RISE_MS, FEVER_COUGH_FADE_MS, FEVER_RAT_AMBIENT, FEVER_RAT_AMBIENT_ODDS,
   DAY_CYCLE_MS, BUGLE_EVERY_DAYS, BUGLE_SALUTERS, BUGLE_REVEILLE, BUGLE_TAPS, BUGLE_FAR, BUGLE_SALUTE_ONE, BUGLE_SALUTE_MANY,
   WARM_ROOMS,
-  PALE_DRAKE, PALE_SNOW_HOLD_MS,
+  PALE_DRAKE, PALE_SNOW_HOLD_MS, CAVE_STANDING_WATER,
 } from "./zone-data";
 
 // An idle arc waits here until the roll (or the bell's hours) wakes it.
@@ -4495,6 +4495,8 @@ export function seaUnder(z: ZoneDO, roomId: string): boolean {
  * water over the dry plate at this depth; 0 draws nothing.
  */
 export function roomWater(z: ZoneDO, roomId: string): number {
+  const standing = CAVE_STANDING_WATER[roomId]; // the cave's drowned stone, never dry (2026-11-22)
+  if (standing) return standing;
   if (seaUnder(z, roomId)) return Math.min(3, Math.max(1, seaLevel(z) - (SEA_ROOMS.get(roomId) ?? 1) + 1));
   if (tideFlooded(z, roomId)) return Math.min(3, tideRank - floodRank(roomId) + 1);
   return 0;

@@ -1,0 +1,281 @@
+# THE CAVE UNDER THE WOOD, THE BOTTOM (three floors down). Not a cave any more:
+# flat stone, dressed and laid tight, with cold air coming up through the joints,
+# the same stone that lies under every fever grave and under the Deep's older
+# work (cave-plan.md, the story). Built by someone older than the holding. The
+# sleeper lies on it. Nothing says what it is or what the stone is: evidence only.
+#
+# THE WAYS. A straight road runs north to south between the two ways down: the
+# Diggers' Stair lands at its north end (the Stair Foot) and the Old Sink at its
+# south (the Sink Foot). The sleeper's ground is west, behind the brood; the
+# ring of nine stones is north-west, under the Standing Oaks.
+#
+# THE LIGHT. The stone gives a faint cold light of its own, never explained,
+# and every lit room's words say so. Dark rooms are where something covers the
+# stone: the diggers' spoil, a fall of rock, standing water.
+#   DARK: the-spoil-heaps the-last-heading the-rock-fall the-buried-hall
+#         the-drowned-flags the-sink-foot the-black-water-hall
+#   Every other room on this floor is lit by the stone.
+#
+# THE SECRET DOOR (cave-plan.md, the breathing stone): the Ring of Nine opens
+# down onto the under-stone (the-cave-4.rooms) only while the pried stone stands
+# up on its edge. The door is keyed so it stays shut until that code exists.
+
+!region cave
+!floor -3
+
+## the-stair-foot | The Stair Foot
+The diggers' stair comes down onto a floor of flat stone, dressed and laid tight, so level that the cut steps end on it in a ragged edge like a torn cloth. Cold air comes up through the joints between the stones all over the floor, steadily, and the stone itself gives a faint grey light, enough to see the walls by. The walls are dressed stone too.
+> up the-diggers-stair
+> west the-spoil-heaps
+> south the-first-flags
+
+## the-spoil-heaps | The Spoil Heaps
+The diggers tipped their spoil here, broken rock and earth in heaps that cover the floor and bank against the walls, and where it lies the stone's light is put out. It is dark. A shovel stands in the nearest heap. The cold comes up out of the heaps anyway, through the spoil.
+> east the-stair-foot
+> west the-last-heading
+
+## the-last-heading | The Last Heading
+The furthest the diggers got. A rough tunnel goes into the spoil and stops at a face of dressed stone they had begun to cut into, and given up on: a few pick-marks on it, shallow, and a pick with its point snapped off lying at the foot of it. Somebody has cut a row of tallies into the soft rock beside the face, and crossed them all out.
+> east the-spoil-heaps
+
+## the-first-flags | The First Flags
+Out of the diggers' mess the floor runs on clean: great flat stones, each the size of a door, fitted so close you could not get a knife between them, and the cold air coming up through the joints regardless. The faint light comes off them evenly from no point you can find. Your steps are very loud.
+> north the-stair-foot
+> south the-straight-way
+
+## the-straight-way | The Straight Way
+A way of dressed stone running straight ahead, walls and floor and roof, as straight as a ruled line, further than the faint light lets you see. Nothing in a cave runs like this. Somebody built it, and built it to last, and it has.
+> north the-first-flags
+> west the-west-door
+> south the-cold-road
+
+## the-cold-road | The Cold Road
+The straight way goes on, and the cold gets worse, the air coming up through the joints of the floor so steadily that it blows the dust along the stone in long lines, all toward the north. The faint light of the stone shows the dust moving.
+> north the-straight-way
+> south the-cross-hall
+
+## the-cross-hall | The Cross Hall
+Two ways of dressed stone cross here in a square hall with a high flat roof, the corners of it square and true. The stone gives its faint grey light from every face, floor and walls and roof alike, so there are no shadows at all, not even yours.
+> north the-cold-road
+> west the-west-hall
+> east the-east-hall
+> south the-long-flags
+
+## the-long-flags | The Long Flags
+The floor here is laid in long flags running the length of the way, and down the middle of them a track has been worn into the stone, shallow and smooth, by something that went this way more times than anyone could count. The track goes west at the hall behind you.
+> north the-cross-hall
+> south the-sunk-flags
+
+## the-sunk-flags | The Sunk Flags
+The floor has sunk here in the middle, the flags tilted down toward a long joint that has opened wider than the rest, a finger's width, and the cold air comes up out of it hard enough to sing. The faint light is brighter along its edges, or seems to be.
+> north the-long-flags
+> south the-rock-fall
+
+## the-rock-fall | The Rock Fall
+The rock above the dressed roof has come down through it here and filled the way to half its height with broken stone, and under the fall the light of the stone is gone. It is dark. You climb over the heap with the roof close over your head.
+> north the-sunk-flags
+> east the-side-arch
+> south the-cleared-way
+
+## the-cleared-way | The Cleared Way
+Past the fall the way is clean again, the light back, the flags level. Fallen stones have been moved to the walls on both sides and set down there in a row, carefully, all the same way, by something that did not use its hands.
+> north the-rock-fall
+> south the-south-road
+
+## the-south-road | The South Road
+The straight way runs on south under its faint light, and the walls on both sides are cut with shallow niches at the height of your chest, empty, square, every one the same, a long row of them going away into the dark both ways.
+> north the-cleared-way
+> south the-near-sink
+> west the-south-cell
+
+## the-near-sink | The Near Sink
+The way's south end, where the dressed roof has a ragged hole broken through it and a rope hangs down out of the hole. Water has come down through it once and spread a skin of silt over the flags, and the stone's light comes up dull through the silt.
+> north the-south-road
+> south the-sink-foot
+
+## the-sink-foot | The Sink Foot
+The bottom of the Old Sink: a rough round shaft coming down through the roof, wet rock above and dressed stone below, and a heap of the river's old gravel spread out across the floor under it, dark, covering the stone. The rope from above ends here, in a knot. The cold goes up the shaft past you.
+> north the-near-sink
+> up the-old-sink
+
+## the-west-door | The West Door
+A doorway in the side of the straight way, square, its lintel a single stone, its jambs fitted to it without mortar. There is no door in it and no mark of a hinge. It was made to be walked through.
+> east the-straight-way
+> west the-pillared-way
+
+## the-pillared-way | The Pillared Way
+A way held up by square pillars of dressed stone, two and two, the roof flat on them, the faint light coming off every face. The pillars are worn at the height of your hip on the side toward the door, smooth, as if a great many hands had touched them going in.
+> east the-west-door
+> west the-pillar-hall
+
+## the-pillar-hall | The Pillar Hall
+A hall of square pillars in rows, more of them than the light shows, so the hall seems to go on in every direction. The floor between them is very clean. The cold air comes up between the flags everywhere and the dust that blows along them is all going the same way, north.
+> east the-pillared-way
+> north the-north-steps
+> south the-cracked-flags
+
+## the-north-steps | The North Steps
+Three broad steps go up out of the pillar hall, each a single stone, worn hollow in the middle. The air coming down them from the north is colder than any in the hall, and it smells of nothing, and it does not stop.
+> south the-pillar-hall
+> north the-cold-passage
+
+## the-cold-passage | The Cold Passage
+A narrow passage of dressed stone where the cold is so hard your breath smokes and frost lies white in the joints of the walls. The faint light of the stone is clearer here, as if the cold made it.
+> south the-north-steps
+> north the-hum
+
+## the-hum | The Hum
+A low sound comes from the walls here, a hum you feel more than hear, steady, rising very slowly and falling very slowly. Put a hand on the stone and it is in the stone. It is the sound the air makes, coming up through the joints.
+> south the-cold-passage
+> north the-ante-room
+
+## the-ante-room | The Ante-Room
+A small square room before a doorway, its floor laid in a pattern: nine stones round one, and the one in the middle worn deep. Benches of stone run round the walls. Nobody has sat on them for longer than the oaks above have stood.
+> south the-hum
+> west the-ring-door
+
+## the-ring-door | The Ring Door
+A doorway with a lintel cut in a shallow curve, and on the curve, cut into the stone, a ring of nine small marks round one, the same as the floor of the room behind you. The air through the doorway is very cold and it is all coming one way, out.
+> east the-ante-room
+> west the-ring-of-nine
+
+## the-ring-of-nine | The Ring of Nine
+A round chamber, the only round room in all this squared stone, and in its floor a ring of nine great flat stones set round a tenth, each the size of a table, each with its own joint round it. Nothing else stands in the room, and nothing has been left in it.
+> east the-ring-door
+> down the-under-steps key:breathing-stone
+
+## the-west-hall | The West Hall
+A long hall going west from the cross, its floor worn by the track down the middle of it, wide and shallow. Along the walls the stone is scraped, low down, in long scratches, and the scratches are fresh and pale against the old grey.
+> east the-cross-hall
+> west the-brood-way
+
+## the-brood-way | The Brood Way
+The track down the middle of the way is wet here, and the scratches along the walls are everywhere, crossing, at the height of your knee. Something has shed a skin on the floor, thin and grey and wrinkled, the shape of a thing with four legs and a long tail, the length of a dog.
+> east the-west-hall
+> south the-brood-nests
+> west the-pale-walls
+
+## the-brood-nests | The Brood Nests
+Hollows have been worn into the dressed floor of this room, shallow, each the length of a dog, a dozen of them, each with the stone polished smooth inside it by lying. Shed skins lie in some of them. They are all turned toward the west.
+> north the-brood-way
+
+## the-cracked-flags | The Cracked Flags
+The flags here have cracked across, every one of them, in the same direction, as if a great weight had been dragged over them once. The cold comes up through the cracks as well as the joints, hard, and the light from the stone comes up through them too.
+> north the-pillar-hall
+> south the-pale-walls
+
+## the-pale-walls | The Pale Walls
+A hall of dressed stone with its walls scraped bare to a height above your head, the old grey surface gone, the stone under it pale and fresh. The track down the floor is deep here. It goes west, to a doorway at the far end, and the cold that comes out of it is the worst yet.
+> east the-brood-way
+> north the-cracked-flags
+> west the-sleepers-door
+
+## the-sleepers-door | The Low Door
+A doorway low and wide, much wider than a man needs, its jambs worn round at the height of your knee by something passing through it close against the stone on both sides at once. The light beyond is stronger. The stone there is not grey: it is white.
+> east the-pale-walls
+> west the-worn-hollow
+
+## the-worn-hollow | The Worn Hollow
+A long chamber floored with great white flags, and down the middle of it, worn into the stone, a hollow the shape of a lying body four times the length of a man, polished smooth as glass by lying. The cold air comes up through the joints all round the hollow and not through any other. Everything in this room faces the hollow.
+> east the-sleepers-door
+> west the-cold-pit
+> south the-back-way
+
+## the-cold-pit | The Cold Pit
+Behind the hollow, a square pit in the floor, lined with dressed stone, going down into a dark that the stone's light does not reach. The cold comes up out of it so hard it hurts. At the bottom of the light, the lining of the pit is scratched all over, from the inside.
+> east the-worn-hollow
+
+## the-back-way | The Back Way
+A narrow way leads out of the hollow's room at its south end, low, the floor worn into a groove by the same track, going away south. Small bones lie in the groove, of grubbets and fish, and of something like a salamander, very large.
+> north the-worn-hollow
+> south the-groove
+
+## the-groove | The Groove
+The track down the floor is a groove here as deep as your shin, worn into the dressed stone, and you walk in it because there is nowhere else to walk. The walls are close and scraped pale on both sides. The groove goes on south, toward water.
+> north the-back-way
+> south the-black-water-hall
+
+## the-black-water-hall | The Black Water Hall
+Water has come into the dressed stone here and stands over the floor, black and still and cold, a hand deep, hiding the stone and its light, so the room is dark. The groove goes in under the water and comes out the other side. Things move in the water, slowly.
+> north the-groove
+> east the-pale-steps
+
+## the-pale-steps | The Pale Steps
+Out of the water, the floor climbs in long shallow steps of white stone, the light back and bright on them, and the steps are wet where something came up them out of the water and went on, dragging.
+> west the-black-water-hall
+> east the-carved-rings
+
+## the-carved-rings | The Carved Rings
+A long low hall of dressed stone, the roof so close you could put your hand flat on it, the light coming off it into your face. The track runs down the middle. Along the walls, set into them in a row, there are flat stones carved with rings, nine round one, again and again.
+> west the-pale-steps
+> east the-south-hall
+
+## the-south-hall | The South Hall
+A wide hall at the south of the dressed stone, square, its roof held up by four pillars. Old bones lie at the foot of the pillars in heaps, small dark bones of a people smaller than the holding's, packed close in no order, and under the heaps the floor's light shows through.
+> west the-carved-rings
+> south the-bone-pillars
+
+## the-bone-pillars | The Bone Pillars
+More bones, and here they have been laid against the pillars in courses, built up like walls, careful, a people's dead put up round the pillars one on another. Their skulls all face the same way, toward the west. The cold air comes up through the joints under them.
+> north the-south-hall
+> east the-quiet-way
+
+## the-quiet-way | The Quiet Way
+A short way of dressed stone, the walls plain, nothing in it, the light even. It is the only place down here where the air does not move at all. Your breathing is the only sound.
+> west the-bone-pillars
+> south the-south-cell
+
+## the-south-cell | The South Cell
+A square cell off the south road, its doorway narrow, its floor one single stone, the light coming up out of it white and even. In the middle of the stone there is a hand-mark, a palm and five fingers, sunk into the stone as if the stone had been soft once when a hand was laid on it. The hand is small.
+> north the-quiet-way
+> east the-south-road
+
+## the-east-hall | The East Hall
+A hall going east from the cross, its walls lined with shallow niches at the height of your chest, every one empty, the light coming out of the backs of them. Something was kept in each. The dust in each has the clean square print of it, gone.
+> west the-cross-hall
+> east the-pillared-east
+
+## the-pillared-east | The Pillared East
+A hall of pillars on the east side, as tall as the ones on the west, and here the pillars have been cut into at the height of a man's shoulder, all of them, with pick-marks, as if someone had tried each pillar in turn to see what it was made of. They are made of stone all the way through.
+> west the-east-hall
+> east the-east-way
+
+## the-east-way | The East Way
+A straight way going north and south along the east of the stone, plainer than the rest, the walls undressed in places, as if it were the back of something. The air moves along it northward and the light lies on it thin.
+> west the-pillared-east
+> north the-buried-hall
+> south the-sheet-water
+
+## the-buried-hall | The Buried Hall
+The roof has come down over the whole of this hall, slowly, by the look of it, sagging in one piece before it broke, and the hall is half full of rock and dark where the rock lies. A way through it has been scraped out, low, wide, at the height of a lying body.
+> south the-east-way
+> north the-cold-cell
+
+## the-cold-cell | The Cold Cell
+A square cell where the cold coming up through the floor has hung frost all over the walls in feathers a finger long. The light comes through the frost blue-white. Something has lain on the floor and melted a shape into the frost, and the frost has not yet grown back over it.
+> south the-buried-hall
+
+## the-sheet-water | The Sheet Water
+Water seeps in through the joints of the east wall here and runs down it and across the floor in a sheet as thin as glass, and the stone's light comes up through it rippling. It runs one way across the floor, west, uphill.
+> north the-east-way
+> south the-drowned-flags
+
+## the-drowned-flags | The Drowned Flags
+The water lies deep here over the floor, over your knee, still and black, and the light of the stone does not come through it. It is dark. You feel the flags under your feet, and the joints between them, and the cold coming up through the water from them.
+> north the-sheet-water
+> south the-east-road
+
+## the-east-road | The East Road
+The way out of the water, the floor rising dry again and the light coming back up out of it. A short road of dressed stone joins the east way to the straight way, its flags laid in a herringbone, each one fitted to the next so close that the herringbone is the only sign there are joints at all.
+> north the-drowned-flags
+> west the-east-steps
+
+## the-east-steps | The East Steps
+The herringbone road ends at two broad steps down to the straight way. On the top step someone has scratched a mark with a knife point: a ring, with a line through it. The scratch is new against the stone.
+> east the-east-road
+> west the-side-arch
+
+## the-side-arch | The Side Arch
+An arch opens in the east wall of the straight way here, low and round-headed, the only curve in the wall for its whole length. Its keystone is cut with a ring of nine small marks round one. Through it, two broad steps go up to a road laid in herringbone.
+> west the-rock-fall
+> east the-east-steps

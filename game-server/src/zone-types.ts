@@ -219,6 +219,17 @@ export interface Creature {
   leads?: boolean;      // styles.ts: the lead animal of the pack fighting in this room
   openUntil?: number;   // styles.ts: a striker committed by its bite; your next swing can't miss it
   dropping?: boolean;   // styles.ts: a lurker coming back out of the dark this round
+  brokeOff?: boolean;   // cave.ts: a cat that broke off a fight that turned, until it is whole again
+  dragTo?: string;      // cave.ts: the cave room it is dragging its kill down to...
+  dragMeal?: number;    // ...and what that kill is worth to it when it gets there
+  holdRounds?: number;  // cave.ts: blows landed while its bite has hold of you
+  calledAt?: number;    // cave.ts: when a digger last called
+  shutHp?: number;      // cave.ts: the lamp-man's health when he last shuttered his lamp
+  backAt?: number;      // cave.ts: when the shuttered lamp-man comes back out of the dark...
+  backFor?: string;     // ...and the pubkey he comes back for
+  outOfDark?: boolean;  // ...and, back, his next blow is the one out of the dark
+  nipAt?: number;       // cave.ts: a bat in flight, when it last went at somebody in its way
+  flying?: "out" | "home"; // cave.ts: a bat on the dusk flight out, or the dawn flight home
   folkStance?: "guarded" | "reckless"; // styles.ts: how a person is fighting now (unset = steady)
   turnHp?: number;      // styles.ts: its health at the start of its last turn, so a bird knows it was hit since
   waitsOn?: string;     // a waiting vulture (ai.vulturesWait): the pubkey of the hurt wanderer it is following

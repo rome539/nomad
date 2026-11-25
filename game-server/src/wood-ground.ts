@@ -23,6 +23,8 @@
 export const WOOD_GROUND: Record<string, string[]> = {
   road: [
     "the-barbican-footings", "the-gate-arch", "the-paved-road", "the-road-ruts", "the-turning-bay",
+    // the wood's new ways to the cave (2026-11-22)
+    "the-back-road", "the-sunk-paving", "the-fallen-milestone", "the-road-bend", "the-holloway-head", "the-deep-holloway", "the-root-bridge", "the-rotted-cart", "the-washout",
   ],
   built: [
     "the-bounds-house", "the-charcoal-hut", "the-fish-house", "the-icehouse", "the-withy-hut",
@@ -47,6 +49,8 @@ export const WOOD_GROUND: Record<string, string[]> = {
     "the-pale-grass", "the-pay-stone", "the-picked-bones", "the-rabbit-warren", "the-rampart-walk",
     "the-sawyers-bench", "the-stump-field", "the-sunken-lawn", "the-tilt-yard", "the-wedge-ground",
     "the-well-court", "the-west-ride", "the-white-ride", "the-windthrow",
+    // the wood's new ways to the cave (2026-11-22)
+    "the-cut-line", "the-tally-posts",
   ],
   heath: [
     "the-broken-ground", "the-dry-heath", "the-edge-of-it", "the-flint-scatter", "the-gorse-brake",
@@ -71,6 +75,8 @@ export const WOOD_GROUND: Record<string, string[]> = {
     "the-silted-pond", "the-skid-road", "the-sodden-ground", "the-south-ride", "the-spring-mire",
     "the-standing-water", "the-still-air", "the-sunk-fence", "the-wet-hollow", "the-wet-oaks", "the-wet-ride",
     "the-willow-break", "the-willow-margin", "the-willow-stools", "the-withy-holt",
+    // the wood's new ways to the cave (2026-11-22)
+    "the-sunk-moss", "the-wet-lane", "the-lanes-end",
   ],
   water: [
     "the-black-pool", "the-dark-pool", "the-drinking-pool", "the-eel-ditch", "the-fishponds",
@@ -83,10 +89,14 @@ export const WOOD_GROUND: Record<string, string[]> = {
     "the-fallen-wall", "the-guard-footings", "the-hall-floor", "the-kitchen-range", "the-lime-kiln",
     "the-mounting-block", "the-old-palisade", "the-solar", "the-stable-range", "the-well-court",
     "the-wolf-pits",
+    // the wood's new ways to the cave (2026-11-22)
+    "the-postern-gap",
   ],
   earth: [
     "the-badger-banks", "the-badger-ground", "the-deep-roots", "the-earth-fall", "the-fox-earths",
     "the-grey-lie", "the-rabbit-warren", "the-root-hollow", "the-sand-cut", "the-slip", "the-wolf-earth",
+    // the wood's new ways to the cave (2026-11-22)
+    "the-under-bank", "the-dark-behind",
   ],
   roost: [
     "the-ancient-ash", "the-boundary-oak", "the-cracked-oak", "the-crow-roost", "the-crows-oak",

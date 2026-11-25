@@ -21,7 +21,7 @@ import * as events from "./events";
 import * as works from "./works";
 import * as lore from "./lore";
 import { cap, shortName, nameMatches, roundTender, rollShopCondition, heartWord, foodWord, isNight, isBloodMoon, isFullMoon, moonPhase, eclipsePhase, skyBand, halfFrac } from "./zone-util";
-import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, KEEPER_LEARN_SALES, WORTH_MARK_AT, GEAR_FAILING_AT, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, THROW_TOUGH, DEEP_HEART,
+import { SCRAP_ID, IRON_ID, salvageYield, repairCost, stuffCount, forgeCost, STUFF_WORD, SMELT_SCRAP_PER_IRON, NO_SALVAGE, PACK_CAP, PACK_FOOD_CAP, LOCKBOX_CAP, VAULT_CAP, RICH_TENDER, KEEPER_LEARN_SALES, WORTH_MARK_AT, GEAR_FAILING_AT, JOURNAL_ITEM, SALVAGE_YIELD, REPAIR_COST, MATERIAL_READ, WEAPON_CLASS_READ, WEAPON_CLASS_TRAIT, TRAIT_DOES, TRAIT_COUNTED, materialOf, traitAdj, LANTERN_ITEM, LANTERN_MEND_IRON, isLantern, THROW_TOUGH, DEEP_HEART,
   ALTAR_ROOMS, HEART_FRESH_SEC,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_GAIN, WHET_CAP, FORGE_ROOMS, TORCH_BURN_MS,
   FENCE_OUT_MIN_MS, FENCE_OUT_MAX_MS, GLUT_FREE, GLUT_FLOOR, GLUT_EASE_MS, GLUT_EASE_SHARE, CIGARETTES, FENCE_LAST_ONE_ODDS, FENCE_CHURN_MIN_MS, FENCE_CHURN_MAX_MS, FENCE_ABSENT_FRACTION, FENCE_ALWAYS, FENCE_MATS, TORCH_ITEM,
@@ -276,12 +276,12 @@ function benchSheet(z: ZoneDO, c: CarriedItem, where: string, have: (id: string)
     // here and having the vice turn it down is a button that lies.
     // The lantern is mended in forge iron, not scrap (rome, 2026-10-16).
     mend: c.condition >= 100 || THROW_TOUGH.has(c.itemId) ? ""
-      : c.itemId === LANTERN_ITEM ? `${LANTERN_MEND_IRON} iron` : stuffList(z, repairCost(t.id, t.rarity)),
+      : isLantern(c.itemId) ? `${LANTERN_MEND_IRON} iron` : stuffList(z, repairCost(t.id, t.rarity)),
     // ...and whether you can pay it, so the button is honest before it is
     // pressed rather than refusing afterwards. Counted the way cmdRepair
     // spends: across pack and keeping both.
     canMend: c.condition < 100 && !THROW_TOUGH.has(c.itemId)
-      && (c.itemId === LANTERN_ITEM ? iron >= LANTERN_MEND_IRON : repairCost(t.id, t.rarity).every((o) => have(o.id) >= o.n)),
+      && (isLantern(c.itemId) ? iron >= LANTERN_MEND_IRON : repairCost(t.id, t.rarity).every((o) => have(o.id) >= o.n)),
   };
 }
 
@@ -1718,7 +1718,7 @@ export async function repairCore(z: ZoneDO, session: Session, carried: CarriedIt
   // in its well now (rome, 2026-10-16), so what the bench mends is the lantern
   // itself - the sprung tin and the cracked pane - and it wants forge iron for
   // it, not scrap. Worn to nothing it will not light, but it is never gone.
-  const lantern = carried.itemId === LANTERN_ITEM;
+  const lantern = isLantern(carried.itemId);
   // The stone is the anti-lantern: it wears like gear and NOTHING mends it
   // (rome, 2026-07-11) — every latch it beats open is spent for good.
   if (THROW_TOUGH.has(carried.itemId)) return "The vice has no answer for stone. What it's spent, it's spent.";
@@ -2365,7 +2365,7 @@ export async function sendBench(z: ZoneDO, session: Session, note?: string, sfx?
         // A light in the pack can be lit or put out from the window, the same
         // words the typed list prints (light.lightOffer). Pack only. A lantern put
         // away still says how much fat is in it (rome, 2026-10-31).
-        ...(() => { const o = session.items.includes(c) ? light.lightOffer(z, session, c) : null; return o ? { lite: o.verb, lit: o.lit, well: o.well ?? "" } : c.itemId === LANTERN_ITEM ? { well: light.wellCount(c.fuel ?? 0) } : {}; })(),
+        ...(() => { const o = session.items.includes(c) ? light.lightOffer(z, session, c) : null; return o ? { lite: o.verb, lit: o.lit, well: o.well ?? "" } : isLantern(c.itemId) ? { well: light.wellCount(c.fuel ?? 0, c.itemId) } : {}; })(),
       };
     };
     // Fungibles collapse to one entry with a count and the full list of rows —
@@ -2833,7 +2833,7 @@ export function slateText(z: ZoneDO): string {
   // THE OUTSIDE ONLY (rome, 2026-11-19): no rows for the Halls or the Deep. The gates
   // are the open ground and Assart End is the wood, each on its ground's one row,
   // carrying the weather of both.
-  const SLATE_SKIPS = new Set(["upper", "deep"]);
+  const SLATE_SKIPS = new Set(["upper", "deep", "cave"]); // and the cave under the wood (2026-11-22): no weather reaches it
   const SLATE_PART_OF: Record<string, string> = { gate: "out", den: "wood" };
   const bands = events.weatherGrounds(z).bands;
   const grounds = [...new Set([...bands.map((b) => SLATE_PART_OF[b] ?? b)])]
@@ -3604,6 +3604,7 @@ export function wallStudy(z: ZoneDO, session: Session): void {
     // does — and here it matters twice over, because the ferry house IS a gate,
     // so the shallow ring around it is nothing BUT crossing rooms.
     crossing: { key: "crossing", label: "The Crossing", rooms: [] },
+    cave: { key: "cave", label: "The Cave", rooms: [] }, // the cave under the wood (2026-11-22)
   };
   for (const id of shown) {
     const room = world.rooms.get(id)!;

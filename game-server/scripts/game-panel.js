@@ -50,11 +50,12 @@
     "The Crossing": "causeway ford ferry ferry-hard staithe bridge marsh marsh-samphire marsh-carr marsh-dyke shell reed eyot shore-road works sea-cave salt-street salt-fields salt-common",
     "The Road": "the-kept-road the-frost-heaved-paving the-cart-ruts road-oaks road-hedges road-moor road-gill",
     "The Wood": "wood wood-felling wood-osier wood-bailey wood-burnt wood-holly wood-birch glade wet sunken heath holding under-roots cave-mouth cave-passage cave",
-    "Assart End": "the-dens fields common"
+    "Assart End": "the-dens fields common",
+    "The Cave": "cave-roots cave-mouths cave-wet cave-rough cave-gallery cave-bones cave-dripstone cave-ledge cave-hollow cave-dark-river cave-glow-river cave-foxfire cave-roost cave-silk cave-workings cave-camp cave-stopping cave-deep-camp cave-dry-dark stone-way stone-buried stone-pillars stone-ring stone-scraped stone-hollow stone-drowned under-stone"
   };
   var groundAt = {};
   Object.keys(GROUND_PLACE).forEach(function (l) { GROUND_PLACE[l].split(" ").forEach(function (t) { groundAt[t] = l; }); });
-  var ORDER = ["The Gatehouse", "The Fortress", "The Deep", "The Mountain", "The Crossing", "The Road", "The Wood", "Assart End", "Other"];
+  var ORDER = ["The Gatehouse", "The Fortress", "The Deep", "The Mountain", "The Crossing", "The Road", "The Wood", "Assart End", "The Cave", "Other"];
   var byLoc = {};
   var put = function (loc, v, t) { (byLoc[loc] = byLoc[loc] || []).push([v, t]); };
   var seen = {}, rows = [];

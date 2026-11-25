@@ -9,6 +9,7 @@ import { SIG } from "./legendary";
 // PACKS).
 import type { ZoneDO } from "./zone";
 import * as ratking from "./ratking";
+import * as cave from "./cave";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate } from "./world";
 import { hasTrait } from "./world";
@@ -93,6 +94,7 @@ export function creatureBlow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
   if (CUTTHROATS.has(id) && !victim.staggered && chance(FEINT_ODDS)) out.feint = true;
 
   if (FOLK.has(id)) out.mult *= STANCE[folkStance(z, creature, tmpl)].atk;
+  cave.blow(z, creature, tmpl, victim, now, out); // the cave's own ways (cave.ts)
 
   creature.lastBlowAt = now;
   return out;
@@ -102,6 +104,7 @@ export function creatureBlow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
 export function beforeAttack(z: ZoneDO, creature: Creature, tmpl: MobTemplate, victim: Session, now: number): boolean {
   creature.dropping = false;
   const id = creature.templateId;
+  if (cave.beforeAttack(z, creature, tmpl, victim, now)) return true; // breaks off, shutters (cave.ts)
   // A wounded boar does not run: it turns, and the next blow is a charge.
   if (TURNING_BOARS.has(id) && !creature.turned && creature.hp < tmpl.max_hp * BOAR_TURN_AT) {
     creature.turned = true;
@@ -228,6 +231,8 @@ export function playerSwing(z: ZoneDO, session: Session, creature: Creature, tmp
   weapon: { carried: CarriedItem; tmpl: ItemTemplate } | null, now: number): { miss?: string; mult: number } {
   const id = creature.templateId;
   if (LURKERS.has(id) && creature.hidden) return { miss: "You swing at the dark where it was, and hit nothing.", mult: 1 };
+  const wide = cave.playerMisses(z, session, creature); // the lamp-man in your dark (cave.ts)
+  if (wide) return { miss: wide, mult: 1 };
   if (FLIERS.has(id) && airborne(creature, now) && !(weapon && hasTrait(weapon.tmpl, "reach"))) {
     return { miss: `${cap(tmpl.name)} is overhead, out of reach of anything you swing.`, mult: 1 };
   }

@@ -66,11 +66,20 @@ export const RUN_ROOMS = new Set<string>([
   "the-drain-cut", "the-outfall",
   // the deep's moving water
   "the-eel-run",
+  // the cave under the wood (2026-11-22): its river, the streams in it, and the river heard through the floor
+  "the-sump-mouth", "the-black-water", "the-glow-reach", "the-starry-roof", "the-river-shingle",
+  "the-river-bend", "the-diggers-bridge", "the-foxfire-wall", "the-deep-run", "the-ford", "the-long-pool",
+  "the-river-shelf", "the-narrowing", "the-rapids", "the-river-turn", "the-low-roof", "the-silt-banks",
+  "the-glow-tunnel", "the-rising-water", "the-under-spring", "the-spring-foot", "the-spring-throat",
+  "the-ditch-water", "the-wet-passage", "the-listening-floor", "the-fern-hole", "the-cold-sand",
+  "the-bridge-end", "the-wet-ledge", "the-spring-gallery", "the-wet-cut", "the-salamander-pools",
 ]);
 // ...and water that is ALWAYS loud: falls, races, an open sluice.
 export const FALLS_ROOMS = new Set<string>([
   "the-force", "the-lower-force", "the-upper-force", "the-dam-walk", "the-hanging-wood", "the-gill-narrows",
   "the-gill-foot", "the-stepping-stones", "the-resurgence", "the-weir",
+  // the cave under the wood (2026-11-22): the falls, and the hole the falls roar up
+  "the-falls-foot", "the-falls-pool", "the-sound-hole",
 ]);
 // THE WIND KEPT DOWN (rome, 2026-11-11: in the Resurgence the snow raised the
 // wind to a gale over the falls, and the two rang like an echo). Here the wind
@@ -80,6 +89,9 @@ export const WIND_KEPT_DOWN = new Set<string>(["the-resurgence"]);
 // Standing pools and inland gravel do not make breaking surf or river hiss.
 export const QUIET_WATER_ROOMS = new Set<string>([
   "the-flashes", "the-wet-carr", "the-burn-flats", "the-peat-cuts",
+  // the cave under the wood (2026-11-22): its still pools and standing water
+  "the-under-pool", "the-wide-water", "the-still-reach", "the-deep-pool", "the-glass-pool", "the-pale-pools",
+  "the-black-water-hall", "the-drowned-flags",
 ]);
 // The sea, beyond the crossing.
 export const SHORE_ROOMS = new Set<string>(["the-burn-mouth", "the-cobble-bank"]);
@@ -103,6 +115,10 @@ export const DRIP_ROOMS = new Set<string>([
   // is it dripping off the roof (rome, 2026-10-13)
   "the-sea-cave", "the-sand-crawl", "the-drowned-chamber", "the-weed-gallery", "the-blowhole",
   "the-fallen-roof", "the-salt-pool",
+  // the cave under the wood (2026-11-22): where its words say water drips, seeps or weeps
+  "the-drip-stones", "the-dripping-ledge", "the-wet-step", "the-ditch-sink", "the-bears-wallow",
+  "the-weeping-crawl", "the-seep-hall", "the-weeping-wall", "the-shaft-foot", "the-glow-crawl",
+  "the-foxfire-hall", "the-blue-passage", "the-sheet-water",
 ]);
 // UNDER STONE, with or without water: the hollow tone of a room with a great
 // deal of rock around it. The deep, the warrens and the keep's own halls have
@@ -110,7 +126,11 @@ export const DRIP_ROOMS = new Set<string>([
 export const HOLLOW_ROOMS = new Set<string>(["the-kept-room", "the-mine-gallery", "the-camouflet", "the-last-shelter"]);
 // A fire actually burning. Twenty-five rooms have a hearth; this is the one
 // whose prose says it is lit. The gatehouse's own hearth is `inside`.
-export const FIRE_ROOMS = new Set<string>(["the-shieling"]);
+export const FIRE_ROOMS = new Set<string>([
+  "the-shieling",
+  // and the cave's deep camp (2026-11-22), whose fire is kept
+  "the-deep-camp",
+]);
 
 // WHAT EVERY OTHER STEP LANDS ON (rome, 2026-11-02: the Heart of It crunched
 // in leaves and the Listening Stand beside it thudded like a flagged floor).
@@ -220,7 +240,7 @@ export interface Weather {
 
 export function soundscapeOf(p: Place, w: Weather): Soundscape {
   const { roomId, band, open, inside } = p;
-  const sunless = band === "deep" || band === "warrens";
+  const sunless = band === "deep" || band === "warrens" || band === "cave"; // the cave under the wood (2026-11-22)
   const buried = !inside && !open && (sunless || band === "upper" || HOLLOW_ROOMS.has(roomId));
   // no rain is heard through solid rock: the deep, the warrens, and a room cut
   // into the hill (an open hole like the Last Shelter still hears it)

@@ -502,6 +502,8 @@ function sendMap(z: ZoneDO, session: Session, carried: CarriedItem | null, detai
     // HALLS. The colour, the label and the palette entry were all correct at the
     // far end and never saw a crossing room. Whoever adds the mountain: here.
     crossing: { key: "crossing", label: "The Crossing", rooms: [] },
+    // ...and the cave under the wood (2026-11-22), or its rooms file under the Halls.
+    cave: { key: "cave", label: "The Cave", rooms: [] },
   };
   for (const id of shown) {
     const room = world.rooms.get(id)!;

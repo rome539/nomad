@@ -17,7 +17,7 @@ try {
  const method=zone.match(/  public artSkyFor\(session: Session\): string \| undefined \{[\s\S]*?^  \}/m)[0].replace('    return this.skyFor(session.roomId);\n','    const roomId=session.roomId;\n'+sf);
  const {code}=await transform(method.replace('public artSkyFor','function artSkyFor'),{loader:'ts'});
  let now=0,weather='';
- const c={seesArt:(pk)=>pk==='synthetic',OUTDOOR_ROOMS:new Set(['outside']),OUTDOOR_REGIONS:new Set(['out','road','wood','mountain','den','crossing']),ROOF_SHOWS_OUTSIDE:new Set(),events:{weatherNow:()=>weather,snowed:()=>weather==='snow',foggy:()=>weather==='fog',raining:()=>weather==='rain',phaseOf:()=>'',wxPhase:()=>'',afterRainCleared:()=>true,rainNearby:()=>false}};
+ const c={seesArt:(pk)=>pk==='synthetic',OUTDOOR_ROOMS:new Set(['outside']),OUTDOOR_REGIONS:new Set(['out','road','wood','mountain','den','crossing']),ROOF_SHOWS_OUTSIDE:new Set(),CAVE_MOUTHS:new Set(),events:{weatherNow:()=>weather,snowed:()=>weather==='snow',foggy:()=>weather==='fog',raining:()=>weather==='rain',phaseOf:()=>'',wxPhase:()=>'',afterRainCleared:()=>true,rainNearby:()=>false}};
  for(const name of ['isNight','isFullMoon','isBloodMoon','isDawn','isDusk','eclipsePhase'])c[name]=()=>clock[name](now);
  c.skyCovered=()=>false; // the moon's calendar, under an open sky (a covered spell is its own test)
  vm.createContext(c);vm.runInContext(code,c);

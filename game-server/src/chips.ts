@@ -24,7 +24,7 @@ import { chipName, nameMatches, shortName, isNight, isFullMoon } from "./zone-ut
 import { hasTrait } from "./world";
 import * as trail from "./trail";
 import {
-  LURKERS, DIR_ORDER, TORCH_ITEM, LANTERN_ITEM, LANTERN_FAT_MS, LANTERN_WELL_MS, FAT_ITEM, seesArt,
+  LURKERS, DIR_ORDER, TORCH_ITEM, isLantern, lumpMs, wellMs, FAT_ITEM, seesArt,
   FISHING_ROOMS, TRADE_CHIP, BOUNTY_CHIP, FORGE_CHIP, BENCH_CHIP, DEN_CHIP, MAP_ITEMS, DETAILED_MAP, DROWNERS,
   SMOKEHOUSE_ROOMS, CURE_RECIPES, COOK_RECIPES, MILESTONES, DEN_BUILDS,
   TOLL_STONES, WHETSTONE_ROOMS, WHET_CAP, COLD_STORE_ROOMS, OSSUARY_ROOM, FORGE_ROOMS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
@@ -444,7 +444,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
     // Any burning weapon offers the chip, not just the longbrand (2026-08-20).
     else if (session.items.some((c) => hasTrait(world.itemTemplates.get(c.itemId), "burning"))) suggest.push("light brand");
     // ...only a lantern that will actually catch: sound enough, and fat in its well.
-    if (session.items.some((c) => c.itemId === LANTERN_ITEM && c.condition > 0 && light.wellOf(session, c) > 0)) suggest.push("light lantern");
+    if (session.items.some((c) => isLantern(c.itemId) && c.condition > 0 && light.wellOf(session, c) > 0)) suggest.push("light lantern");
   }
   // AND THE WAY TO PUT IT OUT (rome, 2026-10-24: nothing said how). A lantern
   // only: shuttering it keeps the fat, where a doused torch is a torch spent,
@@ -452,7 +452,7 @@ export function sendCtx(z: ZoneDO, session: Session): void {
   if (!fighting && session.litSource === "lantern" && z.carriesLight(session)) suggest.push("douse");
   // FAT FOR THE WELL, when you have a lump and the well has room for it.
   if (!fighting && session.items.some((c) => c.itemId === FAT_ITEM)
-    && session.items.some((c) => c.itemId === LANTERN_ITEM && light.wellOf(session, c) + LANTERN_FAT_MS <= LANTERN_WELL_MS)) suggest.push("fill lantern");
+    && session.items.some((c) => isLantern(c.itemId) && light.wellOf(session, c) + lumpMs(c.itemId) <= wellMs(c.itemId))) suggest.push("fill lantern");
 
   // A shut cache here that you have a way into: one chip opens it.
   if (!fighting) {

@@ -1,0 +1,185 @@
+# THE WOOD'S NEW WAYS WEST (2026-11-22), built with the cave under the wood.
+#
+# Every way from a gate to the western wood ran through three rooms: the Moss
+# Floor, the Clay Shelf and the Leaning Limes. All the cave's ways in are west of
+# them, so three people could shut the cave and the western wood off from the
+# world. The throat check found it; this file opens the wood until the narrowest
+# point between the gates and the cave is the cave's own six mouths (six ways
+# in for 238 rooms behind them: the rule's one per 40).
+#
+# Picked by max-flow from every door the map allows, leaving out the ground
+# built closed on purpose: the-wood-4.rooms (the far side, the holding, cores G
+# and H) and the bear caves. Every door joins two rooms already side by side on
+# the map, and the new rooms stand on squares nobody held.
+#
+# It also keeps the cave's rule that every way into the cave is at least 14
+# steps from every other: doors that would bring two of them closer (the
+# Spring Mire to the Deer Fence, the Crows' Oak to the Deep Roots, the Ferny
+# Bank to the Stone Oak) were tried and left out.
+#
+#   FIVE DOORS between old rooms:
+#     the Pine Dark - the Murk            the Black Alders - the Alder Stand
+#     the Sapling Crowd - the Buckled Ground
+#     the Wild Cherry - the Deep Roots    the Boundary Cross - the Pay Stone
+#   UNDER THE DEEP ROOTS: three rooms from the Soft Floor round behind the wall
+#     of roots, so the Ferny Bank's ground has a second way in.
+#   THE OLD GROWTH'S NORTH WAY: two rooms from the Bounds House east to the
+#     Mounting Block, so the Standing Oaks' ground has a way in that is not
+#     the Tangle.
+#   THE GATEHOUSE ROAD: twelve rooms from the Rampart Walk down to the Frog
+#     Chorus, so the Ward Ditch (the sixth way into the cave) has a way in that
+#     is not the Killing Ground. It comes in the long way round on purpose: the
+#     short way would put the ditch five steps from the Gate Arch.
+!region wood
+
+## the-pine-dark | attachment: the rows run on south into the murk
+!existing
+> south the-murk
+
+## the-murk | attachment
+!existing
+> north the-pine-dark
+
+## the-black-alders | attachment: the alder ground goes on south
+!existing
+> south the-black-alder-stand
+
+## the-black-alder-stand | attachment
+!existing
+> north the-black-alders
+
+## the-sapling-crowd | attachment: the saplings give onto the heaved ground
+!existing
+> east the-buckled-ground
+
+## the-buckled-ground | attachment
+!existing
+> west the-sapling-crowd
+
+## the-wild-cherry | attachment: down off the bank to the roots
+!existing
+> south the-deep-roots
+
+## the-deep-roots | attachment
+!existing
+> north the-wild-cherry
+> south the-dark-behind
+
+## the-boundary-cross | attachment: the writ's line runs on to the pay stone
+!existing
+> south the-pay-stone
+
+## the-pay-stone | attachment
+!existing
+> north the-boundary-cross
+
+# ---- UNDER THE DEEP ROOTS ----------------------------------------------------
+
+## the-soft-floor | attachment: the moss goes down into a hollow
+!existing
+> south the-sunk-moss
+
+## the-sunk-moss | The Sunk Moss
+The soft floor goes down here into a long hollow, the moss deeper still, so you wade in it to the shin, and it closes over each step behind you. Along one side of the hollow the ground rises into a bank, and roots come out of the bank in a wall.
+> north the-soft-floor
+> east the-under-bank
+
+## the-under-bank | The Under-Bank
+You go along under a bank where the ground has fallen away from the roots of a row of great trees, the roots hanging over you, tangled and dripping, furred with moss. Water drips from them onto your shoulders. Between them there are gaps, and behind the gaps it is dark.
+> west the-sunk-moss
+> east the-dark-behind
+
+## the-dark-behind | The Dark Behind
+Behind the wall of roots there is a space, a hollow under the trees where the ground has gone, roofed by roots and walled by roots, black and cool and smelling of wet earth. Something has slept here. Through the roots on the north side there is a grey of open wood.
+> west the-under-bank
+> north the-deep-roots
+
+# ---- THE OLD GROWTH'S NORTH WAY ----------------------------------------------
+
+## the-bounds-house | attachment: out past the coppice line
+!existing
+> east the-cut-line
+
+## the-cut-line | The Cut Line
+The coppice round the counting house stops here at a line as straight as a ruled edge, the stools on one side cut and cut again for a hundred years and the old trees on the other never cut at all. A ride runs along the line, kept open by feet. It goes east toward the old gatehouse ground.
+> west the-bounds-house
+> east the-tally-posts
+
+## the-tally-posts | The Tally Posts
+Oak posts stand along the ride at every twentieth pace, grey and split, each one notched down its side in fives the way the rods in the counting house are tied. Somebody walked this line and counted. The posts go on east to where the ground opens by the road.
+> west the-cut-line
+> east the-mounting-block
+
+## the-mounting-block | attachment
+!existing
+> west the-tally-posts
+
+# ---- THE GATEHOUSE ROAD ------------------------------------------------------
+
+## the-rampart-walk | attachment: a gap in the back of the bank
+!existing
+> east the-postern-gap
+
+## the-postern-gap | The Postern Gap
+The bank of the old gatehouse ground is broken through here at its back, where a small gate once let people out without opening the great one. The gateposts are stumps. Beyond the gap a road goes off away from the gatehouse, down toward the wood.
+> west the-rampart-walk
+> south the-back-road
+
+## the-back-road | The Back Road
+A road runs off behind the gatehouse, metalled once with flint and still hard under the turf, wide enough for a cart. Nobody came to the front gate by this road. It went to the wood, for the wood's timber and charcoal, and it still goes there.
+> north the-postern-gap
+> east the-sunk-paving
+
+## the-sunk-paving | The Sunk Paving
+The road's paving has sunk in the middle under a long weight of carts, and the two ruts are worn into the stone a hand deep, and water lies in them, and moss along their lips. Grass has the crown of the road. The ruts go on east.
+> west the-back-road
+> east the-fallen-milestone
+
+## the-fallen-milestone | The Fallen Milestone
+A milestone lies on its face in the verge, its foot still in the hole it stood in. Somebody has dug round it and turned it partway, to read it, and let it fall back. Whatever it says is underneath.
+> west the-sunk-paving
+> east the-road-bend
+
+## the-road-bend | The Road Bend
+The road turns south here and starts down off the high ground toward the trees, the verges closing in, the first oaks leaning over it. Looking back, the bank of the gatehouse ground is a long green line against the sky.
+> west the-fallen-milestone
+> south the-holloway-head
+
+## the-holloway-head | The Holloway Head
+The road begins to sink between banks, worn down below the ground by the wheels and the rain, the banks rising on both sides to your knee, then your waist. Roots come out of them. The light from above narrows to a strip.
+> north the-road-bend
+> south the-deep-holloway
+
+## the-deep-holloway | The Deep Holloway
+The road runs at the bottom of a cut deeper than a man is tall, the banks sheer and overhung, the trees along their tops meeting over the road so it goes through a green tunnel. Your steps sound on the hard floor. Anything on the banks above could watch you all the way.
+> north the-holloway-head
+> south the-root-bridge
+
+## the-root-bridge | The Root Bridge
+The roots of two oaks on opposite banks have met over the holloway and grown into each other, so a bridge of living root crosses the road at the height of your head. Something uses it. The bark on top of it is worn smooth and the moss is gone.
+> north the-deep-holloway
+> south the-rotted-cart
+
+## the-rotted-cart | The Rotted Cart
+A cart stands in the holloway where it stopped, its wheels sunk to the hubs in the road's mud, its bed rotted through, the shafts lying on the ground in front of it with no harness. A load of charcoal is still in it, black under the leaf litter. It was going up the road, to the gatehouse.
+> north the-root-bridge
+> south the-washout
+
+## the-washout | The Washout
+Water has used the holloway as a stream for years and torn the road out of its bottom, leaving the old paving in broken slabs tumbled among stones. You climb down over them. The banks have slipped in places and the road is half buried.
+> north the-rotted-cart
+> south the-wet-lane
+
+## the-wet-lane | The Wet Lane
+The holloway shallows out and the road goes on as a wet lane between low banks, puddled from side to side, reeds coming up in the ruts. From ahead comes a great racket of frogs. On the bank to the west the ground drops away into a dark under roots.
+> north the-washout
+> south the-lanes-end
+
+## the-lanes-end | The Lane's End
+The road gives out here among reeds and standing water, the last of the paving going down under the wet and not coming up. It was a road to the wood and it reached it. The frogs are very loud.
+> north the-wet-lane
+> south the-frog-chorus
+
+## the-frog-chorus | attachment
+!existing
+> north the-lanes-end

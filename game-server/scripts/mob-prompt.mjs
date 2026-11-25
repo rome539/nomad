@@ -1029,6 +1029,22 @@ const BIRD_SHEETS = {
 // wrong one out of sixteen lists, which is how eight drawn sheets lost a real
 // cell. Restored, with hit gone instead.
 const REDRAW = {
+  // THE CAVE UNDER THE WOOD (mig 409, 2026-11-24): eleven new sheets, death last. HAND-BUILT
+  // off the hush's, the capercaillie's and the strand thief's prompts: output/imagegen/<id>-prompt.txt.
+  "cave-cougar": ["idle", "lurk", "alert", "move-a", "move-b", "attack", "feed", "rest", "death"],
+  "mole-hound": ["idle", "listen", "alert", "rest", "feed", "move-a", "move-b", "attack", "death"],
+  "river-gulper": ["idle", "alert", "hold", "attack", "sweep", "move-a", "move-b", "death"],
+  "cave-spider": ["idle", "alert", "move-a", "move-b", "attack", "sweep", "feed", "death"],
+  "cave-bat": ["idle", "alert", "move-a", "move-b", "attack", "sweep", "rest", "death"],
+  "digger": ["idle", "call", "alert", "move-a", "move-b", "attack", "sweep", "snatch-escape", "death"],
+  "the-lamp-man": ["idle", "trim-the-wick", "alert", "move-a", "move-b", "attack", "sweep", "shutter", "death"],
+  "stone-brood": ["idle", "alert", "rest", "feed", "move-a", "move-b", "attack", "sweep", "death"],
+  "stone-sleeper": ["idle", "alert", "rest", "move-a", "move-b", "attack", "sweep", "death"],
+  "grubbet": ["idle", "alert", "rest", "feed", "move-a", "move-b", "attack", "death"],
+  "pale-salamander": ["idle", "alert", "rest", "graze", "move-a", "move-b", "attack", "death"],
+  "polecat": ["idle", "alert", "rest", "feed", "move-a", "move-b", "attack", "death"],
+  "cave-crayfish": ["idle", "alert", "graze", "move-a", "move-b", "attack", "sweep", "death"],
+  "stone-mites": ["idle", "alert", "graze", "move-a", "move-b", "attack", "sweep", "death"],
   // THE HUSH (2026-11-19), new in the wood: the follower's sheet, 8 frames, death last.
   // HAND-BUILT off the follower's prompt: output/imagegen/the-hush-prompt.txt.
   "the-hush": ["idle","alert","listen","feed","move-a","move-b","attack","death"],
@@ -1231,6 +1247,21 @@ try { cache = JSON.parse(fs.readFileSync(CACHE, "utf8")); } catch {}
 // So an entry here wins over D1 until its migration ships. DELETE THE ENTRY the
 // moment it does, or this quietly becomes the thing that overrides live prose.
 const PENDING_DESC = {
+  // migration 409 — the cave under the wood, new (2026-11-24)
+  "cave-cougar": "A long tawny cat, lean through the flanks, with a small head and a tail as long as the rest of it, held low and still. It is down here in the dark, where a cat has no business being, and it is at home. Its eyes take your light and throw it back green.",
+  "mole-hound": "A long-legged hound, grey and hairless in patches, its ribs showing, with ears spread wide and eyes too big for its head, round and dark, that take the least light there is and shine it back. It holds its head high and turned, and the head turns with every sound you make.",
+  "river-gulper": "A fish as long as a man and as pale as a peeled root, lying in the black water with only the line of its back showing. The mouth, when it opens, is wider than the body behind it. It has no eyes worth the name, and it does not need them to know what has come to the edge.",
+  "cave-spider": "A spider with a body the size of a dog's head and legs that would span a cartwheel, grey, and furred with dust. It sits in the silk with its legs drawn in, as still as one more wrapped thing, until it is not.",
+  "cave-bat": "A bat the size of your fist with wings that would cover your chest, brown-grey and short-furred, with tall ears and a pushed-up snout. It hangs from the rock wrapped in its own wings among a great many others, and when one drops, the rest come after it.",
+  "digger": "A dried man in a leather jerkin gone stiff with clay, a hood pulled forward over a face with little left of it, a short-hafted pick in his fist. His hands are grey with stone dust to the wrist, all cord and knuckle. He is still at the work they sent him down to do, and he looks at your light before he looks at you.",
+  "stone-brood": "Pale, low and four-legged, the length of a big dog, with a blunt head held just off the stone and a wrinkled hide hanging in folds at the neck. It has no eyes. Its mouth is full of small even teeth and it breathes through them, slowly, as if it were tasting the cold air.",
+  "stone-sleeper": "It lies on the dressed stone as if it were part of it: pale, enormously long, four-legged, a blunt head as broad as a cart's bed laid flat on the flags. Its hide is wrinkled and loose and the colour of the stone. It has no eyes. The cold air coming up through the joints moves over it, and it breathes with the air, slowly. It is not asleep.",
+  "the-lamp-man": "A dried man in a long leather coat stiff with oil and soot, his hood drawn forward, carrying a shuttered lamp, lit and held low, so its light lies on the floor and not on what is left of his face. Spare wicks hang at his belt beside a can of oil. He has been walking these passages a long time, and he walks them as if he still had somewhere to take the light.",
+  "grubbet": "A fat pale burrower the size of a rabbit, grey-furred on the back and nearly bare on the belly, with a pink snout like a pig's that never stops working and two front feet that are all spade. Its eyes are small and milky and it squints at your light. They live packed together in the burrows they dig, and they squeal at everything.",
+  "pale-salamander": "A salamander as long as your forearm and as white as a candle, with feathery pink gills behind its head and two small dark specks where eyes would be. It lies on the bottom of the shallow water and walks, slowly, when it walks at all.",
+  "polecat": "A long low animal no bigger than a cat, dark brown going black at the legs, with a pale band across a small flat face like a mask turned inside out. It moves in quick loops through the rock as if the stone were water, and where it has been the air smells sharp and rank.",
+  "cave-crayfish": "A crayfish as long as your hand, white as a peeled almond and nearly see-through, with long feelers that sweep ahead of it and claws held up and open. It has no eyes. It backs under a stone when the water moves, and it does not let go of what it has got hold of.",
+  "stone-mites": "Tiny pale things, each no bigger than a grain of barley, by the thousand. They live in the joints of the dressed stone, where the cold air comes up, and they come out of the joints all together, a grey film that runs over the flags like spilt water and then over whatever is standing on them.",
   // the capercaillie, new in the wood (2026-11-19)
   "capercaillie": "A grouse the size of a goose, the cock all dark slate with a bottle-green breast, a hooked pale bill and a bar of red skin over the eye. It sits tight on the wood floor until you are nearly on it, then goes up through the branches with a crash like a door kicked in. In the spring the cock fans his tail and clicks, and goes for anything that comes near him, a man included.",
   // migration 390 — the water vole, new (rome, 2026-11-12)
@@ -1780,7 +1811,7 @@ const SAY = {
 // any pixel with alpha as ink and keeps the alpha it finds, and the magenta key
 // simply finds nothing to take. The swap runs on the finished text, so every
 // magenta line in the prompt goes, wherever a template put it.
-const CLEAR_BG = new Set(["twice-dead", "the-cook", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand", "the-long-warden", "the-miller", "the-keeper-of-the-holding", "fever-rat", "capercaillie"]);
+const CLEAR_BG = new Set(["digger", "the-lamp-man", "twice-dead", "the-cook", "marrow-cantor", "the-drowned", "drowned-hulk", "the-reed-walker", "the-refuge-man", "the-sapper", "skeleton", "thrice-dead", "the-woodward", "road-carrier", "the-scaffold-hand", "the-long-warden", "the-miller", "the-keeper-of-the-holding", "fever-rat", "capercaillie"]);
 const clearBg = (s) => !CLEAR_BG.has(id) ? s : s
   .replace(/Pure solid #FF00FF MAGENTA everywhere outside the creature\./g,
     "A fully TRANSPARENT background everywhere outside the creature: real alpha, empty pixels. No checkerboard pattern drawn in, no white, no grey, no colour, no magenta.")

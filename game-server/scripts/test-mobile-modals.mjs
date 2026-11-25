@@ -258,7 +258,7 @@ try {
   await page.$eval('#tstock .mud-row',e=>e.click());
   assert.equal(await page.$eval('#trade .mud-cost',e=>e.textContent),'Cost: 4');
   assert.equal(await page.$eval('#trade .mud-cost',e=>e.parentElement.className),'acts','cost and buy share action row');
-  assert.equal(await page.$eval('#trade .mud-stats',e=>getComputedStyle(e).justifyContent),'flex-start');
+  assert.match(await page.$eval('#trade .mud-stats',e=>getComputedStyle(e).justifyContent),/^(flex|flow)-start$/); // newer Chrome reports flex-start as flow-start
   console.log('PASS item description, shared stat/cost reader, server loadout commands and gatehouse-only controls');
 
 

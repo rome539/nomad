@@ -1,0 +1,501 @@
+# THE CAVE UNDER THE WOOD, THE MIDDLE (two floors down): the water. The river
+# comes out of a sump in the north, runs down the west side of the wood's
+# underground, turns east at the falls, and rises up the Spring's Throat into
+# the Spring Mire. Off it: deep pools, two bat roosts, and the diggers' road.
+#
+# THE DIGGERS (cave-plan.md, the story): the holding's own people, sent down
+# when the fever came to wall up the way the cold air comes from. Their road
+# runs from the foot of the Root Chimney, where they came down, west past three
+# camps to the stopping, a half-built wall across the way to the stair down.
+# Like every work in the country it stopped mid-stroke. Never explained.
+#
+# THE LIGHT. Lit by its own living light: glow-worms hung over the water and
+# foxfire on the wet walls. Every lit room's words name its light. Dark rooms
+# are the dry stretches where nothing glows: the diggers' road, the roosts, the
+# deep pools under rock.
+#   LIT: the-glow-reach the-starry-roof the-river-shingle the-river-bend
+#        the-diggers-bridge the-foxfire-wall the-deep-run the-ford the-long-pool
+#        the-river-shelf the-narrowing the-falls-pool the-glow-tunnel
+#        the-wide-water the-still-reach the-rising-water the-under-spring
+#        the-foxfire-cut the-weeping-wall the-seep-hall the-wet-ledge
+#        the-glow-crawl the-pale-pools the-foxfire-hall the-blue-passage
+#        the-lit-steps the-spring-gallery the-salamander-pools
+#        the-shaft-foot (foxfire), the-deep-camp (its fire)
+#   Every other room on this floor is dark.
+#
+# TWO WAYS DOWN to the dressed stone: the Diggers' Stair (behind the stopping)
+# and the Old Sink (off the still reach).
+
+!region cave
+!floor -2
+
+## the-sump-mouth | The Sump Mouth
+The river comes out from under the rock here. A wall of stone goes down into black water, and the water wells out from under it, cold and fast and silent, from somewhere nobody has been. There is no way on but downstream.
+> south the-black-water
+
+## the-black-water | The Black Water
+The river runs black and fast between walls of wet rock with no bank to speak of, only a ledge along one side you go along with your back to the stone. Nothing glows here. The water is loud and the air over it is colder than the water.
+> north the-sump-mouth
+> west the-under-pool
+> south the-glow-reach
+
+## the-under-pool | The Under-Pool
+The river spreads sideways here into a pool under a low roof, wide and still and black, so deep that a stone dropped in does not seem to reach anything. The edge of it is a shelf of smooth rock sloping down into the water. Something big moves under the surface, and the surface hardly moves.
+> east the-black-water
+
+## the-glow-reach | The Glow Reach
+The first lights. A few pale points of green hang in the dark over the river, low, each on a thread finer than hair, and as you watch, more of them are there. They are glow-worms, and the roof here is beginning to be full of them.
+> north the-black-water
+> south the-starry-roof
+
+## the-starry-roof | The Starry Roof
+The roof over the river is crowded with glow-worms, thousands of them, so that it looks like a night sky with too many stars, and their light lies green on the moving water. Their threads hang down in curtains. Anything that flies into them is held, and eaten.
+> north the-glow-reach
+> south the-river-shingle
+> east the-roost-water
+
+## the-river-shingle | The River Shingle
+The river has left a bank of shingle here on the inside of a bend, round grey stones rattling under your feet, and the glow-worms above put a green shine on every wet one. The water runs past close, fast and smooth and deep.
+> north the-starry-roof
+> south the-river-bend
+
+## the-river-bend | The River Bend
+The river turns here hard against the far wall and has cut it back into a deep undercut, the rock hanging out over the water. Glow-worms hang under the undercut in a thick green fringe. On this side there are old marks of nails in the rock, where something was once fixed.
+> north the-river-shingle
+> south the-diggers-bridge
+
+## the-diggers-bridge | The Diggers' Bridge
+A bridge of planks crosses the river here on two baulks of timber wedged between the rocks, the boards grey and soft with wet, one of them gone. It was built by people, carefully. The glow-worms have hung their threads from the underside of it.
+> north the-river-bend
+> east the-bridge-end
+> south the-foxfire-wall
+
+## the-foxfire-wall | The Foxfire Wall
+Rotten timber is jammed into the cracks of the wall here, the wreck of old props carried down by the water, and the rot on it glows: a cold blue-green light that comes from the wood itself, enough to see your hand by. The river runs past it lit from the side.
+> north the-diggers-bridge
+> south the-deep-run
+
+## the-deep-run | The Deep Run
+The river runs deep and narrow here, a fast smooth channel with the bank a ledge above it, and the glow-worms on the roof are mirrored in it, broken and mended and broken again. There is no shallow here. Whatever is in the water is in deep water.
+> north the-foxfire-wall
+> south the-ford
+
+## the-ford | The Ford
+The river spreads over a bed of stones and runs shallow, a few hands deep, quick and cold enough to ache. Stepping stones have been set across it. Glow-worms crowd the roof over the ford and the stones shine green under the water.
+> north the-deep-run
+> east the-wet-ledge
+> south the-long-pool
+
+## the-long-pool | The Long Pool
+The river slows here into a long pool with the roof close over it and the glow-worms so thick and so near you could touch them. The water is clear and very deep in the middle, and pale shapes hang still in it, fish with no eyes, and something larger, further down, paler.
+> north the-ford
+> west the-deep-pool
+> south the-river-shelf
+
+## the-deep-pool | The Deep Pool
+A side pool off the long pool, under rock, with no light at all. The edge goes down steep and smooth and the water is very cold. Bones lie on the shelf at the water's edge, picked white, and some of them are a man's.
+> east the-long-pool
+
+## the-river-shelf | The River Shelf
+A shelf of rock runs along above the water here, wide enough to walk, polished by feet. The river below is lit green by the glow-worms over it and you can see the bottom in places, and in places you cannot.
+> north the-long-pool
+> south the-narrowing
+
+## the-narrowing | The Narrowing
+The walls close in and the river runs faster between them, piling up against the rock and roaring. The glow-worms grow thinner here, their threads blown sideways by the air that comes with the fast water. Ahead the roar is louder.
+> north the-river-shelf
+> south the-rapids
+
+## the-rapids | The Rapids
+The river breaks white over a staircase of rocks and the noise of it fills everything. Spray hangs in the air and puts out the glow-worms' light, and puts out any flame held near it. You go along the wall by feel, wet through.
+> north the-narrowing
+> south the-falls-foot
+
+## the-falls-foot | The Falls Foot
+The river goes over a lip of rock in a fall twice your height and hits the pool below with a sound you feel in your chest. Spray comes up off it in a cold cloud and goes up a hole in the roof, and the roar goes up with it. Nothing can be heard over it.
+> north the-rapids
+> up the-sound-hole
+> south the-falls-pool
+
+## the-falls-pool | The Falls Pool
+The pool under the falls is round and deep and churning, foam going round on it. Away from the falls the roof is low and the glow-worms come back, few and faint, and the water calms. A long scum of foam drifts off downstream.
+> north the-falls-foot
+> south the-river-turn
+
+## the-river-turn | The River Turn
+The river turns east here, under a low wide roof, and slows, and spreads. Silt lies on the inside of the turn and something has walked through it on four short legs, dragging a tail. There is no light here.
+> north the-falls-pool
+> east the-low-roof
+
+## the-low-roof | The Low Roof
+The roof comes down until it is a hand's breadth over the water, and the way along the bank is a crawl on your belly in the wet with the rock pressing down. In high water this would be under the river. The rock overhead is clean of mud and silt to a line well above your head.
+> west the-river-turn
+> east the-silt-banks
+
+## the-silt-banks | The Silt Banks
+The roof lifts again over wide banks of soft grey silt, the river slow and quiet between them. You sink to the ankle at every step. A side way leads off into pools beside the river, and the silt is printed with small tracks going to and from them.
+> west the-low-roof
+> east the-glow-tunnel
+> north the-salamander-pools
+
+## the-glow-tunnel | The Glow Tunnel
+A round tunnel of rock with the river filling its floor and the glow-worms filling its roof, so you go through a tube of green light along a ledge with the water beside you. It is very beautiful and very quiet and there is nothing to hold onto.
+> west the-silt-banks
+> east the-wide-water
+
+## the-wide-water | The Wide Water
+The tunnel opens into a wide chamber nearly all water, the river spreading into a lake with the glow-worms' light on it. The bank goes round the edge. Out in the middle the surface sometimes swells, slowly, as if something were turning over far down.
+> west the-glow-tunnel
+> east the-still-reach
+
+## the-still-reach | The Still Reach
+The river runs so slow here it seems not to run at all, flat and black with a scatter of green light on it from the roof. The bank is wide and dry. A side passage leads off away from the water, and the cold air comes out of it, not off the river.
+> west the-wide-water
+> east the-rising-water
+> north the-old-sink
+
+## the-rising-water | The Rising Water
+The river is climbing here: the bed tilts up and the water comes up it against the slope, slow and heavy, pushed from behind. The roof comes down to meet it. The glow-worms hang low over the water, their light green on the slope.
+> west the-still-reach
+> east the-under-spring
+
+## the-under-spring | The Under-Spring
+The water fills the passage nearly to the roof and pushes upward through a round shaft in it, welling up, and you wade chest-deep with a hand on the rock and the glow-worms an arm's length from your face.
+> west the-rising-water
+> east the-spring-foot
+
+## the-spring-foot | The Spring Foot
+The foot of the Spring's Throat: the whole river goes up here through a round shaft in the roof, welling up cold and heavy, and spills out above into the mire. You can climb up beside it, through it, holding your breath. Up there is the wood.
+> west the-under-spring
+> up the-spring-throat
+> north the-cold-sand
+
+## the-roost-water | The Roost Water
+A side way leaves the river here and climbs, and the water that runs down it out of the roost is brown and stinks. The glow-worms stop where it starts. From up the slope comes a sound like rain that is not rain, the rustle of a great many small bodies.
+> west the-starry-roof
+> north the-guano-slope
+
+## the-guano-slope | The Guano Slope
+A slope of droppings ankle-deep, soft and warm and stinking of ammonia so strong your eyes run. Beetles cover it, moving. The roof above is close and black and it is moving too.
+> south the-roost-water
+> east the-north-roost
+
+## the-north-roost | The North Roost
+The roof of this chamber is covered in bats, packed wing to wing, thousands of them, hanging and shifting and squeaking, and the floor is deep in what they drop. A light held up sets them stirring all over the roof, a ripple running away into the dark.
+> west the-guano-slope
+> north the-silk-hall
+> east the-bat-way
+
+## the-silk-hall | The Silk Hall
+Silk hangs from the roof of this chamber in sheets, grey and thick as sacking, from wall to wall, and the dead bats caught in it hang like leaves. The silk is strong. It catches on your face and hands and comes away with you. Something has been making it for a long time, and it is big.
+> south the-north-roost
+> west the-wrapped-things
+
+## the-wrapped-things | The Wrapped Things
+Bundles hang from the roof in the far corner of the silk, wrapped round and round, some the size of a bat, some the size of a dog, one the size of a man. The big one has a boot showing at the bottom of the wrapping.
+> east the-silk-hall
+
+## the-bat-way | The Bat Way
+A high narrow passage the bats use, the walls rubbed dark by wings. Every dusk the whole roost goes out this way and up, and the air in it still smells of them. It is empty now. The floor is soft with droppings and bones of moths.
+> west the-north-roost
+> east the-smoked-passage
+
+## the-smoked-passage | The Smoked Passage
+The roof here is black with soot, thick and old, and there are the ashes of fires on the floor in a row across the passage, built close together, as if somebody had wanted to fill the way with smoke. Dead bats lie in the ash, dried out, a great many of them.
+> west the-bat-way
+> east the-deep-camp
+
+## the-ladder-foot | The Ladder Foot
+The roots of the Root Chimney end here, and below where they end, ladders have been lashed to the rock, three of them, one under the other, the rungs worn pale by hands. They were brought down from above. At the foot of them the floor has been swept.
+> up the-root-chimney
+> west the-pick-work
+
+## the-pick-work | The Pick Work
+The passage was too narrow for a man with a load, and somebody made it wider: the walls are cut back on both sides with picks, the marks short and even and all the same height, a good day's work done by people who knew how. The spoil has been carried off.
+> east the-ladder-foot
+> west the-first-camp
+
+## the-first-camp | The First Camp
+A camp in a dry chamber: a ring of stones round a hearth, a stack of firewood under a cloth, a row of empty sacks hung on pegs driven into the rock. The hearth is not cold. Lamp soot blackens the roof over a niche in the wall where a lamp has stood night after night.
+> east the-pick-work
+> north the-lamp-store
+> west the-tally-wall
+> south the-dry-stretch
+
+## the-lamp-store | The Lamp Store
+A niche cut back into the rock, shelved with planks, and on the shelves: jars of oil sealed with wax, bundles of wick, spare glass wrapped in rag, a pot of tallow, a flint. All in rows. Somebody keeps this in order still. The shelf at the front is empty in the shape of a lamp.
+> south the-first-camp
+
+## the-tally-wall | The Tally Wall
+The wall here is covered in tallies cut with a point, groups of four strokes and one across, row under row, and a mark at the head of each row that might be a name. The rows stop at different lengths. One row goes on long after the rest have stopped, and the last strokes are cut deep.
+> east the-first-camp
+> west the-barrow-run
+
+## the-barrow-run | The Barrow Run
+Planks have been laid end to end along the floor here as a run for barrows, and the rut of a single wheel is worn into them. A barrow stands on the run, tipped forward, loaded with cut stone, its handles still up as if the man pushing it had only now let go.
+> east the-tally-wall
+> north the-propped-way
+> west the-widened-squeeze
+
+## the-propped-way | The Propped Way
+Timber props hold up the roof here, posts and a cap-beam every few paces, squared and pegged by somebody who knew timber. The roof was bad. You can see where it came down before the props went in, and the props are holding it now, grey and wet and bowed.
+> south the-barrow-run
+> north the-sagging-props
+
+## the-sagging-props | The Sagging Props
+The props here have begun to go: the caps bowed, the posts leaning, one split from top to bottom and still standing because the rock has not yet finished deciding. Little falls of grit come down when you pass. Nobody has put in new props for a long time.
+> south the-propped-way
+> west the-stone-store
+
+## the-stone-store | The Stone Store
+Cut stone is stacked here against the wall in neat courses, blocks squared for building, enough for a wall the height of a man. It was carried down from above, on backs and in barrows. None of it has been used. The top of the stack has a coat of dust on it as thick as cloth.
+> east the-sagging-props
+> west the-water-butts
+
+## the-widened-squeeze | The Widened Squeeze
+A squeeze somebody opened up with picks and wedges, the cut faces fresh against the old water-worn rock, and the wedges still in the last crack, driven halfway home. The hammer lies on the floor beside them where it was put down.
+> east the-barrow-run
+> west the-cold-camp
+
+## the-cold-camp | The Cold Camp
+A second camp: hearth, woodpile, sacks, a pot on a hook over the hearth with something dried black in the bottom of it. The ash in the hearth is old and grey and has a skin on it. Nobody has sat at this fire for a long time. The cold air comes through the camp from the west and goes on up.
+> east the-widened-squeeze
+> north the-sleeping-shelf
+> south the-broken-ladder
+
+## the-sleeping-shelf | The Sleeping Shelf
+A long shelf of rock along the wall has been made into a bed for many: bracken laid on it, and blankets on the bracken, eight or nine places side by side, each with a hollow worn in it. The blankets are pulled back in every place, as they would be in a house woken in the night.
+> south the-cold-camp
+> north the-water-butts
+
+## the-water-butts | The Water Butts
+Two big butts of water stand here on a ledge, staved and hooped, with a dipper hung on the side of one. The water in them is clear and cold. A line has been cut in the rock above each to show where the water should be kept up to, and both are well below it.
+> east the-stone-store
+> south the-sleeping-shelf
+> west the-carry-way
+
+## the-carry-way | The Carry Way
+A narrow way where everything had to go through on men's backs: the walls are rubbed smooth at shoulder height on both sides, and the floor is littered with chips of the stone they carried. A broken carrying frame leans against the wall, its straps rotted.
+> east the-water-butts
+> north the-mortar-trough
+
+## the-mortar-trough | The Mortar Trough
+A wooden trough of mortar stands here gone hard as the rock round it, with the trowel set in it at an angle and the hoe beside it, both held fast. Sacks of lime are stacked by the trough, split, the lime spilled and gone to stone on the floor.
+> south the-carry-way
+> north the-pick-marks
+
+## the-pick-marks | The Pick Marks
+The diggers were cutting a new way here. The face at the end of the passage is half-cut, the pick marks fresh and pale, and a pick is still in the rock, buried to the eye in the last stroke, the handle sticking out level. Cold air comes out of the crack the stroke opened.
+> south the-mortar-trough
+> west the-first-stopping
+
+## the-first-stopping | The First Stopping
+A wall of cut stone and mortar has been built across the passage here, a good wall, waist-high on one side and rising to chest-high on the other, the courses true. It is not finished. You climb over the low end. The cold air comes over the top of it as it came before the wall was there.
+> east the-pick-marks
+> west the-carried-stone
+
+## the-carried-stone | The Carried Stone
+Stone lies about the floor here where it was set down, singly and in twos, block after block, not stacked, not laid, each where the man carrying it stopped. A line of them goes off ahead along the passage, further apart the further it goes, like a trail.
+> east the-first-stopping
+> west the-deep-camp
+
+## the-deep-camp | The Deep Camp
+The last camp and the deepest. A good fire burns here, low, in a hearth of cut stone, and bedding is laid round it, and food hangs from a peg out of reach of anything that digs. A box stands against the wall, iron-bound, with a lock as big as a fist. The people who keep this camp are not far away.
+> west the-smoked-passage
+> east the-carried-stone
+> south the-stopping
+
+## the-stopping | The Stopping
+The great wall. It was meant to close the passage from floor to roof and it closes two-thirds of it, every course of it laid true and pointed, a proper wall in the middle of a cave. Over the top there is a gap the width of a door, and the cold comes through it like water over a weir. The ladder up to the gap is still standing.
+> north the-deep-camp
+> south the-diggers-stair
+
+## the-diggers-stair | The Diggers' Stair
+Behind the stopping the way goes down, and the diggers cut steps into it, rough and steep, a rope pegged along the wall to hold. The rock changes as you go down. It gets colder with every step, and the air comes up the stair steady and hard, out of the dark below.
+> north the-stopping
+> down the-stair-foot
+
+## the-bridge-end | The Bridge End
+The far end of the plank bridge, where a path goes up off the river into the rock. A post is set in the ground at the bridge foot and a lantern hook is nailed to it, empty. The path has been trodden by many boots, going both ways.
+> west the-diggers-bridge
+> east the-foxfire-cut
+
+## the-foxfire-cut | The Foxfire Cut
+A passage cut through soft rock, and the old props in it have rotted where they stand and glow: every post a pillar of cold blue-green light, the caps glowing overhead, so you walk through a row of them like a row of lamps. They will not bear any weight now.
+> west the-bridge-end
+> south the-weeping-wall
+
+## the-weeping-wall | The Weeping Wall
+Water seeps out of the whole face of the wall here and runs down it in a thin sheet, and the rot that grows in the wet glows, a faint blue light in patches and streaks all over the stone. The floor is a shallow stream.
+> north the-foxfire-cut
+> south the-seep-hall
+
+## the-seep-hall | The Seep Hall
+A low wide hall where water drips everywhere and stands in pools on the floor, and the walls are crusted with a glowing rot that lights the whole hall dimly blue. The drips make rings in the pools. The cold air comes down from the shaft at the far end.
+> north the-weeping-wall
+> south the-shaft-foot
+
+## the-shaft-foot | The Shaft Foot
+The foot of the Shaft Head's shaft: water marks run down its walls from far above, and the cold air goes up it like a chimney drawing. There is foxfire in the wet at the bottom, a faint blue. The way up is the climb you came down.
+> north the-seep-hall
+> up the-shaft-head
+> west the-wet-ledge
+> east the-glow-crawl
+
+## the-wet-ledge | The Wet Ledge
+A ledge of wet rock runs from the shaft's foot down to the ford, slick with green, the foxfire on the wall beside it bright enough to see the edge by. The river is loud below. A rope has been pegged along the wall here, and the pegs are rusted thin.
+> west the-ford
+> east the-shaft-foot
+
+## the-glow-crawl | The Glow Crawl
+A crawl through wet rock, the roof low over your back and glowing with rot, so you go through it with blue light an inch from your eyes. The floor is mud. Things have crawled through here before you, and the mud keeps their marks, small and many.
+> west the-shaft-foot
+> east the-pale-pools
+
+## the-pale-pools | The Pale Pools
+A chamber of shallow pools, each clear and cold, lit faintly blue from the foxfire on the walls. Pale salamanders lie in the pools, white and still, their skin so thin you can see the dark of their insides. They do not move when you come close.
+> west the-glow-crawl
+> east the-dark-stretch
+
+## the-dark-stretch | The Dark Stretch
+The rock is dry here and nothing glows. It is black, the black of having no eyes, and the only sound is your own breathing and the far-off sound of water behind you. The floor is dust.
+> west the-pale-pools
+> east the-dry-gallery
+
+## the-dry-gallery | The Dry Gallery
+A long gallery of dry rock, dark, its floor fine dust. The dust has been walked. Booted feet went this way, a line of them, going west, and over the bootprints are the prints of something with long claws and no pad.
+> west the-dark-stretch
+> east the-crushed-props
+
+## the-crushed-props | The Crushed Props
+The roof came down here onto the props and took them with it: timbers splintered and thrown down in a heap with the rock, a way cleared through the fall at one side just wide enough. Under the heap a hand shows, a man's, grey with the dust.
+> west the-dry-gallery
+> east the-cut-through
+
+## the-cut-through | The Cut-Through
+A short passage cut through the rock with picks to join two caves that did not meet, straight and square, the floor level. It is a piece of work that does not belong in a cave, and the cave has not yet done anything about it.
+> west the-crushed-props
+> east the-crossed-ways
+
+## the-broken-ladder | The Broken Ladder
+A ladder goes down a step in the floor here, and its third rung is broken and the ones below it hang by one side. The rock below has the scrape marks of the men who fell. Beside it someone has cut footholds into the rock instead.
+> north the-cold-camp
+> south the-wet-cut
+
+## the-wet-cut | The Wet Cut
+A cut passage where the water has come back in: a stream runs along the floor where the diggers' boots went, and the walls they cut so square are going green. The wet has not yet started to glow.
+> north the-broken-ladder
+> south the-crossed-ways
+
+## the-crossed-ways | The Crossed Ways
+Two passages cross here, one natural and one cut. On the wall where they meet someone has cut an arrow with a pick, pointing down the cut way, and beside it a mark like a door.
+> west the-cut-through
+> north the-wet-cut
+> south the-foxfire-hall
+
+## the-foxfire-hall | The Foxfire Hall
+A high hall of wet rock lit blue from end to end by the rot that grows on it, the light coming off the walls in sheets so you can see the whole shape of the hall at once. In the middle of it there is a shaft going up, the Cold Well's, and the air goes up it.
+> north the-crossed-ways
+> east the-well-foot
+
+## the-well-foot | The Well Foot
+The foot of the Cold Well. The air comes past you and goes up the well hard, out of the lower ways, and the handholds go up in the rock above you into the black. Somebody has drawn a mark on the wall here in soot, a ring, and put a line through it.
+> west the-foxfire-hall
+> up the-cold-well
+> east the-blue-passage
+> south the-well-passage
+
+## the-dry-stretch | The Dry Stretch
+A dry way leading down from the first camp, dark, dusty, worn by boots. There are lamp-hooks driven into the wall at every twentieth pace, and no lamps on them.
+> north the-first-camp
+> south the-dead-glow
+
+## the-dead-glow | The Dead Glow
+The walls are crusted with rot here as they are where it glows, but here it does not glow: it is dry and dead and black. Somebody has scraped at it with a blade, as if to see whether it would light again.
+> north the-dry-stretch
+> south the-hanging-silk
+
+## the-hanging-silk | The Hanging Silk
+Threads of silk hang across the passage, singly, at the height of your face and your knees, too fine to see. You walk into them. Every one of them goes back along the wall into the dark ahead, toward a sound like rain.
+> north the-dead-glow
+> south the-east-roost
+
+## the-blue-passage | The Blue Passage
+A wet passage between the well and the roost, its walls glowing blue in patches where the water runs, so the light comes and goes along it. The air smells more and more of ammonia going east.
+> west the-well-foot
+> east the-roost-edge
+
+## the-roost-edge | The Roost Edge
+The foxfire stops and the dark starts, and the floor goes soft with droppings. Ahead there is the sound of many wings shifting at once, a great dry rustle, and a smell that closes your throat.
+> west the-blue-passage
+> east the-east-roost
+
+## the-east-roost | The East Roost
+A high chamber with a roof alive with bats, packed and shifting, the floor a slope of droppings with beetles moving over it. Silk hangs among the bats in long grey ropes, and some of the bats in it are not moving.
+> north the-hanging-silk
+> west the-roost-edge
+> east the-spiders-gallery
+> south the-roost-floor
+
+## the-spiders-gallery | The Spider's Gallery
+A gallery off the roost, hung with silk from end to end in sheets so thick that the far end is a grey wall. The floor is covered with the dry husks of bats. In the silk there are holes, round, bigger than your head, that something goes in and out of.
+> west the-east-roost
+> east the-egg-sacs
+
+## the-egg-sacs | The Egg Sacs
+At the end of the gallery, fixed to the roof in a row, hang sacs of silk the size of loaves, tight and round and pale. One of them is split, and empty. The silk round them is thicker than anywhere, and fresh.
+> west the-spiders-gallery
+
+## the-roost-floor | The Roost Floor
+The floor of the roost under the Bat Chimney, deep in droppings, warm. The chimney goes up from here into the upper cave, its sides black and slick, and the bats go up it. At dusk the noise of them going would deafen you.
+> north the-east-roost
+> up the-bat-chimney
+> south the-guano-banks
+
+## the-guano-banks | The Guano Banks
+Banks of old droppings, years deep, grown over with a pale mould, the bottom of the roost where everything ends. Things have died here and been eaten by the beetles until only the shapes of them are left in the mould.
+> north the-roost-floor
+
+## the-well-passage | The Well Passage
+A dry passage going south from the foot of the Cold Well, dark, the walls close. A boot lies on its side in the dust, an old one, with the sole worn through.
+> north the-well-foot
+> south the-black-crawl
+
+## the-black-crawl | The Black Crawl
+A crawl through dry dark rock, no light, no sound, the roof on your back. It goes on longer than seems right. Then the air ahead gets wetter.
+> north the-well-passage
+> south the-dry-pools
+
+## the-dry-pools | The Dry Pools
+A chamber of pools that have dried, their beds cracked into plates, their rims high and white. The salamanders that lived in them are in them still, dried flat. Water can be heard somewhere ahead, more than one way.
+> north the-black-crawl
+> west the-glass-pool
+
+## the-glass-pool | The Glass Pool
+One pool here still holds water, so clear and still that you see the bottom of it before you see the water, and put a foot in it without meaning to. It is very cold. Something pale moves at the bottom and is gone.
+> east the-dry-pools
+> west the-lit-steps
+
+## the-lit-steps | The Lit Steps
+The floor goes down in steps of wet rock, each lit faintly blue along its edge by the rot that grows in the wet, so the way down shows as a stair of lines in the dark. The sound of the river comes up from below.
+> east the-glass-pool
+> south the-spring-gallery
+
+## the-spring-gallery | The Spring Gallery
+A gallery running down toward the river, the walls glowing blue in streaks where the water seeps, and the river's sound filling it. Silt lies on the floor in ridges, left by water higher than this. The river comes up here sometimes.
+> north the-lit-steps
+> south the-cold-sand
+
+## the-cold-sand | The Cold Sand
+A slope of wet sand down to the foot of the spring, cold to the touch, ribbed by water. The river is very near and very loud, coming up through the rock just ahead, and the sand is printed all over with the marks of small feet going down to it.
+> north the-spring-gallery
+> south the-spring-foot
+
+## the-salamander-pools | The Salamander Pools
+Pools in the silt beside the river, lit faint green by a few glow-worms in the roof, and full of pale salamanders: dozens of them, lying still in the shallows with their pink gills spread. A track of bigger footprints comes down to the pools and goes back.
+> south the-silt-banks
+
+## the-old-sink | The Old Sink
+The side way off the still reach ends at a hole in the floor where the river once went down, before it found its way east. The hole is dry now and goes down a long way, and the cold air comes up it. Somebody has tied a rope off round a knob of rock at its lip.
+> south the-still-reach
+> down the-sink-foot

@@ -52,6 +52,7 @@ const REGIONS = [
   { region: "wood",     rules: "WOOD_RULES",     files: (f) => f.startsWith("the-wood") },
   // ...and the dens (2026-09-30).
   { region: "den",      rules: "DEN_RULES",      files: (f) => f.startsWith("the-dens") },
+  { region: "cave",     rules: "CAVE_RULES",     files: (f) => f.startsWith("the-cave") },
 ];
 
 // Every crossing room we can see statically, with its DESCRIPTION, because

@@ -14,8 +14,8 @@ import { underCover } from "./detail";
 import { setItemCondition, setItemFuel, removeItemRow, hasTrait } from "./world";
 import type { CarriedItem } from "./world";
 import {
-  TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_FAT_MS, LANTERN_WELL_MS, LANTERN_WEAR, FAT_ITEM, BEACON_ROOM,
-  brandBurnMs,
+  TORCH_ITEM, TORCH_BURN_MS, LANTERN_ITEM, LANTERN_WEAR, FAT_ITEM, BEACON_ROOM,
+  brandBurnMs, LANTERNS, isLantern, lumpMs, wellMs,
 } from "./zone-data";
 
 // ---- THE LANTERN'S WELL (rome, 2026-10-16; zone-data LANTERN_*) ----
@@ -28,9 +28,22 @@ export function fuelKey(roomId: string): string {
   return `${LANTERN_ITEM}#fuel@${roomId}`;
 }
 // The lantern that is burning in your hand right now, if one is.
-function litLantern(session: Session): CarriedItem | undefined {
+export function litLantern(session: Session): CarriedItem | undefined {
   if (session.litSource !== "lantern" || !session.litUntil) return undefined;
-  return session.items.find((c) => c.rowId === session.litRow) ?? session.items.find((c) => c.itemId === LANTERN_ITEM);
+  return session.items.find((c) => c.rowId === session.litRow) ?? session.items.find((c) => isLantern(c.itemId));
+}
+// THE BELT LAMP TAKES NO HAND (mig 410): a light burning at the belt costs the
+// shield nothing, and a two-handed weapon leaves it lit.
+export function beltLit(session: Session): boolean {
+  return !!LANTERNS[litLantern(session)?.itemId ?? ""]?.belt;
+}
+/** A light that fills the shield hand: any flame but a brand (weapon hand) or a belt lamp. */
+export function handFlame(session: Session): boolean {
+  return carriesLight(session) && session.litSource !== "brand" && !beltLit(session);
+}
+/** A lit lantern no blow puts out (the lamp-man's own lamp). */
+export function steadyLit(session: Session): boolean {
+  return !!LANTERNS[litLantern(session)?.itemId ?? ""]?.steady;
 }
 // How much is in this lantern's well, burning or not, in ms.
 // The burning one is known by its row, so this holds even for a lantern that
@@ -50,8 +63,8 @@ export function saveWell(z: ZoneDO, session: Session): void {
   setItemFuel(z.env.DB, c.rowId, c.fuel).catch(() => {});
 }
 // The well, said as a lantern-carrier would say it.
-export function wellWords(ms: number): string {
-  const lumps = ms / LANTERN_FAT_MS;
+export function wellWords(ms: number, id: string = LANTERN_ITEM): string {
+  const lumps = ms / lumpMs(id);
   return ms <= 0 ? "The well is dry."
     : lumps >= 2.75 ? "The well is full of fat."
     : lumps >= 1.75 ? "The well is two parts full."
@@ -67,9 +80,10 @@ export function wellWords(ms: number): string {
 // this kind and not whichever the pack finds first.
 export function lightOffer(z: ZoneDO, session: Session, c: CarriedItem): { lit: boolean; verb: "light" | "douse" | ""; arg: string; well?: string } | null {
   const burning = carriesLight(session);
-  if (c.itemId === LANTERN_ITEM) {
+  if (isLantern(c.itemId)) {
     const lit = burning && session.litSource === "lantern" && session.litRow === c.rowId;
-    return { lit, verb: lit ? "douse" : "light", arg: "lantern", well: wellCount(wellOf(session, c)) };
+    const arg = c.itemId === LANTERN_ITEM ? "lantern" : (z.world!.itemTemplates.get(c.itemId)?.name ?? "lamp").replace(/^(a|an|the) /i, "");
+    return { lit, verb: lit ? "douse" : "light", arg, well: wellCount(wellOf(session, c), c.itemId) };
   }
   if (hasTrait(z.world!.itemTemplates.get(c.itemId), "burning")) {
     const lit = burning && session.litSource === "brand" && session.litRow === c.rowId;
@@ -89,10 +103,10 @@ export function torchInHand(session: Session): boolean {
 // how many lumps of fat it had left). In lumps, up to the next half so a scrape
 // still reads as something and only a dry well says 0, out of what the well
 // holds: "fat 1½/3". The window shows the same words.
-export function wellCount(ms: number): string {
-  const halves = Math.ceil((ms / LANTERN_FAT_MS) * 2);
+export function wellCount(ms: number, id: string = LANTERN_ITEM): string {
+  const halves = Math.ceil((ms / lumpMs(id)) * 2);
   const whole = Math.floor(halves / 2), half = halves % 2 ? "½" : "";
-  return `fat ${whole || !half ? whole : ""}${half}/${Math.round(LANTERN_WELL_MS / LANTERN_FAT_MS)}`;
+  return `fat ${whole || !half ? whole : ""}${half}/${Math.round(wellMs(id) / lumpMs(id))}`;
 }
 export function lightWords(offer: ReturnType<typeof lightOffer>): string {
   if (!offer) return "";
@@ -253,8 +267,14 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
       })
     : undefined;
   const brand = named ?? brands[0];
-  const lantern = session.items.find((c) => c.itemId === LANTERN_ITEM);
-  const wantLantern = arg.includes("lantern") ? true
+  // WHICH LAMP (mig 410): a word of its name picks one ("light belt"), "lamp" the
+  // cave's before the hooded lantern, and otherwise the first to hand.
+  const lanterns = session.items.filter((c) => isLantern(c.itemId));
+  const lampWords = arg.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && w !== "lantern" && w !== "lamp");
+  const lantern = lanterns.find((c) => lampWords.some((w) => (z.world!.itemTemplates.get(c.itemId)?.name.toLowerCase() ?? "").includes(w)))
+    ?? (arg.includes("lamp") ? lanterns.find((c) => c.itemId !== LANTERN_ITEM) : undefined)
+    ?? lanterns.find((c) => c.itemId === LANTERN_ITEM) ?? lanterns[0];
+  const wantLantern = arg.includes("lantern") || arg.includes("lamp") ? true
     : (arg.includes("torch") || arg.includes("brand")) ? false
     : !torch && !brand;
   // The plain stick burns first unless the brand is asked for by name —
@@ -331,7 +351,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
       const bn = z.world!.itemTemplates.get(light.itemId)?.name ?? "the brand";
       return z.send(session, `You'll want ${bn} in your hand before you put a spark to it — 'equip ${light.itemId}', then 'light brand'.`);
     }
-  } else {
+  } else if (!(wantLantern && LANTERNS[light.itemId]?.belt)) { // a belt lamp takes no hand
     const refusal = blockedFromLight(z, session);
     if (refusal) return z.send(session, refusal);
   }
@@ -346,8 +366,10 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
     session.torchWarned = false;
     light.fuel = 0;
     await setItemFuel(z.env.DB, light.rowId, 0);
-    z.send(session, `You slide the shutter and touch flame to the wick — a low, steady light settles around you. Nothing flinches from it.${guardNote(z, session, "the lantern")}`, "gain sfx-ignite");
-    z.roomFeed(session.roomId, `${session.name} raises a hooded lantern; a patient light spreads.`, session.pubkey, false);
+    const lampName = z.world!.itemTemplates.get(light.itemId)?.name ?? "a lantern";
+    const belt = !!LANTERNS[light.itemId]?.belt;
+    z.send(session, `You slide the shutter and touch flame to the wick — a low, steady light settles around you. Nothing flinches from it.${belt ? " It hangs at your belt and leaves your hands free." : guardNote(z, session, "the lantern")}`, "gain sfx-ignite");
+    z.roomFeed(session.roomId, `${session.name} ${belt ? "lights" : "raises"} ${lampName}; a patient light spreads.`, session.pubkey, false);
   } else if (isBrand) {
     // The brand stays in your hand, burning — a weapon that is also a fire.
     // The burnout tick spends the brand itself when the pitch is gone.
@@ -380,7 +402,7 @@ export async function cmdLight(z: ZoneDO, session: Session, arg = ""): Promise<v
 // this (2026-08-20): the flame lives in the weapon hand, and swapping steel
 // just leaves it burning in the pack until it burns down.
 export function snuffForHand(z: ZoneDO, session: Session): void {
-  if (session.litSource === "brand") return;
+  if (session.litSource === "brand" || beltLit(session)) return; // the belt lamp takes no hand
   const wasLantern = session.litSource === "lantern";
   saveWell(z, session); // the shutter keeps what it had not burned
   session.litUntil = undefined;
@@ -397,16 +419,17 @@ export function snuffForHand(z: ZoneDO, session: Session): void {
 export async function cmdFill(z: ZoneDO, session: Session, arg = ""): Promise<void> {
   if (arg && !/lantern|lamp|well/i.test(arg)) return z.send(session, "There is nothing to fill that with.");
   const lit = litLantern(session);
-  const lantern = lit ?? session.items.find((c) => c.itemId === LANTERN_ITEM);
+  const lantern = lit ?? session.items.find((c) => isLantern(c.itemId));
   if (!lantern) return z.send(session, "You carry no lantern.");
+  const lump = lumpMs(lantern.itemId), words = (ms: number) => wellWords(ms, lantern.itemId);
   if (z.inCombat(session)) return z.send(session, "Not with something trying to kill you.");
   const fat = session.items.find((c) => c.itemId === FAT_ITEM);
-  if (!fat) return z.send(session, `You have no fat to put in it. ${wellWords(wellOf(session, lantern))}`);
-  if (wellOf(session, lantern) + LANTERN_FAT_MS > LANTERN_WELL_MS) return z.send(session, `There is no room in the well for another lump. ${wellWords(wellOf(session, lantern))}`);
+  if (!fat) return z.send(session, `You have no fat to put in it. ${words(wellOf(session, lantern))}`);
+  if (wellOf(session, lantern) + lump > wellMs(lantern.itemId)) return z.send(session, `There is no room in the well for another lump. ${words(wellOf(session, lantern))}`);
   session.items.splice(session.items.indexOf(fat), 1);
   await removeItemRow(z.env.DB, fat.rowId);
   if (lantern === lit) {
-    session.litUntil! += LANTERN_FAT_MS;
+    session.litUntil! += lump;
     session.torchWarned = false;
     // ...and the well is written down now (rome, 2026-11-08: filled, and five
     // minutes later the flame and all the fat were gone). A burning well lived
@@ -414,10 +437,10 @@ export async function cmdFill(z: ZoneDO, session: Session, arg = ""): Promise<vo
     // to what it held when it was lit, the new lump and all lost with it.
     saveWell(z, session);
   } else {
-    lantern.fuel = (lantern.fuel ?? 0) + LANTERN_FAT_MS;
+    lantern.fuel = (lantern.fuel ?? 0) + lump;
     await setItemFuel(z.env.DB, lantern.rowId, lantern.fuel);
   }
-  z.send(session, `You work a lump of fat down into the lantern's well and wipe your fingers on your leg. ${wellWords(wellOf(session, lantern))}`, "gain");
+  z.send(session, `You work a lump of fat down into the lantern's well and wipe your fingers on your leg. ${words(wellOf(session, lantern))}`, "gain");
   z.sendStatus(session);
   z.sendCtx(session); // the fat is gone: the 'fill lantern' chip must go with the last lump
 }

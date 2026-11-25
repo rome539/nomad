@@ -57,10 +57,10 @@ function skyFor(id, { night = false, raining = false, inside = false, rainNext =
       artSkyFor: null,
     },
   };
-  const fn = new Function("seesArt", "OUTDOOR_ROOMS", "OUTDOOR_REGIONS", "ROOF_SHOWS_OUTSIDE", "events",
+  const fn = new Function("seesArt", "OUTDOOR_ROOMS", "OUTDOOR_REGIONS", "ROOF_SHOWS_OUTSIDE", "CAVE_MOUTHS", "events",
     "isNight", "isBloodMoon", "isFullMoon", "eclipsePhase", "isDusk", "isDawn", "skyCovered", "session", "self",
     body.replace(/\bthis\b/g, "self").replace(/!\./g, ".")   /* the TS non-null assertion is not JS */);
-  return fn(ctx.seesArt, ctx.OUTDOOR_ROOMS, ctx.OUTDOOR_REGIONS, new Set(["the-mine-mouth"]), ctx.events, ctx.isNight,
+  return fn(ctx.seesArt, ctx.OUTDOOR_ROOMS, ctx.OUTDOOR_REGIONS, new Set(["the-mine-mouth"]), new Set(), ctx.events, ctx.isNight,
     ctx.isBloodMoon, ctx.isFullMoon, ctx.eclipsePhase, ctx.isDusk, ctx.isDawn, ctx.skyCovered, ctx.session, ctx.self);
 }
 

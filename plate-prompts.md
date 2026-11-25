@@ -210,6 +210,32 @@ REPLACE THE MAGENTA WITH REAL SKY - heavy grey snow sky, no magenta anywhere in 
 The Door Book artifact is the OLD gate format (magenta #f102fd, fog and rain
 plates, no torch plate, 1586x992): never copy constants from it.
 
+## 5. Caves (2026-11-22, the cave under the wood)
+
+A cave room is an indoor room (section 2): the indoor NO SKY line, no snow.
+Three kinds, from what the room's words say about its light:
+
+- **Dark** (most of the cave): day, night, night-torch exactly as section 2.
+  The day picture is only the base the other two are handed back from.
+- **A mouth** (lit from an opening above): the same three. The subject says the
+  daylight comes down from an opening overhead, out of the top of the frame; the
+  night hand-back takes it away.
+- **Lights itself** (glow-worms, foxfire, a fire left burning, the dressed
+  stone's own light): the same three as a dark room (2026-11-22: a one-shot lit
+  prompt came out as day). The day base names the place with its light source in
+  it, and is not saved. The night hands it back with, in place of section 2's
+  night sentence:
+  `Now it is night and the only light is the room's own: <its light, where it
+  lies>. That light is dim but it is enough to see the room by: the floor, the
+  walls and the roof can be made out in its colour, while the room stays dark,
+  everything it does not reach deep blue-black and the far distance gone to
+  black. No daylight and no other light source of any kind.` (Not "faint": too
+  dark. Not "really lights the room": too bright.) The torch hands back the night with the
+  section 1 night-torch text word for word, plus one sentence keeping the room's
+  own light, the way the gate keeps its lamp: "<The glow-worms' light> stays
+  exactly as it is in the night picture.", and ends with the indoor
+  `Still no sky and no magenta anywhere - enclosed, opaque to every edge.`
+
 ## Creature sheets
 
 Never written by hand: `game-server/scripts/mob-prompt.mjs` builds every sheet

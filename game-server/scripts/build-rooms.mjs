@@ -256,6 +256,18 @@ if (!flags.has("--offline")) {
 // exactly the mistake it always was.
 for (const d of dups) {
   const first = rooms.get(d.id);
+  // Two attachments to one old room, from two files (the Spring Mire takes the
+  // cave's way down in one and a new door to the Deer Fence in another): both
+  // only bolt doors on, so fold them into one stub. Two doors the same way to
+  // different rooms is still an error.
+  if (d.existing && first.existing) {
+    for (const e of d.exits) {
+      const clash = first.exits.find((x) => x.dir === e.dir);
+      if (clash && clash.target !== e.target) err(e.file, e.line, `"${d.id}" is given a ${e.dir} exit to "${e.target}" here and to "${clash.target}" at ${first.file}:${first.line}`);
+      else if (!clash) first.exits.push(e);
+    }
+    continue;
+  }
   const stub = d.existing ? d : (first.existing ? first : null);
   const real = stub === d ? first : (stub === first ? d : null);
   if (!stub || !real || stub.existing === real.existing) {

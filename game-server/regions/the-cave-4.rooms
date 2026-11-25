@@ -1,0 +1,44 @@
+# THE CAVE UNDER THE WOOD, THE UNDER-STONE (four floors down). The hidden part
+# behind the breathing stone (cave-plan.md, the secret door): seven rooms, NOT
+# counted in the cave's 200, where the older people's own things lie, with the
+# box from the dressed stone, the best of the bottom's epics and the strongest
+# evidence. The sleeper is not here. The way back up is the steps, unkeyed.
+#
+# No light: the stone down here gives none. Every room is dark.
+
+!region cave
+!floor -4
+
+## the-under-steps | The Under-Steps
+Steps go down under the tilted stone, narrow and steep, cut from the living rock and worn hollow in the middle by feet much smaller than yours. The cold comes up them so hard it pushes. At the top the edge of the great stone stands up against the dark.
+> up the-ring-of-nine key:breathing-stone
+> south the-low-gallery-under
+
+## the-low-gallery-under | The Low Gallery
+A gallery cut low, for people shorter than you, so you go along it stooping, the roof brushing your hair. The walls are smooth and dark and give no light. Along both of them at the height of your waist runs a carved band of rings, nine round one, over and over, with no end and no beginning.
+> north the-under-steps
+> east the-shelved-room
+> south the-worn-floor
+
+## the-shelved-room | The Shelved Room
+A small room with shelves cut out of the rock on three walls, and things on the shelves: bowls of black stone, thin as a leaf; little figures of something with four legs and a long tail, carved in white stone, dozens of them, every one lying flat; a heap of rings of bone. Dust lies on all of it like snow.
+> west the-low-gallery-under
+> east the-box-chamber
+
+## the-box-chamber | The Box Chamber
+A square chamber with nothing in it but a box: a long box of the same flat dressed stone as the floors above, its lid a single slab, a keyhole cut through the slab no bigger than your little finger. The box stands on the floor exactly in the middle of the room. Everything else down here was put by hand. This was put first.
+> west the-shelved-room
+
+## the-worn-floor | The Worn Floor
+A room where the floor is worn into hollows by kneeling: rows of them, each a pair of shallow dips side by side, all facing the far wall. The far wall is blank. Cold comes off it, not up through the floor, as if it were the outside of something.
+> north the-low-gallery-under
+> west the-faces-down
+> south the-open-joint
+
+## the-faces-down | The Faces Down
+The older people's dead are here, a few of them, laid out on the floor in a row, each face down on the stone with its arms at its sides and its hands flat. Small people. They were laid like that on purpose, all of them, to face down. Nothing has disturbed them. Nothing comes here.
+> east the-worn-floor
+
+## the-open-joint | The Open Joint
+The last room. The floor is two great stones with a joint between them wider than any above, a hand's width, running wall to wall, and out of it the cold comes up in a flood, steady, silent, forever. Below the joint there is no light and no bottom to see. Round its edges, the stone is worn smooth by hands, as if a great many people had knelt here and pressed down on it.
+> north the-worn-floor

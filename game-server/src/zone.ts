@@ -116,6 +116,7 @@ import * as dice from "./dice";
 import * as works from "./works";
 import * as wanderer from "./wanderer";
 import * as styles from "./styles";
+import * as cave from "./cave";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import { FORGE_STOCK,
@@ -163,10 +164,10 @@ import { FORGE_STOCK,
   LB_GENRES, LB_BOSS_PTS, LB_PVP_PTS, LB_ACCOUNT_PTS, LB_CHART_PTS,
   TRAIT_POOL, TRAIT_ROLL_ODDS, KEEN_BARE_BLEED_ODDS, WEAPON_CLASS_TRAIT, TRAIT_MATERIAL, materialOf, traitAdj, traitTell, playerBleedOdds,
   POSES, GUARD_SPOIL_ODDS, GUARD_SPOIL,
-  STARVING_AT, WHITE_ROE, WALKING_DEAD, FEVER_RAT, bossStands, DARK_ROOMS, seesArt, ART_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
+  STARVING_AT, WHITE_ROE, WALKING_DEAD, FEVER_RAT, bossStands, DARK_ROOMS, seesArt, ART_ROOMS, OUTDOOR_ROOMS, OUTDOOR_REGIONS, INDOOR_ROOMS, ROOF_SHOWS_OUTSIDE, CAVE_MOUTHS, FORAGE_ROOMS, FORAGE_REGIONS, FORTRESS_BANDS, SURFACE_BANDS, MOUNTAIN_HEARD_BANDS, DARK_TOUCH, PATROLS, CURE_RECIPES, COOK_RECIPES, SMOKEHOUSE_ROOM, FOOD_KEEPS, SCRAP_ID, SMELT_SCRAP_PER_IRON,
   SMOKE_TORCH_ROLL_MIN_MS, SMOKE_TORCH_ROLL_MAX_MS, SMOKE_TORCH_MINT_ODDS, SMOKE_TORCH_GROUND_CAP,
   CARRION_ROLL_MIN_MS, CARRION_ROLL_MAX_MS, CARRION_MINT_ODDS, CORPSE_TRACES,
-  LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
+  LANTERN_ITEM, LANTERN_FAT_MS, FAT_ITEM, FAT_DROPS, isLantern, lumpMs, LEATHER_DROPS, BONE_DROPS, LEATHER_ID, BONE_BITS_ID, TORCH_ITEM, PACK_TORCH_CAP, PACK_DRESSING_CAP,
   FEED_KILL, FEED_VITAL, FEED_STUN, FEED_BLEED, FEED_HOBBLE, FEED_PVP_KILL, FEED_PVP_VITAL, FEED_REST_CAUGHT,
   MARKERS, MARK_MS, MARK_HEED_MULT, MARK_CALL_ODDS, SWEEPERS,
   FERRY_DRAG_ROOM, FERRY_DRAG_ODDS, FERRY_DRAG_MAX, SLOW_TO_NOTICE, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, RAVEN_NEST_ROOMS, RAVEN_SCOOPERS,
@@ -210,7 +211,7 @@ function passageLine(z: ZoneDO, roomId: string, region: string, age: number): st
   // cap(track), not "The " + track: the phrase carries its own article, so the
   // literal produced "The the ground is freshly disturbed" in every outdoor
   // band. Caught on the mountain, live, an hour after it shipped.
-  const track = !open && (region === "upper" || region === "deep" || region === "gate") ? "the dust" : "the ground";
+  const track = !open && (region === "upper" || region === "deep" || region === "gate" || region === "cave") ? "the dust" : "the ground";
   return fresh ? `${cap(track)} is freshly disturbed — someone passed this way minutes ago.` : `Footprints disturb ${track} here.`;
 }
 
@@ -3769,7 +3770,7 @@ export class ZoneDO implements DurableObject {
     if (spike) bits.push(`spiked ${spike}`);
     if (hasTrait(t, "riposte")) bits.push("riposte");
     if (hasTrait(t, "mancatcher")) bits.push("mancatcher");
-    if (t.id === LANTERN_ITEM) bits.push("long steady light — a tame flame, nothing fears it");
+    if (isLantern(t.id)) bits.push("long steady light — a tame flame, nothing fears it");
     return bits.length ? ` (${bits.join(", ")})` : "";
   }
 
@@ -3780,7 +3781,7 @@ export class ZoneDO implements DurableObject {
   // The hammerstone is the same shape: its condition meters the latches left
   // in it (STONE_WEAR per smash) — and unlike the lantern, NOTHING refills it.
   public isGear(itemId: string): boolean {
-    if (itemId === LANTERN_ITEM || THROW_TOUGH.has(itemId)) return true;
+    if (isLantern(itemId) || THROW_TOUGH.has(itemId)) return true;
     const t = this.world!.itemTemplates.get(itemId);
     return !!t && t.slot !== "";
   }
@@ -4073,7 +4074,7 @@ export class ZoneDO implements DurableObject {
     const carried: CarriedItem = { rowId, itemId, serial: null, equipped: false, condition, journalId: opts?.journalId, acquiredAt: Math.floor(Date.now() / 1000), rolledTraits: rolledTraits || undefined, rolledMap: parseTraits(rolledTraits) };
     // A lantern that comes from a box, a body or the keeper has a lump of fat in
     // its well - enough to find out what it is for.
-    if (itemId === LANTERN_ITEM) carried.fuel = opts?.fuel ?? LANTERN_FAT_MS;
+    if (isLantern(itemId)) carried.fuel = opts?.fuel ?? lumpMs(itemId);
     session.items.push(carried);
     await insertLoot(this.env.DB, rowId, session.pubkey, itemId, null, carried.condition, carried.acquiredAt, rolledTraits);
     if (opts?.journalId) await setItemJournalId(this.env.DB, rowId, opts.journalId);
@@ -5406,7 +5407,8 @@ export class ZoneDO implements DurableObject {
         // 0 so the killing blow runs through the same death path below.
         let vitals = false;
         if (victim.hp > 0 && findsVitals(tmpl)
-            && this.vitalsLottery(this.equippedArmor(victim), VITALS_CREATURE)) {
+            && this.vitalsLottery(this.equippedArmor(victim), VITALS_CREATURE)
+            && !this.wearsTrait(victim, SIG.unfound)) { // SIGNATURE: the sleeper's flag
           victim.hp = 0;
           vitals = true;
         }
@@ -5415,7 +5417,8 @@ export class ZoneDO implements DurableObject {
         // the end of you. The only answer is to break the grip. (Folds into the
         // hp check below, so a fatal pull runs death like any killing blow.)
         let drowned = 0;
-        if (victim.seizedBy === creature.id && DROWNERS.has(creature.templateId) && chance(SEIZE_DROWN_ODDS)) {
+        if (victim.seizedBy === creature.id && DROWNERS.has(creature.templateId) && !this.wearsTrait(victim, SIG.heldBreath) // SIGNATURE: the swallowed hood
+            && chance(SEIZE_DROWN_ODDS)) {
           drowned = Math.max(1, Math.round(victim.maxHp * SEIZE_DROWN_FRACTION));
           victim.hp -= drowned;
           this.fxPose(creature.roomId, creature.templateId, "lift-you-clear"); // only the drowned god is drawn doing it
@@ -5432,6 +5435,7 @@ export class ZoneDO implements DurableObject {
             this.send(victim, `${cap(tmpl.name)} drags you under — black water fills your lungs for ${drowned}. (break free, or drown)`, "dmgin big");
             cough.swallowedWater(victim); // and you will be coughing it up for a while (cough.ts)
           }
+          cave.landed(this, creature, tmpl, victim); // what the cave's own do on a landed blow (cave.ts)
           // light-snuffing: a landed blow puts your flame out (mob trait lottery).
           if (creature.traits?.includes("light-snuffing") && victim.litSource === "torch" && this.carriesLight(victim)) {
             victim.litUntil = undefined; victim.litSource = undefined; victim.litRow = undefined; victim.torchWarned = false;
@@ -5475,6 +5479,7 @@ export class ZoneDO implements DurableObject {
           if (DROWNERS.has(creature.templateId) && !landBound && !victim.seizedBy && chance(seizeOdds)) {
             victim.seizedBy = creature.id;
             this.fxPose(creature.roomId, creature.templateId, "take-hold");
+            this.fxPose(creature.roomId, creature.templateId, "hold"); // the river-gulper's own frame
             this.send(victim, `${cap(tmpl.name)} closes cold arms around you — you're held fast. (break free: keep fighting, or it drags you under)`, "seize");
           }
           // Claws and teeth open a wound the mail can't turn.
@@ -5721,6 +5726,8 @@ export class ZoneDO implements DurableObject {
     await styles.tickHabits(this, now);
     // ...and whatever is running something down follows it (chase.ts).
     await chase.tick(this, now);
+    // ...and a shuttered lamp opens again somewhere in the cave (cave.ts).
+    cave.tick(this, now);
 
     // The day/night world-clock flips: tell whoever's standing outside to
     // see it (same courtesy the weather events already extend on their own
@@ -6035,6 +6042,8 @@ export class ZoneDO implements DurableObject {
         ai.waters(this, creature, now);
         // ...and the unseen things shift their ambushes to where the feet go.
         ai.lurkerDrifts(this, creature, now);
+        // ...and the cave's own: a kill dragged home, a lamp coming back, the bats' flight (cave.ts).
+        cave.act(this, creature, now);
         // Near the white roe the followers come for you, and nothing stays in
         // its room (whiteroe.ts).
         await whiteroe.follows(this, creature, now);
@@ -7611,7 +7620,7 @@ export class ZoneDO implements DurableObject {
         this.rot.push({ itemId: c.itemId, roomId: fell, at: Date.now() + ROT_MS });
       }
       if (this.isGear(c.itemId)) this.groundCond.set(`${c.itemId}@${fell}`, c.condition); // the spill keeps its wear
-      if (c.itemId === LANTERN_ITEM) this.groundCond.set(light.fuelKey(fell), c.fuel ?? 0); // ...and a lantern its fat
+      if (isLantern(c.itemId)) this.groundCond.set(light.fuelKey(fell), c.fuel ?? 0); // ...and a lantern its fat
       if (c.rolledTraits) this.groundRolled.set(`${c.itemId}@${fell}`, c.rolledTraits); // and whatever it rolled — the looter inherits the roll (099)
       // The scar: an engraved piece writes its owner's death into the ledger,
       // and the mark rides the stones for whoever takes it up next. Your gear
@@ -9296,7 +9305,7 @@ export class ZoneDO implements DurableObject {
     // to drop; 'equip shield' lowers the flame and brings the guard back).
     // A burning BRAND is the exception (2026-08-20): the flame lives in the
     // WEAPON hand, the shield hand is free, and the guard stands while it burns.
-    const handFlame = this.carriesLight(session) && session.litSource !== "brand";
+    const handFlame = light.handFlame(session); // not a brand (weapon hand), not a belt lamp (no hand)
     if (s && s.tmpl.block > 0 && !twoHanded && !handFlame) {
       block += s.tmpl.block * Math.max(0, s.carried.condition) / 100;
       // Guarded means fighting BEHIND the shield — it catches a shade more.
@@ -9404,7 +9413,7 @@ export class ZoneDO implements DurableObject {
     // one left: the shield stays equipped (so it can't be lost loose in the
     // pack), equippedBlock quietly returns 0, and every surface but the sheet's
     // block figure went on saying you were guarded. Now it says so on the bar.
-    if (this.carriesLight(session) && light.guardingShield(this, session)) fx.push("guard-down");
+    if (light.handFlame(session) && light.guardingShield(this, session)) fx.push("guard-down");
     // KIT THAT WILL NOT LAST (rome, 2026-08-22). Wear's only signals were two
     // one-shot lines in combat scroll — a tell as the bar crossed 35, another as
     // it crossed 12 — and from that second one a weapon has ~48 landed blows
@@ -9651,7 +9660,7 @@ export class ZoneDO implements DurableObject {
     // off the floor (paintScene: a roof shows the weather in its sky and keeps
     // its ground dry). Only the genuinely sunless places still answer "in".
     const roofed = !OUTDOOR_ROOMS.has(roomId) && !openSkyForArt
-      && OUTDOOR_REGIONS.has(this.world!.rooms.get(roomId)?.region ?? "");
+      && (OUTDOOR_REGIONS.has(this.world!.rooms.get(roomId)?.region ?? "") || CAVE_MOUTHS.has(roomId)); // ...and the cave's mouths (2026-11-22)
     const seesOut = openSkyForArt || roofed;
     // grey while the ground is wet, unless its sky cleared off the rain (AFTER_RAIN_CLEARS);
     // rain next door is grey whatever, its cloud is overhead
@@ -9799,7 +9808,10 @@ export class ZoneDO implements DurableObject {
     // noise draws in from next door (rome, 2026-07-13) — same exemptions, rolled
     // once per ring so the room joins in a stagger, not all at once.
     ai.joinSameRoomFight(this, roomId);
-    if (!legendary.fightMuffled(this, roomId)) this.creatureNoise(roomId); // SIGNATURE: the bearded cowl
+    if (!legendary.fightMuffled(this, roomId)) {
+      this.creatureNoise(roomId); // SIGNATURE: the bearded cowl
+      cave.fightHeard(this, roomId); // ...and the mole hounds hear it further (cave.ts)
+    }
   }
 
   // Creatures have ears too. Player-made noise makes everything idle in
