@@ -1183,6 +1183,15 @@ export const MOB_WEAKGRIP_MULT = 1.8;      // weak-gripped: undertow.s mirror �
 export const MOB_HELD_RECHECK_MS = 15_000;
 export const MOB_BRINE_SLOW_MULT = 2;         // brine-slow: wanders at half speed out of water
 export const MOB_UNDERTOW_MULT = 1.5;         // undertow: seize odds up
+// THE EIGHT FROM THE CAVE (2026-11-25). Drawn up for the cave and given to every
+// family they fit (wild-traits.ts holds what they do).
+export const LONG_EAR_ROOMS = 3;     // long-eared: hears your footsteps and a fight this many rooms off
+export const FLAME_DRAW_ROOMS = 2;   // flame-drawn: sees a carried light this many rooms off
+export const FLAME_DRAW_ODDS = 0.5;  // ...and comes to it, per step you take
+export const LAMP_BREAK_ODDS = 0.3;  // lamp-breaker: a landed blow puts out a torch or shuts a lantern
+export const MOB_ARMOR_TOP = 3;      // stone-skinned adds a point, never past the measured mob ceiling
+// Traits a cave creature never rolls: there is no tide and no bell under the wood.
+export const NOT_UNDERGROUND = new Set(["tide-called", "bell-tuned"]);
 export const MOB_TRAIT_TELL: Record<string, string> = {
   "plague-bearer": "Its mouth is a bad colour and there is something crusted round it. Whatever it has been eating, it has not been eating it fresh.",
   "land-bound": "Out of the water it is a poorer thing than it was — the arms hang wrong, and it knows the stone is the wrong place for it.",
@@ -1223,6 +1232,14 @@ export const MOB_TRAIT_TELL: Record<string, string> = {
   undertow: "The water moves around it — and it will pull you under.",
   marked: "It has been caught before. It knows what you are, and it will not stay to find out.",
   "light-fingered": "Its hands never stop moving.",
+  "long-eared": "Its ears are too big for it, and they turn to every sound before its head does.",
+  "dark-striker": "It keeps to where the light is not, and it is watching the edge of yours.",
+  "flame-drawn": "It cannot keep its eyes off a light. It has been looking at yours since you came in.",
+  "lamp-breaker": "It has had a lamp out of a hand before. It is watching your hands, not your face.",
+  "stone-skinned": "Its hide is thick and grey and set hard, like something left too long in the wet and the cold.",
+  "light-shy": "It will not look at your light. It looks at you, and then it looks away.",
+  "stone-deaf": "It did not turn when you came in. It does not turn at anything.",
+  "roost-bound": "It hangs where the rest of its kind are gone from, and it has not moved in a long while.",
 };
 // What the journal says a trait DOES, once you have marked it (studied or killed
 // a creature wearing it). The close-read tell is the in-world hint; this is the
@@ -1287,6 +1304,14 @@ export const MOB_TRAIT_DOES: Record<string, string> = {
   undertow: "holds and drags harder",
   marked: "bolts the moment it sees you",
   "light-fingered": "never fumbles the lift",
+  "long-eared": "hears your footsteps and a fight three rooms off, and comes",
+  "dark-striker": "its first blow lands heavier on anyone without a light",
+  "flame-drawn": "comes to a carried light from two rooms off",
+  "lamp-breaker": "a landed blow can put out your torch or shut your lantern",
+  "stone-skinned": "a hard hide — harder to cut",
+  "light-shy": "will not start a fight with anyone carrying a light",
+  "stone-deaf": "hears nothing — no sound wakes it or brings it",
+  "roost-bound": "never goes out with the roost",
 };
 // The pools, by family — a trait must be WIRED before it is listed. Families
 // with no pool yet simply don't roll (mobFamily returns null for them).
@@ -1300,13 +1325,17 @@ export const MOB_TRAIT_DOES: Record<string, string> = {
 // hounds, which are SENTINELS, nor the verdigris thing, which is a CORRODER.
 // Every other non-boss template in the roster resolves to a family below.
 export const MOB_TRAITS: Record<string, { good: string[]; bad: string[] }> = {
-  runner: { good: ["wary", "hind-mother", "sleepless"], bad: ["runt", "lame"] },
-  hunter: { good: ["maneater", "bloodthirsty", "fire-hardened"], bad: ["runt", "snag-toothed"] },
-  lurker: { good: ["light-snuffing", "patient", "mimic", "shadow-born"], bad: ["thin", "twitchy", "half-blind"] },
-  hollow: { good: ["song-deaf", "still-harnessed", "set-fast"], bad: ["keeps-its-bones", "bell-tuned", "ash-marked"] },
-  scavenger: { good: ["starveling", "bone-cracker", "jealous"], bad: ["skittish", "sour-gutted"] },
-  drowner: { good: ["the-kept", "tide-called", "undertow"], bad: ["brine-slow", "land-bound", "weak-gripped"] },
-  thief: { good: ["light-fingered", "choosy", "bolt-hole"], bad: ["marked", "butter-fingered"] },
+  // The eight from the cave (2026-11-25) sit at the end of each list. Some only
+  // fit some of a family (TRAIT_FITS, ai.ts): roost-bound only on a roost that
+  // goes out, light-shy only on a thing that starts fights, long-eared and
+  // flame-drawn only on a thing that walks off its ground.
+  runner: { good: ["wary", "hind-mother", "sleepless", "stone-skinned"], bad: ["runt", "lame", "roost-bound"] },
+  hunter: { good: ["maneater", "bloodthirsty", "fire-hardened", "long-eared", "dark-striker"], bad: ["runt", "snag-toothed", "light-shy", "stone-deaf"] },
+  lurker: { good: ["light-snuffing", "patient", "mimic", "shadow-born", "long-eared", "lamp-breaker"], bad: ["thin", "twitchy", "half-blind", "light-shy", "stone-deaf"] },
+  hollow: { good: ["song-deaf", "still-harnessed", "set-fast", "flame-drawn", "lamp-breaker"], bad: ["keeps-its-bones", "bell-tuned", "ash-marked"] },
+  scavenger: { good: ["starveling", "bone-cracker", "jealous", "long-eared", "stone-skinned"], bad: ["skittish", "sour-gutted", "light-shy", "stone-deaf"] },
+  drowner: { good: ["the-kept", "tide-called", "undertow", "stone-skinned"], bad: ["brine-slow", "land-bound", "weak-gripped"] },
+  thief: { good: ["light-fingered", "choosy", "bolt-hole", "flame-drawn"], bad: ["marked", "butter-fingered"] },
   // VERMIN and COIL are the two SMALL pools, and small is the honest word for
   // them: measured against the live roster they hold three animals between them
   // (the scarp raven and the dancer; the gravid adder). Everything else in the
@@ -1318,7 +1347,7 @@ export const MOB_TRAITS: Record<string, { good: string[]; bad: string[] }> = {
   // neither adds a mechanic. Vermin eat corpses through the same scavengerFeeds
   // branch the scavengers do (zone.ts, the VERMIN hunger arm), so bone-cracker
   // and sour-gutted were already wired for them.
-  vermin: { good: ["plague-bearer", "maneater", "bone-cracker"], bad: ["runt", "skittish", "sour-gutted"] },
+  vermin: { good: ["plague-bearer", "maneater", "bone-cracker", "flame-drawn", "dark-striker"], bad: ["runt", "skittish", "sour-gutted", "light-shy"] },
   // patient is shared with the lurker on purpose. For a lurker it is the drop
   // out of the dark; for an adder it is the strike out of stillness. Same rule —
   // one heavy opening blow, spent once — and both earn it by having waited.
@@ -1327,7 +1356,7 @@ export const MOB_TRAITS: Record<string, { good: string[]; bad: string[] }> = {
   // LISTENERS, so it never reaches the code at all. snag-toothed is the honest
   // version of the same idea — a viper whose fangs are broken — and it is table
   // driven (mobDmgMult), so it works on anything with a mouth.
-  coil: { good: ["plague-bearer", "patient"], bad: ["runt", "snag-toothed"] },
+  coil: { good: ["plague-bearer", "patient", "dark-striker", "stone-skinned"], bad: ["runt", "snag-toothed"] },
 };
 // FEARS_FIRE, but as nerve rather than a wall (rome, 2026-08-03: "the woods
 // mobs are running away too much when a person has fire, it should be a chance

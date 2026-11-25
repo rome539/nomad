@@ -117,6 +117,7 @@ import * as works from "./works";
 import * as wanderer from "./wanderer";
 import * as styles from "./styles";
 import * as cave from "./cave";
+import * as wildTraits from "./wild-traits";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
 import { FORGE_STOCK,
@@ -982,7 +983,7 @@ export class ZoneDO implements DurableObject {
         const rolledDen = ai.rollDen(this, spawn.template_id, spawn.room_id);
         const tmpl = ai.rollBloodline(this, base, rolledDen);
         const den = ai.bloodlineHome(this, tmpl, rolledDen);
-        const traits = ai.rollMobTraits(tmpl);
+        const traits = ai.rollMobTraits(tmpl, this.regionOf(den) === "cave");
         this.creatures.set(spawn.id, {
           id: spawn.id,
           templateId: tmpl.id,
@@ -1040,7 +1041,7 @@ export class ZoneDO implements DurableObject {
         const rolledDen = ai.rollDen(this, spawn.template_id, spawn.room_id);
         const tmpl = ai.rollBloodline(this, base, rolledDen);
         const den = ai.bloodlineHome(this, tmpl, rolledDen);
-        const traits = ai.rollMobTraits(tmpl);
+        const traits = ai.rollMobTraits(tmpl, this.regionOf(den) === "cave");
         this.creatures.set(spawn.id, {
           id: spawn.id,
           templateId: tmpl.id,
@@ -2487,7 +2488,7 @@ export class ZoneDO implements DurableObject {
       case "bounty": return gate.cmdBounty(this, session, cmd.arg);
       case "dice": return dice.cmdDice(this, session, cmd.arg);
       case "roll": return dice.cmdRoll(this, session);
-      case "stand": return dice.cmdStand(this, session);
+      case "stand": if (cmd.arg && cave.pryRing(this, session, cmd.arg, Date.now())) return; return dice.cmdStand(this, session); // stand on a ring stone (cave.ts)
       case "buy": return gate.cmdBuy(this, session, cmd.arg);
       case "offer": return gate.cmdOffer(this, session, cmd.arg);
       case "inventory": return verbs.cmdInventory(this, session);
@@ -4994,7 +4995,7 @@ export class ZoneDO implements DurableObject {
       // commit — a wind-up you can back out of the room to escape, or preempt by
       // striking first (which puts it in a normal fight and cancels the tell).
       if (!creature.target && ai.hyenaGuardsMeal(this, creature)) {
-        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s) && !wildTraits.lightShy(this, creature, s));
         if (!prey) {
           creature.rouseAt = undefined; // the room emptied — it drops back to its meal
         } else if (creature.rouseAt === undefined) {
@@ -5020,7 +5021,7 @@ export class ZoneDO implements DurableObject {
       // make it rare); once wound up it commits. Not for meal-guarders — those own
       // the block above. See ai.starvingHunts for the guardrails.
       if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && ai.starvingHunts(this, creature)) {
-        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s));
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s) && !wildTraits.lightShy(this, creature, s));
         if (!prey) {
           creature.rouseAt = undefined; // no one to hunt — the hunger settles back
         } else if (creature.rouseAt === undefined) {
@@ -5064,7 +5065,7 @@ export class ZoneDO implements DurableObject {
       // starving predator's own hunger is reason enough — this is the
       // separate case of a fed one smelling blood on someone stumbling).
       if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && !ai.starvingHunts(this, creature) && ai.woundedPreyHunts(this, creature)) {
-        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s) && s.hp < s.maxHp * WOUNDED_FRACTION);
+        const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s) && s.hp < s.maxHp * WOUNDED_FRACTION && !wildTraits.lightShy(this, creature, s));
         if (!prey) {
           creature.rouseAt = undefined; // healed up, left, or died — the interest settles
         } else if (creature.rouseAt === undefined) {
@@ -5438,6 +5439,7 @@ export class ZoneDO implements DurableObject {
             cough.swallowedWater(victim); // and you will be coughing it up for a while (cough.ts)
           }
           cave.landed(this, creature, tmpl, victim); // what the cave's own do on a landed blow (cave.ts)
+          wildTraits.landed(this, creature, tmpl, victim); // lamp-breaker (wild-traits.ts)
           // light-snuffing: a landed blow puts your flame out (mob trait lottery).
           if (creature.traits?.includes("light-snuffing") && victim.litSource === "torch" && this.carriesLight(victim)) {
             victim.litUntil = undefined; victim.litSource = undefined; victim.litRow = undefined; victim.torchWarned = false;
@@ -8367,9 +8369,7 @@ export class ZoneDO implements DurableObject {
       else if (this.isDark(room.id) && !this.carriesLight(session) && cave.lampLights(this, room.id)) {
         lines.push("The lamp-man's lamp is open, and its yellow light lies over everything here.");
       }
-      const ringSign = cave.ringLine(this, session, Date.now()); // the breathing stone shows itself (cave.ts)
-      if (ringSign) lines.push(ringSign);
-      else if (room.id === cave.RING_ROOM && this.openDoors.has(cave.RING_DOOR)) lines.push("One of the nine stones stands up on its edge, and steps go down under it into the cold.");
+      if (room.id === cave.RING_ROOM && this.openDoors.has(cave.RING_DOOR)) lines.push("The tenth stone in the middle stands up on its edge, and steps go down under it into the cold.");
       const curing = this.curingCount(room.id);
       const shownCure: Record<string, number> = {};
       // Loose loot is COLLECTED, not spilled line-by-line: on entry a big pile
@@ -9821,6 +9821,7 @@ export class ZoneDO implements DurableObject {
     if (!legendary.fightMuffled(this, roomId)) {
       this.creatureNoise(roomId); // SIGNATURE: the bearded cowl
       cave.fightHeard(this, roomId); // ...and the mole hounds hear it further (cave.ts)
+      wildTraits.fightHeard(this, roomId); // ...and a long-eared thing three rooms off (wild-traits.ts)
     }
   }
 
@@ -9847,6 +9848,7 @@ export class ZoneDO implements DurableObject {
     for (const c of this.creatures.values()) {
       if (c.target || c.roomId === sourceRoomId) continue;
       if (c.asleep) continue; // a sleeper doesn't hear the next room over (same-room noise has its own wake roll)
+      if (c.traits?.includes("stone-deaf")) continue; // hears nothing (wild-traits.ts)
       const tmpl = world.mobTemplates.get(c.templateId)!;
       if (tmpl.is_boss) continue; // the King waits; the noise comes to him
       if (DROWNERS.has(c.templateId)) continue; // it holds its water; noise doesn't move it

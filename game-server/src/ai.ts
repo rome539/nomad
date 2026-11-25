@@ -28,6 +28,7 @@ import { cap, isNight, isFullMoon, isBloodMoon, fullMoonTonight, morphOf } from 
 import * as events from "./events";
 import * as styles from "./styles";
 import * as cave from "./cave";
+import * as wildTraits from "./wild-traits";
 import * as whiteroe from "./whiteroe";
 import * as groups from "./groups";
 import * as squads from "./squads";
@@ -55,7 +56,7 @@ import {
   DRAKE_AIR_MS, DRAKE_AIR_EVERY_MS, DRAKE_AIR_AT, DRAKE_DIVE_MIN, DRAKE_DIVE_MAX, ARMOR_K,
   DRAKE_RANGE, DRAKE_TURN_MIN, DRAKE_PREY_MIN_HP, DRAKE_OVER, DRAKE_HUNT_WAIT_MS, DRAKE_HUNGER_MULT, SLOW_EATERS,
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT, DEEP_HEART, KINGS_ROOMS_DEEP,
-  WARY_BOLT_ODDS, SCAVENGER_HEAL, bodyOf, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
+  WARY_BOLT_ODDS, SCAVENGER_HEAL, bodyOf, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, FLIGHT_BATS, NOT_UNDERGROUND, MOB_ARMOR_TOP, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
   FLIERS, RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
@@ -281,17 +282,39 @@ function mobFamily(tmpl: MobTemplate): string | null {
   return null;
 }
 
-export function rollMobTraits(tmpl: MobTemplate): string[] {
+// WHO IN A FAMILY MAY ROLL WHICH (2026-11-25, the eight from the cave): a family
+// is broad, and a trait that cannot do anything on the body that rolls it is a
+// lie. Walking to a sound or a light needs a thing that leaves its ground (an
+// AGGRESSIVE one at home never takes the first step); shying from a fight needs
+// a thing that starts them; staying home from the roost needs a roost that goes.
+const walksOff = (id: string): boolean =>
+  !SENTINELS.has(id) && !ROOTED.has(id) && !BROODERS.has(id) && !GUARDIANS.has(id)
+  && (!DROWNERS.has(id) || WALKING_DEAD.has(id))
+  && (!AGGRESSIVE.has(id) || WALKING_DEAD.has(id) || OPEN_LURKERS.has(id));
+const startsFights = (id: string): boolean =>
+  AGGRESSIVE.has(id) || LURKERS.has(id) || DEFENDS_CAVE.has(id)
+  || (STARVE_HUNTERS.has(id) && !SMALL_HUNTERS.has(id) && !HOLLOW.has(id));
+const TRAIT_FITS: Record<string, (id: string) => boolean> = {
+  "long-eared": walksOff,
+  "flame-drawn": walksOff,
+  "light-shy": startsFights,
+  "roost-bound": (id) => FLIGHT_BATS.has(id),
+};
+
+/** `underground` = it spawns in the cave, where there is no tide and no bell. */
+export function rollMobTraits(tmpl: MobTemplate, underground = false): string[] {
   if (tmpl.is_boss) return [];
   const fam = mobFamily(tmpl);
   const pool = fam ? MOB_TRAITS[fam] : undefined;
   if (!pool) return [];
   if (!chance(MOB_TRAIT_ODDS)) return [];
+  const fits = (t: string) => (TRAIT_FITS[t]?.(tmpl.id) ?? true) && !(underground && NOT_UNDERGROUND.has(t));
+  const good = pool.good.filter(fits), bad = pool.bad.filter(fits);
   // A boon or a flaw; a family with only one side falls through to the side it
   // has (a runt-only runner must not halve its odds for the lack of a boon).
-  const side = pool.good.length && pool.bad.length
-    ? (chance(MOB_BAD_SHARE) ? pool.bad : pool.good)
-    : (pool.good.length ? pool.good : pool.bad);
+  const side = good.length && bad.length
+    ? (chance(MOB_BAD_SHARE) ? bad : good)
+    : (good.length ? good : bad);
   if (!side.length) return [];
   return [pick(side)];
 }
@@ -323,7 +346,9 @@ export function mobDmgMult(traits: string[] | undefined): number {
 // one path and not another — is how a trait becomes a thing players cannot
 // learn, because it would only be true when they attacked a particular way.
 export function mobArmor(tmpl: MobTemplate, creature: Creature): number {
-  return tmpl.armor + (creature.traits?.includes("still-harnessed") ? 1 : 0);
+  const base = tmpl.armor + (creature.traits?.includes("still-harnessed") ? 1 : 0);
+  // stone-skinned: a hard hide, never past the mob ceiling (wild-traits.ts).
+  return creature.traits?.includes("stone-skinned") && base < MOB_ARMOR_TOP ? base + 1 : base;
 }
 
 // NO TRAIT IN THIS LOTTERY ADDS A BODY (rome, 2026-08-24). `pair-bonded` and
@@ -941,6 +966,7 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
     // open; anything else just wakes, and deals with you the normal way.
     for (const c of z.creatures.values()) {
       if (c.roomId !== roomId || !c.asleep) continue;
+      if (c.traits?.includes("stone-deaf")) continue; // hears nothing (wild-traits.ts)
       if (!chance(Math.min(1, odds))) continue;
       c.asleep = false;
       c.sleepUntil = undefined;
@@ -984,6 +1010,8 @@ export async function wakeListeners(z: ZoneDO, session: Session, roomId: string,
       // movement (in or past) and to a grudge, not to noise alone. Blind lurkers
       // still strike at sound; that's the whole of what they are.
       if (fromNoise && !lurker) continue;
+      // Stone-deaf hears nothing to spring at; light-shy will not come at a light (wild-traits.ts).
+      if (c.traits?.includes("stone-deaf") || wildTraits.lightShy(z, c, session)) continue;
       if (remembers(z, c, session.pubkey, now)) continue;
       // The marrow-song: an entranced bone wakes to NOTHING while it plays,
       // and to everything for a while after (per-creature — only the deep's
@@ -1081,6 +1109,8 @@ export async function provokeGrudges(z: ZoneDO, session: Session, ambush: boolea
         z.roomFeed(session.roomId, `${cap(kingName)} speaks to ${session.name}.`, session.pubkey, false);
       }
       if (!holdsGrudge && !guards && !hostile) continue;
+      // Light-shy: it settles an old score, but starts no new one with a light in your hand (wild-traits.ts).
+      if (!holdsGrudge && wildTraits.lightShy(z, creature, session)) continue;
       const tmpl = z.world!.mobTemplates.get(creature.templateId)!;
       // A dire-hyena guarding its kill no longer jumps you the instant you walk
       // in — it winds up (DIRE_ROUSE_MS; the act loop commits it), and the tell
@@ -4591,7 +4621,7 @@ export function mintCreature(z: ZoneDO, baseTmpl: MobTemplate, home: string, now
       if (d < bestD) { bestD = d; roomId = m; }
     }
   }
-  const traits = rollMobTraits(tmpl);
+  const traits = rollMobTraits(tmpl, z.regionOf(home) === "cave");
   const creature: Creature = {
     id: uuid(),
     templateId: tmpl.id,

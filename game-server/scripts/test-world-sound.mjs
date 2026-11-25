@@ -316,6 +316,7 @@ check('listen sends real nearby cues but sealed doors and hidden lurkers stay qu
     LISTEN_DIRS:{east:'east'}, DIR_ORDER:{east:1}, HEARD_EMPTY:{upper:['nothing']},
     MOON_DOOR_KEY:'moon',TIDE_DOOR_KEY:'tide',BELL_DOOR_KEY:'bell',
     groundWord:()=> 'stone', cap:s=>s, dirPhrase:s=>s, pick:a=>a[0],
+    cave: { SOUNDING_ROOM:'the-sounding-room', soundingLine:()=>'' }, // the ring's song, heard in one room only (cave.ts)
   });
   vm.runInContext(listenCode,c);
   const z = { world:{exits:new Map([['here',[exit]]])}, creatures:new Map([['m',mob]]), sessions:new Map(), openDoors:new Set(), regionOf:()=> 'upper', send:(...args)=>sent.push(args) };

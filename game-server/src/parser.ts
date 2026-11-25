@@ -151,6 +151,8 @@ export const VERB_ALIASES: Record<string, Verb> = {
   // and had no verb to say it with). A game that names an action in its own
   // prose has to answer to that word.
   unlock: "unlock", open: "unlock", pry: "unlock", force: "unlock",
+  // the Ring of Nine's stones are stepped on (cave.pryRing); anywhere else these read as open
+  step: "unlock", tread: "unlock", stamp: "unlock", press: "unlock", push: "unlock", lift: "unlock", heave: "unlock",
   cut: "unlock", unbind: "unlock", snip: "unlock",
   // ...and `pour` for the same reason at the bell-pit: its own refusal says the
   // mould "wants bell-metal — a lump of it, and the pour", and until now the

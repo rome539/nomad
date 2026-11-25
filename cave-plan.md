@@ -178,25 +178,26 @@ door), what you HEAR (the bell hatch). They keep the deep door's law: a window,
 never a wall; the way back is always unkeyed; never on a route already open; no
 hint text, silence after a wrong try.
 
-**The breathing stone. Its key is the AIR**, the one thing the whole
-cave is about.
-- At the bottom, a chamber floored with a ring of **nine** dressed stones, the
-  same ring as the nine oaks of the Standing Oaks above in the Old Growth.
-- Cold air comes up through the joints of only ONE of the nine, and **the
-  stone keeps changing**: it turns over through the day, AND every wrong pry
-  moves the air to another stone. Trying every stone does not work (the target
-  moves each miss) and remembering does not work (it is never the same stone
-  twice running). The only way in is to read the cave each time.
-- **The cave tells you, never the game.** No hint lines, only what the room
-  shows, and the tell varies so it is never one fixed word to look for: a flame
-  leaning toward the stone, dust lifting off its joints, a thin whistle in one
-  seam, frost on one stone's face while the rest are damp. Up top at the
-  Standing Oaks a close look shows the same: one oak's ground cold, its leaves
-  stirring with no wind.
-- Pry the stone the cave points at and it tilts up on its edge, steps going down
-  under it, the cold pouring up: a `down` exit for a few minutes, open to anyone
-  in the room, then the stone settles. A wrong stone does not move and nothing
-  is said, but the air has moved.
+**The singing stones** (rebuilt 2026-11-25; the first build, "the breathing
+stone", named the stone right in the ring's room text and was no puzzle at all).
+- At the bottom, a chamber floored with a ring of **nine** dressed stones round a
+  tenth, worn deep, in the middle. The ring room gives nothing away; a close look
+  says only that each stone sits a hair proud of its joint.
+- Each stone gives a little under a foot and sounds **its own note**, always the
+  same one (cave.ts RING_NOTES): a deep note like a bell under water, a thin high
+  note, a dry click, a long ringing note, a hollow knock, a hum you feel in your
+  teeth, a crack like ice, a soft sigh, a grinding groan.
+- Far up in **the Sounding Room** (the-cave-1), whose own words say standing still
+  is the only way to hear anything, `listen` hears the stones singing a **phrase of
+  four** under the rest of the cave. Each step's note "goes up into the rock
+  overhead, and somewhere far above, something gives it back": the thread to the
+  room above. The phrase is new every time the stone opens, so an answer passed
+  on is spent once it is used (a server restart also draws a new one).
+- Find the phrase, learn which stone sounds which note, step the four in order
+  (`step`, `stand on`, `push`, `press`, `lift`, `pry` all work) and the middle
+  stone tilts up on its edge over steps going down: a `down` exit for a few
+  minutes, open to anyone, then it settles. A wrong note is only a note; nothing
+  says so, and the phrase starts again. The oaks above give no sign any more.
 - **Behind it: the under-stone**, a small hidden part (about 6-8 rooms, NOT counted
   in the 200; extra on top of them) where the older people's own things lie: the box on the dressed
   stone (opened with the sleeper's key) moves here (DONE 2026-11-25, mig 412: the Box Chamber; the ring itself built the same day in cave.ts), with the best of the
@@ -382,7 +383,7 @@ every room sits on the square its doors say, the stairs drop almost straight dow
 | the-cave-1 | one down | 80 | the upper cave: the six mouths (the Ward Ditch's passage south), the Hollow and its ledges, the hound ground, the bear's way, the fern side |
 | the-cave-2 | two down | 91 | the river (sump in the north, the falls, rising up the Spring's Throat), two roosts, the diggers' road and three camps, the stopping |
 | the-cave-3 | three down | 50 | the dressed stone: the straight road, the brood, the Worn Hollow (the sleeper's room), the Ring of Nine |
-| the-cave-4 | four down | 7 | the under-stone, behind the Ring of Nine (`key:breathing-stone` until its code exists) |
+| the-cave-4 | four down | 7 | the under-stone, behind the Ring of Nine (`key:breathing-stone`, opened by the singing stones) |
 
 - Six ways from the upper cave to the river floor; two from the river floor to
   the stone (the Diggers' Stair behind the stopping, and the Old Sink).

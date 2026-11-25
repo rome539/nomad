@@ -10,6 +10,7 @@ import { SIG } from "./legendary";
 import type { ZoneDO } from "./zone";
 import * as ratking from "./ratking";
 import * as cave from "./cave";
+import * as wildTraits from "./wild-traits";
 import type { Creature, Session } from "./zone-types";
 import type { MobTemplate } from "./world";
 import { hasTrait } from "./world";
@@ -95,6 +96,7 @@ export function creatureBlow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
 
   if (FOLK.has(id)) out.mult *= STANCE[folkStance(z, creature, tmpl)].atk;
   cave.blow(z, creature, tmpl, victim, now, out); // the cave's own ways (cave.ts)
+  wildTraits.blow(z, creature, tmpl, victim, now, out); // dark-striker (wild-traits.ts)
 
   creature.lastBlowAt = now;
   return out;

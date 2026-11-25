@@ -7331,7 +7331,7 @@ export const ROOM_FEATURES: Record<string, FeatureTable> = {
   },
   "the-ring-of-nine": {
     "ring|stones|stone|nine|tenth|joints|joint|floor":
-      "Nine stones, as alike as nine coins, each in its own joint, round the tenth in the middle. Each is the size of a table and sits heavy in its joint. The room is cold, and the air in it is never still.",
+      "Nine stones, as alike as nine coins, each in its own joint, round the tenth in the middle, which is worn deep. Each is the size of a table, and each sits a hair proud of its joint, as if it would give a little under a foot. The room is cold, and very quiet.",
   },
   "the-west-hall": {
     "hall|scratches|scratch|walls|track|floor":

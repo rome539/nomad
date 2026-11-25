@@ -110,6 +110,9 @@ try {
         "export {leaderboardRank} from './world';",
         "export {PLAYER_SAVE_MAX_MS} from './zone-data';",
         "export {THIEVES as T_THIEVES, thiefWords as T_thiefWords, thiefSay as T_thiefSay, SEIZE_WORDS as T_SEIZE_WORDS, DROWNERS as T_DROWNERS} from './zone-data';",
+        "export {rollMobTraits as T_rollMobTraits, mobArmor as T_mobArmor} from './ai';",
+        "export {MOB_TRAITS as T_MOB_TRAITS, MOB_TRAIT_TELL as T_TRAIT_TELL, MOB_TRAIT_DOES as T_TRAIT_DOES, MOB_ARMOR_TOP as T_ARMOR_TOP} from './zone-data';",
+        "export * as T_wild from './wild-traits';",
         "export {handleVerify, handleChallenge} from './auth';",
         "export {finalizeEvent as signNostr, generateSecretKey as newNostrKey} from 'nostr-tools';",
       ].join('\n'),
@@ -121,7 +124,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { caveMod, LANTERNS, STAYS_HOME_BOXES, CAVE_COOK, CAVE_CURE, CAVE_FAT, applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, packQuarryId, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, roomWater, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, biteOf, bodyErrand, rangePack, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary, rehome, alarmBark, windsUp, lurkerFoundBy, hallFogged, foggy, cmdWho, WHO_PLACES_KEYS, GATEHOUSE_FEASTS, FEAST_LINES, gatehouseFeast, FEAST_COSTUMES, feastCostume, CAVE_GROUND, CAVE_SETTLES, CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, CAVE_TEST_HOLLOW, CAVE_TEST_GRAVE, hungers, CAVE_T_RUNNERS, CAVE_T_SURPLUS, T_THIEVES, T_thiefWords, T_thiefSay, T_SEIZE_WORDS, T_DROWNERS } = await import(pathToFileURL(output));
+  const { caveMod, LANTERNS, STAYS_HOME_BOXES, CAVE_COOK, CAVE_CURE, CAVE_FAT, applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, packQuarryId, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, roomWater, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, biteOf, bodyErrand, rangePack, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary, rehome, alarmBark, windsUp, lurkerFoundBy, hallFogged, foggy, cmdWho, WHO_PLACES_KEYS, GATEHOUSE_FEASTS, FEAST_LINES, gatehouseFeast, FEAST_COSTUMES, feastCostume, CAVE_GROUND, CAVE_SETTLES, CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, CAVE_TEST_HOLLOW, CAVE_TEST_GRAVE, hungers, CAVE_T_RUNNERS, CAVE_T_SURPLUS, T_THIEVES, T_thiefWords, T_thiefSay, T_SEIZE_WORDS, T_DROWNERS, T_rollMobTraits, T_mobArmor, T_MOB_TRAITS, T_TRAIT_TELL, T_TRAIT_DOES, T_ARMOR_TOP, T_wild } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -5330,35 +5333,77 @@ try {
     const later = readdirSync(new URL('../migrations/', import.meta.url)).filter((f) => +f.slice(0, 3) > 412 && /box-stone/.test(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8')));
     assert.deepEqual(later, [], 'a later migration moves the stone box again: check it is meant');
   });
-  check('the Ring of Nine opens: pry the stone the air comes up under, a wrong one moves the air, and the room and the oaks show the same stone (2026-11-25)', () => {
+  check('the Ring of Nine is a puzzle: each stone sings its own note up toward the Sounding Room, which gives the phrase of four, stepping it opens the middle stone, and the next opening wants a new phrase (2026-11-25)', () => {
     const out = [];
-    const z = { openDoors: new Set(), doorCloseAt: new Map(), send: (s, t) => out.push(t), roomFeed() {}, roomSound() {}, carriesLight: () => false };
+    const z = { openDoors: new Set(), doorCloseAt: new Map(), send: (s, t) => out.push(t), roomFeed() {}, roomSound() {} };
     const me = { roomId: caveMod.RING_ROOM, name: 'me', pubkey: 'me' };
     const now = Date.UTC(2026, 10, 25, 12);
     const nth = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
-    const right = caveMod.ringStone(z, now);
-    for (let t = 0; t < 200; t++) { const k = caveMod.ringStone({}, now + t * 40 * 60_000); assert.ok(Number.isInteger(k) && k >= 0 && k <= 8, 'the stone came out as ' + k); }
-    assert.match(caveMod.ringLine(z, me, now), new RegExp('\\b' + nth[right] + '\\b'), 'the room does not show the breathing stone');
-    assert.match(caveMod.oaksLine(z, now), new RegExp('\\b' + nth[right] + ' oak'), 'the oaks above do not show the same one');
-    assert.equal(caveMod.pryRing(z, me, 'chest', now), false, 'a pry about something else is not the ring\'s');
-    const wrong = (right + 4) % 9;
-    assert.equal(caveMod.pryRing(z, me, nth[wrong] + ' stone', now), true);
-    assert.ok(!z.openDoors.has(caveMod.RING_DOOR), 'a wrong stone opened the way');
-    assert.doesNotMatch(out.at(-1), /wrong|another|moves|air/, 'a wrong stone explains itself');
-    let moved = false;
-    for (let k = 0; k < 6 && !moved; k++) { if (caveMod.ringStone(z, now) !== right) moved = true; else caveMod.pryRing(z, me, 'stone ' + (((right + 1) % 9) + 1), now); }
-    assert.ok(moved, 'wrong pries never move the air, so trying every stone would work');
-    const now2 = caveMod.ringStone(z, now);
-    assert.equal(caveMod.pryRing(z, me, 'the ' + nth[now2] + ' stone', now), true);
-    assert.ok(z.openDoors.has(caveMod.RING_DOOR) && z.doorCloseAt.get(caveMod.RING_DOOR) > now, 'the right stone does not open the way down for a while');
-    assert.equal(caveMod.ringLine(z, me, now), null, 'the sign still shows with the stone already up');
-    assert.ok(caveMod.ringStone({}, now + 40 * 60_000 * 3) !== undefined, 'the stone turns over through the day');
+    assert.equal(new Set(caveMod.RING_NOTES).size, 9, 'nine stones, nine notes');
+    for (let d = 0; d < 60; d++) {
+      const p = caveMod.ringPhrase({});
+      assert.equal(p.length, 4);
+      for (let k = 0; k < 4; k++) assert.ok(p[k] >= 0 && p[k] <= 8 && p[k] !== p[k - 1], 'phrase ' + p);
+    }
+    const phrase = [...caveMod.ringPhrase(z)];
+    assert.deepEqual(caveMod.ringPhrase(z), phrase, 'the phrase changes before anyone opens the stone');
+    // the Sounding Room gives the phrase in the stones' own words, in order
+    const heard = caveMod.soundingLine(z);
+    let at = 0;
+    for (const k of phrase) { const i = heard.indexOf(caveMod.RING_NOTES[k], at); assert.ok(i >= at, 'the dome does not sing ' + caveMod.RING_NOTES[k] + ' in its place'); at = i + 1; }
+    // a step sounds the stone's own note and names no other stone
+    assert.equal(caveMod.pryRing(z, me, 'chest', now), false, 'words about something else are not the ring\'s');
+    caveMod.pryRing(z, me, 'on the ' + nth[phrase[0]] + ' stone', now);
+    assert.ok(out.at(-1).includes(caveMod.RING_NOTES[phrase[0]]), 'the stone does not sound its own note');
+    assert.match(out.at(-1), /goes up into the rock overhead, and somewhere far above, something gives it back/, 'nothing ties the stones to the room above');
+    // walking in, the nearest stone sings under your foot, and it is no step of the phrase
+    const ze = { openDoors: new Set(), doorCloseAt: new Map(), send: (s, t) => out.push(t), roomFeed() {}, roomSound() {} };
+    const walker = { ...me };
+    caveMod.ringEntry(ze, walker);
+    assert.match(out.at(-1), /Your foot comes down on the nearest of the nine stones[^]*sounds: a deep note[^]*far above, something gives it back/, 'walking in does not show the stones sing');
+    const said = out.length;
+    caveMod.ringEntry(ze, { ...me, roomId: 'elsewhere' });
+    ze.openDoors.add(caveMod.RING_DOOR); caveMod.ringEntry(ze, walker);
+    assert.equal(out.length, said, 'a stone sang somewhere else, or with the way already open');
+    assert.match(readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8'), /cave\.ringEntry\(z, session\);/, 'walking in never reaches the stones');
+    // a wrong note in the middle: nothing says so, and nothing opens
+    const wrong = [0, 1, 2, 3, 4, 5, 6, 7, 8].find((k) => k !== phrase[1] && k !== phrase[0]);
+    caveMod.pryRing(z, me, (wrong + 1) + (['st', 'nd', 'rd'][wrong] ?? 'th') + ' stone', now);
+    assert.ok(out.at(-1).includes(caveMod.RING_NOTES[wrong]), '"4th stone" is not read as the fourth');
+    assert.doesNotMatch(out.at(-1), /wrong|again|silent|dead|order/, 'a wrong note explains itself');
+    for (const k of phrase.slice(1)) caveMod.pryRing(z, me, nth[k], now);
+    assert.ok(!z.openDoors.has(caveMod.RING_DOOR), 'a broken phrase opened the way');
+    // the whole phrase, in order: the middle stone stands up for a while
+    for (const k of phrase) caveMod.pryRing(z, me, nth[k] + ' stone', now);
+    assert.ok(z.openDoors.has(caveMod.RING_DOOR) && z.doorCloseAt.get(caveMod.RING_DOOR) > now, 'the phrase does not open the way down for a while');
+    // spent: the next opening wants a new phrase (one in a few thousand draws repeats by chance)
+    let fresh = false;
+    for (let t = 0; t < 5 && !fresh; t++) {
+      const zt = { ...z, openDoors: new Set(), doorCloseAt: new Map() };
+      const p = [...caveMod.ringPhrase(zt)];
+      const who = { ...me };
+      for (const k of p) caveMod.pryRing(zt, who, nth[k], now);
+      assert.ok(zt.openDoors.has(caveMod.RING_DOOR), 'the phrase did not open it');
+      fresh = JSON.stringify(caveMod.ringPhrase(zt)) !== JSON.stringify(p);
+    }
+    assert.ok(fresh, 'the stones sing the same phrase after it has been used');
+    // the middle stone itself never gives
+    const z2 = { ...z, openDoors: new Set(), doorCloseAt: new Map() };
+    caveMod.pryRing(z2, { ...me }, 'middle stone', now);
+    assert.match(out.at(-1), /does not give/);
+    // the ring names no stone any more, and the oaks above give no sign
     const verbs = readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8');
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.doesNotMatch(zone + verbs, /ringLine|oaksLine/, 'something still hands the stone over');
+    assert.match(verbs, /session\.roomId === cave\.SOUNDING_ROOM && !want\) lines\.push\(cave\.soundingLine\(z\)/, 'listening in the Sounding Room does not hear the phrase');
+    // step, push, lift reach the stones
+    const parser = readFileSync(new URL('../src/parser.ts', import.meta.url), 'utf8');
+    for (const v of ['step', 'push', 'lift', 'press', 'pry']) assert.match(parser, new RegExp('\\b' + v + ': "unlock"'), v + ' does not reach the stones');
     assert.match(verbs, /exit\.key_item === cave\.RING_KEY && !z\.openDoors\.has\(doorKey\)\) \{[^]*?if \(session\.roomId === cave\.RING_ROOM\) return z\.send\(session, cave\.RING_SHUT/, 'the way down is not the ring\'s own');
     assert.ok(verbs.indexOf('cave.RING_KEY') < verbs.indexOf('A black iron door bars the way ${dir}. It wants'), 'the ring falls through to the iron-door line');
     assert.doesNotMatch(caveMod.RING_SHUT, /door|key/, 'the ring talks about a door or a key');
-    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
-    assert.match(zone, /if \(cave\.pryRing\(this, session, arg, Date\.now\(\)\)\) return;/, 'pry does not reach the ring');
+    assert.match(zone, /if \(cave\.pryRing\(this, session, arg, Date\.now\(\)\)\) return;/, 'the stones are not reached');
+    assert.match(zone, /case "stand": if \(cmd\.arg && cave\.pryRing\(this, session, cmd\.arg/, 'stand on a stone does not reach it');
     assert.match(zone, /if \(key === cave\.RING_DOOR\) \{ cave\.ringSettles\(this\); continue; \}/, 'the stone never settles, or settles with the deep door\'s iron line');
   });
   check('the cave bat hangs from the top of the picture on every floor line, rank and row scale (2026-11-25)', () => {
@@ -9233,6 +9278,63 @@ try {
     assert.equal(light.handFlame(lit('belt-lamp')), false, 'a belt lamp does not');
     const z = { carriesLight: (s) => light.carriesLight(s), outOfWorld: () => false, litFor: () => true, send() {}, sendStatus() {}, env: { DB: null } };
     assert.equal(caveMod.takeLight(z, lit('lamp-mans-lamp'), { name: 'the lamp-man' }, true), false, "no blow puts out the lamp-man's own lamp");
+  });
+
+  check('the eight traits drawn up for the cave roll on every family they fit, and each does what the journal says (2026-11-25)', () => {
+    const EIGHT = ['long-eared', 'dark-striker', 'flame-drawn', 'lamp-breaker', 'stone-skinned', 'light-shy', 'stone-deaf', 'roost-bound'];
+    const pooled = new Set(Object.values(T_MOB_TRAITS).flatMap((p) => [...p.good, ...p.bad]));
+    for (const t of EIGHT) {
+      assert.ok(pooled.has(t), t + ' is in a family pool');
+      assert.ok(T_TRAIT_TELL[t] && T_TRAIT_DOES[t], t + ' has a tell and a journal line');
+    }
+    const rolls = (id, underground) => {
+      const seen = new Set();
+      for (let i = 0; i < 40000; i++) for (const t of T_rollMobTraits({ id, is_boss: 0 }, underground)) seen.add(t);
+      return seen;
+    };
+    // who in a family may roll which: only a roost that goes out stays home from it
+    assert.ok(rolls('cave-bat', true).has('roost-bound'), 'a cave bat can be roost-bound');
+    assert.ok(!rolls('roe-deer', false).has('roost-bound'), 'a deer has no roost to stay home from');
+    // no tide and no bell under the wood
+    const gulper = rolls('river-gulper', true);
+    assert.ok(!gulper.has('tide-called') && gulper.has('stone-skinned'), 'a cave gulper is never tide-called');
+    assert.ok(!rolls('digger', true).has('bell-tuned'), 'a digger is never bell-tuned');
+    assert.ok(!rolls('digger', true).has('flame-drawn'), 'a digger holds its ground, so it cannot be drawn off it');
+    // stone-skinned: a point of armour, never past the ceiling
+    assert.equal(T_mobArmor({ armor: 1 }, { traits: ['stone-skinned'] }), 2);
+    assert.equal(T_mobArmor({ armor: T_ARMOR_TOP }, { traits: ['stone-skinned'] }), T_ARMOR_TOP);
+    // dark-striker: the first blow on someone with no light, and only the first
+    const now = Date.now();
+    const out = { mult: 1 };
+    T_wild.blow({ litFor: () => false }, { traits: ['dark-striker'] }, { name: 'a wolf' }, {}, now, out);
+    assert.equal(out.mult, 1.5, 'the first blow in the dark lands heavier');
+    const out2 = { mult: 1 };
+    T_wild.blow({ litFor: () => false }, { traits: ['dark-striker'], lastBlowAt: now - 1000 }, { name: 'a wolf' }, {}, now, out2);
+    assert.equal(out2.mult, 1, 'not the second');
+    const out3 = { mult: 1 };
+    T_wild.blow({ litFor: () => true }, { traits: ['dark-striker'] }, { name: 'a wolf' }, {}, now, out3);
+    assert.equal(out3.mult, 1, 'not on someone with a light');
+    // light-shy
+    assert.equal(T_wild.lightShy({ carriesLight: () => true }, { traits: ['light-shy'] }, {}), true);
+    assert.equal(T_wild.lightShy({ carriesLight: () => false }, { traits: ['light-shy'] }, {}), false);
+    // long-eared and flame-drawn come to you; stone-deaf hears nothing
+    const dist = { far: 3, near: 2 };
+    const mk = (traits, roomId) => ({ id: roomId + traits[0], hp: 5, traits, roomId, nextWanderAt: now + 60_000 });
+    const ear = mk(['long-eared'], 'far'), drawn = mk(['flame-drawn'], 'near'), deaf = mk(['stone-deaf'], 'near');
+    const zf = { creatures: new Map([[1, ear], [2, drawn], [3, deaf]]), carriesLight: () => true, outOfWorld: () => false, roomDist: (a) => dist[a] ?? 0 };
+    for (let i = 0; i < 64 && !drawn.walkingTo; i++) T_wild.footfall(zf, { roomId: 'here' }, 4, now);
+    assert.equal(ear.walkingTo, 'here', 'long-eared hears footsteps three rooms off');
+    assert.equal(drawn.walkingTo, 'here', 'flame-drawn comes to a light two rooms off');
+    assert.equal(deaf.walkingTo, undefined, 'a stone-deaf thing does not come');
+    // the rules that live beside their own homes
+    const src = (f) => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8');
+    assert.match(src('cave.ts'), /function flightTurn[^]*?roost-bound/, 'a roost-bound bat does not go out');
+    assert.match(src('cave.ts'), /function earshot[^]*?stone-deaf[^]*?long-eared/, "the hounds' ears answer both");
+    assert.match(src('ai.ts'), /stone-deaf"\)\) continue; \/\/ hears nothing/, 'no footfall wakes a stone-deaf sleeper');
+    assert.match(src('zone.ts'), /stone-deaf"\)\) continue; \/\/ hears nothing/, 'no fight draws a stone-deaf thing over');
+    assert.equal((src('zone.ts').match(/wildTraits\.lightShy/g) ?? []).length, 3, 'a light-shy hunter neither guards, hunts nor runs down a lit wanderer');
+    assert.match(src('ai.ts'), /!holdsGrudge && wildTraits\.lightShy/, 'nor comes at one on sight');
+    assert.match(src('zone.ts'), /wildTraits\.landed\(/, 'the lamp-breaker blow is wired');
   });
 
   console.log(`\n${passed} regression checks pass`);

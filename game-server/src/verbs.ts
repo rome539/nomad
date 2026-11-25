@@ -28,6 +28,7 @@ import { chance, randInt, uuid, pick } from "./rng";
 import { DIRECTIONS } from "./parser";
 import * as ai from "./ai";
 import * as cave from "./cave";
+import * as wildTraits from "./wild-traits";
 import * as light from "./light";
 import * as events from "./events";
 import * as follow from "./follow";
@@ -974,12 +975,7 @@ export async function cmdLook(z: ZoneDO, session: Session, arg: string): Promise
     const placed = carving.lookPlaced(z, session, arg);
     // A CLOSE LOOK IS THE WORLD SPEAKING (rome, 2026-11-07): the lore look, as the last hand on found gear.
     if (placed) return z.send(session, placed, "lore");
-    const found = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
-    // the breathing stone shows under a close look, in the ring and in the oaks over it
-    // (cave.ts); neither room keeps a region's record, so the chronicle reads nothing here
-    const sign = session.roomId === cave.RING_OAKS && /oak|ring|ground|tree|leaves/.test(arg) ? cave.oaksLine(z, Date.now())
-      : session.roomId === cave.RING_ROOM && /ring|stone|floor|joint|nine/.test(arg) ? cave.ringLine(z, session, Date.now()) : null;
-    const feature = found && sign ? found + " " + sign : found;
+    const feature = detail.lookFeature(session.roomId, lore.mapRegionOf(z, session.roomId), arg);
     // A region's record reads its newest rows under its own close look (chronicle.ts).
     if (feature) return z.send(session, feature + await chronicle.under(z, session.roomId, feature), "lore");
   }
@@ -1620,6 +1616,8 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = fals
   // dead). Cloth tiptoes past the sleeper; plate wakes the thing in the room.
   await ai.wakeListeners(z, session, session.roomId, WAKE_ENTER * stealthMult, "twists toward the sound of you and lunges!");
   cave.footfall(z, session, stealthMult); // the mole hounds hear you two rooms off (cave.ts)
+  wildTraits.footfall(z, session, stealthMult); // long-eared and flame-drawn come (wild-traits.ts)
+  cave.ringEntry(z, session); // the Ring of Nine's nearest stone sings under your foot (cave.ts)
   await savePlayer(z.env.DB, session.pubkey, session.roomId, session.hp);
   z.markSimDirty();
   await follow.after(z, session, from, dir); // whoever is following you comes after
@@ -3517,6 +3515,8 @@ export function cmdListen(z: ZoneDO, session: Session, arg: string): void {
   const lines = [quiet
     ? "You go still. There is nothing to listen past — the wood is holding its breath with you."
     : "You go still and give the dark your ear."];
+  // The dome gathers the whole cave, and under it the ring's stones singing (cave.ts).
+  if (session.roomId === cave.SOUNDING_ROOM && !want) lines.push(cave.soundingLine(z));
   for (const e of picked) {
     // The secret doors keep their own state: the moon, the tide and the bell
     // are not in openDoors, but a door standing open is not cold iron either —
