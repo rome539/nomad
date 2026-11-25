@@ -9337,6 +9337,22 @@ try {
     assert.match(src('zone.ts'), /wildTraits\.landed\(/, 'the lamp-breaker blow is wired');
   });
 
+  check('the Heart of It is back in the middle of the maze: no door from the Bounds House onto the Cut Line, which put the woodward nine steps from the Gate Arch (mig 413, 2026-11-25)', () => {
+    const sql = readFileSync(new URL('../migrations/413_the_heart_goes_back_into_the_maze.sql', import.meta.url), 'utf8');
+    assert.match(sql, /DELETE FROM exits WHERE room_id = 'the-bounds-house' AND dir = 'east' AND to_room = 'the-cut-line';/);
+    assert.match(sql, /DELETE FROM exits WHERE room_id = 'the-cut-line' AND dir = 'west' AND to_room = 'the-bounds-house';/);
+    // nothing builds it again: no room file joins the two, and no later migration does
+    for (const f of readdirSync(new URL('../regions/', import.meta.url)).filter((f) => f.endsWith('.rooms'))) {
+      const txt = readFileSync(new URL('../regions/' + f, import.meta.url), 'utf8');
+      for (const [room, to] of [['the-bounds-house', 'the-cut-line'], ['the-cut-line', 'the-bounds-house']]) {
+        const block = txt.split(/^## /m).find((b) => b.startsWith(room + ' |'));
+        assert.ok(!block || !new RegExp('^> \\w+ ' + to + '\\b', 'm').test(block), f + ': ' + room + ' still opens onto ' + to);
+      }
+    }
+    for (const f of readdirSync(new URL('../migrations/', import.meta.url)).filter((f) => f > '413'))
+      assert.doesNotMatch(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8'), /INSERT INTO exits[^;]*'the-bounds-house'[^;]*'the-cut-line'|INSERT INTO exits[^;]*'the-cut-line'[^;]*'the-bounds-house'/, f + ' puts the door back');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

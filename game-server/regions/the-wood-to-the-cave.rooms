@@ -23,9 +23,11 @@
 #     the Wild Cherry - the Deep Roots    the Boundary Cross - the Pay Stone
 #   UNDER THE DEEP ROOTS: three rooms from the Soft Floor round behind the wall
 #     of roots, so the Ferny Bank's ground has a second way in.
-#   THE OLD GROWTH'S NORTH WAY: two rooms from the Bounds House east to the
-#     Mounting Block, so the Standing Oaks' ground has a way in that is not
-#     the Tangle.
+#   THE OLD GROWTH'S NORTH WAY: two rooms off the Mounting Block, the Cut Line
+#     and the Tally Posts. They used to go on west into the Bounds House, one
+#     room from the Heart of It, and that put the woodward nine steps from the
+#     Gate Arch where the maze had kept him forty-two; the door is gone (mig
+#     413, 2026-11-25). The old growth still has four ways in without it.
 #   THE GATEHOUSE ROAD: twelve rooms from the Rampart Walk down to the Frog
 #     Chorus, so the Ward Ditch (the sixth way into the cave) has a way in that
 #     is not the Killing Ground. It comes in the long way round on purpose: the
@@ -96,13 +98,8 @@ Behind the wall of roots there is a space, a hollow under the trees where the gr
 
 # ---- THE OLD GROWTH'S NORTH WAY ----------------------------------------------
 
-## the-bounds-house | attachment: out past the coppice line
-!existing
-> east the-cut-line
-
 ## the-cut-line | The Cut Line
 The coppice round the counting house stops here at a line as straight as a ruled edge, the stools on one side cut and cut again for a hundred years and the old trees on the other never cut at all. A ride runs along the line, kept open by feet. It goes east toward the old gatehouse ground.
-> west the-bounds-house
 > east the-tally-posts
 
 ## the-tally-posts | The Tally Posts
