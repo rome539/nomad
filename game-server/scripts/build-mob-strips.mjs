@@ -119,6 +119,7 @@ const BODY_SCALE = {
   "bone-knight": 0.932, "last-watchman": 0.956,
   "the-drover": 0.988, "the-tide-warden": 0.996,
   "twice-dead": 0.949, "skeleton": 0.904,
+  "cave-cougar": 0.953, // the 2026-11-25 redraw measured 1.049 of the live body at 15
   // smaller than they shipped, so the size number went up and this trims the rest
   "the-salt-widow": 0.971, "thrice-dead": 0.975,
   "the-fowler": 0.982,

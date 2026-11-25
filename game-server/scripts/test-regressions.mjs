@@ -109,6 +109,7 @@ try {
         "export {saveMark} from './zone-util';",
         "export {leaderboardRank} from './world';",
         "export {PLAYER_SAVE_MAX_MS} from './zone-data';",
+        "export {THIEVES as T_THIEVES, thiefWords as T_thiefWords, thiefSay as T_thiefSay, SEIZE_WORDS as T_SEIZE_WORDS, DROWNERS as T_DROWNERS} from './zone-data';",
         "export {handleVerify, handleChallenge} from './auth';",
         "export {finalizeEvent as signNostr, generateSecretKey as newNostrKey} from 'nostr-tools';",
       ].join('\n'),
@@ -120,7 +121,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { caveMod, LANTERNS, STAYS_HOME_BOXES, CAVE_COOK, CAVE_CURE, CAVE_FAT, applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, packQuarryId, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, roomWater, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, biteOf, bodyErrand, rangePack, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary, rehome, alarmBark, windsUp, lurkerFoundBy, hallFogged, foggy, cmdWho, WHO_PLACES_KEYS, GATEHOUSE_FEASTS, FEAST_LINES, gatehouseFeast, FEAST_COSTUMES, feastCostume, CAVE_GROUND, CAVE_SETTLES, CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, CAVE_TEST_HOLLOW, CAVE_TEST_GRAVE, hungers, CAVE_T_RUNNERS, CAVE_T_SURPLUS } = await import(pathToFileURL(output));
+  const { caveMod, LANTERNS, STAYS_HOME_BOXES, CAVE_COOK, CAVE_CURE, CAVE_FAT, applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, packQuarryId, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, roomWater, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, biteOf, bodyErrand, rangePack, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary, rehome, alarmBark, windsUp, lurkerFoundBy, hallFogged, foggy, cmdWho, WHO_PLACES_KEYS, GATEHOUSE_FEASTS, FEAST_LINES, gatehouseFeast, FEAST_COSTUMES, feastCostume, CAVE_GROUND, CAVE_SETTLES, CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, CAVE_TEST_HOLLOW, CAVE_TEST_GRAVE, hungers, CAVE_T_RUNNERS, CAVE_T_SURPLUS, T_THIEVES, T_thiefWords, T_thiefSay, T_SEIZE_WORDS, T_DROWNERS } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -5293,6 +5294,62 @@ try {
     }
     assert.match(pub, /"midge", "air", "whistle"\]\.forEach\(function \(k\) \{ fadeGain/, 'sound off must fade the cave air too');
   });
+  check('the cave bat hangs from the top of the picture on every floor line, rank and row scale (2026-11-25)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const pad = +(pub.match(/var ROOF_PAD = ([0-9.]+);/) || [])[1];
+    const i = pub.indexOf('var roofAir = function');
+    const roofAir = Function('ROOF_PAD', 'return ' + pub.slice(pub.indexOf('function', i), pub.indexOf('\n};', i) + 2))(pad);
+    // the CSS, worked by hand: the row's top sits on the line, it is rowH tall, and it is
+    // drawn translateY(-50%) scale(s) about its bottom; the sprite sits centred in it,
+    // pushed forward by its rank, and its own translateY(-air*100%) is of its own height
+    for (const line of [60, 66, 72, 79]) for (const scale of [1, 0.8, 0.55]) for (const depth of [0, 30]) {
+      const picth = 900, rowH = picth * 0.22, h = picth * 0.09;
+      const localTop = line / 100 * picth + (rowH - h) / 2 + depth / scale;
+      const bottom = line / 100 * picth + rowH;
+      const shownTop = bottom - (bottom - localTop) * scale - rowH / 2;
+      const air = roofAir(line, picth, rowH, scale, depth, h);
+      const inkTop = shownTop - air * h * scale + pad * h * scale;
+      assert.ok(Math.abs(inkTop) < 0.5, 'the bat hangs ' + inkTop.toFixed(1) + 'px off the top at line ' + line + ', scale ' + scale + ', depth ' + depth);
+    }
+    assert.match(pub, /if \(roof\) air = a\.el && a\.el\._roofAir !== undefined \? a\.el\._roofAir/, 'the bat does not use the lift worked out for it');
+    assert.match(pub, /if \(!dead\) el\._roofAir = roofAir\(Number\(mobsEl\.dataset\.floorLine \|\| 55\), picth, rowH, scale, depth, item\.h\);/, 'the row no longer works out the bat\'s lift');
+    assert.ok(/el\.style\.top = \(\(rowH - item\.h\) \/ 2 \+ depth \/ scale\)/.test(pub) && /mobsEl\.style\.transform = "translateY\(-50%\) scale\("/.test(pub) && /mobsEl\.style\.transformOrigin = "50% 100%"/.test(pub), 'the row is laid out differently now, so the sum above is stale');
+  });
+  check('every thief goes at your pack with what it has: the digger with its pick, the birds with the bill, the fox with its teeth, and a fish holds you with its mouth (2026-11-25)', () => {
+    const lines = (w) => [w.strapped, w.miss, w.missFeed, w.eat, w.eatFeed, w.take, w.takeFeed].filter(Boolean).join(' | ');
+    const noHands = { 'digger': /pick/, 'the-old-raven': /bill/, 'the-bone-dropper': /bill/, 'the-raiding-fox': /teeth|jaws/ };
+    for (const [id, has] of Object.entries(noHands)) {
+      assert.ok(T_THIEVES.has(id), id + ' is no longer a thief, so this check is stale');
+      const w = T_thiefWords(id), all = lines(w);
+      assert.doesNotMatch(all, /finger|hand\b|hands\b/, id + ' grabs with fingers it does not use');
+      assert.match(w.strapped + w.miss + w.take, has, id + ' does not grab with ' + has);
+    }
+    assert.doesNotMatch(lines(T_thiefWords('digger')), /hiss/, 'the digger hisses');
+    assert.equal(T_thiefWords('digger').eat, undefined, 'a dead digger eats what it takes');
+    assert.equal(T_thiefSay(T_thiefWords('digger').take, 'a digger', 'a lantern'), 'A digger hooks a lantern off your pack with its pick and drags it away into the dark! (kill it to get it back)');
+    // every thief has every line it needs
+    for (const id of T_THIEVES) { const w = T_thiefWords(id); for (const k of ['strapped', 'miss', 'missFeed', 'take', 'takeFeed']) assert.ok(w[k] && w[k].includes('{N}'), id + ' has no ' + k + ' line'); if (w.eat) assert.ok(w.eatFeed, id + ' eats with no line for the room'); }
+    for (const id of ['river-gulper', 'conger', 'old-conger']) {
+      assert.ok(T_DROWNERS.has(id), id + ' no longer seizes');
+      assert.match(T_SEIZE_WORDS[id] ?? '', /mouth|jaws/, id + ' is a fish and holds you with arms');
+    }
+    const zone = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.doesNotMatch(zone, /fingers dance over your pack/, 'the shared fingers line is back in zone.ts');
+    assert.match(zone, /thiefSay\(SEIZE_WORDS\[creature\.templateId\]/, 'the seize line does not ask the fish for its own words');
+  });
+  check('the cave is no louder than the rest of the game: every cave sound goes through CAVE_VOL, and the drops and strands stay under a timber creak (2026-11-25)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const vol = +(pub.match(/var CAVE_VOL = ([0-9.]+);/) || [])[1];
+    assert.ok(vol > 0 && vol <= 0.5, 'CAVE_VOL is gone or turned up (' + vol + ')');
+    const body = (fn) => { const i = pub.indexOf('function ' + fn + '('); return pub.slice(i, pub.indexOf('\n}\n', i)); };
+    for (const fn of ['caveKnock', 'caveTrickle', 'caveGroan', 'caveDrop', 'caveStrand']) assert.match(body(fn), /SCAPE_VOL \* CAVE_VOL/, fn + ' does not go through CAVE_VOL');
+    assert.match(pub, /scape\.air\.gain\.gain, bed \? bed\[0\] \* SCAPE_VOL \* CAVE_VOL/, 'the cave air does not go through CAVE_VOL');
+    assert.match(pub, /0\.05 \* SCAPE_VOL \* CAVE_VOL \* scape\.whistleOn/, 'the whistle does not go through CAVE_VOL');
+    // the drops: the deep's own drip is 0.07, and a drop at 0.05 measured as loud as it
+    const under = body('scapeUnder');
+    for (const m of under.matchAll(/caveDrop\([^,]+,[^,]+,\s*([0-9.]+)/g)) assert.ok(+m[1] * vol <= 0.012, 'a cave drop at ' + m[1] + ' is as loud as the deep drip');
+    assert.doesNotMatch(body('scapeBreathe'), /under === "stone" \? 1\.25/, 'the dressed stone hum is louder than the deep hum again');
+  });
   check('the cave second pictures: each named room is a real cave room on that ground, and each picture has its files, its floor and its light (2026-11-25)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const grab = (name) => { const i = pub.indexOf('var ' + name + ' = {'); return Function('return ' + pub.slice(pub.indexOf('{', i), pub.indexOf('\n};', i) + 2))(); };
@@ -8929,7 +8986,7 @@ try {
   check('the cave bat hangs up at the roof of the picture, never from the floor line, and the sleeper is only a little bigger than its brood (2026-11-24)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /var ROOF_HANGERS = \{ "cave-bat": 1 \};/, 'the bat is a roof hanger');
-    assert.match(pub, /if \(roof\) air = ROOF_RISE \/ mobVh\(a\.id\);/, 'and the pose lifts it');
+    assert.match(pub, /if \(roof\) air = [^;]*ROOF_RISE \/ mobVh\(a\.id\);/, 'and the pose lifts it (to the top of the picture since 2026-11-25, ROOF_RISE when the row has not placed it yet)');
     assert.match(pub, /var roof = [^;]*a\.phase !== "death"/, 'except dead, when it falls');
     const size = (id) => +pub.match(new RegExp('^\\s*"' + id + '": ([\\d.]+),', 'm'))[1];
     assert.ok(size('stone-sleeper') > size('stone-brood') && size('stone-sleeper') < size('stone-brood') * 1.5, 'just bigger than the brood');

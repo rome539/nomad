@@ -2537,6 +2537,64 @@ export const THIEVES = new Set([
   // The strand thief (mig 191) works the wrack line, and does not think of it
   // as stealing, because the sea does not own things either.
   "strand-thief", "the-wrecker"]);
+// HOW EACH THIEF GOES AT YOUR PACK (2026-11-25: a digger with a pick in his fist
+// was "dancing his fingers" over a pack, and hissed). Every grab line was written
+// for a man's hand. Each one is said here in what the thing actually has: the
+// digger hooks with his pick, the birds with the bill, the fox with its teeth.
+// {N} the thief's name, capitalised; {it} what it took; {v} whose pack. A thief
+// with no `eat` never eats what it takes: a dead man has no use for bread, so he
+// carries it off like anything else.
+export interface ThiefWords { strapped: string; miss: string; missFeed: string; eat?: string; eatFeed?: string; take: string; takeFeed: string }
+const HANDS: ThiefWords = {
+  strapped: "{N}'s fingers go over your pack, find everything lashed down tight, and come away empty.",
+  miss: "{N}'s hand goes over your pack and comes away with nothing. It will try again.",
+  missFeed: "{N} makes a grab at {v}'s pack and misses it.",
+  eat: "{N} snatches {it} and crams it down as it bolts — gone.",
+  eatFeed: "{N} tears a meal from {v} and flees, gulping it down.",
+  take: "{N} snatches {it} and bolts! (kill it to get it back)",
+  takeFeed: "{N} tears something from {v} and flees!",
+};
+const BILL = (what: string, off: string): ThiefWords => ({
+  strapped: "{N} stabs its bill into your pack and finds everything lashed down tight. It " + what + " at you.",
+  miss: "{N} tugs at your pack with its bill and comes away with nothing. It will try again.",
+  missFeed: "{N} tugs at {v}'s pack with its bill and gets nothing.",
+  eat: "{N} snatches {it} in its bill and gulps it down as it " + off + " — gone.",
+  eatFeed: "{N} tears a meal from {v}'s pack and " + off + ", gulping it.",
+  take: "{N} snatches {it} in its bill and " + off + "! (kill it to get it back)",
+  takeFeed: "{N} snatches something from {v} and " + off + "!",
+});
+export const THIEF_WORDS: Record<string, ThiefWords> = {
+  // the dried man still works with his pick: he hooks your pack with it
+  "digger": {
+    strapped: "{N} hooks the point of its pick under your pack straps and drags, and everything is lashed down tight. It wrenches the pick free.",
+    miss: "{N} hooks its pick at your pack and drags, and the straps hold. It will try again.",
+    missFeed: "{N} hooks its pick at {v}'s pack and the straps hold.",
+    take: "{N} hooks {it} off your pack with its pick and drags it away into the dark! (kill it to get it back)",
+    takeFeed: "{N} hooks something off {v}'s pack with its pick and makes off with it!",
+  },
+  "the-old-raven": BILL("croaks", "flaps off"),
+  "the-bone-dropper": BILL("hisses", "beats away up the rock"),
+  "the-raiding-fox": {
+    strapped: "{N} worries at your pack with its teeth and finds everything lashed down tight. It yaps at you.",
+    miss: "{N} gets its teeth into your pack and tugs, and comes away with nothing. It will try again.",
+    missFeed: "{N} tugs at {v}'s pack with its teeth and gets nothing.",
+    eat: "{N} snatches {it} in its jaws and bolts it down as it runs — gone.",
+    eatFeed: "{N} tears a meal from {v}'s pack and runs, bolting it down.",
+    take: "{N} snatches {it} in its jaws and is off! (kill it to get it back)",
+    takeFeed: "{N} snatches something from {v} in its jaws and is off!",
+  },
+};
+export function thiefWords(id: string): ThiefWords { return THIEF_WORDS[id] ?? HANDS; }
+export function thiefSay(line: string, name: string, item = "", victim = ""): string {
+  return line.split("{N}").join(name.charAt(0).toUpperCase() + name.slice(1)).split("{it}").join(item).split("{v}").join(victim);
+}
+// HOW A DROWNER TAKES HOLD, where it is not by arms (2026-11-25): the gulper and the
+// congers are fish, and have a mouth to hold you with and nothing else.
+export const SEIZE_WORDS: Record<string, string> = {
+  "river-gulper": "{N}'s mouth comes up out of the black water and closes on you — you're held fast.",
+  "conger": "{N}'s jaws lock on your leg — you're held fast.",
+  "old-conger": "{N}'s jaws lock on your leg — you're held fast.",
+};
 
 // ROAMING DENS (rome, 2026-08-02: "do they have dens? i think we should have it
 // as rng where they spawn on a road").

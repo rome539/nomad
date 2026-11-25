@@ -3341,23 +3341,32 @@ function scapeBreathe() {
   scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * 0.7 * (a.roof ? 0.95 : 1) * SCAPE_VOL * (0.7 + 0.5 * scape.rainNow), 0.6);
   // the stone's hum swells and sinks so slowly you hardly hear it go
   var hw = scapeWander("hum", 0.01, 0.02);
-  // the cave's hum by its ground: deeper and fuller in the dressed stone, hushed in the glow
-  var humAt = a.under === "stone" ? 1.25 : a.under === "glow" ? 0.6 : 1;
+  // the cave's hum by its ground: deeper in the dressed stone (never louder than the
+  // deep's), hushed in the glow
+  var humAt = a.under === "glow" ? 0.6 : 1;
   scapeTo(scape.hum.gain.gain, a.hollow ? 0.11 * SCAPE_VOL * humAt * (0.8 + 0.35 * hw) : 0, 0.8);
   scapeTo(scape.hum.chain[0].frequency, (a.under === "stone" ? 95 : 140) + 60 * hw, 0.8);
   // THE CAVE'S AIR moves on a walk of its own, slower than the wind's
   if (Math.random() < 0.05) scape.airGustTo = Math.random();
   scape.airGust += (scape.airGustTo - scape.airGust) * 0.06;
   var bed = CAVE_AIR_BED[a.under];
-  scapeTo(scape.air.gain.gain, bed ? bed[0] * SCAPE_VOL * (0.45 + 0.75 * scape.airGust) : 0, 0.8);
+  scapeTo(scape.air.gain.gain, bed ? bed[0] * SCAPE_VOL * CAVE_VOL * (0.45 + 0.75 * scape.airGust) : 0, 0.8);
   if (bed) { scapeTo(scape.air.chain[0].frequency, bed[1] + bed[2] * scape.airGust, 0.8); scapeTo(scape.air.chain[1].frequency, bed[3], 0.8); }
   // a crack whistling: only in a draught, only while it lasts (scapeUnder starts it)
   scape.whistleOn *= 0.96;
-  scapeTo(scape.whistle.gain.gain, a.under === "draught" ? 0.05 * SCAPE_VOL * scape.whistleOn * (0.5 + scape.airGust) : 0, 0.5);
+  scapeTo(scape.whistle.gain.gain, a.under === "draught" ? 0.05 * SCAPE_VOL * CAVE_VOL * scape.whistleOn * (0.5 + scape.airGust) : 0, 0.5);
 }
 // level, throat low, throat swing, top of the air, by ground. Measured against the
 // deep's hum, which is what all of it sat under before: the draught is the loudest
 // and still quieter than a stream; the dressed stone barely has air at all.
+// THE CAVE UNDER THE REST OF THE GAME (2026-11-25: the cave's own sounds came out too
+// loud). Measured, ear-weighted, against what the game already plays: the drops in
+// the dripstone were as loud as the deep's loudest drip and came three times as
+// often, the glow's drops nearly so, and a silk strand was louder than a fire's
+// snap. Every cave sound now goes through this, and the drops and the strands are
+// cut further and come less often, so nothing in the cave is louder than a timber
+// creak and its air sits under the wind through walls.
+var CAVE_VOL = 0.5;
 var CAVE_AIR_BED = {
   draught:   [0.075, 260, 260, 1100],
   roots:     [0.04, 220, 160, 800],
@@ -3513,8 +3522,8 @@ function caveEcho(echo, fb, tone) {
 // a stone settling, a knock in the dark: low, short, and the room answers
 function caveKnock(t, lvl, echo, fb, tone) {
   var e = caveEcho(echo, fb, tone);
-  SND._burst(t, { type: "lowpass", freq: 260 + Math.random() * 220, q: 1.2, dur: 0.12 + Math.random() * 0.1, gain: lvl * SCAPE_VOL, atk: 0.004, out: e });
-  SND._burst(t, { type: "lowpass", freq: 260 + Math.random() * 220, q: 1.2, dur: 0.12 + Math.random() * 0.1, gain: lvl * 0.7 * SCAPE_VOL, atk: 0.004 });
+  SND._burst(t, { type: "lowpass", freq: 260 + Math.random() * 220, q: 1.2, dur: 0.12 + Math.random() * 0.1, gain: lvl * SCAPE_VOL * CAVE_VOL, atk: 0.004, out: e });
+  SND._burst(t, { type: "lowpass", freq: 260 + Math.random() * 220, q: 1.2, dur: 0.12 + Math.random() * 0.1, gain: lvl * 0.7 * SCAPE_VOL * CAVE_VOL, atk: 0.004 });
 }
 // grit or earth running down off a roof or a wall: a short shower of tiny ticks,
 // thinning out; dark for earth, bright for grit and sand
@@ -3523,7 +3532,7 @@ function caveTrickle(t, bright, lvl) {
   for (var i = 0; i < n; i++) {
     var at = t + span * Math.pow(i / n, 1.6) + Math.random() * 0.03;
     SND._burst(at, { type: "bandpass", freq: (bright ? 2600 : 900) + Math.random() * (bright ? 3000 : 900), q: 2, dur: 0.012 + Math.random() * 0.02,
-      gain: lvl * (1 - 0.6 * i / n) * (0.4 + Math.random() * 0.6) * SCAPE_VOL, atk: 0.001 });
+      gain: lvl * (1 - 0.6 * i / n) * (0.4 + Math.random() * 0.6) * SCAPE_VOL * CAVE_VOL, atk: 0.001 });
   }
 }
 // wood or root under load: the timber groan, slower and lower than a building's
@@ -3533,7 +3542,7 @@ function caveGroan(t, lo, hi, lvl) {
   o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f1, t + dur);
   var bp = scapeFilter("bandpass", 350 + Math.random() * 450, 6);
   var g = actx.createGain(); g.gain.setValueAtTime(0, t);
-  var steps = Math.round(dur * 16), peak = lvl * SCAPE_VOL;
+  var steps = Math.round(dur * 16), peak = lvl * SCAPE_VOL * CAVE_VOL;
   for (var i = 1; i <= steps; i++) g.gain.linearRampToValueAtTime(peak * Math.sin(Math.PI * i / steps) * (0.35 + Math.random() * 0.65), t + dur * i / steps);
   g.gain.linearRampToValueAtTime(0, t + dur + 0.05);
   o.connect(bp); bp.connect(g); g.connect(aout());
@@ -3546,7 +3555,7 @@ function caveDrop(t, f, lvl, echo, fb) {
   var o = actx.createOscillator(); o.type = "sine";
   o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.5, t + 0.05);
   var g = actx.createGain(); g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(lvl * SCAPE_VOL, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(lvl * SCAPE_VOL * CAVE_VOL, t + 0.004);
   g.gain.exponentialRampToValueAtTime(0.0004, t + 0.22);
   o.connect(g); g.connect(aout()); g.connect(e);
   o.start(t); o.stop(t + 0.3);
@@ -3558,11 +3567,11 @@ function caveStrand(t) {
   [1, 2.01].forEach(function (m, k) {
     var o = actx.createOscillator(); o.type = "sine"; o.frequency.value = f * m;
     var g = actx.createGain(); g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime((k ? 0.006 : 0.014) * SCAPE_VOL, t + 0.01);
+    g.gain.exponentialRampToValueAtTime((k ? 0.0022 : 0.005) * SCAPE_VOL * CAVE_VOL, t + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0002, t + dur);
     if (thrum) {
       var lfo = actx.createOscillator(); lfo.frequency.value = 6 + Math.random() * 4;
-      var lg = actx.createGain(); lg.gain.value = (k ? 0.003 : 0.007) * SCAPE_VOL;
+      var lg = actx.createGain(); lg.gain.value = (k ? 0.0011 : 0.0025) * SCAPE_VOL * CAVE_VOL;
       lfo.connect(lg); lg.connect(g.gain); lfo.start(t); lfo.stop(t + dur);
     }
     o.connect(g); g.connect(aout()); o.start(t); o.stop(t + dur + 0.05);
@@ -3587,8 +3596,8 @@ function scapeUnder() {
     gap = [14000, 45000];
   } else if (u === "dripstone") {
     var k = Math.random() < 0.3 ? 2 : 1;
-    for (var i = 0; i < k; i++) caveDrop(t + i * (0.15 + Math.random() * 0.3), 1700 + Math.random() * 1900, 0.05, 0.36 + Math.random() * 0.12, 0.5);
-    gap = [1400, 4800];
+    for (var i = 0; i < k; i++) caveDrop(t + i * (0.15 + Math.random() * 0.3), 1700 + Math.random() * 1900, 0.02, 0.36 + Math.random() * 0.12, 0.45);
+    gap = [3000, 9000];
   } else if (u === "roost") {
     caveTrickle(t, true, 0.018);
     gap = [6000, 20000];
@@ -3596,7 +3605,7 @@ function scapeUnder() {
     caveStrand(t);
     gap = [6000, 20000];
   } else if (u === "glow") {
-    caveDrop(t, 520 + Math.random() * 420, 0.035, 0.42 + Math.random() * 0.15, 0.45);
+    caveDrop(t, 520 + Math.random() * 420, 0.015, 0.42 + Math.random() * 0.15, 0.4);
     gap = [6000, 18000];
   } else if (u === "works") {
     if (r < 0.55) caveGroan(t, 75, 150, 0.045); else if (r < 0.9) caveTrickle(t, true, 0.035); else caveKnock(t, 0.04, 0.14, 0.3, 1000);
@@ -11217,7 +11226,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "136";      // /mob/      strips and their eye layers
+var MOB_V  = "137";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "77";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
@@ -16610,7 +16619,7 @@ var MOB_SPRITE = {
   "the-gaunt": 34,
   // THE CAVE UNDER THE WOOD (mig 409, 2026-11-24). First numbers, set off the
   // nearest sibling already on screen; to be looked at in the game and moved.
-  "cave-cougar": 15,          // a cat under the cave lion at 19; the redraw (2026-11-24) measured 0.987 of the first body at 15, kept
+  "cave-cougar": 15,          // a cat under the cave lion at 19; the redraw (2026-11-24) measured 0.987 of the first body at 15, kept; the 2026-11-25 redraw is held to the same body by BODY_SCALE
   "mole-hound": 15.5,         // a long-legged hound, over the grey wolf's 13 (rome: a bit small at 13, too big at 18)
   "river-gulper": 12,         // a fish as long as a man, the bull seal's 12
   "cave-spider": 11,          // legs that would span a cartwheel (rome: a bit small at 8)
@@ -16666,7 +16675,7 @@ var MOB_ANIM = {
   "digger":            { n: 9, aspect: 0.937, f: {"idle":0,"call":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"snatch-escape":7,"death":8} },
   "cave-spider":       { n: 7, aspect: 1.336, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"feed":5,"death":6} },
   "cave-crayfish":     { n: 8, aspect: 1.123, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
-  "cave-cougar":       { n: 9, aspect: 1.504, f: {"idle":0,"lurk":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"rest":7,"death":8} },
+  "cave-cougar":       { n: 9, aspect: 1.585, f: {"idle":0,"lurk":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"rest":7,"death":8} },
   "cave-bat":          { n: 8, aspect: 1.061, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"sweep":5,"rest":6,"death":7} },
   "rat-yule":               { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "rat-midsummer":          { n: 8, aspect: 1.689, f: {"idle":0,"rest":1,"feed":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
@@ -17062,6 +17071,19 @@ var SWOOP_HOVER = 0.55, SWOOP_DIP = 0.2;
 // at its own size, and comes down only dead.
 var ROOF_HANGERS = { "cave-bat": 1 };
 var ROOF_RISE = 45;
+// ...AND FROM THE TOP OF THE PICTURE ITSELF (2026-11-25). A fixed rise left it
+// hanging in mid-air on every plate whose floor line is not the one it was set on.
+// Now the lift is worked out from where the creature row actually puts it (the
+// floor line, the row's scale, how far forward its rank stands), so the top of
+// the bat meets the top of the picture. ROOF_PAD is the clear margin above the
+// hanging bat inside its own frame (measured on the strip: 0.013 of the frame).
+var ROOF_PAD = 0.013;
+// (a var, not a function statement: the preview lifts this run of constants whole,
+// up to the next function statement)
+var roofAir = function (linePct, picth, rowH, scale, depth, h) {
+  var top = picth * linePct / 100 + rowH / 2 - (rowH + h) / 2 * scale + depth;
+  return top / (h * scale) + ROOF_PAD;
+};
 var LEAP_S = 0.7;
 var LEAP_EVERY_S = 5;
 var leapAt = function (t, slot) {
@@ -17490,6 +17512,8 @@ function fitMobRow() {
     el.style.left = (x + item.w * item.fit * .06) + "px";
     el.style.top = ((rowH - item.h) / 2 + depth / scale) + "px";
     el._depth = depth;   // how far forward it stands: its body lies on the same spot
+    // a roof hanger's lift up to the top of the picture, from this very spot (ROOF_HANGERS)
+    if (!dead) el._roofAir = roofAir(Number(mobsEl.dataset.floorLine || 55), picth, rowH, scale, depth, item.h);
     el.style.zIndex = String(z);
     // Only static corpses need this separate size adjustment; animation
     // transforms remain owned by stepAnims on every living creature.
@@ -18012,7 +18036,7 @@ function poseAt(a, now) {
   }
   var roof = typeof ROOF_HANGERS !== "undefined" && ROOF_HANGERS[a.id] && a.phase !== "death"
     && typeof MOB_SPRITE !== "undefined" && MOB_SPRITE[a.id];
-  if (roof) air = ROOF_RISE / mobVh(a.id);
+  if (roof) air = a.el && a.el._roofAir !== undefined ? a.el._roofAir : ROOF_RISE / mobVh(a.id);
   if (a.phase !== "hit") a.rot = 0;
   if (f[name] === undefined) name = "idle";
   if (!roof) s *= 1 - AIR_SHRINK * Math.min(1, air / lift);

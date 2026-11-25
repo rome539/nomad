@@ -151,7 +151,7 @@ import { FORGE_STOCK,
   SHELTER_ROOMS, YEW_ROOM, GIBBET_ROOM,
   WAKE_NOISE, RARITY_RANK,
   HOARDERS, HOARD_CARRY_CAP, HOARD_KEEP, feastCostume,
-  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_KIND_ROOM, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
+  SCAVENGERS, VERMIN, DIRE_ROUSE_MS, STARVE_HUNTS_ODDS, WOUNDED_PREY_ODDS, THIEF_ROB_ODDS, MOON_THIEF_MULT, THIEF_LIFT_ODDS, THIEF_LIFT_DEFAULT, thiefWords, thiefSay, SEIZE_WORDS, BOLD_DMG_MULT, DROWNERS, SEIZE_ODDS, SEIZE_BREAK_ODDS, SEIZE_DMG_MULT, SEIZE_DROWN_ODDS, SEIZE_DROWN_FRACTION, LURKERS, ROOTED, FIREKEEPERS, PACK_CALLERS, MOON_HOWL_ODDS, MOON_KIND_ROOM, WATCH_CALLS, CANTOR_CUT_LINES, REVENANTS,
   CHAINMAN_TMPL, CHAINMAN_ROLL_MIN_MS, CHAINMAN_ROLL_MAX_MS, CHAINMAN_ODDS, CHAINMAN_STAY_MIN_MS, CHAINMAN_STAY_MAX_MS, CHAINMAN_LEAVES,
   BAD_TRAIT_POOL, BAD_TRAIT_SHARE, SECOND_TRAIT_ODDS, TEMPERED_WEAR_MULT, BRITTLE_WEAR_MULT, GREASED_RUST_MULT, PITTED_RUST_MULT, FLEECED_COLD_MULT, SODDEN_COLD_MULT, CHILL_MEND_MULT,
   REVIVE_FRAC, RISE_LIMIT, PLAYER_HIT, WEAPON_VERBS, PIERCE_TELL, PIERCE_TELL_FLESH, BLUNT_TELL, BLUNT_TELL_BONE, BLEED_TELL, BONE_DRY_TELL, CRIT_FLOURISH, CREATURE_HIT, CREATURE_VITALS, BITERS, BEAKS, COILS, SMALL_BITE, KILL_SMALL, KILL_BIG, MOB_HIT, MOB_VITALS,
@@ -5481,7 +5481,7 @@ export class ZoneDO implements DurableObject {
             victim.seizedBy = creature.id;
             this.fxPose(creature.roomId, creature.templateId, "take-hold");
             this.fxPose(creature.roomId, creature.templateId, "hold"); // the river-gulper's own frame
-            this.send(victim, `${cap(tmpl.name)} closes cold arms around you — you're held fast. (break free: keep fighting, or it drags you under)`, "seize");
+            this.send(victim, thiefSay(SEIZE_WORDS[creature.templateId] ?? "{N} closes cold arms around you — you're held fast.", tmpl.name) + " (break free: keep fighting, or it drags you under)", "seize");
           }
           // Claws and teeth open a wound the mail can't turn.
           this.openWound(victim, tmpl, creature);
@@ -5530,8 +5530,9 @@ export class ZoneDO implements DurableObject {
           // one unsealed thing off your back (it goes for the richest), and gone.
           // Sealed loot is TITLE the dungeon marked as yours; its fingers slide off.
           // STRAPPED (the baldric) lashes everything down — nothing to lift.
+          const tw = thiefWords(creature.templateId);
           if (THIEVES.has(creature.templateId) && !creature.stole && this.wearsTrait(victim, "strapped")) {
-            this.send(victim, `${cap(tmpl.name)}'s fingers dance over your pack and find everything lashed down tight. It hisses.`);
+            this.send(victim, thiefSay(tw.strapped, tmpl.name));
           } else if (THIEVES.has(creature.templateId) && !creature.stole) {
             const takeable = victim.items.filter((c) => c.serial === null && !c.equipped);
             const byRarity = (a: typeof takeable[number], b: typeof takeable[number]) =>
@@ -5546,7 +5547,7 @@ export class ZoneDO implements DurableObject {
             // walks past the meal it needs and lifts the best thing you own,
             // which is the outcome you actually mind, and it means hunger stops
             // being a thing you can hope for.
-            const foodFirst = creature.hunger >= HUNGRY_AT && !creature.traits?.includes("choosy")
+            const foodFirst = tw.eat && creature.hunger >= HUNGRY_AT && !creature.traits?.includes("choosy")
               ? takeable.filter((c) => world.itemTemplates.get(c.itemId)?.edible).sort(byRarity)[0]
               : undefined;
             const loot = foodFirst ?? [...takeable].sort(byRarity)[0];
@@ -5561,13 +5562,13 @@ export class ZoneDO implements DurableObject {
             const liftOdds = (THIEF_LIFT_ODDS.get(creature.templateId) ?? THIEF_LIFT_DEFAULT)
               * (creature.traits?.includes("butter-fingered") ? MOB_BUTTERFINGERS_MULT : 1);
             if (loot && !creature.traits?.includes("light-fingered") && !chance(liftOdds)) {
-              this.send(victim, `${cap(tmpl.name)}'s hand goes over your pack and comes away with nothing. It will try again.`);
-              this.roomFeed(victim.roomId, `${cap(tmpl.name)} makes a grab at ${victim.name}'s pack and misses it.`, victim.pubkey, false);
+              this.send(victim, thiefSay(tw.miss, tmpl.name));
+              this.roomFeed(victim.roomId, thiefSay(tw.missFeed, tmpl.name, "", victim.name), victim.pubkey, false);
             } else if (loot) {
               const it = world.itemTemplates.get(loot.itemId)!;
               victim.items.splice(victim.items.indexOf(loot), 1);
               await removeItemRow(this.env.DB, loot.rowId);
-              if (it.edible && creature.hunger >= HUNGRY_AT) {
+              if (tw.eat && tw.eatFeed && it.edible && creature.hunger >= HUNGRY_AT) {
                 // A hungry thief that grabs FOOD doesn't fence it — it crams it
                 // down on the run. THAT is how a cutpurse feeds (rome, 2026-07-18:
                 // "we have to feed them"): the meal sates it (hunger clears, a
@@ -5575,16 +5576,16 @@ export class ZoneDO implements DurableObject {
                 // still pockets to drop on death; only food it eats.
                 creature.hunger = 0;
                 creature.hp = Math.min(tmpl.max_hp, creature.hp + Math.max(it.heal, 3));
-                this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and crams it down as it bolts — gone.`);
-                this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears a meal from ${victim.name} and flees, gulping it down.`, victim.pubkey, false);
+                this.send(victim, thiefSay(tw.eat, tmpl.name, it.name));
+                this.roomFeed(victim.roomId, thiefSay(tw.eatFeed, tmpl.name, "", victim.name), victim.pubkey, false);
               } else {
                 creature.stole = loot.itemId;
                 // A stolen journal keeps its pages: the row dies here, so its
                 // instance identity must ride the thief or the book comes back blank.
                 creature.stoleJournal = loot.journalId;
                 creature.stoleInvite = loot.inviteCode;
-                this.send(victim, `${cap(tmpl.name)} snatches ${it.name} and bolts! (kill it to get it back)`);
-                this.roomFeed(victim.roomId, `${cap(tmpl.name)} tears something from ${victim.name} and flees!`, victim.pubkey, false);
+                this.send(victim, thiefSay(tw.take, tmpl.name, it.name));
+                this.roomFeed(victim.roomId, thiefSay(tw.takeFeed, tmpl.name, "", victim.name), victim.pubkey, false);
               }
               this.sendCtx(victim);
               await ai.creatureMoves(this, creature, now, "flee", false);
