@@ -1985,6 +1985,22 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
         alarmBark(z, from, now, creature);
       }
     }
+    // A LURKER WALKS UNHEARD, NOT UNSEEN (2026-11-25: a cave cougar a torch had
+    // found walked out of the room without a word, and the picture and the chips
+    // went on showing it there, so a look at it found nothing). Nobody hears it go;
+    // whoever's light has it in view sees it go, and every picture is redrawn.
+    if (silent) {
+      let watched = false;
+      for (const s of z.sessions.values()) {
+        if (!z.reachable(s) || z.lurkerUnseen(creature, s)) continue;
+        if (s.roomId === from) { watched = true; z.send(s, `${cap(tmpl.name)} slips away ${exit.dir}.`); }
+        else if (s.roomId === creature.roomId) { watched = true; z.send(s, `${cap(tmpl.name)} creeps in.`); }
+      }
+      if (watched || [...z.sessions.values()].some((s) => s.roomId === from || s.roomId === creature.roomId)) {
+        z.refreshRoomCtx(from);
+        z.refreshRoomCtx(creature.roomId);
+      }
+    }
     if (!silent) {
       // The hollow don't bleed — they come apart in their own way. A runner
       // isn't wounded at all: it just darts, whole and gone.

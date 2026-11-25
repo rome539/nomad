@@ -266,7 +266,9 @@ export function sendCtx(z: ZoneDO, session: Session): void {
       // else is true of it, and a thing that has YOU is the one you must read.
       const now = Date.now();
       // caught by the light before it could spring: pressed into its crevice, plain to see
-      const state = lurking && !creature.target ? "lurk-lit"
+      // ...unless it is eating: the words say it has its head down in the meal, and
+      // so does the picture (2026-11-25: a cave cougar fed in the lurk frame).
+      const state = lurking && !creature.target && !ai.eatingShown(z, creature, now) ? "lurk-lit"
         // BLOWN IS STANDING, NOT GOING (rome, 2026-11-09: a raven out of breath
         // was drawn flying off for a minute while the words had it pulled up
         // short). At bay it is the hurt pose: low, sagging, sides going.

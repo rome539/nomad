@@ -21,7 +21,7 @@ import { CAVE_GROUND } from "./cave-ground";
 import {
   HEARS_FAR, HEAR_ROOMS, FOOTFALL_HEED_ODDS, LIGHT_DAZZLED, DAZZLED_MULT, LIGHT_TAKERS, LANTERN_TAKERS,
   BREAKS_OFF, BREAK_OFF_AT, KILL_DRAGGERS, HOLD_BITERS, HOLD_BITE_ODDS, HOLD_STEP, HOLD_MAX,
-  CALLERS, CALL_ROOMS, CALL_EVERY_MS, LAMP_MEN, SHUTTER_AT, SHUTTER_STEP, SHUTTER_BACK_MS, LAMP_RETURN_ROOMS,
+  CALLERS, CALL_ROOMS, CALL_EVERY_MS, LAMP_MEN, SHUTTER_AT, SHUTTER_BACK_MS, LAMP_RETURN_ROOMS,
   DARK_FIRST_MULT, DARK_MISS_ODDS, FLIGHT_BATS, FLIGHT_NIP_EVERY_MS, FLIGHT_NIP_ODDS, FLIGHT_SNUFF_ODDS,
   CATCHES_ONLY_ON,
 } from "./zone-data";
@@ -92,9 +92,11 @@ export function beforeAttack(z: ZoneDO, creature: Creature, tmpl: MobTemplate, v
       `${cap(tmpl.name)} breaks off, and is gone into the dark before you can follow it.`);
   }
   if (LAMP_MEN.has(id)) {
-    const at = creature.shutHp === undefined ? tmpl.max_hp * SHUTTER_AT : creature.shutHp - tmpl.max_hp * SHUTTER_STEP;
+    // ONCE A FIGHT (2026-11-25): he goes into the dark once, at half his health, and
+    // comes back once; after that he stays until one of you is dead. Going again at
+    // every quarter made a fight he could leave and come back to without end.
     // A fire he cannot put out lights him wherever he goes in the room: no dark to go into.
-    if (creature.hp < at && !z.roomLit(creature.roomId)) {
+    if (creature.shutHp === undefined && creature.hp < tmpl.max_hp * SHUTTER_AT && !z.roomLit(creature.roomId)) {
       creature.shutHp = creature.hp;
       z.fxPose(creature.roomId, id, "shutter");
       creature.backAt = now + randInt(SHUTTER_BACK_MS[0], SHUTTER_BACK_MS[1]);
@@ -169,7 +171,11 @@ export function blow(z: ZoneDO, creature: Creature, tmpl: MobTemplate, victim: S
 export function landed(z: ZoneDO, creature: Creature, tmpl: MobTemplate, victim: Session): void {
   const id = creature.templateId;
   const odds = LIGHT_TAKERS.get(id);
-  if (odds && chance(odds)) takeLight(z, victim, tmpl, LANTERN_TAKERS.has(id));
+  // The lamp-man puts your light out ONCE a fight (2026-11-25): light another and he
+  // leaves it be, or a fight with him was a torch gone every few blows.
+  const spent = LAMP_MEN.has(id) && !!creature.snuffedFor?.includes(victim.pubkey);
+  if (odds && !spent && chance(odds) && takeLight(z, victim, tmpl, LANTERN_TAKERS.has(id)) && LAMP_MEN.has(id))
+    (creature.snuffedFor ??= []).push(victim.pubkey);
   if (HOLD_BITERS.has(id) && !victim.seizedBy && chance(HOLD_BITE_ODDS)) {
     victim.seizedBy = creature.id;
     creature.holdRounds = 0;
@@ -239,7 +245,7 @@ export function act(z: ZoneDO, c: Creature, now: number): void {
   const tmpl = z.world!.mobTemplates.get(id);
   if (!tmpl) return;
   if (c.brokeOff && c.hp >= tmpl.max_hp) c.brokeOff = false;
-  if (LAMP_MEN.has(id) && c.hp >= tmpl.max_hp) c.shutHp = undefined;
+  if (LAMP_MEN.has(id) && c.hp >= tmpl.max_hp) { c.shutHp = undefined; c.snuffedFor = undefined; } // whole again: the next fight is a new one
   if (c.dragTo) dragStep(z, c, tmpl);
   if (FLIGHT_BATS.has(id)) nip(z, c, tmpl, now);
 }

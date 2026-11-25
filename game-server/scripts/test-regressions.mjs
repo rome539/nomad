@@ -9353,6 +9353,54 @@ try {
       assert.doesNotMatch(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8'), /INSERT INTO exits[^;]*'the-bounds-house'[^;]*'the-cut-line'|INSERT INTO exits[^;]*'the-cut-line'[^;]*'the-bounds-house'/, f + ' puts the door back');
   });
 
+  check('a lurker a light has found is seen walking out, and every picture is redrawn, so look never misses one still drawn there (2026-11-25)', () => {
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    const block = ai.slice(ai.indexOf('A LURKER WALKS UNHEARD, NOT UNSEEN'), ai.indexOf('    if (!silent) {', ai.indexOf('A LURKER WALKS UNHEARD, NOT UNSEEN')));
+    assert.match(block, /if \(silent\) \{/, 'the silent walk has no branch of its own');
+    assert.match(block, /z\.lurkerUnseen\(creature, s\)/, 'it asks whether each player can see it, as look does');
+    assert.match(block, /s\.roomId === from\) \{ watched = true; z\.send\(s, `\$\{cap\(tmpl\.name\)\} slips away \$\{exit\.dir\}\.`\)/, 'whoever sees it is not told it went');
+    assert.match(block, /z\.refreshRoomCtx\(from\);\s*z\.refreshRoomCtx\(creature\.roomId\);/, 'the room it left keeps drawing it');
+  });
+
+  check('a lurker eating is drawn eating, not lying in wait, once a light has found it (2026-11-25)', () => {
+    const chips = readFileSync(new URL('../src/chips.ts', import.meta.url), 'utf8');
+    assert.match(chips, /const state = lurking && !creature\.target && !ai\.eatingShown\(z, creature, now\) \? "lurk-lit"/, 'the lurk frame wins over the meal');
+    // and the meal is still read further down the same chain
+    const chain = chips.slice(chips.indexOf('const state = lurking'), chips.indexOf('doing.push(state)'));
+    assert.match(chain, /ai\.eatingShown\(z, creature, now\) \|\|/, 'nothing draws the meal once the lurk frame is passed');
+  });
+
+  check('the lamp-man puts your light out once a fight, goes into the dark once and comes back once, then stays (2026-11-25)', () => {
+    const now = Date.now();
+    const said = [];
+    const lit = () => ({ pubkey: 'p', name: 'me', roomId: 'r', litSource: 'torch', litUntil: now + 600_000, items: [], hp: 50, maxHp: 50 });
+    const z = { carriesLight: (s) => !!s.litUntil && s.litUntil > Date.now(), outOfWorld: () => false, litFor: () => false, roomLit: () => false,
+      send: (s, t) => said.push(t), sendStatus() {}, roomFeed() {}, fxPose() {}, noteCreaturesChanged() {}, refreshRoomCtx() {}, sessions: new Map(),
+      env: { DB: null } };
+    const tmpl = { id: 'the-lamp-man', name: 'the lamp-man', max_hp: 90 };
+    const lamp = { id: 'l1', templateId: 'the-lamp-man', roomId: 'r', hp: 90 };
+    // once a fight: however many blows land, one torch goes out
+    let out = 0;
+    const me = lit();
+    for (let i = 0; i < 200; i++) {
+      if (!me.litUntil) { out++; me.litUntil = now + 600_000; me.litSource = 'torch'; }
+      caveMod.landed(z, lamp, tmpl, me);
+    }
+    if (!me.litUntil) out++;
+    assert.equal(out, 1, 'he put out ' + out + ' lights in one fight');
+    // into the dark once, at half his health, and never a second time
+    const victim = lit();
+    lamp.hp = 40;
+    assert.equal(caveMod.beforeAttack(z, lamp, tmpl, victim, now), true, 'he does not go into the dark at half his health');
+    lamp.aloft = undefined; lamp.backAt = undefined; lamp.hp = 15;
+    assert.equal(caveMod.beforeAttack(z, lamp, tmpl, victim, now), false, 'he went into the dark a second time');
+    // whole again, the next fight is a new one
+    z.world = { mobTemplates: new Map([['the-lamp-man', tmpl]]) };
+    lamp.hp = 90; caveMod.act(z, lamp, now);
+    assert.equal(lamp.shutHp, undefined); assert.equal(lamp.snuffedFor, undefined);
+    assert.doesNotMatch(readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8'), /SHUTTER_STEP/, 'the every-quarter shutter is back');
+  });
+
   console.log(`\n${passed} regression checks pass`);
 } finally {
   await rm(dir, { recursive: true, force: true });

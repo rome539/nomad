@@ -6631,8 +6631,7 @@ export const CALL_EVERY_MS = 30_000;
 // of the dark from another way; a fire in the room he cannot put out takes that
 // away. In your dark his first blow is the worst and yours go wide.
 export const LAMP_MEN = new Set(["the-lamp-man"]);
-export const SHUTTER_AT = 0.5;            // first shutter, as a share of his health...
-export const SHUTTER_STEP = 0.25;         // ...and again each time he loses this much more
+export const SHUTTER_AT = 0.5;            // he shutters once a fight, at this share of his health
 export const SHUTTER_BACK_MS: [number, number] = [15_000, 35_000];
 export const LAMP_RETURN_ROOMS = 2;
 export const DARK_FIRST_MULT = 1.5;
