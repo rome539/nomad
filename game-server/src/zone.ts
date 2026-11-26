@@ -5020,7 +5020,9 @@ export class ZoneDO implements DurableObject {
       // first. A low per-tick roll BEGINS it (the threshold + no-prey gate already
       // make it rare); once wound up it commits. Not for meal-guarders — those own
       // the block above. See ai.starvingHunts for the guardrails.
-      if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && ai.starvingHunts(this, creature)) {
+      // ...and never with its head in a meal (2026-11-25: a starving cave cougar fed on
+      // a kill and wound up on a player in the same breath). It finishes eating first.
+      if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && !ai.eatingNow(creature, now) && ai.starvingHunts(this, creature)) {
         const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s) && !wildTraits.lightShy(this, creature, s));
         if (!prey) {
           creature.rouseAt = undefined; // no one to hunt — the hunger settles back
@@ -5064,7 +5066,7 @@ export class ZoneDO implements DurableObject {
       // Excludes anything the block above already claimed (a genuinely
       // starving predator's own hunger is reason enough — this is the
       // separate case of a fed one smelling blood on someone stumbling).
-      if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && !ai.starvingHunts(this, creature) && ai.woundedPreyHunts(this, creature)) {
+      if (!creature.target && !ai.hyenaGuardsMeal(this, creature) && !ai.eatingNow(creature, now) && !ai.starvingHunts(this, creature) && ai.woundedPreyHunts(this, creature)) {
         const prey = [...this.sessions.values()].find((s) => s.roomId === creature.roomId && this.reachable(s) && s.hp < s.maxHp * WOUNDED_FRACTION && !wildTraits.lightShy(this, creature, s));
         if (!prey) {
           creature.rouseAt = undefined; // healed up, left, or died — the interest settles

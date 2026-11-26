@@ -2712,6 +2712,8 @@ export const WALKING_DEAD = new Set([
   // ...and the keep's and the deep's hollow (2026-11-14), which draw their homes now and
   // walk the ground round them; every other skeleton is in a road squad and walks its round
   "skeleton", "warden", "marrow-cantor",
+  // ...and the cave's diggers (2026-11-25), out of their camps and along the workings
+  "digger",
 ]);
 // THE ROAD LIVES TOO (2026-11-13): the third living region. The goat and the scarp
 // raven are the mountain's lines as well, so a line may now live in more than one
@@ -2803,7 +2805,10 @@ export const WOOD_GROUPS = new Map<string, { min: number; max: number; lone: num
 // bats hang in company, and the grubbets live in colonies. Left where they are: the gulpers (drowners hold their water),
 // the diggers (dead men) at their camps and the stopping, the lamp-man, the brood on the dressed
 // stone and the sleeper. Ground: cave-ground.ts.
-export const CAVE_ROAMERS = new Set(["cave-cougar", "mole-hound", "grubbet", "pale-salamander", "cave-spider", "cave-bat", "polecat", "cave-crayfish", "stone-mites"]);
+// ...and the diggers (2026-11-25): they sat in their camps for good, because a thing
+// that attacks on sight never takes the first step off its home. Now their homes are
+// drawn over the workings and the camps, and they walk the ground round them.
+export const CAVE_ROAMERS = new Set(["cave-cougar", "mole-hound", "grubbet", "pale-salamander", "cave-spider", "cave-bat", "polecat", "cave-crayfish", "stone-mites", "digger"]);
 export const CAVE_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
   ["mole-hound", { min: 3, max: 4, lone: 0.1 }], // packs of three and four (cave-plan.md)
   ["cave-bat", { min: 3, max: 6, lone: 0.1 }],    // the roosts hang in company

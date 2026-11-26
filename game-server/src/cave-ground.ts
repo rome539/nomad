@@ -132,4 +132,5 @@ export const CAVE_SETTLES: [string, string[]][] = [
   ["polecat", ["bones", "rough", "roots", "gallery"]], // the holes in the rock round the grubbets
   ["cave-crayfish", ["river"]],
   ["stone-mites", ["stone", "buried"]],             // the joints of the dressed stone
+  ["digger", ["workings", "camp"]],                  // the dead at the work: their road and their camps (2026-11-25)
 ];
