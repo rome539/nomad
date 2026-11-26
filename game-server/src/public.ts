@@ -11228,11 +11228,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "138";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "80";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "81";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "41";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "71";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "42";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "73";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -11366,7 +11366,10 @@ var TERRAIN_PLATE = {
   "wood-felling": ["wood-felling"], "wood-osier": ["wood-osier"], "wood-bailey": ["wood-bailey"],
   "wood-burnt": ["wood-burnt"], "wood-holly": ["wood-holly"], "wood-birch": ["wood-birch"],
   glacier: ["glacier"], ridge: ["ridge"], towers: ["towers"],
-  "road-oaks": ["road-oaks"], "road-hedges": ["road-hedges"], "road-moor": ["road-moor"], "road-gill": ["road-gill"],
+  "road-oaks": ["road-oaks"], "road-hedges": ["road-hedges"], "road-moor": ["road-moor"],
+  // the gill rooms wear the beck now (2026-11-25): their own picture was cut, and the
+  // beck is the same thing, a stream down a rock cleft with its falls and its pool
+  "road-gill": ["beck"],
   "marsh-samphire": ["marsh-samphire"], "marsh-carr": ["marsh-carr"], "marsh-dyke": ["marsh-dyke"], "ferry-hard": ["ferry-hard"],
   // THE CAVE UNDER THE WOOD (2026-11-22): twenty-seven grounds (zone-data CAVE_RULES).
   "cave-roots": ["cave-roots"], "cave-mouths": ["cave-mouths"], "cave-wet": ["cave-wet"],
@@ -12622,7 +12625,6 @@ var TERRAIN_SCENES = {
   "road-oaks":    "day night night-torch snow",
   "road-hedges":  "day night night-torch snow",
   "road-moor":    "day night night-torch snow",
-  "road-gill":    "day night night-torch snow",
   "marsh-samphire": "day night night-torch snow",
   "marsh-carr":   "day night night-torch snow",
   "marsh-dyke":   "day night night-torch snow",
@@ -13012,7 +13014,7 @@ var MOB_LINE = {
                  "wood-felling": 62, "wood-osier": 66, "wood-bailey": 58,
                  "wood-burnt": 58, "wood-holly": 62, "wood-birch": 66,
                  glacier: 72, ridge: 60, towers: 70,
-                 "road-oaks": 70, "road-hedges": 72, "road-moor": 64, "road-gill": 80,
+                 "road-oaks": 70, "road-hedges": 72, "road-moor": 64,
                  "marsh-samphire": 72, "marsh-carr": 68, "marsh-dyke": 66, "ferry-hard": 74,
                  // THE HOLDING (rome, 2026-09-29: the creatures looked huge against
                  // it). The ruined walls stand close round the courtyard, so a
@@ -15475,7 +15477,6 @@ var FLOOD_GROUND = {
   "the-salt-pool": { water: [0.6, 0.55] },
   "the-deep-mark": { water: [0.6, 0.554] },
   "shell": { water: [0.467, 0.422] },
-  "road-gill": { water: [0.733, 0.704] },
   "marsh-carr": { water: [0.65, 0.6], waterNight: [0.72, 0.56] }, // open water in the pool, not the brown of the reeds and mud; by night the pool's dark water, not the sky's bright reflection in it
   "ford": { water: [0.333, 0.61] },
   "the-breathing-hall": { walls: [.576, 3.8, 4, .25], hz: .52, keepLut: 1, scale: 1.5 }, // scale: 40 draws as 60 did; // the sea cave's rule: the walls stand on their foot line (where the back wall meets the floor, under the benches; down at the sides), the floor keeps its depth map and runs back to that wall

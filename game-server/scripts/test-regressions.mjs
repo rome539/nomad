@@ -5594,9 +5594,21 @@ try {
     const panel = readFileSync(new URL('./game-panel.js', import.meta.url), 'utf8');
     const placed = new Set([...panel.match(/var GROUND_PLACE = \{([\s\S]*?)\};/)[1].matchAll(/:\s*"([^"]*)"/g)].flatMap(m => m[1].split(' ')));
     assert.ok(grounds.length > 40, 'read the ground list');
-    for (const g of ['marsh-samphire', 'marsh-carr', 'marsh-dyke', 'ferry-hard', 'road-gill']) assert.ok(grounds.includes(g), g + ' is a ground');
+    for (const g of ['marsh-samphire', 'marsh-carr', 'marsh-dyke', 'ferry-hard', 'road-moor']) assert.ok(grounds.includes(g), g + ' is a ground');
     const missing = grounds.filter(g => !placed.has(g));
     assert.deepEqual(missing.filter(g => /^(marsh|ferry|road|wood)-/.test(g)), [], 'these land under Other');
+  });
+
+  check('the gill rooms wear the beck, and their own picture is gone everywhere (2026-11-25)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /\n  "road-gill": \["beck"\],/, 'the gill ground paints the beck');
+    assert.doesNotMatch(pub, /"road-gill":\s*"day/, 'no road-gill picture set');
+    assert.doesNotMatch(pub, /"road-gill":\s*\d/, 'no road-gill standing line');
+    const deploy = readFileSync(new URL('./deploy-artwork.json', import.meta.url), 'utf8');
+    assert.ok(!deploy.includes('road-gill'), 'not deployed');
+    const panel = readFileSync(new URL('./game-panel.js', import.meta.url), 'utf8');
+    assert.ok(!panel.includes('road-gill'), 'not in the preview list');
+    assert.equal(terrainOf('the-gill-pot', '', 'road'), 'road-gill', 'the rooms keep their ground');
   });
 
   check('the preview paints a cave room picture as the game does, never the mountainside (2026-11-25)', () => {

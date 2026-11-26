@@ -48,7 +48,7 @@
   var GROUND_PLACE = {
     "The Mountain": "snow glacier cairn ridge gully scree boulder slab glass fold alder corrie-rim corrie-floor mountainside crag towers beck vent shiel-street shiel-fields shiel-common",
     "The Crossing": "causeway ford ferry ferry-hard staithe bridge marsh marsh-samphire marsh-carr marsh-dyke shell reed eyot shore-road works sea-cave salt-street salt-fields salt-common",
-    "The Road": "the-kept-road the-frost-heaved-paving the-cart-ruts road-oaks road-hedges road-moor road-gill",
+    "The Road": "the-kept-road the-frost-heaved-paving the-cart-ruts road-oaks road-hedges road-moor",
     "The Wood": "wood wood-felling wood-osier wood-bailey wood-burnt wood-holly wood-birch glade wet sunken heath holding under-roots cave-mouth cave-passage cave",
     "Assart End": "the-dens fields common",
     "The Cave": "cave-roots cave-mouths cave-wet cave-rough cave-gallery cave-bones cave-dripstone cave-ledge cave-hollow cave-dark-river cave-glow-river cave-foxfire cave-roost cave-silk cave-workings cave-camp cave-stopping cave-deep-camp cave-dry-dark stone-way stone-buried stone-pillars stone-ring stone-scraped stone-hollow stone-drowned under-stone cave-squeeze cave-beast-ways cave-shaft cave-dome cave-white-water cave-black-pool cave-glow-lake cave-glow-tunnel cave-bridge cave-props cave-cut-way cave-ladders cave-foxfire-props cave-foxfire-hall stone-niches stone-doors stone-frost stone-cells"
