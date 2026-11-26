@@ -4011,9 +4011,10 @@ var VOICE_FAMILY = {
   root: "root-thing verdigris-thing",
   drake: "the-drake the-pale-drake",
   // THE CAVE UNDER THE WOOD (2026-11-24): each its own voice, none borrowed.
-  cavecougar: "cave-cougar", molehound: "mole-hound", grubbet: "grubbet", salamander: "pale-salamander",
-  cavespider: "cave-spider", cavebat: "cave-bat", gulper: "river-gulper", digger: "digger", lampman: "the-lamp-man",
-  brood: "stone-brood", sleeper: "stone-sleeper", polecat: "polecat", crayfish: "cave-crayfish", mites: "stone-mites"
+  // ...and each line's rare blood (mig 414, 2026-11-26) in its line's voice.
+  cavecougar: "cave-cougar the-white-cougar", molehound: "mole-hound the-lead-hound", grubbet: "grubbet the-bloated-grubbet", salamander: "pale-salamander the-old-white",
+  cavespider: "cave-spider giant-cave-spider", cavebat: "cave-bat the-grizzled-bat the-bat-mother", gulper: "river-gulper the-great-gulper", digger: "digger the-overman", lampman: "the-lamp-man",
+  brood: "stone-brood the-old-brood", sleeper: "stone-sleeper", polecat: "polecat the-black-polecat", crayfish: "cave-crayfish the-blue-crayfish", mites: "stone-mites red-mites"
 };
 var VOICE_OF = {};
 Object.keys(VOICE_FAMILY).forEach(function (f) { VOICE_FAMILY[f].split(" ").forEach(function (id) { VOICE_OF[id] = f; }); });
@@ -11229,13 +11230,13 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "139";      // /mob/      strips and their eye layers
+var MOB_V  = "141";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "88";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "89";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "42";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "80";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "81";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -16624,19 +16625,32 @@ var MOB_SPRITE = {
   // THE CAVE UNDER THE WOOD (mig 409, 2026-11-24). First numbers, set off the
   // nearest sibling already on screen; to be looked at in the game and moved.
   "cave-cougar": 15,          // a cat under the cave lion at 19; the redraw (2026-11-24) measured 0.987 of the first body at 15, kept; the 2026-11-25 redraw is held to the same body by BODY_SCALE
+  "the-white-cougar": 15.5,  // long and lean, a little over the cougar (mig 414)
   "mole-hound": 15.5,         // a long-legged hound, over the grey wolf's 13 (rome: a bit small at 13, too big at 18)
+  "the-lead-hound": 16.5,    // bigger than the rest of its pack (mig 414)
   "river-gulper": 12,         // a fish as long as a man, the bull seal's 12
+  "the-great-gulper": 18.5,  // twice a man's length (mig 414)
   "cave-spider": 11,          // legs that would span a cartwheel (rome: a bit small at 8)
+  "giant-cave-spider": 15,    // the spider's rare blood drawn from its own sheet, a third bigger (mig 414)
   "cave-bat": 5.5,            // fist-sized with the wings open (rome: a bit small at 4)
-  "digger": 30,               // a man standing, as the cook
+  "the-bat-mother": 6.5,     // the roost's brood-mother, fat, a third over the bat (mig 414)
+  "the-grizzled-bat": 7.5,     // the size of a crow, wings that would span your arms (mig 414)
+  "digger": 28.8,               // a man standing, as the cook - redrawn 2026-11-26 with the wind-up, set by drawn area to stand as big as he did
+  "the-overman": 29.5,       // taller than the diggers (mig 414)
   "the-lamp-man": 31,         // a man standing, tall
   "stone-brood": 11,          // the length of a big dog, drawn low in every pose (the 2026-11-26 sheet measured within 1% of the one before by area)
+  "the-old-brood": 14,       // as long as a pony (mig 414)
   "stone-sleeper": 16.8,      // just bigger than its brood (rome: far too big at 34); the 2026-11-26 sheet drew 11% smaller by area than the one before at 15, so 16.8 keeps it the size it was
   "polecat": 4,               // no bigger than a cat, long and low
+  "the-black-polecat": 5,    // a little longer and heavier (mig 414)
   "cave-crayfish": 5.5,       // as long as a hand (rome: too small at 3)
+  "the-blue-crayfish": 5.5,  // its rare blood, the claws bigger, the body a little (mig 414)
   "stone-mites": 7,           // a spread of mites (rome: too small at 4)
+  "red-mites": 8.5,          // a thicker spread (mig 414)
   "grubbet": 5.5,             // the size of a rabbit (rome: a bit small at 4)
+  "the-bloated-grubbet": 7,  // twice the weight, a third over the grubbet (mig 414)
   "pale-salamander": 3,       // as long as a forearm
+  "the-old-white": 4.5,      // its rare blood, half as long again (mig 414)
 };
 
 // WHAT A CREATURE DOES WHILE YOU STAND THERE. A sprite with an entry here is not
@@ -16667,6 +16681,18 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "the-grizzled-bat":   { n: 8, aspect: 1.057, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"sweep":5,"rest":6,"death":7} },
+  "the-great-gulper":   { n: 8, aspect: 1.326, f: {"idle":0,"alert":1,"hold":2,"attack":3,"sweep":4,"move-a":5,"move-b":6,"death":7} },
+  "the-white-cougar":   { n: 9, aspect: 1.536, f: {"idle":0,"lurk":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"rest":7,"death":8} },
+  "the-old-brood":   { n: 9, aspect: 1.581, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "the-overman":   { n: 9, aspect: 0.928, f: {"idle":0,"call":1,"alert":2,"move-a":3,"move-b":4,"swing":5,"attack":6,"snatch-escape":7,"death":8} },
+  "the-lead-hound":   { n: 9, aspect: 1.131, f: {"idle":0,"listen":1,"alert":2,"rest":3,"feed":4,"move-a":5,"move-b":6,"attack":7,"death":8} },
+  "the-black-polecat":   { n: 8, aspect: 1.472, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "red-mites":   { n: 8, aspect: 1.638, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-bloated-grubbet":   { n: 8, aspect: 1.144, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
+  "the-blue-crayfish":   { n: 8, aspect: 1.187, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "the-bat-mother":   { n: 8, aspect: 1.093, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"sweep":5,"rest":6,"death":7} },
+  "the-old-white":   { n: 8, aspect: 1.848, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-lamp-man":      { n: 9, aspect: 0.953, f: {"idle":0,"trim-the-wick":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"shutter":7,"death":8} },
   "stone-sleeper":     { n: 8, aspect: 1.504, f: {"idle":0,"alert":1,"rest":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "stone-mites":       { n: 8, aspect: 1.73, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
@@ -16676,8 +16702,9 @@ var MOB_ANIM = {
   "pale-salamander":   { n: 8, aspect: 1.974, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "mole-hound":        { n: 9, aspect: 1.034, f: {"idle":0,"listen":1,"alert":2,"rest":3,"feed":4,"move-a":5,"move-b":6,"attack":7,"death":8} },
   "grubbet":           { n: 8, aspect: 1.141, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
-  "digger":            { n: 9, aspect: 0.937, f: {"idle":0,"call":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"snatch-escape":7,"death":8} },
+  "digger":            { n: 9, aspect: 0.973, f: {"idle":0,"call":1,"alert":2,"move-a":3,"move-b":4,"swing":5,"attack":6,"snatch-escape":7,"death":8} },
   "cave-spider":       { n: 7, aspect: 1.336, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"feed":5,"death":6} },
+  "giant-cave-spider": { n: 7, aspect: 1.336, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"feed":5,"death":6} }, // a copy of the cave spider's strip
   "cave-crayfish":     { n: 8, aspect: 1.123, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "cave-cougar":       { n: 9, aspect: 1.585, f: {"idle":0,"lurk":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"rest":7,"death":8} },
   "cave-bat":          { n: 8, aspect: 1.061, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"sweep":5,"rest":6,"death":7} },
@@ -17073,7 +17100,7 @@ var SWOOP_HOVER = 0.55, SWOOP_DIP = 0.2;
 // alert are drawn hanging head down, and drawn on the floor line they hung from
 // nothing. So it lives up where the roof is, a share of the frame above its line,
 // at its own size, and comes down only dead.
-var ROOF_HANGERS = { "cave-bat": 1 };
+var ROOF_HANGERS = { "cave-bat": 1, "the-grizzled-bat": 1, "the-bat-mother": 1 };
 var ROOF_RISE = 45;
 // ...AND FROM THE TOP OF THE PICTURE ITSELF (2026-11-25). A fixed rise left it
 // hanging in mid-air on every plate whose floor line is not the one it was set on.
@@ -17143,7 +17170,9 @@ var MOB_EYES = {
   // ...and the cook (2026-10-30), drawn with it from the start.
   "the-cook": 1,
   // ...and the cave's dead (mig 409, 2026-11-24), the diggers and the lamp-man.
-  "digger": 1, "the-lamp-man": 1
+  "digger": 1, "the-lamp-man": 1,
+  // ...and the diggers' overman (mig 414), a digger set over the rest.
+  "the-overman": 1
 };
 
 var IDLE_MS = 1400;      // how long one idle frame is held...

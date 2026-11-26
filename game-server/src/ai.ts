@@ -62,7 +62,7 @@ import {
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
-  MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, HURT_STYLE, FLEE_TELL, FIRE_FLEE_OUT,
+  MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, BROOD_NESTS, BROOD_BIRTH, HURT_STYLE, FLEE_TELL, FIRE_FLEE_OUT,
   QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, PITS_ROOMS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, SLOW_WALKERS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   HUNGER_PER_MIN, COLD_HUNGER_MULT,
@@ -93,7 +93,7 @@ export function rollBloodline(z: ZoneDO, tmpl: MobTemplate, room?: string): MobT
       // needs a known destination that's a vacant nest.
       if (BROODERS.has(v.variantId)) {
         if (!room) continue;
-        const denRooms = new Set(
+        const denRooms = new Set(BROOD_NESTS[v.variantId] ??
           world.mobSpawns.filter((s) => s.template_id === tmpl.id || s.template_id === v.variantId).map((s) => s.room_id),
         );
         if (!denRooms.has(room)) continue;
@@ -396,7 +396,7 @@ export function reconcilePopulation(z: ZoneDO, world: World): number {
       // her line only. Anything stacked or off-den sheds; the spread ones stay.
       if (BROODERS.has(line)) {
         const base = z.variantBase.get(line) ?? line;
-        const denRooms = new Set(
+        const denRooms = new Set(BROOD_NESTS[line] ??
           world.mobSpawns.filter((s) => s.template_id === line || s.template_id === base).map((s) => s.room_id),
         );
         const seated = new Set<string>();
@@ -2969,7 +2969,7 @@ export function dreadsFire(z: ZoneDO, creature: Creature, victim: Session): bool
     return true;
   }
 
-  // A brood-mother births a scabby rat on a slow clock, up to a cap on her
+  // A brood-mother births one of her own line (a scabby rat, a cave bat) on a slow clock, up to a cap on her
   // LIVING BROOD — a living spawn source. She only breeds while unbothered (no
   // target), so engaging her IS the way to stem the tide; leave her and the
   // nest grows. The cap counts her whole brood by nest (pups are stamped
@@ -2985,20 +2985,21 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
     // every pup it killed within 90 seconds, so the sick herd never fell to
     // where the murrain ends. Her clock keeps running; she breeds again when
     // the ground is well.
-    if (conditions.sickIn(z, "rat", z.regionOf(mother.home ?? mother.roomId))) return;
-    const ratTmpl = z.world!.mobTemplates.get("rat");
-    if (!ratTmpl) return;
+    const young = z.variantBase?.get(mother.templateId) ?? "rat";
+    if (conditions.sickIn(z, young, z.regionOf(mother.home ?? mother.roomId))) return;
+    const youngTmpl = z.world!.mobTemplates.get(young);
+    if (!youngTmpl) return;
     let count = 0;
     for (const c of z.creatures.values()) {
-      if (c.templateId === "rat" && c.home === mother.roomId) count++;
+      if (c.templateId === young && c.home === mother.roomId) count++;
     }
     if (count >= BROOD_CAP) return;
     const pupId = uuid();
     z.creatures.set(pupId, {
       id: pupId,
-      templateId: "rat",
+      templateId: young,
       roomId: mother.roomId,
-      hp: ratTmpl.max_hp,
+      hp: youngTmpl.max_hp,
       hunger: randInt(0, HUNGER_MAX), // the WHOLE range: capped under HUNGRY_AT, every spawn and respawn put the population back below the line together, so nothing was ever hungry when you met it
       grudges: [],
       nextWanderAt: now + randInt(WANDER_MIN_MS, WANDER_MAX_MS),
@@ -3007,8 +3008,9 @@ export function broodBirths(z: ZoneDO, mother: Creature, now: number): void {
     });
     z.noteCreaturesChanged();
     const mtmpl = z.world!.mobTemplates.get(mother.templateId)!;
-    z.roomFeed(mother.roomId, `${cap(mtmpl.name)} shudders, and a fresh pup squirms free.`, undefined, false);
-    z.roomSound(mother.roomId, "A wet, squealing sound {dir}.", undefined, undefined, false, { mob: mother.templateId, act: "call" });
+    const birth = BROOD_BIRTH[mother.templateId] ?? BROOD_BIRTH["brood-rat"];
+    z.roomFeed(mother.roomId, birth.feed.replace("{M}", cap(mtmpl.name)), undefined, false);
+    z.roomSound(mother.roomId, birth.sound, undefined, undefined, false, { mob: mother.templateId, act: "call" });
     z.refreshRoomCtx(mother.roomId);
   }
 

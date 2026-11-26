@@ -73,6 +73,10 @@ gait came out worse. The short lines are what every animal before the cave was
 drawn with. Every animal, the bear, the sloth and the hedgehog included (2026-11-26). Only
 things on two legs keep the people's WALK_A/WALK_B in the tool.
 
+If the short lines draw the same step twice for one animal (the bloated grubbet,
+2026-11-26), that card goes back to the walk lines its own line's sheet was drawn
+with, the wording that already worked for that body, and never to new wording.
+
 ## Before the cutter: normalising a generated sheet
 
 `cut-mob-sheet.mjs` says it takes a FINISHED sheet, and a generator does not

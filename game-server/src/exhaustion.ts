@@ -233,20 +233,20 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "capercaillie": [10, 1, 24, 0], // the cock fights in short bursts (mig 405)
   "wrack-crab": [16, 2, 20, 0],
   // the cave's creatures (mig 409, 2026-11-24)
-  "cave-cougar": [10, 3, 24, 0],     // it puts everything into the first rush, and is spent soon after
-  "mole-hound": [32, 3, 32, 0],     // a hound's wind, as the grey wolf's
-  "river-gulper": [0, 0, 0, 0],      // held in its water, as the mire-walker
-  "cave-spider": [16, 2, 28, 0],
-  "cave-bat": [0, 0, 0, 0],          // on the wing, as the tawny owl
-  "digger": [0, 0, 0, 0],            // the people, as the charcoal-burners
-  "stone-brood": [16, 3, 32, 0],
+  "cave-cougar": [10, 3, 24, 0], "the-white-cougar": [10, 3, 24, 0],     // it puts everything into the first rush, and is spent soon after
+  "mole-hound": [32, 3, 32, 0], "the-lead-hound": [32, 3, 32, 0],     // a hound's wind, as the grey wolf's
+  "river-gulper": [0, 0, 0, 0], "the-great-gulper": [0, 0, 0, 0],      // held in its water, as the mire-walker
+  "cave-spider": [16, 2, 28, 0], "giant-cave-spider": [16, 2, 28, 0],
+  "cave-bat": [0, 0, 0, 0], "the-grizzled-bat": [0, 0, 0, 0], "the-bat-mother": [0, 0, 0, 0],          // on the wing, as the tawny owl
+  "digger": [0, 0, 0, 0], "the-overman": [0, 0, 0, 0],            // the people, as the charcoal-burners
+  "stone-brood": [16, 3, 32, 0], "the-old-brood": [16, 3, 32, 0],
   "stone-sleeper": [8, 5, 40, 4],    // heavy as the bear: it knocks you down while it is fresh
   "the-lamp-man": [0, 0, 0, 0],
-  "grubbet": [16, 2, 20, 0],
-  "pale-salamander": [0, 0, 0, 0],
-  "polecat": [12, 2, 24, 0],         // quick and soon spent, as the ermine
-  "cave-crayfish": [16, 2, 20, 0],   // as the crabs
-  "stone-mites": [0, 0, 0, 0],       // thousands, never all of them tired
+  "grubbet": [16, 2, 20, 0], "the-bloated-grubbet": [16, 2, 20, 0],
+  "pale-salamander": [0, 0, 0, 0], "the-old-white": [0, 0, 0, 0],
+  "polecat": [12, 2, 24, 0], "the-black-polecat": [12, 2, 24, 0],         // quick and soon spent, as the ermine
+  "cave-crayfish": [16, 2, 20, 0], "the-blue-crayfish": [16, 2, 20, 0],   // as the crabs
+  "stone-mites": [0, 0, 0, 0], "red-mites": [0, 0, 0, 0],       // thousands, never all of them tired
 };
 export interface CreatureEffort { effort: number; at: number; fighting: boolean; beat: number; penalty: number; before: number }
 type Body = { templateId: string; exertion?: CreatureEffort };

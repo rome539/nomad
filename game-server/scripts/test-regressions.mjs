@@ -5599,6 +5599,62 @@ try {
     assert.deepEqual(missing.filter(g => /^(marsh|ferry|road|wood)-/.test(g)), [], 'these land under Other');
   });
 
+  check('every cave line but its two masters has a rare blood, born to it, speaking, tiring and sleeping as its line does (mig 414, 2026-11-26)', () => {
+    const mig = readFileSync(new URL('../migrations/414_the_cave_grows_rare_blood.sql', import.meta.url), 'utf8');
+    const pairs = [...mig.matchAll(/\('([a-z-]+)',\s+'([a-z-]+)',\s+0\.0\d\)/g)].map((m) => [m[1], m[2]]);
+    assert.equal(pairs.length, 13, 'twelve lines, the bat with two; the spider\'s is a giant drawn from its own sheet');
+    assert.equal(new Set(pairs.map(([b]) => b)).size, 12, 'every line but the masters');
+    const pubAnim = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const row = (id) => (pubAnim.match(new RegExp('\\n  "' + id + '": +(\\{ n: [^\\n]*?\\} \\})')) || [])[1];
+    assert.equal(row('giant-cave-spider'), row('cave-spider'), 'the giant is drawn from the spider\'s own strip');
+    for (const boss of ['the-lamp-man', 'stone-sleeper']) assert.ok(!pairs.some(([b]) => b === boss), boss + ' has none');
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const ex = readFileSync(new URL('../src/exhaustion.ts', import.meta.url), 'utf8');
+    const lore = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    const fams = pub.slice(pub.indexOf('var VOICE_FAMILY = {'), pub.indexOf('var VOICE_OF = {};'));
+    const table = (src, name) => src.slice(src.indexOf('export const ' + name), src.indexOf('\n};', src.indexOf('export const ' + name)));
+    for (const [base, rare] of pairs) {
+      assert.match(mig, new RegExp("\\('" + rare + "', '"), rare + ' has its template');
+      assert.match(fams, new RegExp('"[^"]*\\b' + base + ' [^"]*\\b' + rare + '\\b'), rare + ' speaks with ' + base);
+      for (const [src, name] of [[zd, 'MOVE_SOUNDS'], [zd, 'WITNESSED_LINES'], [ex, 'CREATURE_ENDURANCE'], [lore, 'MOB_LORE']])
+        assert.ok(table(src, name).includes('"' + rare + '"'), rare + ' is in ' + name + ' as ' + base + ' is');
+      for (const line of ['CAVE_ROAMERS', 'CAVE_GROUPS']) {
+        const at = zd.indexOf('export const ' + line); assert.ok(!zd.slice(at, zd.indexOf(']);', at)).includes('"' + rare + '"'), rare + ' is counted by its line, never in ' + line);
+      }
+    }
+    assert.match(pub, /"the-overman": 1\n\};/, 'the overman has the dead\'s eyes as the diggers do');
+  });
+
+  check('the bat-mother breeds cave bats in the two great roosts, as the brood rat breeds rats (mig 414, 2026-11-26)', () => {
+    const now = Date.now();
+    const z = { world: { mobTemplates: new Map([['cave-bat', { id: 'cave-bat', name: 'a cave bat', max_hp: 9 }], ['the-bat-mother', { id: 'the-bat-mother', name: 'the bat-mother' }]]) },
+      variantBase: new Map([['the-bat-mother', 'cave-bat'], ['brood-rat', 'rat']]),
+      creatures: new Map(), conditions: new Map(), regionOf: () => 'cave', feed: [],
+      noteCreaturesChanged() {}, roomFeed(_r, t) { this.feed.push(t); }, roomSound() {}, refreshRoomCtx() {} };
+    const mother = { id: 'm', templateId: 'the-bat-mother', roomId: 'the-north-roost', home: 'the-north-roost', hp: 16, grudges: [], target: null, nextBirthAt: now - 1 };
+    z.creatures.set('m', mother);
+    broodBirths(z, mother, now);
+    const pups = [...z.creatures.values()].filter((c) => c.id !== 'm');
+    assert.equal(pups.length, 1, 'one born');
+    assert.equal(pups[0].templateId, 'cave-bat', 'a cave bat, her own line, never a rat');
+    assert.equal(pups[0].home, 'the-north-roost', 'born to her roost');
+    assert.match(z.feed[0], /young bat drops from her fur/, 'told as a bat, not a rat');
+    for (let i = 0; i < 10; i++) { mother.nextBirthAt = now - 1; broodBirths(z, mother, now); }
+    assert.equal(z.creatures.size, 7, 'six young at most, as the brood rat');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const BROODERS = new Set\(\["brood-rat", "the-bat-mother"\]\);/);
+    assert.match(zd, /"the-bat-mother": \["the-north-roost", "the-east-roost"\],/, 'only the two great roosts');
+    const rooms = readFileSync(new URL('../regions/the-cave-2.rooms', import.meta.url), 'utf8');
+    for (const r of ['the-north-roost', 'the-east-roost']) assert.ok(rooms.includes(r), r + ' is a real room');
+    for (const t of ['FLIGHT_BATS', 'LIGHT_TAKERS', 'NOISE_SHY']) {
+      const at = zd.indexOf('export const ' + t); assert.ok(!zd.slice(at, zd.indexOf(']);', at)).includes('"the-bat-mother"'), 'a nest-bound mother is not in ' + t);
+    }
+    const mig = readFileSync(new URL('../migrations/414_the_cave_grows_rare_blood.sql', import.meta.url), 'utf8');
+    assert.match(mig, /\('cave-bat',\s+'the-bat-mother',\s+0\.05\)/, 'born at the brood rat\'s odds');
+    assert.match(mig, /\('the-grizzled-bat', 'the grizzled bat',/, 'the bat\'s other rare blood took a new name');
+  });
+
   check('the rain is a third quieter, in the open and on a roof, the wash and the drops alike (2026-11-26)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /^var RAIN_VOL = 0\.47;/m, 'the rain level');
@@ -9130,7 +9186,7 @@ try {
 
   check('the cave bat hangs up at the roof of the picture, never from the floor line, and the sleeper is only a little bigger than its brood (2026-11-24)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
-    assert.match(pub, /var ROOF_HANGERS = \{ "cave-bat": 1 \};/, 'the bat is a roof hanger');
+    assert.match(pub, /var ROOF_HANGERS = \{ "cave-bat": 1, "the-grizzled-bat": 1, "the-bat-mother": 1 \};/, 'the bat is a roof hanger, and both its rare bloods with it (mig 414)');
     assert.match(pub, /if \(roof\) air = [^;]*ROOF_RISE \/ mobVh\(a\.id\);/, 'and the pose lifts it (to the top of the picture since 2026-11-25, ROOF_RISE when the row has not placed it yet)');
     assert.match(pub, /var roof = [^;]*a\.phase !== "death"/, 'except dead, when it falls');
     const size = (id) => +pub.match(new RegExp('^\\s*"' + id + '": ([\\d.]+),', 'm'))[1];
@@ -9207,7 +9263,7 @@ try {
     const fams = pub.slice(pub.indexOf('var VOICE_FAMILY = {'), pub.indexOf('var VOICE_OF = {};'));
     const own = { cavecougar: 'cave-cougar', molehound: 'mole-hound', grubbet: 'grubbet', salamander: 'pale-salamander', cavespider: 'cave-spider', cavebat: 'cave-bat', gulper: 'river-gulper', digger: 'digger', lampman: 'the-lamp-man', brood: 'stone-brood', sleeper: 'stone-sleeper', polecat: 'polecat', crayfish: 'cave-crayfish', mites: 'stone-mites' };
     for (const [fam, id] of Object.entries(own)) {
-      assert.ok(fams.includes(fam + ': "' + id + '"'), id + ' has a family of its own');
+      assert.ok(fams.includes(fam + ': "' + id + '"') || fams.includes(fam + ': "' + id + ' '), id + ' has a family of its own (its rare blood speaks in it too, mig 414)');
       assert.equal((fams.match(new RegExp('[ "]' + id + '[ "]', 'g')) || []).length, 1, id + ' is in no other family');
       assert.ok(new RegExp('\\n  ' + fam + ': function \\(t, m, o\\)').test(pub), fam + ' has its calls');
       assert.ok(new RegExp('\\n  ' + fam + ': function \\(t, o\\)').test(pub), fam + ' has its idle');
