@@ -37,6 +37,12 @@ footing block taken out on 2026-11-05. `scene-art.md` covers wiring a finished p
   Plate Book artifact). Remove only the thing that was asked; never redesign, and
   never add a staged footing or apron line to a redo. If a redo has no room for
   creatures, reword its near ground the natural way described below.
+- **Day prompts drop three lines** (2026-11-25): "Do not downscale or upscale from a
+  higher-resolution painting.", "Pixel density must be identical in every asset." and
+  "; anything living is composited in later onto the near ground" (the NOTHING ALIVE
+  line ends at "in every plate."). With them in, the generator read a fresh day prompt
+  as an edit and refused it for want of a reference image: first the cave days, then
+  the holly redo. Hand-backs are unchanged.
 - **The torch has no direction.** Light comes from the camera's own position.
 - **Never change the constants.** The head, SKY and Door Rule blocks below are fixed.
 - File names: `<ground>-day.png`, `<ground>-night.png`, `<ground>-night-torch.png`,

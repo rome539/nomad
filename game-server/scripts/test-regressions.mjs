@@ -5599,6 +5599,18 @@ try {
     assert.deepEqual(missing.filter(g => /^(marsh|ferry|road|wood)-/.test(g)), [], 'these land under Other');
   });
 
+  check('the preview paints a cave room picture as the game does, never the mountainside (2026-11-25)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const rooms = Function('return ' + pub.match(/var CAVE_ROOM_PLATE = (\{[\s\S]*?\n\});/)[1])();
+    const pics = new Set(Object.values(rooms).flatMap(o => Object.values(o)));
+    const panel = readFileSync(new URL('./game-panel.js', import.meta.url), 'utf8');
+    const cave = panel.match(/"The Cave": "([^"]*)"/)[1].split(' ');
+    assert.ok(pics.size >= 18, 'read the cave room pictures');
+    for (const p of pics) assert.ok(cave.includes(p), p + ' is under The Cave');
+    assert.match(panel, /"The Cave": "cave" \}/, 'The Cave paints with the cave band');
+    assert.match(panel, /CAVE_ROOM_PLATE\[g\]\[rn\] === v\.slice\(7\)\) \{ gname = g; groom = rn; \}/, 'a room picture is painted over its ground with one of its rooms');
+  });
+
   check('kill sign counts every kill, tells sizes and ages apart, varies its words and never names them (2026-10-28)', () => {
     const z = new ZoneDO({}, {});
     z.world = { rooms: new Map([['moor', { id: 'moor', name: 'The Moor', region: 'out' }]]), entryRooms: new Set() };

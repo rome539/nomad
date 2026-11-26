@@ -51,7 +51,7 @@
     "The Road": "the-kept-road the-frost-heaved-paving the-cart-ruts road-oaks road-hedges road-moor road-gill",
     "The Wood": "wood wood-felling wood-osier wood-bailey wood-burnt wood-holly wood-birch glade wet sunken heath holding under-roots cave-mouth cave-passage cave",
     "Assart End": "the-dens fields common",
-    "The Cave": "cave-roots cave-mouths cave-wet cave-rough cave-gallery cave-bones cave-dripstone cave-ledge cave-hollow cave-dark-river cave-glow-river cave-foxfire cave-roost cave-silk cave-workings cave-camp cave-stopping cave-deep-camp cave-dry-dark stone-way stone-buried stone-pillars stone-ring stone-scraped stone-hollow stone-drowned under-stone"
+    "The Cave": "cave-roots cave-mouths cave-wet cave-rough cave-gallery cave-bones cave-dripstone cave-ledge cave-hollow cave-dark-river cave-glow-river cave-foxfire cave-roost cave-silk cave-workings cave-camp cave-stopping cave-deep-camp cave-dry-dark stone-way stone-buried stone-pillars stone-ring stone-scraped stone-hollow stone-drowned under-stone cave-squeeze cave-beast-ways cave-shaft cave-dome cave-white-water cave-black-pool cave-glow-lake cave-glow-tunnel cave-bridge cave-props cave-cut-way cave-ladders cave-foxfire-props cave-foxfire-hall stone-niches stone-doors stone-frost stone-cells"
   };
   var groundAt = {};
   Object.keys(GROUND_PLACE).forEach(function (l) { GROUND_PLACE[l].split(" ").forEach(function (t) { groundAt[t] = l; }); });
@@ -286,7 +286,7 @@
   // ...and the same answer says whether this place has a ROOF, which the game's
   // status frame would have told the picture: a roofed room draws no rain.
   var ambSeen = {};
-  var BAND_OF = { "The Mountain": "mountain", "The Crossing": "crossing", "The Road": "road", "The Wood": "wood", "Assart End": "den" };
+  var BAND_OF = { "The Mountain": "mountain", "The Crossing": "crossing", "The Road": "road", "The Wood": "wood", "Assart End": "den", "The Cave": "cave" };
   function soundHere() {
     var key = gnd.value + "|" + hourSky(), first = !ambSeen[key];
     var band = BAND_OF[groundAt[gnd.value.slice(7)]] || "";
@@ -446,7 +446,17 @@
     } else {
       // THE GROUND'S OWN REGION, as the game sends it - this said "mountain" for
       // every ground, so the beach got the mountain's birds (2026-10-20)
-      paintScene(BAND_OF[groundAt[v.slice(7)]] || "mountain", h, v.slice(7), "preview-ground", torch, skyRollN, "", 0, red, undefined, nightFlag, low);
+      // A CAVE ROOM'S OWN PICTURE IS NOT A GROUND (2026-11-25). The squeezes, the
+      // dome and the rest are given by room name over a cave ground, so asked for
+      // as a ground of their own they matched nothing and fell to the mountainside.
+      // Painted here as the game paints them: their ground, and a room that has them.
+      var gname = v.slice(7), groom = "preview-ground";
+      if (typeof CAVE_ROOM_PLATE === "object" && !TERRAIN_PLATE[gname]) {
+        Object.keys(CAVE_ROOM_PLATE).forEach(function (g) {
+          Object.keys(CAVE_ROOM_PLATE[g]).forEach(function (rn) { if (groom === "preview-ground" && CAVE_ROOM_PLATE[g][rn] === v.slice(7)) { gname = g; groom = rn; } });
+        });
+      }
+      paintScene(BAND_OF[groundAt[v.slice(7)]] || "mountain", h, gname, groom, torch, skyRollN, "", 0, red, undefined, nightFlag, low);
     }
     fitPicture();
     var dead = nomadSel.value === "dead" && ids.indexOf("nomad") >= 0;

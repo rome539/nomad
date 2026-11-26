@@ -11228,11 +11228,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "138";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "77";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "80";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
-var FOG_V  = "40";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "68";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FOG_V  = "41";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
+var FX_V   = "71";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -12605,7 +12605,7 @@ var TERRAIN_SCENES = {
   "shiel-common": "day night night-torch snow",
   // THE BEAR CAVES (2026-10-21). The mouth stands open to the sky and takes the
   // full six; past it the rock has no hour and no weather, like the sea cave.
-  "cave-mouth":   "day night night-torch fog rain snow",
+  "cave-mouth":   "day night night-torch snow",            // redrawn 2026-11-25: fog and rain are laid over it
   "cave-passage": "night night-torch",
   cave:           "night night-torch",
   // THE NEW GROUNDS (2026-10-27) are four plates, not six: fog and rain are
