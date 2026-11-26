@@ -167,7 +167,7 @@ const WALK_B = "Passing pose B: The rear leg has swung forward, with its knee be
 const LINES = {
 // THE WOOD SLOTH (rome, 2026-10-21): it lives on the ground, never hangs, and
 // its claws are SHORT and the same size in every cell - they kept coming back a
-// different length each frame. The walk is the four-legged one (QUAD_WALK).
+// different length each frame. It walks on the two short lines like every animal.
 // The bear's standing frame and the hedgehog's own five, as their 2026-10-21
 // sheets were drawn - they lived only in the handed-over prompt until now.
 "brown-bear": {
@@ -1761,17 +1761,14 @@ Every pose is the BODY making the shape of what it is doing, alone in empty mage
 // the passing frame has them together. The old "opposite leg phase" line came
 // back as two near-identical spread strides.
 const TWO_LEGS = worked() || ["cutthroat", "cutpurse", "footpad", "wayman", "road-carrier", "the-keeper-of-the-holding", "the-drowned", "drowned-hulk"].includes(id);
-// A four-legged walk, said the same way (rome, 2026-10-21): "natural gait" and
-// "opposite leg phase" came back for the bear, the sloth and the hedgehog as the
-// same step drawn twice. The two-legged WALK_A/WALK_B wording, said for paws.
-const FOUR_LEGS_WALK = ["brown-bear", "wood-sloth", "hedgehog"].includes(id);
-const QUAD_WALK_A = "Contact pose A: One front leg reaches forward with the paw making contact, while the opposite hind leg trails behind. The body is transferring weight forward.";
-const QUAD_WALK_B = "Passing pose B: The rear leg has swung forward, with its knee bent and paw lifted, passing beside the planted supporting leg. The legs are close together, not spread apart.";
+// EVERY ANIMAL WALKS ON THE TWO SHORT LINES (rome, 2026-11-26), the bear, the
+// sloth and the hedgehog included: hand-written leg wording came out worse every
+// time it was tried (mob-sprites.md, "Walking frames").
 // what each pose is, said the way the sheet needs it said
 const SAY = {
   idle: "Natural resting alert stance",
-  "move-a": TWO_LEGS ? WALK_A : FOUR_LEGS_WALK ? QUAD_WALK_A : "Locomotion contact pose A, natural species-specific gait",
-  "move-b": TWO_LEGS ? WALK_B : FOUR_LEGS_WALK ? QUAD_WALK_B : "Locomotion passing pose B, opposite leg phase, same direction and body size",
+  "move-a": TWO_LEGS ? WALK_A : "Locomotion contact pose A, natural species-specific gait",
+  "move-b": TWO_LEGS ? WALK_B : "Locomotion passing pose B, opposite leg phase, same direction and body size",
   attack: "Natural physical attack for the species, full body in frame",
   // AN ARMED THING ATTACKS WITH WHAT IT IS HOLDING. The line above is written
   // for an animal, and for a soldier it says nothing at all - so the sheets came

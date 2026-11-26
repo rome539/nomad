@@ -57,6 +57,22 @@ from its real height in metres against a standing man at 1.75m = 22.
 8  tsc --noEmit  +  node scripts/check-served.mjs  # the standing ship gates
 ```
 
+## Walking frames: the two short lines
+
+Every animal's two walking frames are written exactly as `mob-prompt.mjs` writes them:
+
+```
+Locomotion contact pose A, natural species-specific gait
+Locomotion passing pose B, opposite leg phase, same direction and body size
+```
+
+Never describe the legs by hand. The cave animals were given long hand-written
+walks ("One front leg reaches forward with the paw making contact..."), and the
+stone-brood and stone-sleeper came out bad again and again; every rewrite of the
+gait came out worse. The short lines are what every animal before the cave was
+drawn with. Every animal, the bear, the sloth and the hedgehog included (2026-11-26). Only
+things on two legs keep the people's WALK_A/WALK_B in the tool.
+
 ## Before the cutter: normalising a generated sheet
 
 `cut-mob-sheet.mjs` says it takes a FINISHED sheet, and a generator does not

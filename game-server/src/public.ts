@@ -11226,13 +11226,13 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "138";      // /mob/      strips and their eye layers
+var MOB_V  = "139";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "81";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "86";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "42";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "73";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "78";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
@@ -12965,7 +12965,7 @@ var MOB_LINE = {
   // the shaft, the pools, the falls, the bridge and the steps; clear of the river
   // down the tunnel's right side and of the cells' benches
   "cave-squeeze": 70, "cave-beast-ways": 74, "cave-shaft": 74, "cave-dome": 68, "cave-white-water": 74,
-  "cave-black-pool": 72, "cave-glow-lake": 74, "cave-glow-tunnel": 79, "cave-bridge": 76, "cave-foxfire-props": 70,
+  "cave-black-pool": 72, "cave-glow-lake": 74, "cave-glow-tunnel": 79, "cave-bridge": 70, "cave-foxfire-props": 70,
   "cave-foxfire-hall": 70, "cave-props": 72, "cave-cut-way": 68, "cave-ladders": 72, "stone-doors": 75,
   "stone-frost": 65, "stone-cells": 76, "stone-niches": 66,
   // THE CAVE UNDER THE WOOD (2026-11-22), read off the torch plates (same frame as
@@ -16627,8 +16627,8 @@ var MOB_SPRITE = {
   "cave-bat": 5.5,            // fist-sized with the wings open (rome: a bit small at 4)
   "digger": 30,               // a man standing, as the cook
   "the-lamp-man": 31,         // a man standing, tall
-  "stone-brood": 11,          // the length of a big dog, drawn low in every pose
-  "stone-sleeper": 15,        // just bigger than its brood (rome: far too big at 34)
+  "stone-brood": 11,          // the length of a big dog, drawn low in every pose (the 2026-11-26 sheet measured within 1% of the one before by area)
+  "stone-sleeper": 16.8,      // just bigger than its brood (rome: far too big at 34); the 2026-11-26 sheet drew 11% smaller by area than the one before at 15, so 16.8 keeps it the size it was
   "polecat": 4,               // no bigger than a cat, long and low
   "cave-crayfish": 5.5,       // as long as a hand (rome: too small at 3)
   "stone-mites": 7,           // a spread of mites (rome: too small at 4)
@@ -16665,9 +16665,9 @@ var MOB_SPRITE = {
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
   "the-lamp-man":      { n: 9, aspect: 0.953, f: {"idle":0,"trim-the-wick":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"shutter":7,"death":8} },
-  "stone-sleeper":     { n: 8, aspect: 1.802, f: {"idle":0,"alert":1,"rest":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
+  "stone-sleeper":     { n: 8, aspect: 1.504, f: {"idle":0,"alert":1,"rest":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
   "stone-mites":       { n: 8, aspect: 1.73, f: {"idle":0,"alert":1,"graze":2,"move-a":3,"move-b":4,"attack":5,"sweep":6,"death":7} },
-  "stone-brood":       { n: 9, aspect: 1.568, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
+  "stone-brood":       { n: 9, aspect: 1.496, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"sweep":7,"death":8} },
   "river-gulper":      { n: 8, aspect: 1.491, f: {"idle":0,"alert":1,"hold":2,"attack":3,"sweep":4,"move-a":5,"move-b":6,"death":7} },
   "polecat":           { n: 8, aspect: 1.54, f: {"idle":0,"alert":1,"rest":2,"feed":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "pale-salamander":   { n: 8, aspect: 1.974, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },

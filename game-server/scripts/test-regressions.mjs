@@ -9127,7 +9127,10 @@ try {
     assert.match(pub, /if \(roof\) air = [^;]*ROOF_RISE \/ mobVh\(a\.id\);/, 'and the pose lifts it (to the top of the picture since 2026-11-25, ROOF_RISE when the row has not placed it yet)');
     assert.match(pub, /var roof = [^;]*a\.phase !== "death"/, 'except dead, when it falls');
     const size = (id) => +pub.match(new RegExp('^\\s*"' + id + '": ([\\d.]+),', 'm'))[1];
-    assert.ok(size('stone-sleeper') > size('stone-brood') && size('stone-sleeper') < size('stone-brood') * 1.5, 'just bigger than the brood');
+    // the 2026-11-26 sleeper sheet draws its body 11% smaller inside its frame, so its
+    // number rose from 15 to 16.8 to stay the size it was; on screen it is the same
+    // little bit bigger than the brood as before, and the number may run to 1.6 times
+    assert.ok(size('stone-sleeper') > size('stone-brood') && size('stone-sleeper') < size('stone-brood') * 1.6, 'just bigger than the brood');
   });
 
   check('the cave fights its own ways: the hounds squint at a flame, the spider holds tighter, light is taken, the cougar breaks off, the lamp-man shutters and comes back (cave-plan step 4, 2026-11-24)', () => {
