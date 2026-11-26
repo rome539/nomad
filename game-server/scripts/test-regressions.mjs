@@ -5599,6 +5599,13 @@ try {
     assert.deepEqual(missing.filter(g => /^(marsh|ferry|road|wood)-/.test(g)), [], 'these land under Other');
   });
 
+  check('the rain is a third quieter, in the open and on a roof, the wash and the drops alike (2026-11-26)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /^var RAIN_VOL = 0\.47;/m, 'the rain level');
+    assert.match(pub, /scapeTo\(scape\.rain\.gain\.gain, [^;]*\* RAIN_VOL \* \(a\.roof \? 0\.95 : 1\)/, 'the wash uses it, on a roof too');
+    assert.equal((pub.match(/Math\.random\(\) \* 0\.05\) \* RAIN_VOL \* SCAPE_VOL/g) || []).length, 2, 'both kinds of drop use it');
+  });
+
   check('the gill rooms wear the beck, and their own picture is gone everywhere (2026-11-25)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /\n  "road-gill": \["beck"\],/, 'the gill ground paints the beck');

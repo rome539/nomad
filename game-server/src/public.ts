@@ -3337,8 +3337,9 @@ function scapeBreathe() {
   scapeTo(scape.run.gain.gain, a.water === "run" ? (a.loud ? 0.13 : 0.07) * SCAPE_VOL * (0.72 + 0.4 * rw) * (0.92 + 0.16 * Math.random()) : 0, 0.3);
   scapeTo(scape.run.chain[0].frequency, 850 + 500 * rw, 0.4);
   // the rain comes in squalls and eases off; the drops on the ground follow it
+  // A THIRD DOWN, in the open and on a roof alike (rome, 2026-11-26: too loud): RAIN_VOL
   scape.rainNow = scapeWander("rain", 0.03, 0.05);
-  scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * 0.7 * (a.roof ? 0.95 : 1) * SCAPE_VOL * (0.7 + 0.5 * scape.rainNow), 0.6);
+  scapeTo(scape.rain.gain.gain, !a.rain ? 0 : (a.rain === 2 ? 0.15 : 0.10) * RAIN_VOL * (a.roof ? 0.95 : 1) * SCAPE_VOL * (0.7 + 0.5 * scape.rainNow), 0.6);
   // the stone's hum swells and sinks so slowly you hardly hear it go
   var hw = scapeWander("hum", 0.01, 0.02);
   // the cave's hum by its ground: deeper in the dressed stone (never louder than the
@@ -3405,13 +3406,15 @@ function scapeEvery(min, max, fn) {
   scape.timers.push(id);
 }
 // Drops on the near ground, or taps on the roof above you.
+// The rain's own level, the wash and the drops together: 0.7, a third down to 0.47 (rome, 2026-11-26).
+var RAIN_VOL = 0.47;
 function scapeDrips() {
   var a = scapeAmb;
   if (a && a.rain) {
     var t = actx.currentTime + 0.01;
     SND._burst(t, a.roof
-      ? { type: "bandpass", freq: 500 + Math.random() * 700, q: 3, dur: 0.05, gain: (0.04 + Math.random() * 0.05) * 0.7 * SCAPE_VOL, atk: 0.002 }
-      : { type: "bandpass", freq: 2200 + Math.random() * 3000, q: 4, dur: 0.03, gain: (0.03 + Math.random() * 0.05) * 0.7 * SCAPE_VOL, atk: 0.002 });
+      ? { type: "bandpass", freq: 500 + Math.random() * 700, q: 3, dur: 0.05, gain: (0.04 + Math.random() * 0.05) * RAIN_VOL * SCAPE_VOL, atk: 0.002 }
+      : { type: "bandpass", freq: 2200 + Math.random() * 3000, q: 4, dur: 0.03, gain: (0.03 + Math.random() * 0.05) * RAIN_VOL * SCAPE_VOL, atk: 0.002 });
   }
   var pace = 1.5 - (scape ? scape.rainNow : 0.5);   // heavier spells, closer drops
   scapeEvery((a && a.rain === 2 ? 40 : 90) * pace, (a && a.rain === 2 ? 160 : 320) * pace, scapeDrips);
@@ -11228,11 +11231,11 @@ var thrKnown = localStorage.getItem("nomad_name");
 // needs no bust at all.
 var MOB_V  = "139";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
-var BG_V   = "86";      // /room-bg/  the room plates - 91MB, the expensive one
+var BG_V   = "88";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
 var CARD_V = "30";      // /card-bg/ and /door-bg/  the threshold paintings
 var FOG_V  = "42";        // /room-fog/ fog masks by distance (scripts/plate-fog.py)
-var FX_V   = "78";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
+var FX_V   = "80";       // /room-fx/  depth maps and the torch index (scripts/plate-fx.py)
 var BUILD = "__BUILD__";        // stamped at serve time; compared against the world's
 
 // ---------------------------------------------------------------------------
