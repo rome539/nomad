@@ -5760,6 +5760,47 @@ try {
     assert.match(cs, /if \(HOLLOW\.has\(c\.templateId\) \|\| SENTINELS\.has\(c\.templateId\) \|\| ROOTED\.has\(c\.templateId\)\) continue;\n\s+c\.asleep = false; c\.sleepUntil = undefined;\n\s+await creatureMoves\(z, c, now, "flee", false\);/, 'the living wake and bolt; the dead do not care');
   });
 
+  await checkAsync('clearing a fall is the diggers\' first work: the nearest free one goes to it, anywhere in the cave (2026-11-27)', async () => {
+    // the upper cave's falls (the Breakdown, the Scree Slope, the Fallen Slab) lay off the round; no digger ever came
+    const exits = new Map(), rooms = new Map();
+    let cur = null;
+    for (const n of [1, 2, 3, 4]) for (const line of readFileSync(new URL('../regions/the-cave-' + n + '.rooms', import.meta.url), 'utf8').split('\n')) {
+      const h = line.match(/^## ([a-z0-9-]+) \|/); if (h) { cur = h[1]; rooms.set(cur, { id: cur }); if (!exits.has(cur)) exits.set(cur, []); continue; }
+      const e = line.match(/^> (\w+) ([a-z0-9-]+)/);
+      if (e && cur) { exits.get(cur).push({ room_id: cur, dir: e[1], to_room: e[2], key_item: null }); if (!exits.has(e[2])) exits.set(e[2], []); }
+    }
+    const roomDist = (a, b) => { const seen = new Map([[a, 0]]), q = [a]; for (const r of q) { if (r === b) return seen.get(r); for (const e of exits.get(r) ?? []) if (!seen.has(e.to_room)) { seen.set(e.to_room, seen.get(r) + 1); q.push(e.to_room); } } return Infinity; };
+    const t0 = 2_000_000_000_000;
+    const mk = (id, roomId, extra = {}) => ({ id, templateId: 'digger', roomId, hp: 10, nextWanderAt: t0 + 600_000, ...extra });
+    const near = mk('d-near', 'the-ladder-foot'), far = mk('d-far', 'the-deep-camp'), fighting = mk('d-fight', 'the-breakdown', { target: 'someone' });
+    const fall = { a: 'the-breakdown', b: 'the-pawed-sand', at: t0 };
+    const ways = { falls: [fall], nextFallAt: t0 + 1e9, level: 0, levelAt: t0, shut: [], stone: [], nextStoneAt: t0 + 1e9 };
+    const z = { world: { exits, rooms, mobTemplates: new Map([['digger', { id: 'digger', name: 'a digger' }]]) }, events: new Map([['cave-ways', { phase: 'idle', data: JSON.stringify(ways) }]]),
+      creatures: new Map([[near.id, near], [far.id, far], [fighting.id, fighting]]), openDoors: new Set(), roomDist,
+      bandOf: () => 'cave', roomFeed() {}, roomSound() {}, noteExitsChanged() {} };
+    await caveShift.tick(z, t0 + 1000);
+    const sent = (c) => caveShift.sentTo(z, c);
+    const expect = roomDist(near.roomId, 'the-breakdown') <= roomDist(far.roomId, 'the-breakdown') ? near : far;
+    assert.deepEqual(sent(expect), ['the-breakdown', 'the-pawed-sand'], 'the nearest free digger is sent');
+    assert.equal(sent(expect === near ? far : near), null, 'one digger to a fall');
+    assert.equal(sent(fighting), null, 'never one in a fight, even standing at it');
+    assert.ok(expect.nextWanderAt <= t0 + 1000 + 20_000, 'he goes quick: ' + (expect.nextWanderAt - t0));
+    // the walk: ai steers a sent digger closer every step, over its round, and he stops cutting rock on the way
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /const fallAt = mode === "wander" \? caveShift\.sentTo\(z, creature\) : null;/);
+    assert.match(ai, /if \(mode === "wander" && !fallAt && patrolRoute/);
+    assert.match(ai, /else if \(route && !fallAt && !squads\.ledBy/);
+    assert.match(readFileSync(new URL('../src/cave.ts', import.meta.url), 'utf8'), /\|\| caveShift\.sentTo\(z, c\)\) \{ c\.workingAt = undefined; return; \}/);
+    // every fall site in the cave can be walked to from the round
+    for (const [a] of caveShift.FALL_WAYS) assert.ok(roomDist('the-ladder-foot', a) < Infinity, a + ' is reachable');
+    // there, he digs it out
+    expect.roomId = 'the-pawed-sand';
+    await caveShift.tick(z, t0 + 2000);
+    const w = JSON.parse(z.events.get('cave-ways').data);
+    assert.equal(w.falls[0].digBy, expect.id, 'he sets his pick to it');
+    assert.equal(sent(expect), null, 'and is no longer walking to it');
+  });
+
   check('the lamp-man has no sweep frame; his wide blow is drawn as his attack (2026-11-26)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const row = pub.match(/\n  "the-lamp-man": +(\{ n: [^\n]*?\} \})/)[1];
@@ -5791,7 +5832,7 @@ try {
     assert.match(cv, /if \(CALLERS\.has\(id\)\) mines\(z, c, tmpl, now\);/, 'every digger and the overman');
     assert.match(cv, /c\.nextWanderAt = Math\.max\(c\.nextWanderAt, now \+ randInt\(MINE_MIN_MS, MINE_MAX_MS\)\);/, 'it stays at the face a while');
     assert.match(cv, /z\.roomSound\(c\.roomId, "The ring of a pick on rock comes \{dir\}[^"]*", undefined, undefined, false, \{ mob: c\.templateId, act: "metal" \}\);/, 'heard next door');
-    assert.match(cv, /if \(c\.target \|\| c\.asleep \|\| !DIGGERS_FACES\.has\(c\.roomId\)\) \{ c\.workingAt = undefined; return; \}/, 'never in a fight');
+    assert.match(cv, /if \(c\.target \|\| c\.asleep \|\| !DIGGERS_FACES\.has\(c\.roomId\)[^)]*\)\) \{ c\.workingAt = undefined; return; \}/, 'never in a fight');
   });
 
   check('a hungry stone-brood leaves its ground to hunt, a fed one stays, and it eats the polecat and the crayfish too (2026-11-26)', () => {

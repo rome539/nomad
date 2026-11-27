@@ -18,6 +18,7 @@ import { addGrudge, ate } from "./ai";
 import { lurkAway, type Blow } from "./styles";
 import { saveWell, steadyLit } from "./light";
 import { CAVE_GROUND } from "./cave-ground";
+import * as caveShift from "./cave-shift";
 import {
   HEARS_FAR, HEAR_ROOMS, FOOTFALL_HEED_ODDS, LIGHT_DAZZLED, DAZZLED_MULT, LIGHT_TAKERS, LANTERN_TAKERS,
   BREAKS_OFF, BREAK_OFF_AT, KILL_DRAGGERS, HOLD_BITERS, HOLD_BITE_ODDS, HOLD_STEP, HOLD_MAX,
@@ -255,7 +256,7 @@ export function act(z: ZoneDO, c: Creature, now: number): void {
 
 /** A digger come to a face on its round stops and works it, and the pick is heard. */
 function mines(z: ZoneDO, c: Creature, tmpl: MobTemplate, now: number): void {
-  if (c.target || c.asleep || !DIGGERS_FACES.has(c.roomId)) { c.workingAt = undefined; return; }
+  if (c.target || c.asleep || !DIGGERS_FACES.has(c.roomId) || caveShift.sentTo(z, c)) { c.workingAt = undefined; return; } // sent to a fall: no stopping to cut rock
   if (c.workingAt !== c.roomId) {
     c.workingAt = c.roomId;
     c.nextWanderAt = Math.max(c.nextWanderAt, now + randInt(MINE_MIN_MS, MINE_MAX_MS));

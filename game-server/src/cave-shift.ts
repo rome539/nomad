@@ -43,6 +43,11 @@ export const FALLS_MAX = 2;                                   // never more than
 export const FALL_EVERY_MIN_MS = 40 * 60_000, FALL_EVERY_MAX_MS = 120 * 60_000;
 export const FALL_SETTLE_MS = 90 * 60_000;                    // one no digger reaches settles open
 export const DIG_OUT_MIN_MS = 2 * 60_000, DIG_OUT_MAX_MS = 5 * 60_000;
+// CLEARING A FALL IS THE DIGGERS' FIRST WORK (2026-11-27): while a fall is down and
+// nobody is at it, the nearest digger free of a fight leaves his round and walks to
+// it, quick, one digger to a fall, anywhere in the cave, the upper cave's broken
+// ground too. A step every SENT_STEP_MIN..MAX on the way.
+export const SENT_STEP_MIN_MS = 10_000, SENT_STEP_MAX_MS = 20_000;
 const DIGGERS = new Set(["digger", "the-overman"]);
 
 // ---- THE WATER ---------------------------------------------------------------
@@ -87,7 +92,7 @@ export const STONE_MOVES = 2;                                 // closed and open
 export const STONE_EVERY_MIN_MS = 10 * 60_000, STONE_EVERY_MAX_MS = 20 * 60_000;
 
 // ---- STATE -------------------------------------------------------------------
-interface Fall { a: string; b: string; at: number; digBy?: string; digDone?: number }
+interface Fall { a: string; b: string; at: number; digBy?: string; digDone?: number; sent?: string }
 interface Ways { falls: Fall[]; nextFallAt: number; level: number; levelAt: number; shut: string[]; stone: Way[]; nextStoneAt: number }
 
 function state(z: ZoneDO, now: number): Ways {
@@ -221,6 +226,8 @@ function falls(z: ZoneDO, w: Ways, now: number): string[] | undefined {
       const d = z.creatures.get(f.digBy);
       if (!d || d.target || (d.roomId !== f.a && d.roomId !== f.b)) { f.digBy = undefined; f.digDone = undefined; }
     }
+    if (!f.digBy) send(z, w, f, now);
+    else f.sent = undefined;
     if (now - f.at >= FALL_SETTLE_MS && !f.digBy) clearFall(z, w, f, "settled");
   }
   if (now < w.nextFallAt) return undefined;
@@ -238,6 +245,34 @@ function falls(z: ZoneDO, w: Ways, now: number): string[] | undefined {
   }
   return [a, b];
 }
+/** The nearest free digger goes to a fall nobody is at, and keeps going till he is there. */
+function send(z: ZoneDO, w: Ways, f: Fall, now: number): void {
+  const free = (c: Creature | undefined): c is Creature => !!c && DIGGERS.has(c.templateId) && !c.target && c.hp > 0;
+  let d = f.sent ? z.creatures.get(f.sent) : undefined;
+  if (!free(d)) {
+    f.sent = undefined;
+    const taken = new Set(w.falls.map((x) => x.sent).filter(Boolean));
+    let best = Infinity;
+    for (const c of z.creatures.values()) {
+      if (!free(c) || taken.has(c.id)) continue;
+      const dist = Math.min(z.roomDist(c.roomId, f.a), z.roomDist(c.roomId, f.b));
+      if (dist < best) { best = dist; d = c; }
+    }
+    if (!d || best === Infinity) return;
+    f.sent = d.id;
+  }
+  d = z.creatures.get(f.sent!)!;
+  d.workingAt = undefined; // off the face: this comes first
+  if (d.nextWanderAt > now + SENT_STEP_MAX_MS) d.nextWanderAt = now + randInt(SENT_STEP_MIN_MS, SENT_STEP_MAX_MS);
+}
+
+/** The two rooms of the fall this digger has been sent to, or null. */
+export function sentTo(z: ZoneDO, c: Creature): [string, string] | null {
+  if (!DIGGERS.has(c.templateId)) return null;
+  const f = read(z)?.falls?.find((x) => x.sent === c.id && !x.digBy);
+  return f ? [f.a, f.b] : null;
+}
+
 function clearFall(z: ZoneDO, w: Ways, f: Fall, how: "dug" | "settled"): void {
   openWay(z, f.a, f.b);
   w.falls = w.falls.filter((x) => x !== f);

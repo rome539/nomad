@@ -1638,7 +1638,15 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
     // down into the keep (rome, 2026-07-14: the last watchman in the Vaulted
     // Hall). Off its route, every idle step now closes on the nearest post —
     // the rounds always find the wall again. Never strands.
-    if (mode === "wander" && patrolRoute(tmpl.id, creature.home) && !squads.ledBy(z, creature)) {
+    // A DIGGER SENT TO A FALL goes straight to it, round or no round (cave-shift.ts send).
+    const fallAt = mode === "wander" ? caveShift.sentTo(z, creature) : null;
+    if (fallAt) {
+      const far = (r: string) => Math.min(z.roomDist(r, fallAt[0]), z.roomDist(r, fallAt[1]));
+      const here = far(creature.roomId);
+      const closer = exits.filter((e) => far(e.to_room) < here);
+      if (closer.length) exits = closer;
+    }
+    if (mode === "wander" && !fallAt && patrolRoute(tmpl.id, creature.home) && !squads.ledBy(z, creature)) {
       const route = patrolRoute(tmpl.id, creature.home)!;
       if (!route.includes(creature.roomId)) {
         let best = Infinity, near = route[0];
@@ -1850,7 +1858,7 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
       const lead = squads.ledBy(z, creature);
       const toLead = squads.towardCaptain(z, creature, exits) ?? (lead && lead.roomId !== creature.roomId ? squadCross(lead.roomId) : undefined);
       if (toLead) exit = toLead; // fallen behind its captain: back to him first
-      else if (route && !squads.ledBy(z, creature)) {
+      else if (route && !fallAt && !squads.ledBy(z, creature)) {
         // A digger takes up the round where it stands (2026-11-26): all of them
         // starting from the first post walked the mine in one file.
         if (creature.patrolIdx === undefined && route === DIGGERS_ROUND) {
