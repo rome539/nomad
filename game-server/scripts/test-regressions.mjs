@@ -5812,6 +5812,49 @@ try {
     assert.equal(fed.length, 0, 'a stroke every few seconds, not every beat');
   });
 
+  check('a bat hanging from the roof never moves a few paces off or works the ground: the hanging bats have their own idle lines (2026-11-27)', () => {
+    const legs = /paces|works the ground|stands carefully|where it stands|favours its hurt side/;
+    for (const id of ['cave-bat', 'the-grizzled-bat', 'the-bat-mother']) {
+      const tmpl = { id, name: 'a bat', max_hp: 10 };
+      const seen = new Set();
+      for (let i = 0; i < 400; i++) {
+        for (const [hp, hungry] of [[10, false], [10, true], [3, false]]) {
+          const l = presenceLine({ templateId: id, hp, roomId: 'r' }, tmpl, hungry);
+          if (l) { seen.add(l); assert.ok(!legs.test(l), id + ': ' + l); }
+        }
+      }
+      assert.ok(seen.size >= 5, id + ' says something: ' + seen.size);
+    }
+  });
+
+  check('the diggers keep their spacing on the round: no walking it as a file out of a shared camp (2026-11-27)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const R = Function('return ' + zd.match(/export const DIGGERS_ROUND = (\[[\s\S]*?\]);/)[1])(), len = R.length;
+    const GAP = Number(zd.match(/export const DIGGER_GAP = (\d+);/)[1]);
+    assert.ok(GAP >= 2 && GAP * 13 <= len, 'thirteen of them fit the round at that gap');
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /if \(spaced\.some\(\(p\) => \(\(p - \(idx % len\)\) % len \+ len\) % len < DIGGER_GAP\)\) \{/, 'he waits while one stands close ahead');
+    assert.match(ai, /creature\.patrolIdx = at\.length \? at\.reduce\(\(b, i\) => \(gapTo\(i\) > gapTo\(b\) \? i : b\)/, 'he takes up the place furthest from the rest');
+    // the rule on the real round: thirteen out of their camps spread to the gap within the hour
+    const starts = ['the-cold-camp', 'the-cold-camp', 'the-deep-camp', 'the-deep-camp', 'the-deep-camp', 'the-deep-camp', 'the-first-camp', 'the-first-camp', 'the-first-stopping', 'the-pick-work', 'the-sleeping-shelf', 'the-stopping', 'the-stopping'];
+    const ds = [];
+    for (const st of starts) {
+      const at = R.flatMap((r, i) => (r === st ? [i] : []));
+      const gapTo = (i) => ds.reduce((m, d) => Math.min(m, ((d.at - i) % len + len) % len, ((i - d.at) % len + len) % len), len);
+      ds.push({ at: at.reduce((b, i) => (gapTo(i) > gapTo(b) ? i : b), at[0]), next: 0 });
+    }
+    let seed = 7; const rnd = (a, b) => { seed = (seed * 16807) % 2147483647; return a + (seed / 2147483647) * (b - a); };
+    for (let t = 0; t < 3600; t += 2) for (const d of ds) {
+      if (t < d.next) continue;
+      const idx = (d.at + 1) % len;
+      if (ds.some((o) => o !== d && ((o.at - idx) % len + len) % len < GAP)) { d.next = t + rnd(20, 40); continue; }
+      d.at = idx; d.next = t + rnd(45, 150);
+    }
+    const p = ds.map((d) => d.at).sort((a, b) => a - b);
+    const minGap = Math.min(...p.map((x, i) => ((p[(i + 1) % p.length] - x) % len + len) % len));
+    assert.ok(minGap >= GAP, 'an hour on, no two within the gap: ' + minGap);
+  });
+
   check('the lamp-man walks the cave: he stood in the Four Ways for good, and now walks any floor of it, never out (2026-11-27)', () => {
     const lm = { id: 'lm', templateId: 'the-lamp-man', roomId: 'the-four-ways', home: 'the-four-ways', hp: 90, grudges: [], target: null, nextWanderAt: 0 };
     assert.equal(walksAnyway(lm), true, 'aggressive and at home, he still walks');

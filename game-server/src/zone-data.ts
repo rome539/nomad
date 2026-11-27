@@ -2348,6 +2348,8 @@ export const DIGGERS_ROUND = [
 // THE FACES THEY WORK (2026-11-26): the rooms on the round whose words are rock being
 // cut. A digger who comes to one stops and works it a while, a stroke every so often,
 // and the ring of the pick carries to the rooms next door (cave.ts mines).
+export const DIGGER_GAP = 3; // a digger waits while another stands within this many posts ahead of him
+export const DIGGER_WAIT_MIN_MS = 20_000, DIGGER_WAIT_MAX_MS = 40_000;
 export const DIGGERS_FACES = new Set(["the-pick-work", "the-pick-marks", "the-cut-through", "the-wet-cut", "the-widened-squeeze"]);
 export const MINE_MIN_MS = 60_000, MINE_MAX_MS = 180_000;     // how long one stays at a face
 export const STRIKE_MIN_MS = 15_000, STRIKE_MAX_MS = 35_000; // between strokes of the pick
@@ -5280,6 +5282,29 @@ export const PRESENCE_LINES: Record<"animal" | "folk" | "hollow", { calm: string
   },
 };
 // ...and the families that have their own (the picture's poses, said out loud).
+// THE BATS HANG FROM THE ROOF (2026-11-27): the animal lines are a thing on its legs
+// ("moves a few paces off", "works the ground over", "stands carefully"), and a bat
+// hanging from the roof does none of it. Its own, calm, hungry and hurt.
+const HANGING_BAT = {
+  calm: [
+    "{A} shifts its grip on the roof, half opens a wing, and folds it again.",
+    "{A} turns its head toward you, upside down, and holds there, listening.",
+    "{A} gives a thin click, too high to be sure of, and goes still.",
+    "{A} creeps a little way along the roof on its hooked thumbs, and hangs again, a little further from you.",
+    "{A} draws its wings in tighter and keeps one small eye on you.",
+  ],
+  hungry: [
+    "{A} cannot settle on the roof. It shifts, and stretches a wing, and shifts again, restless for the dusk.",
+    "{A} turns its head this way and that, its ears working at every sound in the dark.",
+  ],
+  hurt: [
+    "{A} hangs badly, one wing held out from its body and not folded.",
+    "{A} shifts its grip, slowly, the way a thing does when moving costs it something.",
+  ],
+};
+export const PRESENCE_HANGING: Record<string, { calm: string[]; hungry: string[]; hurt: string[] }> = {
+  "cave-bat": HANGING_BAT, "the-grizzled-bat": HANGING_BAT, "the-bat-mother": HANGING_BAT,
+};
 export const PRESENCE_OWN: Record<string, string[]> = {
   "grave-hyena": [
     "{A} puts its nose to the ground and works it back and forth, over and over, as if the stones still had something in them.",

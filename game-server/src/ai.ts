@@ -44,7 +44,7 @@ import {
   PACK_HOLDERS, PREY_BREAK_ODDS, PREY_WORRY_MULT, HOLD_LINES, BREAK_LINES,
   CANTOR_SING_ODDS, CANTOR_SONG_MS, CANTOR_SONG_LINES, CANTOR_HELD_LINES, CANTOR_END_LINES,
   DRILL_ODDS, DRILL_RANK, DRILL_SOLDIERS, DRILL_LINES, DRILL_RANK_LINES, DEAD_WORK_ODDS, DEAD_WORK_LINES, BONE_DROP_ODDS, BONE_DROP_LINES, BONE_DROP_SOUND, GHOST_FLOCK_ODDS, GHOST_FLOCK_LINES, MILKER_GOATS, MILKING_ODDS, MILKING_LINES, MILKED_GOAT_LINES, CHAINMAN_COUNT_ODDS, CHAINMAN_LINES,
-  SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES, PRESENCE_ODDS, PRESENCE_ROOM_MS, PRESENCE_LINES, PRESENCE_OWN, FOLK, CUTTHROATS,
+  SUMMER_PEOPLE, SUMMER_DANCE_ODDS, SUMMER_DANCE_MS, SUMMER_DANCE_BEGIN_LINES, SUMMER_DANCE_JOIN_LINES, SUMMER_DANCE_DOG_LINE, SUMMER_DANCE_END_LINES, SUMMER_DANCE_SOUNDS, WITNESSED_ODDS, WITNESSED_LINES, PRESENCE_ODDS, PRESENCE_ROOM_MS, PRESENCE_LINES, PRESENCE_OWN, PRESENCE_HANGING, FOLK, CUTTHROATS,
   ALARM_CALLERS, ALARM_CALL_WORDS, ALARM_HEEDS, WINDS_UP, WINDUP_MS, LORE_LINE, ALARM_AVOID_MS, ALARM_DRAW_ODDS, PACK_CALLERS, PACK_CALL_ODDS,
   CROUCH_SETTLE_ODDS, CROUCH_SETTLE,
   MEAL_GRAZE, MEAL_ITEM, MEAL_CORPSE, SMALL_PREY, HUNGER_MAX, HUNGER_FLOOR, mealOf, FORAGE_FIND_MS, HUNT_SUCCESS, HUNT_SUCCESS_DEFAULT, HUNT_REST_MIN, HUNT_REST_MAX, CHASE_RUSH_MS, DARK_HUNT_MULT, DAY_BLIND_HUNTERS, DAY_BLIND_MULT, SIGHT_HUNTERS, SIGHT_DARK_MULT,
@@ -59,7 +59,7 @@ import {
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT, DEEP_HEART, KINGS_ROOMS_DEEP,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, bodyOf, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, FLIGHT_BATS, NOT_UNDERGROUND, MOB_ARMOR_TOP, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
-  FLIERS, RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, CAVE_WALKERS, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, DIGGERS_ROUND, HUNTS_OFF_GROUND, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  FLIERS, RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, CAVE_WALKERS, DIGGER_GAP, DIGGER_WAIT_MIN_MS, DIGGER_WAIT_MAX_MS, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, DIGGERS_ROUND, HUNTS_OFF_GROUND, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
@@ -1442,6 +1442,17 @@ export function winded(creature: Creature, now: number): boolean {
   return (creature.windedUntil ?? 0) > now;
 }
 
+/** Where the other diggers stand on the round (a post each), those at their post and free. */
+function diggersOnRound(z: ZoneDO, me: Creature): number[] {
+  const len = DIGGERS_ROUND.length, out: number[] = [];
+  for (const o of z.creatures.values()) {
+    if (o === me || o.patrolIdx === undefined || o.target || patrolRoute(o.templateId, o.home) !== DIGGERS_ROUND) continue;
+    const at = ((o.patrolIdx - 1) % len + len) % len;
+    if (DIGGERS_ROUND[at] === o.roomId && !caveShift.sentTo(z, o)) out.push(at);
+  }
+  return out;
+}
+
 export async function creatureMoves(z: ZoneDO, creature: Creature, now: number, mode: "wander" | "flee", silent: boolean, chased = false, fromFire = false): Promise<void> {
   // A SQUAD WALKS TOGETHER (squads.ts): a skeleton with its captain waits for him to
   // step, and when the captain steps, the ones that were with him come after.
@@ -1866,13 +1877,23 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
       else if (route && !fallAt && !squads.ledBy(z, creature)) {
         // A digger takes up the round where it stands (2026-11-26): all of them
         // starting from the first post walked the mine in one file.
+        // THEY KEEP THEIR SPACING (2026-11-27): diggers sharing a camp took up the same
+        // stretch and walked it as a file. A digger takes the place in his room furthest
+        // from the rest, and waits while another stands within DIGGER_GAP posts ahead.
+        const len = route.length;
+        const spaced = route === DIGGERS_ROUND ? diggersOnRound(z, creature) : [];
         if (creature.patrolIdx === undefined && route === DIGGERS_ROUND) {
           const at = route.flatMap((r, i) => (r === creature.roomId ? [i] : []));
-          creature.patrolIdx = at.length ? at[randInt(0, at.length - 1)] : randInt(0, route.length - 1);
+          const gapTo = (i: number) => spaced.reduce((m, p) => Math.min(m, Math.abs(((p - i) % len + len) % len), Math.abs(((i - p) % len + len) % len)), len);
+          creature.patrolIdx = at.length ? at.reduce((b, i) => (gapTo(i) > gapTo(b) ? i : b), at[randInt(0, at.length - 1)]) : randInt(0, len - 1);
         }
         let idx = creature.patrolIdx ?? 0;
-        if (route[idx % route.length] === creature.roomId) idx++;
-        const targetRoom = route[idx % route.length];
+        if (route[idx % len] === creature.roomId) idx++;
+        if (spaced.some((p) => ((p - (idx % len)) % len + len) % len < DIGGER_GAP)) {
+          creature.nextWanderAt = now + randInt(DIGGER_WAIT_MIN_MS, DIGGER_WAIT_MAX_MS);
+          return; // one close ahead: he lets the gap open
+        }
+        const targetRoom = route[idx % len];
         const toward = exits.find((e) => e.to_room === targetRoom) ?? squadCross(targetRoom);
         if (toward) { exit = toward; creature.patrolIdx = idx + 1; }
         // off-route: random steps until the rounds find it again
@@ -3806,10 +3827,12 @@ export function drill(z: ZoneDO, creature: Creature, now: number): void {
   const presenceRoomAt = new WeakMap<ZoneDO, Map<string, number>>();
   export function presenceLine(creature: Creature, tmpl: MobTemplate, hungry: boolean): string | null {
     const own = PRESENCE_OWN[creature.templateId];
+    const hang = PRESENCE_HANGING[creature.templateId]; // a bat on the roof: never the lines for a thing on its legs
     const kind = HOLLOW.has(creature.templateId) ? "hollow" : FOLK.has(creature.templateId) || CUTTHROATS.has(creature.templateId) ? "folk" : "animal";
     const set = PRESENCE_LINES[kind];
     let lines: string[];
-    if (creature.hp < tmpl.max_hp * 0.5 && set.hurt) lines = set.hurt;
+    if (hang) lines = creature.hp < tmpl.max_hp * 0.5 ? hang.hurt : hungry && chance(0.5) ? hang.hungry : hang.calm;
+    else if (creature.hp < tmpl.max_hp * 0.5 && set.hurt) lines = set.hurt;
     else if (hungry && set.hungry && chance(0.5)) lines = set.hungry;
     else lines = own ?? set.calm;
     return pick(lines).replace("{A}", cap(tmpl.name));
