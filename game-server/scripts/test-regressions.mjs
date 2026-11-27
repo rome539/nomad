@@ -5777,7 +5777,9 @@ try {
     const ways = { falls: [fall], nextFallAt: t0 + 1e9, level: 0, levelAt: t0, shut: [], stone: [], nextStoneAt: t0 + 1e9 };
     const z = { world: { exits, rooms, mobTemplates: new Map([['digger', { id: 'digger', name: 'a digger' }]]) }, events: new Map([['cave-ways', { phase: 'idle', data: JSON.stringify(ways) }]]),
       creatures: new Map([[near.id, near], [far.id, far], [fighting.id, fighting]]), openDoors: new Set(), roomDist,
-      bandOf: () => 'cave', roomFeed() {}, roomSound() {}, noteExitsChanged() {} };
+      bandOf: () => 'cave', roomFeed(room, line, _x, _l, cls) { fed.push([room, line, cls]); }, roomSound(room, line, excl, _c, _l, snd) { heard.push([room, line, excl, snd]); },
+      fxPose(room, id, pose) { posed.push([room, id, pose]); }, noteExitsChanged() {} };
+    const fed = [], heard = [], posed = [];
     await caveShift.tick(z, t0 + 1000);
     const sent = (c) => caveShift.sentTo(z, c);
     const expect = roomDist(near.roomId, 'the-breakdown') <= roomDist(far.roomId, 'the-breakdown') ? near : far;
@@ -5799,6 +5801,15 @@ try {
     const w = JSON.parse(z.events.get('cave-ways').data);
     assert.equal(w.falls[0].digBy, expect.id, 'he sets his pick to it');
     assert.equal(sent(expect), null, 'and is no longer walking to it');
+    // and the work is seen and heard: his swing drawn, a stroke where he stands, the ring through the rock and next door
+    fed.length = heard.length = posed.length = 0;
+    await caveShift.tick(z, t0 + 2000 + 5000);
+    assert.deepEqual(posed, [['the-pawed-sand', 'digger', 'attack']], 'his swing, as his attack');
+    assert.ok(fed.some(([r, l, c]) => r === 'the-pawed-sand' && /fallen rock/.test(l) && c === 'evt sfx-metal'), 'seen where he stands');
+    assert.ok(fed.some(([r, l, c]) => r === 'the-breakdown' && /fallen rock/.test(l) && c === 'evt sfx-rubble'), 'heard on the far side');
+    assert.ok(heard.some(([r, l, ex, sd]) => r === 'the-pawed-sand' && /\{dir\}/.test(l) && ex === 'the-breakdown' && sd.act === 'metal'), 'and next door');
+    fed.length = 0; await caveShift.tick(z, t0 + 2000 + 6000);
+    assert.equal(fed.length, 0, 'a stroke every few seconds, not every beat');
   });
 
   check('the lamp-man has no sweep frame; his wide blow is drawn as his attack (2026-11-26)', () => {
@@ -6301,7 +6312,13 @@ try {
     // the room says it instead, in the lore look the sky and weather wear (2026-11-27): a fall, and the water
     const fallLook = caveShift.lookLines({ ...wood, events: new Map([['cave-ways', ways(0, [{ a: 'the-breakdown', b: 'the-pawed-sand', at: 0 }])]]),
       world: { exits: new Map([['the-pawed-sand', [{ room_id: 'the-pawed-sand', dir: 'south', to_room: 'the-breakdown' }]]]), rooms: new Map() } }, 'the-pawed-sand');
-    assert.deepEqual(fallLook, ['\u0003The way south is choked to the roof with fallen rock.']);
+    assert.deepEqual(fallLook, ['\u0003The way south has collapsed on the other side, choked to the roof with fallen rock.']);
+    // and walking into it says it has collapsed, never the bare 'no way' of a wall (2026-11-27)
+    const fz = { ...wood, events: new Map([['cave-ways', ways(0, [{ a: 'the-breakdown', b: 'the-pawed-sand', at: 0 }])]]),
+      world: { exits: new Map([['the-pawed-sand', [{ room_id: 'the-pawed-sand', dir: 'south', to_room: 'the-breakdown' }]]]), rooms: new Map() } };
+    assert.match(caveShift.fallenLine(fz, 'the-pawed-sand', 'south'), /^The way south has collapsed on the other side\./);
+    assert.equal(caveShift.fallenLine(fz, 'the-pawed-sand', 'east'), null, 'any other way is the plain answer');
+    assert.match(readFileSync(new URL('../src/verbs.ts', import.meta.url), 'utf8'), /if \(!exit\) return z\.send\(session, caveShift\.fallenLine\(z, session\.roomId, dir\) \?\? "There is no way "/);
     const wet = caveShift.lookLines({ ...wood, events: new Map([['cave-ways', ways(2, [])]]), world: { exits: new Map(), rooms: new Map() } }, 'the-ford');
     assert.ok(wet.length === 1 && wet[0].startsWith('\u0003The wood\'s rain has come down into the cave'), JSON.stringify(wet));
     const gate = mk('gate'); gate.events.set('cave-ways', ways(2, [{ a: 'the-breakdown', b: 'the-pawed-sand', at: 0 }])); ask(gate);

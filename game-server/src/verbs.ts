@@ -1115,7 +1115,7 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = fals
   const world = z.world!;
   // An animal path is a way only to someone who has watched it used (paths.ts).
   const exit = (world.exits.get(session.roomId) ?? []).find((e) => e.dir === dir) ?? paths.knownPath(z, session, dir);
-  if (!exit) return z.send(session, "There is no way " + dir + " from here.");
+  if (!exit) return z.send(session, caveShift.fallenLine(z, session.roomId, dir) ?? "There is no way " + dir + " from here.");
   // THE DOOR FIRST (rome, 2026-10-22: he walked north and south out of his own
   // den without ever opening it). Calm, you go out through the door ('out'),
   // the way you came in. With something in there with you, a direction is

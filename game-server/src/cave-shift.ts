@@ -48,6 +48,9 @@ export const DIG_OUT_MIN_MS = 2 * 60_000, DIG_OUT_MAX_MS = 5 * 60_000;
 // it, quick, one digger to a fall, anywhere in the cave, the upper cave's broken
 // ground too. A step every SENT_STEP_MIN..MAX on the way.
 export const SENT_STEP_MIN_MS = 10_000, SENT_STEP_MAX_MS = 20_000;
+// THE DIGGING IS SEEN AND HEARD (2026-11-27): a stroke every STRIKE_MIN..MAX while he
+// is at it, his swing drawn, the ring of it on both sides of the fall and next door.
+export const CLEAR_STRIKE_MIN_MS = 6_000, CLEAR_STRIKE_MAX_MS = 12_000;
 const DIGGERS = new Set(["digger", "the-overman"]);
 
 // ---- THE WATER ---------------------------------------------------------------
@@ -92,7 +95,7 @@ export const STONE_MOVES = 2;                                 // closed and open
 export const STONE_EVERY_MIN_MS = 10 * 60_000, STONE_EVERY_MAX_MS = 20 * 60_000;
 
 // ---- STATE -------------------------------------------------------------------
-interface Fall { a: string; b: string; at: number; digBy?: string; digDone?: number; sent?: string }
+interface Fall { a: string; b: string; at: number; digBy?: string; digDone?: number; sent?: string; strikeAt?: number }
 interface Ways { falls: Fall[]; nextFallAt: number; level: number; levelAt: number; shut: string[]; stone: Way[]; nextStoneAt: number }
 
 function state(z: ZoneDO, now: number): Ways {
@@ -217,14 +220,15 @@ function falls(z: ZoneDO, w: Ways, now: number): string[] | undefined {
     if (!f.digBy) {
       const d = [...z.creatures.values()].find((c) => DIGGERS.has(c.templateId) && !c.target && (c.roomId === f.a || c.roomId === f.b));
       if (d) {
-        f.digBy = d.id; f.digDone = now + randInt(DIG_OUT_MIN_MS, DIG_OUT_MAX_MS);
+        f.digBy = d.id; f.digDone = now + randInt(DIG_OUT_MIN_MS, DIG_OUT_MAX_MS); f.strikeAt = now + randInt(2000, 4000);
         d.nextWanderAt = Math.max(d.nextWanderAt, f.digDone);
         const name = cap(z.world!.mobTemplates.get(d.templateId)?.name ?? "a digger");
         z.roomFeed(d.roomId, `${name} sets his pick to the fallen rock and starts to clear it, a stone at a time.`, undefined, false);
       }
     } else {
       const d = z.creatures.get(f.digBy);
-      if (!d || d.target || (d.roomId !== f.a && d.roomId !== f.b)) { f.digBy = undefined; f.digDone = undefined; }
+      if (!d || d.target || (d.roomId !== f.a && d.roomId !== f.b)) { f.digBy = undefined; f.digDone = undefined; f.strikeAt = undefined; }
+      else if (now >= (f.strikeAt ?? 0)) { strike(z, f, d); f.strikeAt = now + randInt(CLEAR_STRIKE_MIN_MS, CLEAR_STRIKE_MAX_MS); }
     }
     if (!f.digBy) send(z, w, f, now);
     else f.sent = undefined;
@@ -245,6 +249,23 @@ function falls(z: ZoneDO, w: Ways, now: number): string[] | undefined {
   }
   return [a, b];
 }
+/** One stroke at the fallen rock: seen where he stands, heard through it and next door. */
+function strike(z: ZoneDO, f: Fall, d: Creature): void {
+  const name = cap(z.world!.mobTemplates.get(d.templateId)?.name ?? "a digger");
+  const far = d.roomId === f.a ? f.b : f.a;
+  z.fxPose(d.roomId, d.templateId, "attack");
+  z.roomFeed(d.roomId, pick([
+    `${name} drives his pick into the fallen rock and drags a stone clear.`,
+    `${name} swings his pick into the fallen rock, and broken stone rattles down around his boots.`,
+    `${name} levers a slab loose from the fallen rock and lets it fall aside.`,
+  ]), undefined, false, "evt sfx-metal");
+  z.roomFeed(far, pick([
+    "From the far side of the fallen rock comes the ring of a pick, and a stone dragged clear.",
+    "Behind the fallen rock a pick strikes stone, and loose rock slides and settles.",
+  ]), undefined, false, "evt sfx-rubble");
+  z.roomSound(d.roomId, "A pick rings on fallen rock {dir}, and stones are dragged aside.", far, undefined, false, { mob: d.templateId, act: "metal" });
+}
+
 /** The nearest free digger goes to a fall nobody is at, and keeps going till he is there. */
 function send(z: ZoneDO, w: Ways, f: Fall, now: number): void {
   const free = (c: Creature | undefined): c is Creature => !!c && DIGGERS.has(c.templateId) && !c.target && c.hp > 0;
@@ -346,7 +367,7 @@ function stone(z: ZoneDO, w: Ways, now: number): void {
 let parsedFor = "", parsed: Ways | null = null;
 /** The saved state, read once per change (asked on every creature step). */
 function read(z: ZoneDO): Ways | null {
-  const data = z.events.get("cave-ways")?.data;
+  const data = z.events?.get("cave-ways")?.data;
   if (!data) return null;
   if (data !== parsedFor) { parsedFor = data; try { parsed = JSON.parse(data) as Ways; } catch { parsed = null; } }
   return parsed;
@@ -379,7 +400,7 @@ export function lookLines(z: ZoneDO, roomId: string): string[] {
     const other = f.a === roomId ? f.b : f.b === roomId ? f.a : null;
     if (!other) continue;
     const dir = dirOf(z, roomId, other);
-    out.push(`${LORE_LINE}The way ${dir ?? "through"} is choked to the roof with fallen rock.`); // the lore look, as the sky and weather wear it
+    out.push(`${LORE_LINE}The way ${dir ?? "through"} has collapsed on the other side, choked to the roof with fallen rock.`); // the lore look, as the sky and weather wear it
   }
   for (const [a, b] of w.stone ?? []) {
     const other = a === roomId ? b : b === roomId ? a : null;
@@ -392,6 +413,15 @@ export function lookLines(z: ZoneDO, roomId: string): string[] {
   else if (level >= 2) out.push(LORE_LINE + "The wood's rain has come down into the cave, and the water stands over the floor here above the knee.");
   else if (level === 1) out.push(LORE_LINE + "The wood's rain has come down into the cave, and the water stands over the floor here a hand deep.");
   return out;
+}
+
+/** Walking into a choked way: it has collapsed, said so, not "no way" (2026-11-27). */
+export function fallenLine(z: ZoneDO, roomId: string, dir: string): string | null {
+  for (const f of read(z)?.falls ?? []) {
+    const other = f.a === roomId ? f.b : f.b === roomId ? f.a : null;
+    if (other && dirOf(z, roomId, other) === dir) return `The way ${dir} has collapsed on the other side. Fallen rock fills it to the roof, and there is no getting through.`;
+  }
+  return null;
 }
 
 /** The line a person gets walking into a room full of water. */
