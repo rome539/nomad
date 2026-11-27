@@ -5760,6 +5760,13 @@ try {
     assert.match(cs, /if \(HOLLOW\.has\(c\.templateId\) \|\| SENTINELS\.has\(c\.templateId\) \|\| ROOTED\.has\(c\.templateId\)\) continue;\n\s+c\.asleep = false; c\.sleepUntil = undefined;\n\s+await creatureMoves\(z, c, now, "flee", false\);/, 'the living wake and bolt; the dead do not care');
   });
 
+  check('the lamp-man has no sweep frame; his wide blow is drawn as his attack (2026-11-26)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const row = pub.match(/\n  "the-lamp-man": +(\{ n: [^\n]*?\} \})/)[1];
+    assert.ok(!row.includes('"sweep"'), row);
+    assert.match(row, /n: 8,/, 'eight frames');
+  });
+
   check('the stone-hog feeds the broods: a herd grazer on the dressed stone, under the brood, with a haunch that smokes (mig 415, 2026-11-26)', () => {
     const mig = readFileSync(new URL('../migrations/415_the_stone_hogs.sql', import.meta.url), 'utf8');
     assert.match(mig, /\('stone-hog', 'a stone-hog',\n[^\n]*\n\s+2, 24, 2, 4, 600, 0, 'stone-hog-haunch', 0\.6,/, '24hp 2-4, leaves its haunch');
