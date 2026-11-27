@@ -6242,6 +6242,63 @@ try {
     assert.match(readFileSync(new URL('../src/gate.ts', import.meta.url), 'utf8'), /wanted \$\{isNight\(\) \? "tonight" : "today"\} — /);
   });
 
+  check('no keeper tells what the cave is doing, its water or its falls: nobody above can know it (2026-11-27)', () => {
+    const said = [];
+    const ways = (level, falls) => ({ phase: 'idle', data: JSON.stringify({ falls, level, levelAt: 0, shut: [], stone: [], nextFallAt: 0, nextStoneAt: 0 }) });
+    const mk = (region) => ({ world: { rooms: new Map([['g', { region }]]) }, sessions: new Map(), events: new Map(),
+      bandOf: () => region, send: (_s, l) => said.push(l), chronicle: new Map(), regionOf: () => 'gate' });
+    const ask = (z) => { said.length = 0; for (let i = 0; i < 300; i++) { const session = { roomId: 'g', keeperDueAt: 1, keeperTold: new Map(), pubkey: 'c' + i + Math.random() }; try { keeperTells(z, session, Date.now()); } catch { /* */ } } };
+    const water = /does not stop at the ground|fill to the roof, the narrow ones/, fall = /roof has come down somewhere in the cave|A fall chokes a passage/;
+    const wood = mk('wood');
+    wood.events.set('cave-ways', ways(0, [])); ask(wood);
+    assert.ok(!said.some((l) => water.test(l) || fall.test(l)), 'a dry cave with its roof up is not news');
+    wood.events.set('cave-ways', ways(2, [{ a: 'the-breakdown', b: 'the-pawed-sand', at: 0 }])); ask(wood);
+    assert.ok(said.length > 0, 'the keeper spoke');
+    assert.ok(!said.some((l) => water.test(l) || fall.test(l)), 'not the water and not a fall, even while both are so');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.ok(!/"cave-(fall|water)"/.test(zd), 'no cave arc in the keeper\'s tellings');
+    const gate = mk('gate'); gate.events.set('cave-ways', ways(2, [{ a: 'the-breakdown', b: 'the-pawed-sand', at: 0 }])); ask(gate);
+    assert.ok(!said.some((l) => water.test(l) || fall.test(l)), 'no keeper but the wood\'s knows the cave');
+    // and the bat-mother's book matches her picture: fat, wings round her, no young on her
+    const det = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    const bm = det.match(/"the-bat-mother": "([^"]*)"/)[1];
+    assert.ok(!/young|cling|under her wings/.test(bm), bm);
+    assert.match(bm, /North Roost and the East Roost/);
+  });
+
+  check('every creature has lore of its own, and no rare blood reads its line\'s (2026-11-27)', () => {
+    // 45 had none (the whole mountain, the cave lion, the lynx, the wood stag, the rat king, the fever rat,
+    // the chainman, the sea cave's crabs), and the cave's rare bloods carried their line's text word for word
+    const det = readFileSync(new URL('../src/detail.ts', import.meta.url), 'utf8');
+    const s = det.slice(det.indexOf('export const MOB_LORE')); const body = s.slice(0, s.indexOf('\n};'));
+    const L = {}; for (const m of body.matchAll(/"?([a-z0-9-]+)"?:\s*"((?:[^"\\]|\\.)*)"/g)) L[m[1]] = m[2];
+    const pairs = [];
+    for (const f of readdirSync(new URL('../migrations', import.meta.url)).sort()) {
+      const sql = readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8');
+      for (const blk of sql.matchAll(/INSERT[^;]*?mob_variants[^;]*?VALUES([\s\S]*?);/gi))
+        for (const r of blk[1].matchAll(/\(\s*'([a-z0-9-]+)'\s*,\s*'([a-z0-9-]+)'/g)) pairs.push([r[1], r[2]]);
+    }
+    assert.ok(pairs.length > 50, 'rare bloods read: ' + pairs.length);
+    for (const [base, rare] of pairs) {
+      assert.ok(L[rare], rare + ' has no lore');
+      assert.ok(L[base], base + ' has no lore');
+      assert.notEqual(L[rare], L[base], rare + ' reads its line\'s lore');
+    }
+    for (const id of ['cave-lion', 'lynx', 'wood-stag', 'eagle-owl', 'rat-king', 'fever-rat', 'the-chainman', 'the-great-crab', 'the-drake',
+      'glutton', 'hill-wolf', 'red-hind', 'mountain-hare', 'ptarmigan', 'mountain-chough', 'carrion-vulture', 'brooding-vulture', 'eyrie-holder',
+      'bone-breaker', 'hill-eagle', 'hill-fox', 'snow-fox', 'ermine', 'wildcat', 'stone-adder', 'a-fold-dog', 'the-herd', 'the-milker', 'stone-hog'])
+      assert.ok(L[id], id + ' has no lore');
+    // the crawler is drawn pale and four-legged: its words say so, never boneless, and its book names nothing it
+    // could be matched to (the player works that out)
+    const mig = readFileSync(new URL('../migrations/416_the_crawlers_described.sql', import.meta.url), 'utf8');
+    assert.match(mig, /SET description = 'Blind, pale, and low on four legs, the colour of things kept from the light\./);
+    for (const id of ['pale-crawler', 'pale-stalker']) {
+      assert.ok(!/boneless|brood|sleeper|cave|wood|Hollow/i.test(L[id]), id + ': ' + L[id]);
+    }
+    assert.match(L['pale-crawler'], /small even teeth/);
+    assert.match(L['pale-stalker'], /hard to see where it ends/);
+  });
+
   check('the cave lion walks its ground lurking or not, stalks when hungry, and goes back to lurking (2026-11-12)', () => {
     // it sat in the Dry Bones: aggressive and at home it never wandered, and once seen it never moved again
     const lion = { id: 'L', templateId: 'cave-lion', roomId: 'home', home: 'home', hunger: 0 };

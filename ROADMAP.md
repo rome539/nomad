@@ -5,6 +5,9 @@ which carry their own reasoning — this file is what is NOT built yet, plus the
 rulings that bind whatever gets built next. If an entry here has shipped, delete
 it; the commit is the record.*
 
+*Every entry below was checked against the code on 2026-11-27; anything found
+shipped was taken out or marked. The cave's own plan lives in `cave-plan.md`.*
+
 *Guiding principle (the 2026-07-03 simulation pivot): build systems that create
 stories, not scripted content. The interface is friendly; the world is not.*
 
@@ -67,24 +70,30 @@ everything.*
 - **Stance in the status bar** — RULED NO (rome, 2026-07-17): the bar stays as
   it is; stance lives in the doll and the typed reads. Closed; don't re-propose.
 
-## The world as built *(checked 2026-11-03)*
+## The world as built *(checked 2026-11-27)*
 
-The surface expansion is done. Hand-authored, not generated (rome ruled
-procedural out: the rooms read well *because* they're written); the pre-growth
-baseline is the git tag `world-v1-110`.
+The surface expansion is done, and the cave under the wood shipped 2026-11-24.
+Hand-authored, not generated (rome ruled procedural out: the rooms read well
+*because* they're written); the pre-growth baseline is the git tag `world-v1-110`.
 
-**Live: 1,528 rooms, 736 spawns, 14 gates, 144 creature kinds, 401 items.**
+**Rooms in the room files** (`regions/*.rooms`, counted 2026-11-27; the
+fortress's first rooms predate the files and are not in this count):
 
 | region | rooms |
 |---|---|
-| the mountain | 402 |
-| the wood | 332 |
-| the road (west and east) | 249 |
-| the crossing | 239 |
-| the fortress | 118 |
-| the open ground | 82 |
-| the den ground | 60 |
-| the deep | 46 |
+| the mountain | 458 |
+| the wood | 435 |
+| the crossing | 267 |
+| the road (west and east) | 240 |
+| the cave | 234 |
+| the open ground | 78 |
+| the den ground (Assart End) | 69 |
+| the deep | 65 |
+| the halls | 30 |
+
+Every room has a floor (`map_z`, mig 365): 1 the overworks, 0 the ground, -1
+the halls, -2 the warrens, -3 the deep; the cave is its own four floors under
+the wood.
 
 The summit's animal is the drake (`the-drake`, 150 hp; `the-pale-drake` 160).
 Creatures are saved one blob per shard (`b:creatures:<shard>`, simstore.ts),
@@ -115,23 +124,35 @@ own rooms don't have to match the map, and scripts/check-map-true.mjs exempts
 them. Every other compass exit points the way it says (3,762 checked live,
 2026-11-03).
 
-**Capacity** *(measured 2026-07 at ~400 rooms; not re-measured at 1,528)*:
+**Capacity** *(measured 2026-07 at ~400 rooms; not re-measured since)*:
 nothing was near a limit then. DO duration is the one real ceiling and the
 calendar caps it: one zone running 24/7 lands at ~81% of the included
 allowance. The world only ticks while a socket is connected.
 
 ## Next up (unblocked)
 
+- **The cave's last four events** *(designed 2026-11-20, cave-plan.md "Events")*.
+  Built: the water rising with the wood's rain, the bats going out at dusk, the
+  roof falls (and, beyond the plan, the bottom floor's shifting stone). Not
+  built: **the glow goes out** (the middle's glow-worms and foxfire die back
+  for a spell), **the work** (every digger leaves his camp for the stopping,
+  the camps stand unguarded), **the breath** (the Deep's exhale reaches the
+  cave; today `deepRoom` is the deep region only), and **the stone stirs**
+  (rare: cold air out of every mouth and up under every fever grave, frost on
+  the graves that day, the brood up into the middle). Evidence only.
+
 - **Forge: cut some recipes** *(rome, 2026-07-15)*. Scrap, smelting and
   forge-only gear have all shipped (migs 091, 092, 254, 265). What is left:
   the slate has grown to 73 recipes, and the junk end could be trimmed so it
   reads as a craft menu rather than a pile of starter-tier duplicates.
 
-- **The Hunter / Nemesis** *(now the top of the stack)* — targeted pressure:
-  the world sends a named predator after the too-successful player, who has to
-  get out ahead of it. Reuses grudges + `curious` tracking + the blood-on-killer
-  scent primitives that PvP just proved. Also the natural long-term raid clock
-  for the shallow keep. (rome loves this one.)
+- **The Nemesis** *(rome loves this one)* — targeted pressure: the world picks
+  a named predator and sends it after the too-successful player, who has to
+  get out ahead of it. Half of it shipped as **the man-hunter** (manhunter.ts,
+  2026-11-14): an animal born to hunt people, or taught by killing one, comes
+  for the nearest nomad once hungry, with its pack. What is NOT built is the
+  targeting: nothing picks a player because they are doing too well, and
+  nothing is sent across regions after them.
 - **Shallows heat map** — mobs harden where they're farmed (+1–2 HP, not
   damage), decaying back for fresh players. Not built. (Related, shipped: the
   HUNTED region condition, conditions.ts, makes the prey wary where players
@@ -151,6 +172,8 @@ allowance. The world only ticks while a socket is connected.
   and **map-blackout of dark rooms** — a room you've only seen dark shouldn't sit
   on your HUD map. Neither built.
 - **Storied gear v2 and THE SCAR are REJECTED.** Do not build or offer either.
+- **Zaps are REJECTED** (rome, 2026-11-27): no Lightning zaps in the game, and no
+  zap-triggered easter egg. Do not offer them again.
 
 ## Watch list (don't fix until play says so)
 
@@ -164,8 +187,6 @@ allowance. The world only ticks while a socket is connected.
 - **The rusted pick is a scrap faucet** — the renewable pick can be farmed for
   scrap (take, salvage, wait). Harmless at current scrap prices; if the scrap
   economy tightens, levers: salvage yield 0/1, slower regrow, or fence-only.
-- **The undertow-grasper** (anti-turtle) — build only if the pavise-turtle
-  proves too safe now that the shield wall costs a swing tax.
 - **Shield-wall drag (0.85) + block cap (30%)** — the fresh tuning. Watch
   whether the wall-turtle is now a real trade-off or still dominant; the audit
   says murder-vs-tank became a coin-flip, but play is the judge.
@@ -228,7 +249,6 @@ Built as if the world were already full (rome, 2026-07-13). PvP has shipped
 (by choice at a gate, mig 359), and so has trade between wanderers (`deal`,
 trade.ts).
 
-- **Zaps** — `nostr-lightning/` is on the shelf.
 - **The black market / player trade layer** — hoarded gear re-enters
   circulation, prices float on supply/demand (Tarkov's flea). Completes the
   emergent-scarcity model; the hard currency for prices to settle in already
@@ -302,6 +322,13 @@ Directions rome likes and wants held. Design only; no code until he says go.
   texts unchanged.
   **Decided 2026-11-05: they went to different lands**, out of the country
   in different directions, not all one way (the roads can carry it).
+  **Decided 2026-11-20 and built: the cave under the wood is the way down to
+  where the fever came up from** (cave-plan.md, "The story"): the holding sent
+  its people down after the cold air to wall it up, and they stopped mid-stroke
+  (the diggers); the bottom is the same dressed stone, laid by people older
+  than the holding, and the same as the Deep's older stone; the sleeper lies on
+  it and nothing ever says what it is. The pale crawlers of the Deep share the
+  brood's body by quiet evidence in their lore only, never named (2026-11-27).
   Still open: who took the names off, whether the keepers are one order, what the
   iron doors are, one fixed "how long ago" (room texts disagree: two hundred
   years, generations, a very long time), and who the player is.
@@ -327,7 +354,7 @@ Directions rome likes and wants held. Design only; no code until he says go.
   3. **A northern road** from the wood's north side across the north country
      to the mountain's foot by the crossing, never over higher ground: two
      ways home from either end.
-  4. **Floors. BUILT 2026-11-03 (mig 365), not yet shipped.** Every room has
+  4. **Floors. SHIPPED (mig 365).** Every room has
      a floor: 1 the overworks, 0 the ground, -1 the halls, -2 the warrens, -3
      the deep, taken from the stratum each room was already in rather than
      from the stairs. The halls, warrens and deep moved north to sit under the
@@ -342,7 +369,8 @@ Directions rome likes and wants held. Design only; no code until he says go.
      mountain's height stays ground you climb.
   5. **About 1,600 new rooms** (rome's pick): half the density of the wood and
      the mountain, open country with places dotted across it rather than a
-     maze in every square. The world goes from 1,528 to about 3,100.
+     maze in every square. (The world was 1,528 rooms when this was planned;
+     the cave and the mountain's growth have added to it since.)
   6. **What the new ground is for:** settlements wherever three or more dens
      cluster, in any region; old places people left to find and rebuild (the
      holding, the hamlet, the old growth already exist, the new country adds
@@ -536,18 +564,9 @@ Directions rome likes and wants held. Design only; no code until he says go.
   right). What's left, roughly ordered by how much they reuse
   existing plumbing vs. need new:
   - **Armor-piercing bite** — mirrors weapon `pierce`; cheapest gap to close.
-  - **Sweep attack** — hits everyone in the room on its swing, not just its
-    target (mirrors weapon `sweep`); nothing currently lets a mob hit more
-    than one player at once.
   - **Regenerates unless it's bleeding** — heals back damage each tick unless
     an open wound (bleed/pierce landed) shuts that off; forces a weapon-class
     choice instead of just being a bigger HP bar.
-  - **Corrosive/degrading hit** — eats condition off worn gear
-    (`rollGearCondition`'s existing 0–100 number) instead of, or alongside,
-    HP damage. Real stakes without touching combat math.
-  - **Alarm call** — being hit (not just aggroed) alerts same-species
-    creatures elsewhere in the zone, pulling their wander toward its room; a
-    pack that actually musters instead of every mob living in isolation.
   - **Debuff on a landed heavy hit, never a disable** — a visible, temporary
     softening of your next swing (damage or accuracy), reworked from a
     fear/rout idea specifically to respect the standing law that no
@@ -556,9 +575,6 @@ Directions rome likes and wants held. Design only; no code until he says go.
   - **Eats an item, not you** — destroys something specific out of your pack
     (a ration, a dressing, your only light) rather than stealing-and-dropping
     like the existing thief. Makes it a threat to plan around, not tank.
-  - **Marks you** — leaves a scent that makes every other creature in the
-    zone more likely to notice you for a while, separate from the wound-scent
-    mechanic just shipped (this one fires without you being hurt at all).
   - **Silences you** — mutes shout/talk for a duration; attacks your social
     tools (calling for help, coordinating) rather than your body.
   - **Swaps places with you** — a blink/displace trading your position with
@@ -566,7 +582,10 @@ Directions rome likes and wants held. Design only; no code until he says go.
     off from your own exit.
   *(Since built, and so off this list: splits on death and light-snuffing, as
   mob traits; dragging you off, by the drowned ferryman's rope; and closing a
-  room's exits, by the pack standing in the gaps, `ai.heldExits`.)*
+  room's exits, by the pack standing in the gaps, `ai.heldExits`; the sweep,
+  `SWEEPERS`; the corroding hit, `CORRODERS` (the verdigris-thing); marking
+  you, `MARKERS` (the toll clerk); and calling the pack in a long fight,
+  `PACK_CALLERS`.)*
 
 - **Far-world write cost — mostly already solved; small residual lever** *(rome,
   2026-07-20 — investigated the "lots more mobs" scaling question, found the win
@@ -578,8 +597,8 @@ Directions rome likes and wants held. Design only; no code until he says go.
   throttle + 5-min full flush persist churn with bounded staleness. Combined with
   the bubble freezing far creatures outright, **idle far regions already cost
   ~nothing on writes** — the headroom was there for ~400 rooms / ~800 mobs when
-  this was measured (2026-07); the world is now 1,528 rooms and 736 spawns,
-  with creatures saved per shard. The ONLY residual lever, and it's small: the
+  this was measured (2026-07); the world is several times that now, with
+  creatures saved per shard. The ONLY residual lever, and it's small: the
   30s ecology sweep still produces genuine STRUCTURAL far events (a mob changes
   rooms — `WANDER_MIN/MAX_MS` 45–150s — a birth, a death) that dirty legitimately.
   To cut those you'd freeze/slow far-world WANDER (unobserved mobs have no reason
@@ -590,8 +609,11 @@ Directions rome likes and wants held. Design only; no code until he says go.
   coarser far dynamics, NOT visible staleness — entry catch-up is capped by
   `CATCHUP_CAP_MS`). See [[nomad-scaling-ceiling]].
 
-- **System-hook gear — seven approved pieces** *(rome, 2026-07-19: approved all
-  seven, to be noted down)*. The anti-reskin law behind them: **every new
+- **System-hook gear — seven approved pieces, five left** *(rome, 2026-07-19:
+  approved all seven, to be noted down)*. Two have since shipped as gear traits
+  in the roll pool rather than single pieces: the rain-proof light is the
+  **hooded** cloak ("a flame lives in the rain"), and the theft counter is the
+  **strapped** cloak or armour (the pack lashed down; no thief lifts it). The anti-reskin law behind them: **every new
   piece hooks a SYSTEM the sim already runs, never just a stat** — if the pitch
   is "like X but +1," it's a reskin; if it changes how a live system reads you,
   it's an item. Grid method: slots × systems (noise/load, light, traces, scent,
@@ -600,14 +622,10 @@ Directions rome likes and wants held. Design only; no code until he says go.
     no counter today).
   - **Cloak × scent** — a tanner's cloak that masks your blood-drip from the
     scavengers' nose (SCENT_FRESH/drip trails are live; nothing beats them).
-  - **Cloak × weather** — oilcloth that keeps a torch lit in the rain
-    (rainSoaksTorch kills them today).
   - **Helm × sleep** — a helm that muffles the bell for its wearer
     (bellWakeMult exists; no counter).
   - **Body × hunger** — a pack-liner that slows carried-food rot (the rot
     clock exists; FOOD_KEEPS is the only escape).
-  - **Weapon × theft** — a strapped blade the cutpurse can't snatch (STRAPPED
-    exists for exactly one item, the baldric).
   - **Shield × light** — a mirrored boss that spooks fire-fearing mobs
     (dreadsFire exists, dormant-ish).
   Guardrails when building: stat ladders stay ≤3 tiers/slot/weight-class;
@@ -646,7 +664,7 @@ Directions rome likes and wants held. Design only; no code until he says go.
   should be told**, the way the gatehouse says the opposite. Fix it by
   disclosing it, not by muting it.
 - **World events — the long weather (days-to-a-week)** *(design, rome
-  2026-07-15; timed for JUST BEFORE the ~1000-room map expansion)*. Distinct
+  2026-07-15)*. Distinct
   from the shipped ROOM events (events.ts — tide/fog/weather, minutes-scale,
   ONE room): these are **world-scale and persist DAYS to a WEEK** — a condition
   that colours the WHOLE dungeon for a stretch: a siege, a plague, a drought, a
@@ -689,15 +707,12 @@ Directions rome likes and wants held. Design only; no code until he says go.
   inputs past a lag horizon are rejected, so a returning player watches the world
   replay first.
   Also: drop or hard-trim `assets.ts` (3.4MB of base64). Scale when pinned:
-  761 rooms; now 1,528 rooms, 3,762 exits, 401 items, 144 creature kinds. Size
-  is not the blocker.
+  761 rooms; it is well past that now. Size is not the blocker.
   **A sibling, not a port**, sharing the engine with nomadmud.com. Weeks of work,
   and the first step is making the engine not care whether its host is a Durable
   Object or a browser tab.
 ## Easter eggs (parked; an egg in a help file stops being an egg)
 
-- **Zap-triggered whispers** — zap a shrine 21 / 2100 / 21000 sats and
-  something answers. Real value in, a wink out. Only NOMAD can do this.
 - **Root-npub recognition** — if rome's own npub ever walks the Door, the
   dungeon knows its maker. Private, unfakeable.
 - **A too-deep room** at the literal bottom, reached by an undocumented exit —

@@ -426,8 +426,8 @@ every room sits on the square its doors say, the stairs drop almost straight dow
     weather kept off their floor. The drowned stone is drawn dry and its water laid over it (CAVE_STANDING_WATER:
     the Black Water Hall 1, the Drowned Flags 2; FLOOD_GROUND "stone-drowned" dim). Check the look in the preview.
   - Forage is grazing ground for animals: it comes with the creatures (step 3), with the mouths refills surface at.
-  - The keeper's tale: the cave has no gate, so no keeper of its own; its arcs (the events) are what the wood's
-    keepers will tell. Comes with the events.
+  - The keeper's tale: the cave has no gate, so no keeper of its own, and no keeper anywhere tells what the
+    cave is doing, its water, its falls or any of its events (decided 2026-11-27): nobody above can know it.
   - ~~The map's level~~ nothing to do: the map draws by each room's floor (map_z), and the cave is already four
     floors down (-1 to -4), each its own sheet. MAP_BAND_OF only laid out the retired crude map.
 - **Migrations (written, not applied to production):** `407_the_woods_new_ways_to_the_cave.sql` (applied to the
