@@ -6257,6 +6257,12 @@ try {
     assert.ok(!said.some((l) => water.test(l) || fall.test(l)), 'not the water and not a fall, even while both are so');
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
     assert.ok(!/"cave-(fall|water)"/.test(zd), 'no cave arc in the keeper\'s tellings');
+    // the room says it instead, in the lore look the sky and weather wear (2026-11-27): a fall, and the water
+    const fallLook = caveShift.lookLines({ ...wood, events: new Map([['cave-ways', ways(0, [{ a: 'the-breakdown', b: 'the-pawed-sand', at: 0 }])]]),
+      world: { exits: new Map([['the-pawed-sand', [{ room_id: 'the-pawed-sand', dir: 'south', to_room: 'the-breakdown' }]]]), rooms: new Map() } }, 'the-pawed-sand');
+    assert.deepEqual(fallLook, ['\u0003The way south is choked to the roof with fallen rock.']);
+    const wet = caveShift.lookLines({ ...wood, events: new Map([['cave-ways', ways(2, [])]]), world: { exits: new Map(), rooms: new Map() } }, 'the-ford');
+    assert.ok(wet.length === 1 && wet[0].startsWith('\u0003The wood\'s rain has come down into the cave'), JSON.stringify(wet));
     const gate = mk('gate'); gate.events.set('cave-ways', ways(2, [{ a: 'the-breakdown', b: 'the-pawed-sand', at: 0 }])); ask(gate);
     assert.ok(!said.some((l) => water.test(l) || fall.test(l)), 'no keeper but the wood\'s knows the cave');
     // and the bat-mother's book matches her picture: fat, wings round her, no young on her

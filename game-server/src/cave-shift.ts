@@ -25,7 +25,7 @@ import { chance, pick, randInt } from "./rng";
 import { cap } from "./zone-util";
 import { wxPhase } from "./events";
 import { creatureMoves } from "./ai";
-import { HOLLOW, SENTINELS, ROOTED } from "./zone-data";
+import { HOLLOW, SENTINELS, ROOTED, LORE_LINE } from "./zone-data";
 
 type Way = [string, string]; // two rooms that share a passage, both ways
 
@@ -344,7 +344,7 @@ export function lookLines(z: ZoneDO, roomId: string): string[] {
     const other = f.a === roomId ? f.b : f.b === roomId ? f.a : null;
     if (!other) continue;
     const dir = dirOf(z, roomId, other);
-    out.push(`The way ${dir ?? "through"} is choked to the roof with fallen rock.`);
+    out.push(`${LORE_LINE}The way ${dir ?? "through"} is choked to the roof with fallen rock.`); // the lore look, as the sky and weather wear it
   }
   for (const [a, b] of w.stone ?? []) {
     const other = a === roomId ? b : b === roomId ? a : null;
@@ -353,9 +353,9 @@ export function lookLines(z: ZoneDO, roomId: string): string[] {
     out.push(`A slab of the dressed stone stands across the doorway ${side(dir)}, flush with the wall.`);
   }
   const level = waterIn(z, roomId);
-  if (floodShut(z, roomId)) out.push("The water is up to the roof all but a hand's breadth. The only air is where you came in.");
-  else if (level >= 2) out.push("The wood's rain has come down into the cave, and the water stands over the floor here above the knee.");
-  else if (level === 1) out.push("The wood's rain has come down into the cave, and the water stands over the floor here a hand deep.");
+  if (floodShut(z, roomId)) out.push(LORE_LINE + "The water is up to the roof all but a hand's breadth. The only air is where you came in.");
+  else if (level >= 2) out.push(LORE_LINE + "The wood's rain has come down into the cave, and the water stands over the floor here above the knee.");
+  else if (level === 1) out.push(LORE_LINE + "The wood's rain has come down into the cave, and the water stands over the floor here a hand deep.");
   return out;
 }
 
