@@ -28,6 +28,7 @@ import { chance, randInt, uuid, pick } from "./rng";
 import { DIRECTIONS } from "./parser";
 import * as ai from "./ai";
 import * as cave from "./cave";
+import * as caveShift from "./cave-shift";
 import * as wildTraits from "./wild-traits";
 import * as light from "./light";
 import * as events from "./events";
@@ -1139,6 +1140,9 @@ export async function cmdGo(z: ZoneDO, session: Session, dir: string, led = fals
   // can always walk out of it. The water bites while you stand in it (SEA_BITE)
   // and the way you came is still open. A shut way must never be a closed door
   // with somebody already on the wrong side of it.
+  // ...and the cave's low ways full to the roof with the wood's rain (cave-shift.ts):
+  // the same law, the room you go to, never the one you are in.
+  if (caveShift.floodShut(z, exit.to_room)) return z.send(session, caveShift.shutLine(dir), "dmgin");
   if (events.seaShut(z, exit.to_room)) {
     return z.send(session, [
       `The way ${dir} is under water. Not a channel with a bottom you could find — the whole flat is sea, moving, with the tops of the reeds combing through it and no line anywhere in it to walk.`,

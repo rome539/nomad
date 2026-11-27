@@ -1041,6 +1041,7 @@ const REDRAW = {
   "stone-brood": ["idle", "alert", "rest", "feed", "move-a", "move-b", "attack", "sweep", "death"],
   "stone-sleeper": ["idle", "alert", "rest", "move-a", "move-b", "attack", "sweep", "death"],
   "grubbet": ["idle", "alert", "rest", "feed", "move-a", "move-b", "attack", "death"],
+  "stone-hog": ["idle", "alert", "rest", "graze", "move-a", "move-b", "attack", "death"], // mig 415
   "pale-salamander": ["idle", "alert", "rest", "graze", "move-a", "move-b", "attack", "death"],
   "polecat": ["idle", "alert", "rest", "feed", "move-a", "move-b", "attack", "death"],
   "cave-crayfish": ["idle", "alert", "graze", "move-a", "move-b", "attack", "sweep", "death"],
@@ -1257,6 +1258,7 @@ const PENDING_DESC = {
   "stone-brood": "Pale, low and four-legged, the length of a big dog, with a blunt head held just off the stone and a wrinkled hide hanging in folds at the neck. It has no eyes. Its mouth is full of small even teeth and it breathes through them, slowly, as if it were tasting the cold air.",
   "stone-sleeper": "It lies on the dressed stone as if it were part of it: pale, enormously long, four-legged, a blunt head as broad as a cart's bed laid flat on the flags. Its hide is wrinkled and loose and the colour of the stone. It has no eyes. The cold air coming up through the joints moves over it, and it breathes with the air, slowly. It is not asleep.",
   "the-lamp-man": "A dried man in a long leather coat stiff with oil and soot, his hood drawn forward, carrying a shuttered lamp, lit and held low, so its light lies on the floor and not on what is left of his face. Spare wicks hang at his belt beside a can of oil. He has been walking these passages a long time, and he walks them as if he still had somewhere to take the light.",
+  "stone-hog": "A blind, hairless pig as big as a sheep, pale as the flags it stands on, with a snout like a spade and small eyes sealed shut under skin. It works along the joints of the floor with its snout, grunting, scraping up the grey crust that grows there, and lifts its head at every sound.",
   "grubbet": "A fat pale burrower the size of a rabbit, grey-furred on the back and nearly bare on the belly, with a pink snout like a pig's that never stops working and two front feet that are all spade. Its eyes are small and milky and it squints at your light. They live packed together in the burrows they dig, and they squeal at everything.",
   "pale-salamander": "A salamander as long as your forearm and as white as a candle, with feathery pink gills behind its head and two small dark specks where eyes would be. It lies on the bottom of the shallow water and walks, slowly, when it walks at all.",
   "polecat": "A long low animal no bigger than a cat, dark brown going black at the legs, with a pale band across a small flat face like a mask turned inside out. It moves in quick loops through the rock as if the stone were water, and where it has been the air smells sharp and rank.",

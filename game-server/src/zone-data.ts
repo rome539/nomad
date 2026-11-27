@@ -1433,7 +1433,7 @@ export const ECO_LINES = new Set([
   // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
   "polecat", "the-black-polecat", "cave-crayfish", "the-blue-crayfish", "stone-mites", "red-mites",
   // the cave's creatures (mig 409, 2026-11-24)
-  "cave-cougar", "the-white-cougar", "mole-hound", "the-lead-hound", "cave-spider", "giant-cave-spider", "cave-bat", "the-grizzled-bat", "the-bat-mother", "grubbet", "the-bloated-grubbet", "pale-salamander", "the-old-white", "stone-brood", "the-old-brood",
+  "cave-cougar", "the-white-cougar", "mole-hound", "the-lead-hound", "cave-spider", "giant-cave-spider", "cave-bat", "the-grizzled-bat", "the-bat-mother", "grubbet", "the-bloated-grubbet", "pale-salamander", "the-old-white", "stone-brood", "the-old-brood", "stone-hog",
   // THE HUSH (mig 405, 2026-11-19): the wood's middle hunter
   "the-hush",
   // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
@@ -1850,6 +1850,7 @@ export const MOVE_SOUNDS: Record<string, string> = {
   "stone-brood": "Something drags itself {dir} over flat stone, slowly, belly down.", "the-old-brood": "Something drags itself {dir} over flat stone, slowly, belly down.",
   "stone-sleeper": "The stone {dir} makes a long low sound, as if something very heavy had shifted its weight on it.",
   "the-lamp-man": "Steps {dir}, measured, and the small creak of a lamp swinging on its bail.",
+  "stone-hog": "A heavy grunting {dir}, and hooves on flat stone.",
   "grubbet": "Something fat scrabbles {dir}, and a squeal goes up and is answered.", "the-bloated-grubbet": "Something fat scrabbles {dir}, and a squeal goes up and is answered.",
   "pale-salamander": "A small sound of water {dir}, as if something had slid into it.", "the-old-white": "A small sound of water {dir}, as if something had slid into it.",
   "water-vole": "A small plop {dir}, and a ring spreading on the water.",
@@ -1980,6 +1981,7 @@ export const STILL_SOUNDS: Record<string, string> = {
   "stone-brood": "slow breathing through teeth, like air drawn over the edge of a stone", "the-old-brood": "slow breathing through teeth, like air drawn over the edge of a stone",
   "stone-sleeper": "breathing so slow you count between the breaths, and the cold air moving with it",
   "the-lamp-man": "the faint hiss of a lamp wick burning, and nothing else",
+  "stone-hog": "grunting, and a snout scraping along a joint in the floor",
   "grubbet": "snuffling, a scrabble of claws in loose grit, and squeals passed back and forth", "the-bloated-grubbet": "snuffling, a scrabble of claws in loose grit, and squeals passed back and forth",
   "pale-salamander": "nothing but water dripping into still water", "the-old-white": "nothing but water dripping into still water",
   "water-vole": "a dry crunching, very small and very steady, of something eating a reed stem",
@@ -2840,11 +2842,12 @@ export const WOOD_GROUPS = new Map<string, { min: number; max: number; lone: num
 // ...and the diggers (2026-11-25): they sat in their camps for good, because a thing
 // that attacks on sight never takes the first step off its home. Now their homes are
 // drawn over the workings and the camps, and they walk the ground round them.
-export const CAVE_ROAMERS = new Set(["cave-cougar", "mole-hound", "grubbet", "pale-salamander", "cave-spider", "cave-bat", "polecat", "cave-crayfish", "stone-mites", "digger"]);
+export const CAVE_ROAMERS = new Set(["cave-cougar", "mole-hound", "grubbet", "pale-salamander", "cave-spider", "cave-bat", "polecat", "cave-crayfish", "stone-mites", "digger", "stone-hog"]);
 export const CAVE_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
   ["mole-hound", { min: 3, max: 4, lone: 0.1 }], // packs of three and four (cave-plan.md)
   ["cave-bat", { min: 3, max: 6, lone: 0.1 }],    // the roosts hang in company
   ["grubbet", { min: 3, max: 6, lone: 0.1 }],     // colonies, packed into the burrows they dig
+  ["stone-hog", { min: 2, max: 4, lone: 0.1 }],   // herds working the floor of the dressed stone (mig 415)
 ]);
 export const DEN_ROAMERS = new Set(["masterless-dog", "roe-deer"]);
 export const DEN_GROUPS = new Map<string, { min: number; max: number; lone: number; near?: number }>([
@@ -3067,6 +3070,7 @@ export const MILESTONE_SHOW = 12;  // how many you can read at a glance, newest 
 export const NOISE_SHY = new Set(["red-stag", "wood-stag", "feral-goat", "old-billy", "hedgehog",
   // the cave's crayfish, and its bats and stone-mites (2026-11-24)
   "cave-crayfish", "the-blue-crayfish", "cave-bat", "the-grizzled-bat", "stone-mites", "red-mites",
+  "stone-hog", // the bottom floor's hogs (mig 415): they run from a fight, and charge only cornered
   "wrack-crab", "ford-eel", // the crossing's crab and eel keep out of a fight too (rome, 2026-11-12)
   "wood-sloth"]); // and the sloth: it was hauling itself over to a fight and joining it (rome, 2026-11-18)
 export const RUNNERS = new Set(["fleet-rat", "roe-deer", "water-vole",
@@ -3672,7 +3676,7 @@ export const NAPPERS = new Set([
   // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
   "polecat", "the-black-polecat",
   // the cave's creatures (mig 409, 2026-11-24)
-  "cave-cougar", "the-white-cougar", "mole-hound", "the-lead-hound", "cave-bat", "the-grizzled-bat", "the-bat-mother", "grubbet", "the-bloated-grubbet", "stone-brood", "the-old-brood", "pale-salamander", "the-old-white",
+  "cave-cougar", "the-white-cougar", "mole-hound", "the-lead-hound", "cave-bat", "the-grizzled-bat", "the-bat-mother", "stone-hog", "grubbet", "the-bloated-grubbet", "stone-brood", "the-old-brood", "pale-salamander", "the-old-white",
   // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
   "capercaillie",
   // THE HUSH (2026-11-19): it lies up as the other hunters do, by day's rule
@@ -4063,6 +4067,7 @@ export const REST_LINES: Record<string, string> = {
   "cave-cougar": "stretched along the stone with its tail laid over its feet, its eyes shut to slits", "the-white-cougar": "stretched along the stone with its tail laid over its feet, its eyes shut to slits",
   "mole-hound": "curled nose to tail, but the ears still turning, one and then the other", "the-lead-hound": "curled nose to tail, but the ears still turning, one and then the other",
   "cave-bat": "hung upside down from the rock, wrapped in its own wings, squeaking in its sleep", "the-grizzled-bat": "hung upside down from the rock, wrapped in its own wings, squeaking in its sleep", "the-bat-mother": "hung from the rock with her wings closed round her young, the bundle of her moving slightly as they move",
+  "stone-hog": "lying on its side on the flags, its legs out stiff, grunting softly in its sleep",
   "grubbet": "curled into a tight ball, its snout twitching in its sleep", "the-bloated-grubbet": "curled into a tight ball, its snout twitching in its sleep", // (2026-11-26: it said "packed in a heap with the rest of its colony" over a grubbet asleep alone)
   "stone-brood": "lying flat on the stone with its blunt head laid on its forefeet, breathing slowly", "the-old-brood": "lying flat on the stone with its blunt head laid on its forefeet, breathing slowly",
   "pale-salamander": "lying flat and still on the bottom of the shallow water, its gills folded close", "the-old-white": "lying flat and still on the bottom of the shallow water, its gills folded close",
@@ -5617,6 +5622,10 @@ export const WITNESSED_LINES: Record<string, string[]> = {
     "The lamp-man stops and trims his wick with his fingers, and the light steadies, and he goes on.",
     "The lamp-man lifts his lamp and looks down the passage ahead of him, as if it might have changed since he last walked it.",
   ],
+  "stone-hog": [
+    "The stone-hog runs its snout along a joint in the floor, scraping, and stops, and eats what it scraped.",
+    "The stone-hog lifts its head at nothing, its sealed eyes turned toward you, and stands a long time before it puts its snout down again.",
+  ],
   "grubbet": [
     "The grubbet roots along the foot of the wall with its snout, shoving the grit aside, eats something out of it, and roots on.",
     "Two grubbets meet snout to snout in a burrow mouth and squeal at each other until one of them backs in.",
@@ -5753,7 +5762,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["cave-cougar", new Set(["grubbet", "pale-salamander", "mole-hound", "cave-bat", "polecat", "roe-deer", "wild-boar", "capercaillie", "hedgehog"])], ["the-white-cougar", new Set(["grubbet", "pale-salamander", "mole-hound", "cave-bat", "polecat", "roe-deer", "wild-boar", "capercaillie", "hedgehog"])], // 46hp 5-9 over a lone hound (30, 3-6) and the boar (34, 3-6); the wood's game it hunts up top
   ["mole-hound", new Set(["grubbet", "pale-salamander", "cave-bat", "polecat"])], // 30hp 3-6 over a bat (9, 1-3) and a polecat (16, 2-4)
   ["cave-spider", new Set(["cave-bat", "grubbet", "pale-salamander", "cave-crayfish"])], ["giant-cave-spider", new Set(["cave-bat", "grubbet", "pale-salamander", "cave-crayfish"])], // 36hp 3-7 over a bat (9, 1-3)
-  ["stone-brood", new Set(["grubbet", "pale-salamander", "stone-mites", "polecat", "cave-crayfish"])], ["the-old-brood", new Set(["grubbet", "pale-salamander", "stone-mites", "polecat", "cave-crayfish"])], // 40hp 4-8 over the mites (14, 1-2); the polecat (16) and the crayfish (9) too (2026-11-26)
+  ["stone-brood", new Set(["grubbet", "pale-salamander", "stone-mites", "polecat", "cave-crayfish", "stone-hog"])], ["the-old-brood", new Set(["grubbet", "pale-salamander", "stone-mites", "polecat", "cave-crayfish", "stone-hog"])], // 40hp 4-8 over the mites (14, 1-2); the polecat (16) and the crayfish (9) too (2026-11-26)
   // THE VILLAGES ARE AN EASY MEAL (rome, 2026-11-04): the Dens and the two
   // hamlets are rat-heavy, and the hunters around them take rats now - the dogs
   // and the tawny owl by the wood, the hounds and gulls on the Crossing, the
@@ -6218,6 +6227,7 @@ export const TRACK_PRINTS: Record<string, string> = {
   "digger": "nailed boot soles over each other, going one way heavy and coming back light", "the-overman": "nailed boot soles over each other, going one way heavy and coming back light",
   "stone-brood": "a smooth trough pressed into the dust, with splayed four-toed prints either side of it", "the-old-brood": "a smooth trough pressed into the dust, with splayed four-toed prints either side of it",
   "the-lamp-man": "a single line of boot prints, evenly spaced, and a dark spot of lamp oil every few steps",
+  "stone-hog": "the cloven prints of a heavy pig, and the joints of the floor scraped clean along the way it went",
   "grubbet": "short splayed prints with long claw scrapes ahead of the toes, many of them, going in and out of holes", "the-bloated-grubbet": "short splayed prints with long claw scrapes ahead of the toes, many of them, going in and out of holes",
   "pale-salamander": "four-toed prints the size of a fingernail on the wet sand, going into the water and not coming out", "the-old-white": "four-toed prints the size of a fingernail on the wet sand, going into the water and not coming out",
   "water-vole": "tiny star-shaped prints along the soft edge of the bank, and a runway pressed through the grass to the water",
@@ -7832,7 +7842,7 @@ export const BITERS = new Set([
   // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
   "polecat", "the-black-polecat", "stone-mites", "red-mites",
   // the cave's creatures (mig 409, 2026-11-24)
-  "cave-cougar", "the-white-cougar", "mole-hound", "the-lead-hound", "river-gulper", "the-great-gulper", "cave-spider", "giant-cave-spider", "cave-bat", "the-grizzled-bat", "the-bat-mother", "stone-brood", "the-old-brood", "stone-sleeper", "grubbet", "the-bloated-grubbet",
+  "cave-cougar", "the-white-cougar", "mole-hound", "the-lead-hound", "river-gulper", "the-great-gulper", "cave-spider", "giant-cave-spider", "cave-bat", "the-grizzled-bat", "the-bat-mother", "stone-brood", "the-old-brood", "stone-hog", "stone-sleeper", "grubbet", "the-bloated-grubbet",
   // THE HUSH (2026-11-19): what opens you is teeth, not a blow
   "the-hush",
   // mig 247, the mountain's rare blood: the-old-raven, the-raiding-fox, the-dancer, the-blue-fox, the-tom, the-old-glutton
@@ -8774,6 +8784,7 @@ export const RAT_KING_KEEPER_LINES = [
 export const OWN_FORAGE_GROUNDS: Record<string, Set<string>> = {
   // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
   "cave-crayfish": new Set(["cave-glow-river", "cave-dark-river"]), "the-blue-crayfish": new Set(["cave-glow-river", "cave-dark-river"]), // the river's bed and what dies in it
+  "stone-hog": new Set(["stone-way", "stone-scraped", "stone-pillars", "stone-hollow", "stone-ring"]), // the grey crust along the joints in the stone's light (mig 415)
   "stone-mites": new Set(["stone-way", "stone-scraped", "stone-pillars", "stone-buried"]), "red-mites": new Set(["stone-way", "stone-scraped", "stone-pillars", "stone-buried"]), // the joints of the dressed stone
   // the cave's creatures (mig 409, 2026-11-24)
   "grubbet": new Set(["cave-bones", "cave-camp", "cave-deep-camp", "cave-stopping", "cave-roost", "stone-buried"]), "the-bloated-grubbet": new Set(["cave-bones", "cave-camp", "cave-deep-camp", "cave-stopping", "cave-roost", "stone-buried"]), // the leavings, the camps, the guano, the spoil
@@ -9024,7 +9035,7 @@ export const GRAZERS = new Set<string>([
   // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
   "cave-crayfish", "the-blue-crayfish", "stone-mites", "red-mites",
   // the cave's creatures (mig 409, 2026-11-24): the rats on the leavings and the guano, the salamanders on what drifts into the pools, the bats on the midges over the river
-  "grubbet", "the-bloated-grubbet", "pale-salamander", "the-old-white", "cave-bat", "the-grizzled-bat", "the-bat-mother",
+  "stone-hog", "grubbet", "the-bloated-grubbet", "pale-salamander", "the-old-white", "cave-bat", "the-grizzled-bat", "the-bat-mother",
   // THE CAPERCAILLIE (mig 405, 2026-11-19): the wood's ground bird
   "capercaillie",
   // THE WATER VOLE (mig 390, rome 2026-11-12): the crossing's small prey of the reeds
@@ -11280,7 +11291,7 @@ export const BLEED_ODDS = new Map<string, number>([
   // the cave's polecat, crayfish and stone-mites (mig 409, 2026-11-24)
   ["polecat", 0.10], ["the-black-polecat", 0.10], ["stone-mites", 0.08], ["red-mites", 0.08],
   // the cave's creatures (mig 409, 2026-11-24)
-  ["cave-cougar", 0.15], ["the-white-cougar", 0.15], ["mole-hound", 0.15], ["the-lead-hound", 0.15], ["river-gulper", 0.10], ["the-great-gulper", 0.10], ["cave-spider", 0.10], ["giant-cave-spider", 0.10], ["cave-bat", 0.08], ["the-grizzled-bat", 0.08], ["the-bat-mother", 0.08], ["stone-brood", 0.15], ["the-old-brood", 0.15], ["stone-sleeper", 0.20], ["grubbet", 0.10], ["the-bloated-grubbet", 0.10],
+  ["cave-cougar", 0.15], ["the-white-cougar", 0.15], ["mole-hound", 0.15], ["the-lead-hound", 0.15], ["river-gulper", 0.10], ["the-great-gulper", 0.10], ["cave-spider", 0.10], ["giant-cave-spider", 0.10], ["cave-bat", 0.08], ["the-grizzled-bat", 0.08], ["the-bat-mother", 0.08], ["stone-brood", 0.15], ["the-old-brood", 0.15], ["stone-hog", 0.05], ["stone-sleeper", 0.20], ["grubbet", 0.10], ["the-bloated-grubbet", 0.10],
   ["rat-king", 0.15],            // a rat's filthy teeth, a king's size
   ["rat", 0.10],           // scabby rat — filthy teeth, a wound now and then
   // The east road (mig 188). The adder is the outlier in the whole table and is
@@ -12514,6 +12525,7 @@ export const CURE_RECIPES: Record<string, string> = {
   "goat-haunch":  "smoked-haunch", // 8 → 12, keeping
   "boar-side":    "smoked-haunch", // 13 → 12: you trade a point of heal for a meal that travels
   "hare-carcass": "dried-meat",    // 7 → 8, keeping
+  "stone-hog-haunch": "smoked-haunch", // the bottom floor's pig (mig 415), a haunch like any other
   "grubbet-haunch": "dried-meat",  // the cave's (mig 410): a burrower the size of a rabbit, the rat's call (4 → 8, keeping)
 };
 // ---- the fire: a catch cooked where you caught it -------------------------

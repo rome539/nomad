@@ -239,6 +239,7 @@ export const CREATURE_ENDURANCE: Record<string, readonly [number, number, number
   "cave-spider": [16, 2, 28, 0], "giant-cave-spider": [16, 2, 28, 0],
   "cave-bat": [0, 0, 0, 0], "the-grizzled-bat": [0, 0, 0, 0], "the-bat-mother": [0, 0, 0, 0],          // on the wing, as the tawny owl
   "digger": [0, 0, 0, 0], "the-overman": [0, 0, 0, 0],            // the people, as the charcoal-burners
+  "stone-hog": [12, 3, 28, 0],                          // a pig's wind, as the boar's
   "stone-brood": [16, 3, 32, 0], "the-old-brood": [16, 3, 32, 0],
   "stone-sleeper": [8, 5, 40, 4],    // heavy as the bear: it knocks you down while it is fresh
   "the-lamp-man": [0, 0, 0, 0],

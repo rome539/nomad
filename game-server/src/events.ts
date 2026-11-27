@@ -1,4 +1,5 @@
 import * as chronicle from "./chronicle";
+import * as caveShift from "./cave-shift";
 import { hpLabel } from "./util";
 // Room events — the world's weather. The law, for every event this file will
 // ever hold: TELEGRAPH -> ACTIVE -> AFTERMATH, nothing hits a player the world
@@ -1858,6 +1859,7 @@ export async function tickEvents(z: ZoneDO, now: number): Promise<void> {
   await tickWind(z, now);
   await tickGloam(z, now);
   await tickBreach(z, now);
+  await caveShift.tick(z, now); // the cave moves: falls, the water, the bottom floor's stone (cave-shift.ts)
   tickMoon(z, now);
   tickFinds(z, now);
   tickMapRot(z, now);
@@ -4497,6 +4499,8 @@ export function seaUnder(z: ZoneDO, roomId: string): boolean {
 export function roomWater(z: ZoneDO, roomId: string): number {
   const standing = CAVE_STANDING_WATER[roomId]; // the cave's drowned stone, never dry (2026-11-22)
   if (standing) return standing;
+  const risen = caveShift.waterIn(z, roomId); // the wood's rain come down into the cave (2026-11-26)
+  if (risen) return risen;
   if (seaUnder(z, roomId)) return Math.min(3, Math.max(1, seaLevel(z) - (SEA_ROOMS.get(roomId) ?? 1) + 1));
   if (tideFlooded(z, roomId)) return Math.min(3, tideRank - floodRank(roomId) + 1);
   return 0;

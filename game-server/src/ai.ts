@@ -28,6 +28,7 @@ import { cap, isNight, isFullMoon, isBloodMoon, fullMoonTonight, morphOf } from 
 import * as events from "./events";
 import * as styles from "./styles";
 import * as cave from "./cave";
+import * as caveShift from "./cave-shift";
 import * as wildTraits from "./wild-traits";
 import * as whiteroe from "./whiteroe";
 import * as groups from "./groups";
@@ -1480,6 +1481,11 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
     if (world.safeRooms.size) {
       const open = exits.filter((e) => !world.safeRooms.has(e.to_room));
       if (open.length) exits = open; // never strand (creatures are never inside one)
+    }
+    // Nothing that breathes air walks into a cave way full to the roof (cave-shift.ts).
+    {
+      const dry = exits.filter((e) => caveShift.creatureMayEnter(z, creature, e.to_room));
+      if (dry.length) exits = dry; // never strand
     }
     // Every gate is the dungeon's threshold — cold air and the way out. No
     // ordinary creature holds a doorway, so a respawn is never spawn-camped

@@ -117,6 +117,7 @@ import * as works from "./works";
 import * as wanderer from "./wanderer";
 import * as styles from "./styles";
 import * as cave from "./cave";
+import * as caveShift from "./cave-shift";
 import * as wildTraits from "./wild-traits";
 import type { WorksPlan } from "./works";
 import { MAP_QUARTERS, QUARTER_AMBIENCE, QUARTER_DARK, DOOR_ARC_LINES, DOOR_BOARD_TOP, SIGNPOSTS, WAYSTONES, waystoneLine, wayFar } from "./detail";
@@ -7913,7 +7914,7 @@ export class ZoneDO implements DurableObject {
   // this is built once on first sound, and the breach arc — the only thing that
   // mutates exits after load — clears it through noteExitsChanged.
   private soundAdj: Map<string, string[]> | null = null;
-  public noteExitsChanged(): void { this.soundAdj = null; }
+  public noteExitsChanged(): void { this.soundAdj = null; this.roomDists.clear(); } // a way shut or opened changes every distance through it (cave-shift.ts)
   private adjacentTo(roomId: string): string[] {
     if (!this.soundAdj) {
       const adj = new Map<string, string[]>();
@@ -8356,6 +8357,8 @@ export class ZoneDO implements DurableObject {
       lines.push("A keeper waits at a shuttered hatch in the gatehouse wall, dealing in kind.");
     }
 
+    // The cave as it is now: a choked way, a closed slab, the wood's rain standing in it (cave-shift.ts).
+    lines.push(...caveShift.lookLines(this, room.id));
     // A tide-drowned room keeps its floor to itself: whatever lies here lies
     // under black water, unseen until someone goes down after it (cmdDive).
     if (indoors) {

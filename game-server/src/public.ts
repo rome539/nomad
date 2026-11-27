@@ -3977,7 +3977,7 @@ var VOICE_FAMILY = {
   stoat: "ermine the-dancer",
   otter: "otter dog-otter",
   badger: "glutton the-old-glutton",
-  boar: "wild-boar old-boar",
+  boar: "wild-boar old-boar stone-hog",
   deer: "roe-deer white-roe red-hind",
   stag: "red-stag wood-stag",
   goat: "feral-goat old-billy",
@@ -11230,7 +11230,7 @@ var thrKnown = localStorage.getItem("nomad_name");
 // the plates and the skies are untouched. BUMP THE ONE YOU REPLACED — and only
 // when a filename that already exists gets new content, since a new filename
 // needs no bust at all.
-var MOB_V  = "141";      // /mob/      strips and their eye layers
+var MOB_V  = "142";      // /mob/      strips and their eye layers
 var LOOT_V = "2";       // /loot/     the four floor bags and the four chests
 var BG_V   = "89";      // /room-bg/  the room plates - 91MB, the expensive one
 var SKY_V  = "76";      // /sky/      the ten skies
@@ -16653,6 +16653,7 @@ var MOB_SPRITE = {
   "the-overman": 29.5,       // taller than the diggers (mig 414)
   "the-lamp-man": 31,         // a man standing, tall
   "stone-brood": 11,          // the length of a big dog, drawn low in every pose (the 2026-11-26 sheet measured within 1% of the one before by area)
+  "stone-hog": 9.5,           // as big as a sheep: a little under the boar (12) drawn to its area, and under the brood that eats it (mig 415)
   "the-old-brood": 14,       // as long as a pony (mig 414)
   "stone-sleeper": 16.8,      // just bigger than its brood (rome: far too big at 34); the 2026-11-26 sheet drew 11% smaller by area than the one before at 15, so 16.8 keeps it the size it was
   "polecat": 4,               // no bigger than a cat, long and low
@@ -16695,6 +16696,7 @@ var MOB_SPRITE = {
 // studies were generated with - idle, move-a, move-b, up, down, glide, landing -
 // and each creature simply has the ones it was drawn with.
 var MOB_ANIM = {
+  "stone-hog":   { n: 8, aspect: 1.313, f: {"idle":0,"alert":1,"rest":2,"graze":3,"move-a":4,"move-b":5,"attack":6,"death":7} },
   "the-grizzled-bat":   { n: 8, aspect: 1.057, f: {"idle":0,"alert":1,"move-a":2,"move-b":3,"attack":4,"sweep":5,"rest":6,"death":7} },
   "the-great-gulper":   { n: 8, aspect: 1.326, f: {"idle":0,"alert":1,"hold":2,"attack":3,"sweep":4,"move-a":5,"move-b":6,"death":7} },
   "the-white-cougar":   { n: 9, aspect: 1.536, f: {"idle":0,"lurk":1,"alert":2,"move-a":3,"move-b":4,"attack":5,"feed":6,"rest":7,"death":8} },
