@@ -6438,13 +6438,17 @@ export const LURKER_CROWD = 2;                     // a dark room already holdin
 // one could flee into the next one's room and be worn down to nothing.
 // ...AND THE DIRE HYENAS (rome, 2026-10-27): two of the big ones in one room
 // go at each other the same way. Same law, never a kill.
-export const RAT_RIVALS = new Set(["pale-crawler", "dire-hyena"]);
+export const RAT_RIVALS = new Set(["pale-crawler", "dire-hyena", "stone-brood"]); // the broods fight for their ground as the crawlers do (2026-11-27)
 // What a rival fight looks and sounds like, per kind: the crawlers' was written
 // for the wet dark and is wrong for anything with a voice.
 export const RIVAL_LINES: Record<string, { feed: string; sound: string }> = {
   "pale-crawler": {
     feed: "{A} turns on another of its kind, and they go at each other in the wet. One drags itself off, bitten.",
     sound: "Something thrashes and hisses {dir}, two of something, and then one of it drags itself away.",
+  },
+  "stone-brood": {
+    feed: "{A} turns on another of its kind, and they go at each other on the flags, blind heads low, teeth in the loose hide of the neck. One drags itself off, bitten.",
+    sound: "Something heavy thrashes on stone {dir}, two of something hissing through their teeth, and then one of it drags itself away.",
   },
   "dire-hyena": {
     feed: "{A} turns on another of its kind, and the two go at each other snapping and shrieking. One breaks off and slinks away, bitten.",

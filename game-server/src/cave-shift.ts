@@ -150,12 +150,13 @@ function dirOf(z: ZoneDO, from: string, to: string): string | undefined {
 }
 
 /** Can `a` still reach `b` without the passage between them and without the rooms in `banned`? */
-function reaches(z: ZoneDO, a: string, b: string, banned: Set<string>, without?: Way): boolean {
+function reaches(z: ZoneDO, a: string, b: string, banned: Set<string>, without?: Way, within?: Set<string>): boolean {
   const seen = new Set([a]), q = [a];
   for (const at of q) {
     for (const e of z.world!.exits.get(at) ?? []) {
       if (e.key_item && !z.openDoors.has(`${at}:${e.dir}`)) continue;
       const to = e.to_room;
+      if (within && !within.has(to)) continue; // the bottom floor stays whole by its own ways
       if (without && ((at === without[0] && to === without[1]) || (at === without[1] && to === without[0]))) continue;
       if (to === b) return true;
       if (seen.has(to) || banned.has(to)) continue;
@@ -169,6 +170,12 @@ function mayClose(z: ZoneDO, a: string, b: string, w: Ways): boolean {
   if (!wayRows(z, a, b).length || !wayRows(z, b, a).length) return false;
   if (wayRows(z, a, b).some((e) => e.key_item)) return false;
   return reaches(z, a, b, new Set(w.shut), [a, b]);
+}
+/** A slab may shut a doorway of the dressed stone only while both sides still reach each
+ *  other ON THE BOTTOM FLOOR (2026-11-27): the Sink Foot was shut off from the whole floor,
+ *  its only other way up a stair and round the river floor. */
+function mayShutStone(z: ZoneDO, a: string, b: string, w: Ways): boolean {
+  return mayClose(z, a, b, w) && reaches(z, a, b, new Set(w.shut), [a, b], STONE_ROOMS);
 }
 /** Filling this room to the roof leaves every room beside it joined without it. */
 function mayFill(z: ZoneDO, room: string, w: Ways): boolean {
@@ -331,7 +338,21 @@ function water(z: ZoneDO, w: Ways, now: number): void {
   }
 }
 
+/** Any slab that cuts a room off from the rest of the bottom floor slides back. */
+function wholeFloor(z: ZoneDO, w: Ways): void {
+  for (const [a, b] of [...w.stone]) {
+    if (reaches(z, a, b, new Set(w.shut), [a, b], STONE_ROOMS)) continue;
+    openWay(z, a, b);
+    w.stone = w.stone.filter(([x, y]) => !(x === a && y === b));
+    for (const room of [a, b]) {
+      const dir = dirOf(z, room, room === a ? b : a);
+      tell(z, room, `Stone grinds on stone, and the slab across the doorway ${side(dir)} draws back into the wall. The way is open.`);
+    }
+  }
+}
+
 function stone(z: ZoneDO, w: Ways, now: number): void {
+  if (w.stone.length) wholeFloor(z, w);
   if (now < w.nextStoneAt) return;
   w.nextStoneAt = now + randInt(STONE_EVERY_MIN_MS, STONE_EVERY_MAX_MS);
   // what was closed longest opens first
@@ -344,12 +365,13 @@ function stone(z: ZoneDO, w: Ways, now: number): void {
     }
   }
   w.stone = w.stone.slice(opening.length);
+  wholeFloor(z, w);
   const ways: Way[] = [];
   for (const a of STONE_ROOMS) for (const e of z.world!.exits.get(a) ?? []) {
     if (STONE_ROOMS.has(e.to_room) && a < e.to_room && !e.key_item) ways.push([a, e.to_room]);
   }
   for (let n = 0; n < STONE_MOVES && w.stone.length < STONE_SHUT_MAX; n++) {
-    const free = ways.filter(([a, b]) => !w.stone.some(([x, y]) => x === a && y === b) && !opening.some(([x, y]) => x === a && y === b) && mayClose(z, a, b, w));
+    const free = ways.filter(([a, b]) => !w.stone.some(([x, y]) => x === a && y === b) && !opening.some(([x, y]) => x === a && y === b) && mayShutStone(z, a, b, w));
     if (!free.length) break;
     const [a, b] = pick(free);
     const dirA = dirOf(z, a, b), dirB = dirOf(z, b, a);

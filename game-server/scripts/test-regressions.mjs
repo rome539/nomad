@@ -5812,6 +5812,47 @@ try {
     assert.equal(fed.length, 0, 'a stroke every few seconds, not every beat');
   });
 
+  await checkAsync('the bottom floor stays whole by its own ways: no slab cuts a room off from the rest of it (2026-11-27)', async () => {
+    // the Sink Foot was shut off, its only other way a stair up and round the river floor
+    const exits = new Map(), rooms = new Map();
+    let cur = null;
+    for (const n of [1, 2, 3, 4]) for (const line of readFileSync(new URL('../regions/the-cave-' + n + '.rooms', import.meta.url), 'utf8').split('\n')) {
+      const h = line.match(/^## ([a-z0-9-]+) \|/); if (h) { cur = h[1]; rooms.set(cur, { id: cur }); if (!exits.has(cur)) exits.set(cur, []); continue; }
+      const e = line.match(/^> (\w+) ([a-z0-9-]+)/);
+      if (e && cur) { exits.get(cur).push({ room_id: cur, dir: e[1], to_room: e[2], key_item: null }); if (!exits.has(e[2])) exits.set(e[2], []); }
+    }
+    const S = caveShift.STONE_ROOMS;
+    const joined = (a, b) => { const seen = new Set([a]), q = [a]; for (const r of q) { if (r === b) return true; for (const e of exits.get(r) ?? []) if (S.has(e.to_room) && !seen.has(e.to_room)) { seen.add(e.to_room); q.push(e.to_room); } } return false; };
+    const said = [];
+    let t = 2_000_000_000_000;
+    const ways = { falls: [], nextFallAt: t + 1e12, level: 0, levelAt: t, shut: [], stone: [['the-near-sink', 'the-sink-foot']], nextStoneAt: t + 1e12 };
+    const z = { world: { exits, rooms, mobTemplates: new Map() }, events: new Map([['cave-ways', { phase: 'idle', data: JSON.stringify(ways) }]]), creatures: new Map(), openDoors: new Set(),
+      bandOf: () => 'cave', roomFeed(r, l) { said.push([r, l]); }, roomSound() {}, noteExitsChanged() {} };
+    await caveShift.tick(z, t + 1000);
+    let w = JSON.parse(z.events.get('cave-ways').data);
+    assert.equal(w.stone.length, 0, 'the slab before the Sink Foot draws back');
+    assert.ok((exits.get('the-near-sink') ?? []).some((e) => e.to_room === 'the-sink-foot'), 'and the way is open');
+    assert.ok(said.some(([r, l]) => r === 'the-sink-foot' && /draws back into the wall/.test(l)), 'and says so');
+    // and in a long run of shifts no shut slab ever leaves its two rooms apart on the floor
+    w.nextStoneAt = t;
+    z.events.set('cave-ways', { phase: 'idle', data: JSON.stringify(w) });
+    let closed = 0;
+    for (let i = 0; i < 2000; i++) {
+      t += 15 * 60_000;
+      await caveShift.tick(z, t);
+      w = JSON.parse(z.events.get('cave-ways').data);
+      for (const [a, b] of w.stone) { closed++; assert.ok(joined(a, b), a + ' and ' + b + ' cut apart on the floor'); }
+      assert.ok(!w.stone.some(([a, b]) => (a === 'the-near-sink' && b === 'the-sink-foot') || (a === 'the-sink-foot' && b === 'the-near-sink')), 'the Sink Foot is never shut off');
+    }
+    assert.ok(closed > 1000, 'the floor still moves: ' + closed);
+  });
+
+  check('the stone-broods fight for their ground as the pale crawlers do (2026-11-27)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const RAT_RIVALS = new Set\(\[[^\]]*"stone-brood"[^\]]*\]\)/, 'a rival of its own kind');
+    assert.match(zd, /\n  "stone-brood": \{\n    feed: "\{A\} turns on another of its kind, and they go at each other on the flags/, 'its own fight, on the stone');
+  });
+
   check('a bat hanging from the roof never moves a few paces off or works the ground: the hanging bats have their own idle lines (2026-11-27)', () => {
     const legs = /paces|works the ground|stands carefully|where it stands|favours its hurt side/;
     for (const id of ['cave-bat', 'the-grizzled-bat', 'the-bat-mother']) {
