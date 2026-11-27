@@ -5655,6 +5655,72 @@ try {
     assert.match(mig, /\('the-grizzled-bat', 'the grizzled bat',/, 'the bat\'s other rare blood took a new name');
   });
 
+  check('the diggers walk a round of the whole mine, each from where it stands, every leg one exit (2026-11-26)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const route = Function('return ' + zd.match(/export const DIGGERS_ROUND = (\[[\s\S]*?\]);/)[1])();
+    const exits = new Map();
+    let cur = null;
+    for (const n of [1, 2, 3, 4]) for (const line of readFileSync(new URL('../regions/the-cave-' + n + '.rooms', import.meta.url), 'utf8').split('\n')) {
+      const h = line.match(/^## ([a-z0-9-]+) \|/); if (h) { cur = h[1]; exits.set(cur, new Set()); continue; }
+      const e = line.match(/^> \w+ ([a-z0-9-]+)/); if (e && cur) exits.get(cur).add(e[1]);
+    }
+    for (let i = 0; i < route.length; i++) {
+      const a = route[i], b = route[(i + 1) % route.length];
+      assert.ok(exits.get(a)?.has(b), a + ' -> ' + b + ' is one exit');
+    }
+    const spawns = new Set();
+    for (const f of ['409_what_lives_in_the_cave.sql']) {
+      for (const m of readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8').matchAll(/'digger', '([a-z-]+)'\)/g)) spawns.add(m[1]);
+    }
+    assert.ok(spawns.size > 0, 'the diggers have spawn rooms');
+    for (const r of spawns) assert.ok(route.includes(r), r + ', where a digger is born, is on the round');
+    assert.match(zd, /"digger": DIGGERS_ROUND,\n  "the-overman": DIGGERS_ROUND,/, 'the diggers and the overman walk it');
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /if \(creature\.patrolIdx === undefined && route === DIGGERS_ROUND\) \{/, 'each takes it up where it stands, not from the first post');
+  });
+
+  check('a thief tries a strapped pack once a fight, not on every blow (2026-11-26, the digger)', () => {
+    const z = readFileSync(new URL('../src/zone.ts', import.meta.url), 'utf8');
+    assert.match(z, /this\.wearsTrait\(victim, "strapped"\)\) \{\n\s+if \(!creature\.strapTried\?\.includes\(victim\.pubkey\)\) \{\n\s+\(creature\.strapTried \?\?= \[\]\)\.push\(victim\.pubkey\);\n\s+this\.send\(victim, thiefSay\(tw\.strapped, tmpl\.name\)\);/, 'once per victim');
+    assert.match(z, /if \(!creature\.target && creature\.strapTried\) creature\.strapTried = undefined;/, 'a new fight is a new try');
+  });
+
+  check('a cave room takes no hour tint, so its own fire and smoke play without a torch (2026-11-26, the deep camp)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    assert.match(pub, /tint = \(lit \|\| indoors \|\| NO_GROUND_TINT\[hour\] \|\| tbase === hour\) \? "" : hour;/, 'indoors: no tint');
+    assert.match(pub, /\(tint && !FX_UNDER_TINT\[tint\] && !FX_FLOOD_NEXT\)\) \{ done\(null\); return; \}/, 'which is what stopped the effects');
+  });
+
+  check('a room\'s water goes up with its own picture, never over the last room\'s while the new one loads (2026-11-26, the Pale Steps)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const paint = pub.slice(pub.indexOf('function paintScene('), pub.indexOf('var put = function'));
+    assert.ok(!/\n\s*FX_FLOOD = /.test(paint), 'painting a room does not touch the water on screen');
+    assert.match(paint, /FX_FLOOD_NEXT = FX_FLOOD_PANEL >= 0 \? FX_FLOOD_PANEL : terrain === "bridge" \? 0 : FLOOD_DEPTHS\[Math\.min\(3, lastSea\)\] \|\| 0;/, 'it keeps the new depth aside');
+    assert.match(pub, /FX_FLOOD = FX_FLOOD_NEXT; \/\/ the water goes up with the picture it stands in\n\s+var fxOn = typeof sceneFx !== "undefined" && sceneFx\.paint\(/, 'and takes it up as the picture goes up');
+    const prep = pub.slice(pub.indexOf('function fxPrepare('), pub.indexOf('function fxScene('));
+    assert.ok(!/[^_]FX_FLOOD[^_]/.test(prep.replace(/FX_FLOOD_NEXT/g, '')), 'preparing the next room reads the next room\'s depth');
+  });
+
+  check('what stands in the deepest stone, under the tilted stone, takes the stone\'s glow, not the blue dark (2026-11-26)', () => {
+    const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
+    const g = Function('return ' + pub.match(/var CAVE_MOB_GRADE = (\{[\s\S]*?\});/)[1].replace(/\/\/[^\n]*/g, ''))();
+    assert.equal(g['under-stone'], 'cave-stone');
+    assert.equal(g['stone-buried'], undefined, 'the buried stone keeps the dark');
+    assert.equal(g['stone-drowned'], undefined, 'and the drowned');
+  });
+
+  check('a grubbet asleep says only what one grubbet is doing, never that its colony is with it (2026-11-26)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const rest = zd.slice(zd.indexOf('export const REST_LINES'), zd.indexOf('\n};', zd.indexOf('export const REST_LINES')));
+    assert.match(rest, /"grubbet": "curled into a tight ball, its snout twitching in its sleep"/);
+    assert.ok(!/colony/.test(rest.match(/"grubbet": "[^"]*"/)[0]) && !/colony/.test(rest.match(/"the-bloated-grubbet": "[^"]*"/)[0]), 'no colony in either line');
+  });
+
+  check('a digger puts out your torch 1 in 10 of its landed blows, not 1 in 5 (2026-11-26)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    assert.match(zd, /export const LIGHT_TAKERS = new Map<string, number>\(\[[^\n]*\["digger", 0\.1\]/, 'the digger at 0.1');
+  });
+
   check('the rain is a third quieter, in the open and on a roof, the wash and the drops alike (2026-11-26)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     assert.match(pub, /^var RAIN_VOL = 0\.47;/m, 'the rain level');

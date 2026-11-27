@@ -5536,8 +5536,13 @@ export class ZoneDO implements DurableObject {
           // Sealed loot is TITLE the dungeon marked as yours; its fingers slide off.
           // STRAPPED (the baldric) lashes everything down — nothing to lift.
           const tw = thiefWords(creature.templateId);
+          // ...and it tries a strapped pack ONCE a fight (2026-11-26): it used to
+          // try again on every blow that landed, the same line each time.
           if (THIEVES.has(creature.templateId) && !creature.stole && this.wearsTrait(victim, "strapped")) {
-            this.send(victim, thiefSay(tw.strapped, tmpl.name));
+            if (!creature.strapTried?.includes(victim.pubkey)) {
+              (creature.strapTried ??= []).push(victim.pubkey);
+              this.send(victim, thiefSay(tw.strapped, tmpl.name));
+            }
           } else if (THIEVES.has(creature.templateId) && !creature.stole) {
             const takeable = victim.items.filter((c) => c.serial === null && !c.equipped);
             const byRarity = (a: typeof takeable[number], b: typeof takeable[number]) =>
@@ -6078,6 +6083,8 @@ export class ZoneDO implements DurableObject {
         ai.hoarderCovets(this, creature, now);
         // A brood-mother swells the nest while she's left alone.
         if (BROODERS.has(creature.templateId)) ai.broodBirths(this, creature, now);
+        // A thief out of its fight forgets whose straps it tried.
+        if (!creature.target && creature.strapTried) creature.strapTried = undefined;
         // The bone-country remembers its dead: a hollow thing, idle with a living
         // ear near, breathes a name off the room's bloodstain.
         if (HOLLOW.has(creature.templateId)) ai.deadRemembers(this, creature, now);

@@ -120,7 +120,7 @@
     SKY_FX.comet = e === "comet"; SKY_FX.fast = e === "fast";
     var was = FX_FLOOD, v = e.charAt(0) === "f" && e !== "fast" ? +e.slice(1) / 100 : 0;
     FX_FLOOD_PANEL = v > 0 ? v : -1; // none: the room's own depth from the game rules again
-    FX_FLOOD = v > 0 ? v : FLOOD_DEPTHS[Math.min(3, lastSea)] || 0;
+    FX_FLOOD = FX_FLOOD_NEXT = v > 0 ? v : FLOOD_DEPTHS[Math.min(3, lastSea)] || 0;
     if (!was !== !FX_FLOOD) paint(); // the effects layer is chosen when the room is painted
     floodWhy();
   };

@@ -2325,7 +2325,27 @@ export const MOUTHS = [
 // beats the full INNER RING that circles the hall — never the gates (the
 // threshold rule bars that) and never resting on any one wanderer's path in.
 // Each step is to an adjacent room, so the rounds actually close.
+// THE DIGGERS' ROUND (2026-11-26). They sat on homes drawn about their camps and stood
+// two and three to a room. Now they walk the mine at the work: out from the ladder
+// foot past the pick-work, through the first camp, the tally wall and up the props to
+// the stone store and the water-butts, along the carry-way and the pick-marks to the
+// deep camp and down to its stair, back to the water-butts, round by the sleeping
+// shelf and the cold camp, down the broken ladder to the cut-through and the crushed
+// props, and back by the widened squeeze to the first camp. Every leg is one exit.
+// Each digger keeps its own place on it (ai.ts takes up the round where it stands).
+export const DIGGERS_ROUND = [
+  "the-ladder-foot", "the-pick-work", "the-first-camp", "the-lamp-store", "the-first-camp", "the-dry-stretch",
+  "the-first-camp", "the-tally-wall", "the-barrow-run", "the-propped-way", "the-sagging-props", "the-stone-store",
+  "the-water-butts", "the-carry-way", "the-mortar-trough", "the-pick-marks", "the-first-stopping", "the-carried-stone",
+  "the-deep-camp", "the-smoked-passage", "the-deep-camp", "the-stopping", "the-diggers-stair", "the-stopping",
+  "the-deep-camp", "the-carried-stone", "the-first-stopping", "the-pick-marks", "the-mortar-trough", "the-carry-way",
+  "the-water-butts", "the-sleeping-shelf", "the-cold-camp", "the-broken-ladder", "the-wet-cut", "the-crossed-ways",
+  "the-cut-through", "the-crushed-props", "the-cut-through", "the-crossed-ways", "the-wet-cut", "the-broken-ladder",
+  "the-cold-camp", "the-widened-squeeze", "the-barrow-run", "the-tally-wall", "the-first-camp", "the-pick-work",
+];
 export const PATROLS: Record<string, string[]> = {
+  "digger": DIGGERS_ROUND,
+  "the-overman": DIGGERS_ROUND,
   // THE RAT KING has no round any more (rome, 2026-10-31): he goes where he
   // likes in the warrens, and only the warrens (ai.ts keeps him to them).
   // THE COOK (mig 353) keeps the deep's kitchens: the troughs in the Drowned
@@ -4037,7 +4057,7 @@ export const REST_LINES: Record<string, string> = {
   "cave-cougar": "stretched along the stone with its tail laid over its feet, its eyes shut to slits", "the-white-cougar": "stretched along the stone with its tail laid over its feet, its eyes shut to slits",
   "mole-hound": "curled nose to tail, but the ears still turning, one and then the other", "the-lead-hound": "curled nose to tail, but the ears still turning, one and then the other",
   "cave-bat": "hung upside down from the rock, wrapped in its own wings, squeaking in its sleep", "the-grizzled-bat": "hung upside down from the rock, wrapped in its own wings, squeaking in its sleep", "the-bat-mother": "hung from the rock with her wings closed round her young, the bundle of her moving slightly as they move",
-  "grubbet": "packed in a heap with the rest of its colony, its snout twitching in its sleep", "the-bloated-grubbet": "packed in a heap with the rest of its colony, its snout twitching in its sleep",
+  "grubbet": "curled into a tight ball, its snout twitching in its sleep", "the-bloated-grubbet": "curled into a tight ball, its snout twitching in its sleep", // (2026-11-26: it said "packed in a heap with the rest of its colony" over a grubbet asleep alone)
   "stone-brood": "lying flat on the stone with its blunt head laid on its forefeet, breathing slowly", "the-old-brood": "lying flat on the stone with its blunt head laid on its forefeet, breathing slowly",
   "pale-salamander": "lying flat and still on the bottom of the shallow water, its gills folded close", "the-old-white": "lying flat and still on the bottom of the shallow water, its gills folded close",
   "water-vole": "hunched in a round of flattened reed at the water's edge, a brown ball with its nose tucked in",
@@ -6673,7 +6693,9 @@ export const LIGHT_DAZZLED = new Set(["mole-hound", "the-lead-hound"]);
 export const DAZZLED_MULT = 0.7;
 // WHAT GOES FOR YOUR LIGHT: on a landed blow, the odds it puts the flame out. The
 // lamp-man shutters a lantern as well; the rest only take an open flame.
-export const LIGHT_TAKERS = new Map<string, number>([["cave-bat", 0.15], ["the-grizzled-bat", 0.15], ["digger", 0.2], ["the-overman", 0.2], ["the-lamp-man", 0.4]]);
+// A digger 1 in 10 (2026-11-26; it was 1 in 5 and a fight with two of them was a
+// torch gone every few blows).
+export const LIGHT_TAKERS = new Map<string, number>([["cave-bat", 0.15], ["the-grizzled-bat", 0.15], ["digger", 0.1], ["the-overman", 0.2], ["the-lamp-man", 0.4]]);
 export const LANTERN_TAKERS = new Set(["the-lamp-man"]);
 // A cat that breaks off when the fight turns on it, back into the dark, once
 // until it is whole again.

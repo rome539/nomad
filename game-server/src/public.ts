@@ -12510,7 +12510,11 @@ var GATE_PLATE = {
 var CAVE_MOB_GRADE = { "cave-glow-river": "cave-glow", "cave-foxfire": "cave-glow", "cave-deep-camp": "night-torch",
   "cave-glow-lake": "cave-glow", "cave-glow-tunnel": "cave-glow", "cave-bridge": "cave-glow", "cave-foxfire-props": "cave-glow", "cave-foxfire-hall": "cave-glow",
   "stone-doors": "cave-stone", "stone-frost": "cave-stone", "stone-cells": "cave-stone", "stone-niches": "cave-stone",
-  "stone-way": "cave-stone", "stone-pillars": "cave-stone", "stone-scraped": "cave-stone", "stone-hollow": "cave-stone", "stone-ring": "cave-stone" };
+  "stone-way": "cave-stone", "stone-pillars": "cave-stone", "stone-scraped": "cave-stone", "stone-hollow": "cave-stone", "stone-ring": "cave-stone",
+  // ...and the deepest of it, under the tilted stone, which glows as the rest does (2026-11-26:
+  // what stood there took the blue dark). The buried and the drowned stone keep the dark: their
+  // words put the stone's light out under the spoil, the fallen roof and the black water.
+  "under-stone": "cave-stone" };
 // THE CAVE'S SECOND PICTURES BY ROOM (2026-11-25). Seven of the cave's grounds held
 // from eleven to twenty-eight rooms on one picture. Each room here was read and
 // given the picture its words describe: the squeezes, the clawed beast ways, the
@@ -14820,7 +14824,11 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
   // slider, while it is up, stands in for the game's own depth).
   // Never on the bridge: its deck is forty feet over the water (its region
   // header), so the tide under it stands on nothing the picture shows.
-  FX_FLOOD = FX_FLOOD_PANEL >= 0 ? FX_FLOOD_PANEL : terrain === "bridge" ? 0 : FLOOD_DEPTHS[Math.min(3, lastSea)] || 0;
+  // ...but only once this room's picture is up (put, below): set at once, the next
+  // room's water was drawn over the last room's picture while the new one loaded,
+  // so the Pale Steps stood flooded for a moment on the way into the Black Water
+  // Hall (2026-11-26), and a flooded room went dry before it was left.
+  FX_FLOOD_NEXT = FX_FLOOD_PANEL >= 0 ? FX_FLOOD_PANEL : terrain === "bridge" ? 0 : FLOOD_DEPTHS[Math.min(3, lastSea)] || 0;
   if (roomKey) lastRoomKey = roomKey;
   // Cleared as well as set: walking out of a singular room and into ordinary
   // ground must stop naming the room, or the summit follows you down the hill.
@@ -15105,7 +15113,11 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
         scene = "/room-bg/" + terr + "-night" + floodSuffix(terr, "night") + ".webp";
       }
       line = MOB_LINE[terr] || MOB_LINE_DEFAULT;
-      tint = (lit || NO_GROUND_TINT[hour] || tbase === hour) ? "" : hour;
+      // A GROUND DAYLIGHT NEVER REACHES TAKES NO HOUR (2026-11-26): the cave took the
+      // hour outside as its tint, "day" at noon, and the room's own fire and smoke
+      // stopped under it (FX_UNDER_TINT), so the deep camp's hearth stood still unless
+      // you carried a torch. Under the ground the sky is nothing to it.
+      tint = (lit || indoors || NO_GROUND_TINT[hour] || tbase === hour) ? "" : hour;
       // AND THE SAME FOR WHAT IS STANDING IN IT. The ground already knows it is
       // indoors two lines up and takes its night plate at noon; the creature on
       // that ground did not, and kept the hour from the sky outside. At any
@@ -15383,6 +15395,7 @@ function paintScene(band, sky, terrain, roomKey, torch, roll, place, sea, red, c
       if (fogVeilEl.dataset) fogVeilEl.dataset.mask = drawn ? fogMask : "";
     }
     setWeather(precipitation);
+    FX_FLOOD = FX_FLOOD_NEXT; // the water goes up with the picture it stands in
     var fxOn = typeof sceneFx !== "undefined" && sceneFx.paint(scene, tint, preparedFx, cloud);
     if (cloudTint && !fxOn) sceneEl.className = "t-" + cloudTint;
     if (fade) fade();
@@ -15465,6 +15478,7 @@ var fxGl = null, fxProg = null, fxU = {}, fxIndex = null, fxIndexAsked = false;
 var fxName = "", fxEntry = null, fxFrame = null, fxStamp = 0, fxT = 0, fxReady = false, fxSeq = 0;
 var fxTex = {}, fxMobTex = {}, fxEmbers = [], fxDust = [];
 var FX_FLOOD = 0; // the water standing in the room, 0 (none) to 1: set from the room's depth (lastSea)
+var FX_FLOOD_NEXT = 0; // ...the depth of the room being painted, taken up when its picture goes up
 var FLOOD_PULL_GROUNDS = /^(causeway|ford|ferry|ferry-hard|staithe|bridge|marsh|marsh-samphire|marsh-carr|marsh-dyke|shell|reed|eyot|shore-road|works|salt-street|salt-fields|salt-common)-/;
 // ...AND THE FEW WHOSE WATER RUNS TO THE PICTURE'S OWN SKYLINE (rome, 2026-11-11:
 // on these the water stopped short of the horizon). Only these; every other
@@ -15832,7 +15846,7 @@ function fxLoad(src) { return new Promise(function (ok, no) {
 function fxPrepare(scene, tint, done) {
   var parts = scene ? scene.split("/") : [];
   var name = parts[1] === "room-bg" && parts[2] ? parts[2].slice(0, parts[2].lastIndexOf(".")) : "";
-  if (!name || stillness || viewMode !== "image" || (tint && !FX_UNDER_TINT[tint] && !FX_FLOOD)) { done(null); return; }
+  if (!name || stillness || viewMode !== "image" || (tint && !FX_UNDER_TINT[tint] && !FX_FLOOD_NEXT)) { done(null); return; }
   if (!fxIndex) {
     if (!fxPrepare.index) {
       fxIndexAsked = true;
@@ -15850,13 +15864,13 @@ function fxPrepare(scene, tint, done) {
   // THE FLOOD TRIAL: a picture with no depth map of its own (the day, the plain
   // night, the fog) borrows its ground's - the torch picture's, or the snow's -
   // and takes no other effect from it.
-  if (!entry && FX_FLOOD) {
+  if (!entry && FX_FLOOD_NEXT) {
     var base = name.replace(/-flood$/, "").replace(/-(day|night|fog|rain|snow|dawn|dusk)$/, "");
     depthName = fxIndex[base + "-night-torch"] ? base + "-night-torch" : fxIndex[base + "-snow"] ? base + "-snow" : "";
     if (depthName) entry = { borrowed: 1 };
   }
   if (!entry) { done(null); return; }
-  if (entry.snow && !entry.t && !fxSnowGlint && !FX_FLOOD) { done(null); return; } // nothing to show on it right now
+  if (entry.snow && !entry.t && !fxSnowGlint && !FX_FLOOD_NEXT) { done(null); return; } // nothing to show on it right now
   var cache = fxPrepare.cache || (fxPrepare.cache = new Map());
   var pending = cache.get(name);
   if (pending) {
