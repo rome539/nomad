@@ -2740,6 +2740,10 @@ export const CROSSING_GROUPS = new Map<string, { min: number; max: number; lone:
 // the crossing walks the ground round its home as an animal does: the guards off
 // their posts and the water-bound off their water too (ai.walksAnyway, and the
 // DROWNERS gate on the wander). Their homes stay where they are; the bosses stand.
+// THE LAMP-MAN WALKS THE CAVE (2026-11-27): he stood in the Four Ways for good (aggressive,
+// on no round). Now he walks the whole cave, any floor, with no home pulling him back,
+// and never out of it into the wood.
+export const CAVE_WALKERS = new Set(["the-lamp-man"]);
 export const WALKING_DEAD = new Set([
   "the-fowler", "the-eel-cutter", "the-reed-walker", "the-salt-widow", "the-drover", "the-tide-warden",
   "the-pilot", "the-refuge-man", "the-scaffold-hand", "the-bridge-mason", "twice-dead",

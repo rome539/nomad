@@ -59,7 +59,7 @@ import {
   STANCE, WOUNDED_FRACTION, WOUNDED_DMG_MULT, DEEP_HEART, KINGS_ROOMS_DEEP,
   WARY_BOLT_ODDS, SCAVENGER_HEAL, bodyOf, CORPSE_TRACES, DEN_MOVES, CROWS, CROW_ROUSE_RADIUS, CROW_CALL_ODDS, KILL_TAKERS, KILL_FRESH_MS, MOBBED_OWLS, OWL_MOB_REARM_MS, NOISE_COVER, CAVE_DWELLERS, DEFENDS_CAVE, HUNTS_WHEN_HUNGRY, CAVE_HOLD_MIN_MS, CAVE_HOLD_MAX_MS, DIRE_ROUSE_MS, HOLLOW, CORRODERS, LISTENERS, LURKERS, ROOTED, PROVISIONED, DROWNERS, VERMIN, FORAGE_ROOMS, FORAGE_HEAL, FORAGE_RAIN_MULT, MAST_FORAGE_MULT, WRACK_FORAGE_MULT, GRAZERS, MOB_TRAIT_ODDS, MOB_BAD_SHARE, FLIGHT_BATS, NOT_UNDERGROUND, MOB_ARMOR_TOP, MOB_TRAIT_HP, MOB_TRAIT_DMG, MOB_BRINE_SLOW_MULT, MOB_TRAIT_TELL, MOB_TRAITS, MOB_HELD_RECHECK_MS, MOB_STARVELING_MULT, MOB_BONE_CRACKER_MULT, MOB_BOLTHOLE_MULT, MOB_HALFBLIND_MULT,
   HEARTH_DRAW_EVERY_MS, HEARTH_DRAW_ODDS,
-  FLIERS, RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, DIGGERS_ROUND, HUNTS_OFF_GROUND, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
+  FLIERS, RUNNERS, NOISE_SHY, BROWSERS, CRAG_ROOMS, BROODERS, SENTINELS, AGGRESSIVE, GUARDIANS, ROAMING_DENS, roamsIn, groupOf, WALKING_DEAD, CAVE_WALKERS, FOOD_FLIERS, BIRD_CATCH_MULT, REED_COVER, REED_COVER_MULT, SETTLES_BY_GRAZING, SETTLES_BY_SCRAPS, ROUND_RANGE, SURFACE_FORAGE, SENTINEL_ROOMS, FEARS_FIRE, FIRE_ITEMS, FIRE_FLEE_CHANCE, SURFACERS, SURFACE_ROOMS, PATROLS, DIGGERS_ROUND, HUNTS_OFF_GROUND, patrolRoute, HUNGRY_AT, GRAZE_AT, STARVING_AT, TERRITORY_RADIUS, CROWD_CAP, NOISE_HEED_ODDS,
   SHADOWS, SHADOW_PACE_ODDS, SHADOW_REACH, SHADOW_KEEP,
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
@@ -291,7 +291,7 @@ function mobFamily(tmpl: MobTemplate): string | null {
 const walksOff = (id: string): boolean =>
   !SENTINELS.has(id) && !ROOTED.has(id) && !BROODERS.has(id) && !GUARDIANS.has(id)
   && (!DROWNERS.has(id) || WALKING_DEAD.has(id))
-  && (!AGGRESSIVE.has(id) || WALKING_DEAD.has(id) || OPEN_LURKERS.has(id));
+  && (!AGGRESSIVE.has(id) || WALKING_DEAD.has(id) || OPEN_LURKERS.has(id) || CAVE_WALKERS.has(id));
 const startsFights = (id: string): boolean =>
   AGGRESSIVE.has(id) || LURKERS.has(id) || DEFENDS_CAVE.has(id)
   || (STARVE_HUNTERS.has(id) && !SMALL_HUNTERS.has(id) && !HOLLOW.has(id));
@@ -1566,7 +1566,12 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
     // carries a migrant from the mouth to its range. Fleeing ignores the edge
     // (survival first; the next calm step starts the walk back). Patrollers
     // are exempt — their route is their territory. Never strands.
-    if (mode === "wander" && !whiteroe.roams(creature) && creature.home && !bossStands(tmpl) && !patrolRoute(tmpl.id, creature.home) && creature.drift === undefined && !chaseTo) {
+    // The lamp-man walks the whole cave: no ground pulls him home, and no step takes him out of it.
+    if (mode === "wander" && CAVE_WALKERS.has(tmpl.id)) {
+      const inside = exits.filter((e) => z.regionOf(e.to_room) === "cave");
+      if (inside.length) exits = inside;
+    }
+    if (mode === "wander" && !CAVE_WALKERS.has(tmpl.id) && !whiteroe.roams(creature) && creature.home && !bossStands(tmpl) && !patrolRoute(tmpl.id, creature.home) && creature.drift === undefined && !chaseTo) {
       // A HUNGRY THING LEAVES. Where the territory pull is anchored: normally
       // the den, but a hunter whose own ground has nothing left to eat walks to
       // where the food is instead (huntGround). Everything below is unchanged —
@@ -2790,6 +2795,7 @@ export function walksAnyway(creature: Creature): boolean {
   // and at home, it stood in the Dry Bones for good (lurkerDrifts).
   if (OPEN_LURKERS.has(creature.templateId)) return true;
   if (WALKING_DEAD.has(creature.templateId)) return true; // the crossing's dead walk their ground (zone-data)
+  if (CAVE_WALKERS.has(creature.templateId)) return true; // the lamp-man walks the cave
   if (HUNTS_OFF_GROUND.has(creature.templateId) && (creature.hunger ?? 0) >= HUNGRY_AT) return true; // hungry, the brood goes hunting
   return !!creature.home && creature.roomId !== creature.home;           // displaced: it goes back
 }

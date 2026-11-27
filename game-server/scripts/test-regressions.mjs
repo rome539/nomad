@@ -5812,6 +5812,14 @@ try {
     assert.equal(fed.length, 0, 'a stroke every few seconds, not every beat');
   });
 
+  check('the lamp-man walks the cave: he stood in the Four Ways for good, and now walks any floor of it, never out (2026-11-27)', () => {
+    const lm = { id: 'lm', templateId: 'the-lamp-man', roomId: 'the-four-ways', home: 'the-four-ways', hp: 90, grudges: [], target: null, nextWanderAt: 0 };
+    assert.equal(walksAnyway(lm), true, 'aggressive and at home, he still walks');
+    const ai = readFileSync(new URL('../src/ai.ts', import.meta.url), 'utf8');
+    assert.match(ai, /if \(mode === "wander" && CAVE_WALKERS\.has\(tmpl\.id\)\) \{\n\s+const inside = exits\.filter\(\(e\) => z\.regionOf\(e\.to_room\) === "cave"\);/, 'never out of the cave');
+    assert.match(ai, /if \(mode === "wander" && !CAVE_WALKERS\.has\(tmpl\.id\) && !whiteroe\.roams\(creature\)/, 'no home pulls him back');
+  });
+
   check('the lamp-man has no sweep frame; his wide blow is drawn as his attack (2026-11-26)', () => {
     const pub = readFileSync(new URL('../src/public.ts', import.meta.url), 'utf8');
     const row = pub.match(/\n  "the-lamp-man": +(\{ n: [^\n]*?\} \})/)[1];
@@ -9675,7 +9683,7 @@ try {
     const gulper = rolls('river-gulper', true);
     assert.ok(!gulper.has('tide-called') && gulper.has('stone-skinned'), 'a cave gulper is never tide-called');
     assert.ok(!rolls('digger', true).has('bell-tuned'), 'a digger is never bell-tuned');
-    assert.ok(!rolls('the-lamp-man', true).has('flame-drawn'), 'the lamp-man holds his ground, so he cannot be drawn off it');
+    assert.ok(rolls('the-lamp-man', true).has('flame-drawn'), 'the lamp-man walks the cave now (2026-11-27), so a light can draw him');
     assert.ok(rolls('digger', true).has('flame-drawn'), 'a digger walks its ground now, so a light can draw it');
     // stone-skinned: a point of armour, never past the ceiling
     assert.equal(T_mobArmor({ armor: 1 }, { traits: ['stone-skinned'] }), 2);
