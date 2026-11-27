@@ -226,6 +226,8 @@ export interface Creature {
   calledAt?: number;    // cave.ts: when a digger last called
   shutHp?: number;      // cave.ts: the lamp-man's health when he shuttered his lamp (once a fight)
   snuffedFor?: string[]; // cave.ts: whose light the lamp-man has put out this fight (once each)
+  workingAt?: string; // cave.ts: the face a digger is working (mines)
+  strikeAt?: number;  // ...and when its pick next goes into the rock
   strapTried?: string[]; // a thief: whose strapped pack it has already tried this fight (once each; cleared when it has no target)
   backAt?: number;      // cave.ts: when the shuttered lamp-man comes back out of the dark...
   backFor?: string;     // ...and the pubkey he comes back for

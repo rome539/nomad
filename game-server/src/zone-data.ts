@@ -2343,6 +2343,12 @@ export const DIGGERS_ROUND = [
   "the-cut-through", "the-crushed-props", "the-cut-through", "the-crossed-ways", "the-wet-cut", "the-broken-ladder",
   "the-cold-camp", "the-widened-squeeze", "the-barrow-run", "the-tally-wall", "the-first-camp", "the-pick-work",
 ];
+// THE FACES THEY WORK (2026-11-26): the rooms on the round whose words are rock being
+// cut. A digger who comes to one stops and works it a while, a stroke every so often,
+// and the ring of the pick carries to the rooms next door (cave.ts mines).
+export const DIGGERS_FACES = new Set(["the-pick-work", "the-pick-marks", "the-cut-through", "the-wet-cut", "the-widened-squeeze"]);
+export const MINE_MIN_MS = 60_000, MINE_MAX_MS = 180_000;     // how long one stays at a face
+export const STRIKE_MIN_MS = 15_000, STRIKE_MAX_MS = 35_000; // between strokes of the pick
 export const PATROLS: Record<string, string[]> = {
   "digger": DIGGERS_ROUND,
   "the-overman": DIGGERS_ROUND,
@@ -5747,7 +5753,7 @@ export const PREYS_ON = new Map<string, Set<string>>([
   ["cave-cougar", new Set(["grubbet", "pale-salamander", "mole-hound", "cave-bat", "polecat", "roe-deer", "wild-boar", "capercaillie", "hedgehog"])], ["the-white-cougar", new Set(["grubbet", "pale-salamander", "mole-hound", "cave-bat", "polecat", "roe-deer", "wild-boar", "capercaillie", "hedgehog"])], // 46hp 5-9 over a lone hound (30, 3-6) and the boar (34, 3-6); the wood's game it hunts up top
   ["mole-hound", new Set(["grubbet", "pale-salamander", "cave-bat", "polecat"])], // 30hp 3-6 over a bat (9, 1-3) and a polecat (16, 2-4)
   ["cave-spider", new Set(["cave-bat", "grubbet", "pale-salamander", "cave-crayfish"])], ["giant-cave-spider", new Set(["cave-bat", "grubbet", "pale-salamander", "cave-crayfish"])], // 36hp 3-7 over a bat (9, 1-3)
-  ["stone-brood", new Set(["grubbet", "pale-salamander", "stone-mites"])], ["the-old-brood", new Set(["grubbet", "pale-salamander", "stone-mites"])], // 40hp 4-8 over the mites (14, 1-2)
+  ["stone-brood", new Set(["grubbet", "pale-salamander", "stone-mites", "polecat", "cave-crayfish"])], ["the-old-brood", new Set(["grubbet", "pale-salamander", "stone-mites", "polecat", "cave-crayfish"])], // 40hp 4-8 over the mites (14, 1-2); the polecat (16) and the crayfish (9) too (2026-11-26)
   // THE VILLAGES ARE AN EASY MEAL (rome, 2026-11-04): the Dens and the two
   // hamlets are rat-heavy, and the hunters around them take rats now - the dogs
   // and the tawny owl by the wood, the hounds and gulls on the Crossing, the
@@ -6710,6 +6716,11 @@ export const HOLD_STEP = 0.25;            // each blow it lands while it has you
 export const HOLD_MAX = 2;                // ...up to twice the bite
 // The diggers call, and the ones in earshot come.
 export const CALLERS = new Set(["digger", "the-overman"]);
+// THE BROOD GOES HUNTING (2026-11-26). It sets on whoever walks in, and a thing that
+// does that never takes the first step off its ground, so it ate only what came
+// to it: the mites, now and then, and the dead. Hungry, it leaves its ground and
+// goes where the food is (huntGround), and fed, it goes back.
+export const HUNTS_OFF_GROUND = new Set(["stone-brood", "the-old-brood"]);
 export const CALL_ROOMS = 2;
 export const CALL_EVERY_MS = 30_000;
 // THE LAMP-MAN. Hurt, he shutters his lamp and is gone, and comes back on you out

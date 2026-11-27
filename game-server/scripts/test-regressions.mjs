@@ -5709,6 +5709,30 @@ try {
     assert.equal(g['stone-drowned'], undefined, 'and the drowned');
   });
 
+  check('a digger stops at a face on its round and works it, and the pick is heard next door (2026-11-26)', () => {
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const round = Function('return ' + zd.match(/export const DIGGERS_ROUND = (\[[\s\S]*?\]);/)[1])();
+    const faces = Function('return ' + zd.match(/export const DIGGERS_FACES = new Set\((\[[^\]]*\])\)/)[1])();
+    for (const f of faces) assert.ok(round.includes(f), f + ' is on the round');
+    const cv = readFileSync(new URL('../src/cave.ts', import.meta.url), 'utf8');
+    assert.match(cv, /if \(CALLERS\.has\(id\)\) mines\(z, c, tmpl, now\);/, 'every digger and the overman');
+    assert.match(cv, /c\.nextWanderAt = Math\.max\(c\.nextWanderAt, now \+ randInt\(MINE_MIN_MS, MINE_MAX_MS\)\);/, 'it stays at the face a while');
+    assert.match(cv, /z\.roomSound\(c\.roomId, "The ring of a pick on rock comes \{dir\}[^"]*", undefined, undefined, false, \{ mob: c\.templateId, act: "metal" \}\);/, 'heard next door');
+    assert.match(cv, /if \(c\.target \|\| c\.asleep \|\| !DIGGERS_FACES\.has\(c\.roomId\)\) \{ c\.workingAt = undefined; return; \}/, 'never in a fight');
+  });
+
+  check('a hungry stone-brood leaves its ground to hunt, a fed one stays, and it eats the polecat and the crayfish too (2026-11-26)', () => {
+    const b = { id: 'b', templateId: 'stone-brood', roomId: 'the-brood-nests', home: 'the-brood-nests', hp: 40, grudges: [], target: null, nextWanderAt: 0 };
+    assert.equal(walksAnyway({ ...b, hunger: 10 }), false, 'fed, at home, it holds its ground');
+    assert.equal(walksAnyway({ ...b, hunger: 60 }), true, 'hungry, it goes hunting');
+    assert.equal(walksAnyway({ ...b, templateId: 'the-old-brood', hunger: 60 }), true, 'the old brood too');
+    assert.equal(walksAnyway({ ...b, hunger: 10, roomId: 'the-groove' }), true, 'fed and away, it goes back');
+    for (const p of ['grubbet', 'pale-salamander', 'stone-mites', 'polecat', 'cave-crayfish']) {
+      assert.ok(PREYS_ON.get('stone-brood').has(p), 'the brood eats ' + p);
+      assert.ok(PREYS_ON.get('the-old-brood').has(p), 'the old brood eats ' + p);
+    }
+  });
+
   check('a grubbet asleep says only what one grubbet is doing, never that its colony is with it (2026-11-26)', () => {
     const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
     const rest = zd.slice(zd.indexOf('export const REST_LINES'), zd.indexOf('\n};', zd.indexOf('export const REST_LINES')));

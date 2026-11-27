@@ -23,7 +23,7 @@ import {
   BREAKS_OFF, BREAK_OFF_AT, KILL_DRAGGERS, HOLD_BITERS, HOLD_BITE_ODDS, HOLD_STEP, HOLD_MAX,
   CALLERS, CALL_ROOMS, CALL_EVERY_MS, LAMP_MEN, SHUTTER_AT, SHUTTER_BACK_MS, LAMP_RETURN_ROOMS,
   DARK_FIRST_MULT, DARK_MISS_ODDS, FLIGHT_BATS, FLIGHT_NIP_EVERY_MS, FLIGHT_NIP_ODDS, FLIGHT_SNUFF_ODDS,
-  CATCHES_ONLY_ON,
+  CATCHES_ONLY_ON, DIGGERS_FACES, MINE_MIN_MS, MINE_MAX_MS, STRIKE_MIN_MS, STRIKE_MAX_MS,
 } from "./zone-data";
 import { GROUND_OF } from "./mountain-ground";
 
@@ -248,6 +248,25 @@ export function act(z: ZoneDO, c: Creature, now: number): void {
   if (LAMP_MEN.has(id) && c.hp >= tmpl.max_hp) { c.shutHp = undefined; c.snuffedFor = undefined; } // whole again: the next fight is a new one
   if (c.dragTo) dragStep(z, c, tmpl);
   if (FLIGHT_BATS.has(id)) nip(z, c, tmpl, now);
+  if (CALLERS.has(id)) mines(z, c, tmpl, now);
+}
+
+// ---- THE DIGGERS AT THE WORK (2026-11-26) ------------------------------------------
+
+/** A digger come to a face on its round stops and works it, and the pick is heard. */
+function mines(z: ZoneDO, c: Creature, tmpl: MobTemplate, now: number): void {
+  if (c.target || c.asleep || !DIGGERS_FACES.has(c.roomId)) { c.workingAt = undefined; return; }
+  if (c.workingAt !== c.roomId) {
+    c.workingAt = c.roomId;
+    c.nextWanderAt = Math.max(c.nextWanderAt, now + randInt(MINE_MIN_MS, MINE_MAX_MS));
+    c.strikeAt = now + randInt(2000, 8000);
+    return;
+  }
+  if (now >= c.nextWanderAt || now < (c.strikeAt ?? 0)) return;
+  c.strikeAt = now + randInt(STRIKE_MIN_MS, STRIKE_MAX_MS);
+  z.fxPose(c.roomId, c.templateId, "attack");
+  z.roomFeed(c.roomId, `${cap(tmpl.name)} swings his pick into the rock face, and chips of stone fly.`, undefined, false);
+  z.roomSound(c.roomId, "The ring of a pick on rock comes {dir}, a stroke, and a while after it another.", undefined, undefined, false, { mob: c.templateId, act: "metal" });
 }
 
 /** The world beat: a shuttered lamp-man is off the map, so no room's beat reaches him. */
