@@ -1337,9 +1337,11 @@ export class ZoneDO implements DurableObject {
     // to a live world that is already too big — and it costs nothing until the
     // first mountain room lands: no other band has a mountain tier, so every
     // existing shard key is byte-for-byte what it was.
-    simstore.saveSim(this.state.storage, state, this.sim, (c) => {
-      const band = this.bandOf(c.roomId);
-      return band === "mountain" ? band + ":" + (MAP_QUARTERS[c.roomId] ?? "0") : band;
+    // ...and the floor shards by the same rooms (2026-11-27), so a creature and
+    // the ground it stands on are filed under the same key.
+    simstore.saveSim(this.state.storage, state, this.sim, (roomId) => {
+      const band = this.bandOf(roomId);
+      return band === "mountain" ? band + ":" + (MAP_QUARTERS[roomId] ?? "0") : band;
     });
   }
 

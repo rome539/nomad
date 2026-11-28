@@ -82,7 +82,15 @@ const CHURN_META = new Set(["savedAt", "arrivals", "herds", "condTrack"]);
 // region, not eight.
 const B_CREATURES = "b:creatures";           // the pre-split single blob: read once at the crossover, then swept
 const B_CREATURES_PREFIX = "b:creatures:";   // ...and this is what replaces it
-const B_GROUND = "b:ground";
+const B_GROUND = "b:ground";                 // the pre-split single floor blob: read once at the crossover, then swept
+// THE FLOOR SPLIT (2026-11-27). b:ground held every room's floor in one row,
+// 105KB on prod, so a hare's tracks in the wood rewrote the cave's, the
+// mountain's and every dropped stick in the world, and a beat that wrote it
+// beside an 82KB b:meta was caught at 3.1s. The floor now shards exactly as
+// the creatures do, by the caller's room shard, b:ground:<shard>, and only the
+// shards whose floor moved are written.
+const B_GROUND_PREFIX = "b:ground:";
+const isGroundShard = (k: string) => k.startsWith(B_GROUND_PREFIX);
 const B_META = "b:meta";
 // THE WALK SPLIT (2026-08-25). walked/wallMarks are the two per-player room
 // sets — every room a player has been SEEN to stand in, and the gatehouse
@@ -115,7 +123,8 @@ const isWalkShard = (k: string) => k.startsWith(B_WALK_PREFIX);
 const isCreatureShard = (k: string) => k.startsWith(B_CREATURES_PREFIX);
 // A row this store owns and must never sweep as a stray. b:walked is not one
 // any more: it is the pre-split shape, swept at the crossover.
-const isOurs = (k: string) => k === B_GROUND || k === B_META || isWalkShard(k) || isCreatureShard(k);
+// b:ground is not one either since the floor split: swept at its crossover.
+const isOurs = (k: string) => k === B_META || isWalkShard(k) || isCreatureShard(k) || isGroundShard(k);
 // Where a creature with no shard goes. Only reachable if a caller passes no
 // sharder at all (tests, or a future caller that does not care) — the world
 // then behaves exactly as it did before the split, in one blob.
@@ -240,7 +249,7 @@ function byRoom<T>(rec: Record<string, T> | undefined): Map<string, [string, T][
   return out;
 }
 
-function groundBlob(state: SimState): string {
+function groundBlobs(state: SimState, shardOfRoom?: (roomId: string) => string): Map<string, string> {
   const conds = byRoom(state.groundCond);
   const lores = byRoom(state.groundLore);
   const rolls = byRoom(state.groundRolled);
@@ -252,7 +261,7 @@ function groundBlob(state: SimState): string {
     ...Object.keys(state.traces ?? {}),
     ...conds.keys(), ...lores.keys(), ...rolls.keys(), ...hearts.keys(),
   ])].sort();
-  const out: Record<string, RoomBundle> = {};
+  const buckets = new Map<string, Record<string, RoomBundle>>();
   for (const roomId of rooms) {
     const b: RoomBundle = {};
     const g = state.ground[roomId];
@@ -271,9 +280,16 @@ function groundBlob(state: SimState): string {
     if (t) b.t = t;
     const tr = (state.traces ?? {})[roomId];
     if (tr && tr.length) b.tr = tr;
-    if (Object.keys(b).length) out[roomId] = b;
+    if (!Object.keys(b).length) continue;
+    // rooms run sorted, so every bucket fills in sorted order too
+    const key = B_GROUND_PREFIX + ((shardOfRoom ? shardOfRoom(roomId) : SHARD_FALLBACK) || SHARD_FALLBACK);
+    let out = buckets.get(key);
+    if (!out) { out = {}; buckets.set(key, out); }
+    out[roomId] = b;
   }
-  return JSON.stringify(out);
+  const blobs = new Map<string, string>();
+  for (const [k, out] of buckets) blobs.set(k, JSON.stringify(out));
+  return blobs;
 }
 
 function metaBlob(state: SimState): string {
@@ -360,9 +376,11 @@ function unshardBlobs(rows: Map<string, string>): SimState {
   }
   const single = rows.get(B_CREATURES);
   if (!sharded && single) creatures.push(...(JSON.parse(single) as Creature[]));
-  const g = rows.get(B_GROUND);
-  if (g) {
-    for (const [roomId, b] of Object.entries(JSON.parse(g) as Record<string, RoomBundle>)) {
+  // THE FLOOR SHARDS WIN, as the creature shards do; the single b:ground is
+  // read only by a world that has not crossed over to them yet.
+  const floors = [...rows.keys()].filter(isGroundShard);
+  for (const k of floors.length ? floors : rows.has(B_GROUND) ? [B_GROUND] : []) {
+    for (const [roomId, b] of Object.entries(JSON.parse(rows.get(k)!) as Record<string, RoomBundle>)) {
       expandBundle(state, roomId, b);
     }
   }
@@ -438,7 +456,7 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
   cache.vals.clear();
   const now = Date.now();
   const hasBlobs = rows.has(B_CREATURES) || rows.has(B_GROUND) || rows.has(B_META)
-    || rows.has(B_WALKED) || [...rows.keys()].some((k) => isCreatureShard(k) || isWalkShard(k));
+    || rows.has(B_WALKED) || [...rows.keys()].some((k) => isCreatureShard(k) || isWalkShard(k) || isGroundShard(k));
   let state: SimState;
   if (hasBlobs) {
     state = unshardBlobs(rows);
@@ -454,7 +472,10 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
     for (const [k, v] of rows) {
       if (isCreatureShard(k)) cache.vals.set(k, stableCreatures(JSON.parse(v) as Creature[]));
     }
-    cache.vals.set(B_GROUND, groundBlob(state));
+    // Each floor shard seeds from its own row, exact, as the creature shards
+    // do. The pre-split b:ground is left to the stray sweep, so the first save
+    // after the crossover writes every shard and deletes it in one transaction.
+    for (const [k, v] of rows) if (isGroundShard(k)) cache.vals.set(k, v);
     // THE WALK SPLIT, crossover discipline. A world whose b:walked row exists
     // has already crossed: seed it and b:meta and judge dirt normally. A world
     // without it still keeps the two player maps inside b:meta — leave B_WALKED
@@ -503,7 +524,7 @@ export function loadSim(storage: DurableObjectStorage, cache: SimCache): SimStat
 
 // Write the sim: the dirty blobs, and any pending stale-key sweep, in one
 // transaction — a crash mid-save never leaves half a world.
-export function saveSim(storage: DurableObjectStorage, state: SimState, cache: SimCache, shardOf?: (c: Creature) => string): void {
+export function saveSim(storage: DurableObjectStorage, state: SimState, cache: SimCache, shardOfRoom?: (roomId: string) => string): void {
   const now = Date.now();
   const fullFlush = now - cache.lastFullFlushAt >= FULL_FLUSH_MS;
   if (fullFlush) cache.lastFullFlushAt = now;
@@ -518,7 +539,7 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   // are serialised for real and written; the rest are judged and dropped. A
   // creature crossing a border correctly dirties BOTH shards, because both
   // buckets come out different.
-  const shards = shardCreatures(state.creatures, shardOf);
+  const shards = shardCreatures(state.creatures, shardOfRoom && ((c) => shardOfRoom(c.roomId)));
   for (const [shard, list] of shards) {
     const key = B_CREATURES_PREFIX + shard;
     const stable = stableCreatures(list);
@@ -527,10 +548,12 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
       cacheAs.push([key, stable]);
     }
   }
-  const g = groundBlob(state);
-  if (fullFlush || cache.vals.get(B_GROUND) !== g) {
-    puts.push([B_GROUND, g]);
-    cacheAs.push([B_GROUND, g]);
+  const floors = groundBlobs(state, shardOfRoom);
+  for (const [k, g] of floors) {
+    if (fullFlush || cache.vals.get(k) !== g) {
+      puts.push([k, g]);
+      cacheAs.push([k, g]);
+    }
   }
   // Meta: a real (non-churn) change writes now; otherwise the churn throttle
   // lets savedAt/arrivals land once a minute. Either way the write carries
@@ -584,6 +607,7 @@ export function saveSim(storage: DurableObjectStorage, state: SimState, cache: S
   for (const k of cache.vals.keys()) {
     if (!isOurs(k)) dels.push(k);
     else if (isCreatureShard(k) && !live.has(k)) dels.push(k);
+    else if (isGroundShard(k) && !floors.has(k)) dels.push(k);   // a region whose floor is bare now: no old floor left to hydrate
   }
 
   if (!puts.length && !dels.length) {

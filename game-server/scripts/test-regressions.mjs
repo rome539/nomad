@@ -43,6 +43,7 @@ try {
         "export {cmdCook, moveLoad} from './verbs';",
         "export {walkCost} from './exhaustion';",
         "export {COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, wardAt} from './zone-data';",
+        "export {WINDS_UP as T_WINDS_UP, AGGRESSIVE as T_AGGRESSIVE} from './zone-data';",
         "export {forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, keeperRead, eatsAt, rollBloodline, reconcilePopulation, ate, scheduleArrivals, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, fallAsleep, broodBirths} from './ai';",
         "export {alarmBark, windsUp, lurkerFoundBy, waters, ratHoards, godMet, godRemembers, rollDen, livingHomes, applyArrivals, catchMult, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead} from './ai';",
         "export {plan as groupPlan, join as groupJoin, tick as groupTick, pickHome as groupPickHome, holdGround, packQuarry, packQuarryId, holdLand, holdBody, mobEagle, rehome} from './groups';",
@@ -126,7 +127,7 @@ try {
         async a => ({ contents: await readFile(a.path, 'utf8'), loader: 'text' }));
     } }],
   });
-  const { caveMod, LANTERNS, STAYS_HOME_BOXES, CAVE_COOK, CAVE_CURE, CAVE_FAT, applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, packQuarryId, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, roomWater, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, biteOf, bodyErrand, rangePack, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary, rehome, alarmBark, windsUp, lurkerFoundBy, hallFogged, foggy, cmdWho, WHO_PLACES_KEYS, GATEHOUSE_FEASTS, FEAST_LINES, gatehouseFeast, FEAST_COSTUMES, feastCostume, CAVE_GROUND, CAVE_SETTLES, CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, CAVE_TEST_HOLLOW, CAVE_TEST_GRAVE, hungers, CAVE_T_RUNNERS, CAVE_T_SURPLUS, T_THIEVES, T_thiefWords, T_thiefSay, T_SEIZE_WORDS, T_DROWNERS, T_rollMobTraits, T_mobArmor, T_MOB_TRAITS, T_TRAIT_TELL, T_TRAIT_DOES, T_ARMOR_TOP, T_wild, eatingNowT, caveShift } = await import(pathToFileURL(output));
+  const { caveMod, LANTERNS, STAYS_HOME_BOXES, CAVE_COOK, CAVE_CURE, CAVE_FAT, applyArrivals, WOOD_GROUND, DEN_GROUND, GROUND_HOLDERS, GROUND_DRIVEN, PACK_QUARRY, PACK_STAGS, OUT_GROUND, UPPER_GROUND, DEEP_GROUND, FORTRESS_SETTLES, OUT_ROAMERS, OUT_GROUPS, UPPER_ROAMERS, UPPER_GROUPS, DEEP_ROAMERS, tiedHome, SETTLES_BY_SCRAPS, WALKING_DEAD, manhunterMod, huntRareBloodsAsBase, RULED_RARE_BLOODS, RULED_NOT_HUNTED, packmates, mealOf, HUNGER_FLOOR, SQUADS, squadsMod, ROAD_GROUND, ROAD_SETTLES, ROAD_ROAMERS, ROAD_GROUPS, PACK_HUNTERS, SETTLES_BY_PREY, CROSSING_ROAMERS, CROSSING_GROUPS, LIVING_REGIONS, roamsIn, groupOf, FLOCKS, LAND_HOLDERS, CROSSING_GROUND, CROSSING_SETTLES, keeperTells, byDay, wardAt, saysWeather, skyClause, weatherSky, bodiesIn, styleBeforeAttack, styleKeepAloft, lurkAway, holdBody, packQuarryId, mobEagle, forageGround, fightIn, shiesNoise, towardBody, deadEatsAt, grassPatch, dayLine, keeperRead, eatsAt, GATEHOUSE_BARRED, bodyEaten, BEAKS, BITERS, digest, grass, FORAGE_ROOMS, SHIELING_HAMLET_ROOMS, benchEquip, boxedByName, cmdEquip, holdLand, woundedPreyHunts, packQuarry, rollBloodline, bossStands, rainNextDoor, roomWater, rainNearby, mealWords, waters, beasts, SMALL_PREY, SMALL_EATERS, catchMult, PACK_PREY, flightTick, flightFoodIn, GROUND_OF, SETTLES_ON, settlesOn, MOUNTAIN_QUARTER_ROOMS, holdGround, groupPlan, groupJoin, groupTick, groupPickHome, PREYS_ON, rollDen, livingHomes, eatingShown, VERB_ALIASES, gatehouseHeard, aliases, follow, cmdEmote, emoteLine, milestoneRead, nextBellAt, chronicle, ROOM_FEATURES, godMet, godRemembers, roomSound, feverrat, tickFever, fevered, feverBites, feverLifts, feverCoughs, eventAmbient, FEVER_RAT, FEVER_RAT_HOME, FEVER_RAT_HOLD_MS, FEVER_CLOTH_TRAIT, whiteroe, starvingHunts, huntsAt, biteOf, bodyErrand, rangePack, carving, pvp, ratHoards, cmdDive, wxCovers, tickEscape, tickCrabs, crabMarching, crabsOn, biggestFields, clues, conditions, cmdOffer, glutMult, tickGlut, offerCore, terrainOf, MOUTHS, herds, scheduleArrivals, GATEHOUSE_NOARG, ZoneDO, parse, den, cmdMap, copyCounts, worldGrid, ate, study, cmdStudy, cmdJournal, refreshStudied, journalKey, rising, loadLeaderboard, handleBench, sendCtx, cmdGo, receiptGoods, goodsWorth, worthMark, worthPips, cmdRepair, sendTrade, cmdLook, keepingLines, cmdSmoke, cmdInventory, handleGatehouse, light, body, ratking, coughing, campfire, cmdCook, moveLoad, walkCost, COOK_RECIPES, CAMPFIRE_MS, SNOW_LOAD_KG, WET_DRY_MS, reconcilePopulation, provokeGrudges, creatureTell, arrivalLine, wakeListeners, creatureMoves, creatureEatsHere, scavengerFeeds, mobPresence, presenceLine, WITNESSED_LINES, OUTDOOR_REGIONS, INDOOR_ROOMS, PATROLS, patrolRoute, WARRENS_ROOMS, DARK_ROOMS, PITS_ROOMS, WHETSTONE_ROOMS, WHET_CAP, findsVitals, BIG_VITALS, VITALS_CREATURE, VERMIN, GRAZERS, DEN_BUILDS, DEN_BUILD_WORK, OUTDOOR_ROOMS, DAY_CYCLE_MS, isNight, isFullMoon, skyClear, lidOpen, foodGone, lurkerDrifts, walksAnyway, lionStalks, hungerAsEaten, keeperBodyRead, auroraNight, cometNight, nightExtras, heightCold, coldOnYou, MQR, NIGHT_AURORA, NIGHT_COMET, NIGHT_STARS_TURN, SUN_LINE_SET, tickFoodRot, rottedAway, feverPhase, feverGravesOf, FEVER_GRAVES, loadContainer, setRottedAway, SKY_CLEAR_EVERY, ECLIPSE_TOTAL_LINES, ECLIPSE_SUN_LINES, MOON_SKY, MOON_ARC, bodyNewerThanSave, saveSim, loadSim, newCache, fallAsleep, coldBites, snowed, paleDrakeSnows, timedPose, broodBirths, inkRooms, moonKind, moonMonth, fullMoonTonight, moonriseLine, tickMoon, findsMod, trailMod, maprot, legendary, rehome, alarmBark, windsUp, lurkerFoundBy, hallFogged, foggy, cmdWho, WHO_PLACES_KEYS, GATEHOUSE_FEASTS, FEAST_LINES, gatehouseFeast, FEAST_COSTUMES, feastCostume, CAVE_GROUND, CAVE_SETTLES, CAVE_ROAMERS, CAVE_GROUPS, OWN_FORAGE_GROUNDS, DROWNERS, PROVISIONED, CAVE_TEST_SCAVENGERS, ECO_LINES, CAVE_RULES, CAVE_TEST_HOLLOW, CAVE_TEST_GRAVE, hungers, CAVE_T_RUNNERS, CAVE_T_SURPLUS, T_THIEVES, T_thiefWords, T_thiefSay, T_SEIZE_WORDS, T_DROWNERS, T_rollMobTraits, T_mobArmor, T_MOB_TRAITS, T_TRAIT_TELL, T_TRAIT_DOES, T_ARMOR_TOP, T_wild, eatingNowT, caveShift, T_WINDS_UP, T_AGGRESSIVE } = await import(pathToFileURL(output));
 
   // ---------------------------------------------------------------- parser
   console.log('the parser');
@@ -7121,6 +7122,55 @@ try {
     written.length = 0;
     saveSim(storage, back, cache);
     assert.deepEqual(written.filter((k) => k.startsWith('b:walk')), [], 'and nothing is rewritten that did not move');
+  });
+
+  check('the stone-sleeper looks before it comes, so it can be studied alive (2026-11-27)', () => {
+    // It took whoever walked in on the same beat, and study refuses in a fight,
+    // so the living half of its page could never be written.
+    const w = T_WINDS_UP['stone-sleeper'];
+    assert.ok(w && w.tell && w.seen && w.state && w.go, 'the sleeper winds up');
+    assert.ok(T_AGGRESSIVE.has('stone-sleeper'), 'and still comes for whoever stays');
+  });
+
+  check('the floor is one row per region, and a change rewrites only that region (2026-11-27)', () => {
+    // b:ground held every room's floor in one 105KB row, so tracks in the wood
+    // rewrote the whole world's floor, and a beat writing it was caught at 3.1s.
+    const rows = new Map(), written = [];
+    const storage = { sql: { exec(q, ...a) {
+      if (/^SELECT k, v FROM sim_kv/.test(q)) return [...rows].map(([k, v]) => ({ k, v }));
+      if (/^INSERT INTO sim_kv/.test(q)) { rows.set(a[0], a[1]); written.push(a[0]); return []; }
+      if (/^DELETE FROM sim_kv/.test(q)) { rows.delete(a[0]); return []; }
+      return [];
+    } }, transactionSync(fn) { fn(); } };
+    const region = (r) => r.startsWith('w') ? 'wood' : 'cave';
+    // A world saved before the split: one b:ground row.
+    rows.set('b:meta', JSON.stringify({}));
+    rows.set('b:walk:a', JSON.stringify({ walked: [], wallMarks: [] }));
+    rows.set('b:ground', JSON.stringify({ w1: { g: ['stick'] }, c1: { g: ['bone'], t: 99 } }));
+    let cache = newCache();
+    const state = loadSim(storage, cache);
+    assert.deepEqual(state.ground, { w1: ['stick'], c1: ['bone'] }, 'the old row is read at the crossover');
+    saveSim(storage, state, cache, region);
+    assert.ok(!rows.has('b:ground'), 'the old one-row floor is swept');
+    assert.deepEqual(JSON.parse(rows.get('b:ground:wood')), { w1: { g: ['stick'] } }, 'the wood has a row of its own');
+    assert.deepEqual(JSON.parse(rows.get('b:ground:cave')), { c1: { g: ['bone'], t: 99 } }, 'and so does the cave');
+    // Something dropped in the wood: only the wood's floor is written.
+    state.ground.w1 = ['stick', 'feather'];
+    written.length = 0;
+    saveSim(storage, state, cache, region);
+    assert.deepEqual(written.filter((k) => k.startsWith('b:ground')), ['b:ground:wood'], 'only the wood is rewritten');
+    // A fresh load reads every region back from its own row, and rewrites nothing.
+    cache = newCache();
+    const back = loadSim(storage, cache);
+    assert.deepEqual(back.ground, { w1: ['stick', 'feather'], c1: ['bone'] }, 'every floor comes back');
+    assert.equal(back.groundTorch.c1, 99, 'with its torch');
+    written.length = 0;
+    saveSim(storage, back, cache, region);
+    assert.deepEqual(written.filter((k) => k.startsWith('b:ground')), [], 'nothing is rewritten that did not move');
+    // The cave's floor picked bare: its row goes, so no old floor hydrates.
+    back.ground = { w1: ['stick', 'feather'] }; back.groundTorch = {};
+    saveSim(storage, back, cache, region);
+    assert.ok(!rows.has('b:ground:cave'), 'a bare region leaves no row behind');
   });
 
   check('a room waits for every layer of its sky before it shows (2026-11-05)', () => {

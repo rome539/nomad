@@ -3442,6 +3442,16 @@ export const WINDS_UP: Record<string, { tell: string; seen: string; state: strin
     state: "tail fanned and wings down, clicking at you",
     go: "{A} comes at you, wings trailing and bill open.",
   },
+  // THE SLEEPER LOOKS FIRST (2026-11-27), as the drowned god does: it took you
+  // the beat you came in, so nobody was ever out of a fight in its room and the
+  // living half of its page could never be written.
+  "stone-sleeper": {
+    tell: "{A} lifts its blunt head off the flags and turns it toward you, slowly, and the whole long length of it goes still. It has not come at you yet.",
+    seen: "{A} lifts its blunt head off the flags toward {name}.",
+    state: "its blunt head lifted off the flags and turned on you, as still as the stone",
+    go: "{A} comes up off the stone at you, faster than anything that size should move.",
+    pose: "alert",
+  },
 };
 // The grave-hyena will not eat its own kind. It stands over a dead grave-hyena,
 // throws its head back, and laughs — that keening, no-mirth laugh — and holds
