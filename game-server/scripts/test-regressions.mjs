@@ -7124,6 +7124,16 @@ try {
     assert.deepEqual(written.filter((k) => k.startsWith('b:walk')), [], 'and nothing is rewritten that did not move');
   });
 
+  check('the cave count shows every cave roamer, the stone-hogs and their herds too (2026-11-27)', () => {
+    // CAVE_SHOWN was written before the hogs came, so the count never listed them.
+    const beasts = readFileSync(new URL('../src/beasts.ts', import.meta.url), 'utf8');
+    const zd = readFileSync(new URL('../src/zone-data.ts', import.meta.url), 'utf8');
+    const shown = beasts.match(/const CAVE_SHOWN = \[([^\]]*)\]/)[1];
+    const roamers = zd.match(/export const CAVE_ROAMERS = new Set\(\[([^\]]*)\]/)[1].match(/"[^"]+"/g);
+    for (const r of roamers) assert.ok(shown.includes(r), `${r} is on the cave count`);
+    assert.match(beasts, /herds: \["cave-bat", "stone-hog"\]/, 'and the hogs\' herds are counted');
+  });
+
   check('the stone-sleeper looks before it comes, so it can be studied alive (2026-11-27)', () => {
     // It took whoever walked in on the same beat, and study refuses in a fight,
     // so the living half of its page could never be written.

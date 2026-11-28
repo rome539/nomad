@@ -34,7 +34,7 @@ const WOOD_SHOWN = [
 ];
 const DEN_SHOWN = ["rat", "roe-deer", "masterless-dog"];
 // THE CAVE UNDER THE WOOD (mig 409, 2026-11-24): its roamers, and the gulpers, diggers and brood that keep their places.
-const CAVE_SHOWN = ["cave-cougar", "mole-hound", "grubbet", "pale-salamander", "cave-spider", "cave-bat", "river-gulper", "digger", "stone-brood", "polecat", "cave-crayfish", "stone-mites"];
+const CAVE_SHOWN = ["cave-cougar", "mole-hound", "grubbet", "pale-salamander", "cave-spider", "cave-bat", "river-gulper", "digger", "stone-brood", "polecat", "cave-crayfish", "stone-mites", "stone-hog"];
 const ALL_SHOWN = new Set([...SHOWN, ...CROSSING_SHOWN, ...ROAD_SHOWN, ...OUT_SHOWN, ...UPPER_SHOWN, ...DEEP_SHOWN, ...WOOD_SHOWN, ...DEN_SHOWN, ...CAVE_SHOWN]);
 const lineOf = (z: ZoneDO, id: string): string => ALL_SHOWN.has(id) || roamsIn(id) ? id : (z.variantBase.get(id) ?? id);
 const onMountain = (z: ZoneDO, c: Creature): boolean => z.regionOf(c.home ?? c.roomId) === "mountain";
@@ -184,7 +184,7 @@ const DEN_VIEW: RegionView = {
 const CAVE_VIEW: RegionView = {
   title: "THE CAVE", words: ["cave", "the cave"], region: "cave", shown: CAVE_SHOWN, kills: "caveKills",
   packs: [{ line: "mole-hound", label: "Mole hounds" }],
-  herds: ["cave-bat"],
+  herds: ["cave-bat", "stone-hog"],
 };
 const VIEWS = [CROSSING_VIEW, ROAD_VIEW, OUT_VIEW, UPPER_VIEW, DEEP_VIEW, WOOD_VIEW, DEN_VIEW, CAVE_VIEW];
 
