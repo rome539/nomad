@@ -64,7 +64,7 @@ import {
   RAVEN_SCOOPERS, RAVEN_NEST_ROOMS, RAVEN_NEST_CAP,
   WAITING_VULTURES, VULTURE_SMELL_ROOMS, VULTURE_LOSE_AT, VULTURE_CHECK_MS, SILENT_HUNTERS,
   MIGRATION_FACTOR, MIGRATION_MIN_FACTOR, BROOD_CAP, BROOD_INTERVAL_MS, BROOD_NESTS, BROOD_BIRTH, HURT_STYLE, FLEE_TELL, FIRE_FLEE_OUT,
-  QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, MIGRATE_QUARTERS, MIGRATE_ODDS, PITS_ROOMS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
+  QUIET_WANDER_MULT, QUIET_HEED_MULT, SHADOW_WANDER_MULT, MIGRANTS, MIGRATE_BANDS, CAVE_CROSSERS, MIGRATE_QUARTERS, MIGRATE_ODDS, PITS_ROOMS, MIGRATE_KEEP, DRIFT_SETTLE_MIN, DRIFT_GIVES_UP,
   MOVE_SOUNDS, WANDER_MIN_MS, WANDER_MAX_MS, SLOW_WALKERS, MOUTHS, QUIET_WAKE_MULT, NOISY_LOAD,
   HUNGER_PER_MIN, COLD_HUNGER_MULT,
   DEEP_ROOMS, SURFACED_STALE_MS, OUTDOOR_ROOMS, WARRENS_ROOMS, ESCAPE_TMPL, FORTRESS_BANDS, SURFACE_BANDS,
@@ -1547,7 +1547,8 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
     // so a drift travels instead of milling about in the same four rooms. Both
     // "never strand" like every other filter here.
     if (mode === "wander" && creature.drift !== undefined) {
-      const onward = exits.filter((e) => MIGRATE_BANDS.has(z.regionOf(e.to_room)) && !DEEP_ROOMS.has(e.to_room));
+      const crosses = CAVE_CROSSERS.has(tmpl.id);
+      const onward = exits.filter((e) => (MIGRATE_BANDS.has(z.regionOf(e.to_room)) || (crosses && z.regionOf(e.to_room) === "cave")) && !DEEP_ROOMS.has(e.to_room));
       if (onward.length) exits = onward;
       else { // walked itself into a corner of the map it may not settle on: turn back
         creature.home = creature.driftFrom ?? creature.home;
@@ -1555,7 +1556,8 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
         creature.driftFrom = undefined;
       }
     }
-    if (mode === "wander" && creature.drift !== undefined && creature.driftFrom) {
+    const underWood = mode === "wander" && creature.drift !== undefined && CAVE_CROSSERS.has(tmpl.id) && z.regionOf(creature.roomId) === "cave";
+    if (mode === "wander" && creature.drift !== undefined && creature.driftFrom && !underWood) {
       const behind = z.roomDist(creature.roomId, creature.driftFrom);
       const away = exits.filter((e) => z.roomDist(e.to_room, creature.driftFrom!) > behind);
       if (away.length) exits = away;
@@ -1566,6 +1568,16 @@ async function stepOnce(z: ZoneDO, creature: Creature, now: number, mode: "wande
         // animal. Without it a drift can never leave the island it began on.
         const t = thresholdStep(z, creature, creature.roomId, creature.driftFrom, allWays, "further");
         if (t) { exits = [{ dir: t.dir, to_room: t.to_room } as typeof exits[number]]; through = t.through; }
+      }
+    }
+    // UNDER THE WOOD IT CROSSES, IT DOES NOT WANDER: a wolf or bear that took the
+    // cave on a migration makes for the far way out (caveCrossing). Never strands.
+    if (underWood) {
+      const out = caveCrossing(z, creature);
+      if (out) {
+        const d = z.roomDist(creature.roomId, out);
+        const closer = exits.filter((e) => z.roomDist(e.to_room, out) < d);
+        if (closer.length) exits = closer;
       }
     }
     // Every way it may take before its ground narrows them: the place-fear below
@@ -2916,6 +2928,37 @@ function settlesHere(z: ZoneDO, templateId: string, roomId: string): boolean {
 }
 
 /** Cut the tether: this one is going walkabout. */
+// The wood's ways down into the cave, found once per world from its exits.
+const caveDoors = new WeakMap<object, string[]>();
+function woodDoors(z: ZoneDO): string[] {
+  const world = z.world!;
+  let doors = caveDoors.get(world);
+  if (!doors) {
+    doors = [];
+    for (const [roomId, list] of world.exits) {
+      if (z.regionOf(roomId) === "cave") continue;
+      if (list.some((e) => !e.key_item && z.regionOf(e.to_room) === "cave")) doors.push(roomId);
+    }
+    doors.sort();
+    caveDoors.set(world, doors);
+  }
+  return doors;
+}
+/** Where a wolf or bear crossing the cave on a migration comes up: the way out
+ *  into the wood furthest from where it set out, that it can still reach. The
+ *  same answer every step, so it keeps one heading with nothing stored. */
+export function caveCrossing(z: ZoneDO, creature: Creature): string | null {
+  const from = creature.driftFrom ?? creature.home;
+  if (!from) return null;
+  let best: string | null = null, far = -1;
+  for (const r of woodDoors(z)) {
+    const d = z.roomDist(from, r);
+    if (!Number.isFinite(d) || !Number.isFinite(z.roomDist(creature.roomId, r))) continue;
+    if (d > far) { far = d; best = r; }
+  }
+  return best;
+}
+
 export function beginDrift(z: ZoneDO, creature: Creature, templateId: string): void {
   const here = z.regionOf(creature.home ?? creature.roomId);
   // Never strip a band bare. The wood can lose wolves; it cannot be emptied of

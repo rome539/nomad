@@ -2122,6 +2122,12 @@ export const MIGRANTS = new Set<string>([
 // animal that walks from the wood to the den ground has walked somewhere it
 // could plausibly get to, and the map now says so — they share borders.
 export const MIGRATE_BANDS = new Set<string>(["road", "wood", "den", "out", "crossing"]);
+// THE CAVE IS A WAY ACROSS THE WOOD (2026-11-27). The wolves and the walking
+// bears may cross the cave on a migration as well as on their other long walks,
+// and once under the wood they make for the way out furthest from where they set
+// out (ai.ts caveCrossing). They never settle in it (settlesHere keeps to
+// MIGRATE_BANDS). Anything else that wanders in still may, as it always could.
+export const CAVE_CROSSERS = new Set<string>(["grey-wolf", "dire-wolf", "brown-bear", "the-baited-bear", "the-chain-breaker"]);
 // WHERE A MIGRANT MAY SETTLE INSIDE A BAND (2026-08-10). Absent from this table
 // means anywhere in the band, which is right for a road or a wood — they are
 // walkable end to end and a thing can plausibly be anywhere on them.
